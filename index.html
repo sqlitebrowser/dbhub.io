@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>DBHub.io</title>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-animate.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-sanitize.min.js"></script>
+    <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-2.2.0.min.js"></script>
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div ng-app="DBHub-front" ng-controller="databaseView">
+
+    <table class="table table-bordered table-striped">
+        <tr ng-repeat="x in names">
+            <td>{{ x.Name }}</td>
+            <td>{{ x.Country }}</td>
+        </tr>
+    </table>
+
+</div>
+
+<script>
+    var app = angular.module('DBHub-front', ['ui.bootstrap']);
+    app.controller('databaseView', function($scope, $http) {
+        $http.get("http://localhost:9080/foo/devcrapdb1.sqlite")
+                .then(function (response) {$scope.names = response.data.records;});
+    });
+</script>
+</body>
+</html>
