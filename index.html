@@ -10,37 +10,37 @@
     <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
+
+        #viewupdates, #viewbranches, #viewreleases, #viewcontribs {
+            margin-left: 30%;
+        }
     </style>
 </head>
 <body>
-
 <div class="container">
     <div class="row">
-        <div class="col-md-7">
-            <h2 id="viewuser" ng-bind="db.Username + ' / ' + db.Database"></h2>
-        </div>
-        <div class="col-md-5">
-            <div class="row">
-                <div class="col-md-4">
-                    <label id="viewwatch" ng-bind="'Watchers: ' + db.Watchers"></label>
+        <div class="col-md-12">
+            <h2 id="viewuser">
+                <div class="pull-left"><a href="/{{ db.Username }}">{{ db.Username }}</a> / {{ db.Database }}</div>
+                <div class="btn-group pull-right">
+                    <button type="button" class="btn btn-default" ng-bind="'Watchers: ' + db.Watchers"></button>
+                    <button type="button" class="btn btn-default" ng-bind="'Stars: ' + db.Stars"></button>
+                    <button type="button" class="btn btn-default" ng-bind="'Forks: ' + db.Forks"></button>
                 </div>
-                <div class="col-md-4">
-                    <label id="viewstars" ng-bind="'Stars: ' + db.Stars"></label>
-                </div>
-                <div class="col-md-4">
-                    <label id="viewforks" ng-bind="'Forks: ' + db.Forks"></label>
-                </div>
-            </div>
+            </h2>
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-9">
+    <div class="row" style="padding-bottom: 10px; padding-top: 10px;">
+        <div class="col-md-10">
             <div class="row">
                 <div class="col-md-2">
                     <a href="">Data</a>
                 </div>
                 <div class="col-md-2">
                     <a href="">Visual</a>
+                </div>
+                <div class="col-md-2">
+                    <a href="">Schedule</a>
                 </div>
                 <div class="col-md-2">
                     <label id="viewdiscuss" ng-bind="'Discussions: ' + db.Discussions"></label>
@@ -51,35 +51,40 @@
                 <div class="col-md-2">
                     <label>Info</label>
                 </div>
-                <div class="col-md-2">
-                    &nbsp;
-                </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             &nbsp;
         </div>
     </div>
     <div class="row">
         <div class="col-md-12">
-            <label id="viewdesc" ng-bind="db.Description"></label>
+            <div class="well well-sm">
+                <label id="viewdesc" ng-bind="db.Description"></label>
+            </div>
         </div>
     </div>
     <div class="row">
-        <div class="col-md-3">
-            <label id="viewupdates" ng-bind="'Updates: ' + db.Updates"></label>
-        </div>
-        <div class="col-md-3">
-            <label id="viewbranches" ng-bind="'Branches: ' + db.Branches"></label>
-        </div>
-        <div class="col-md-3">
-            <label id="viewreleases" ng-bind="'Releases: ' + db.Releases"></label>
-        </div>
-        <div class="col-md-3">
-            <label id="viewcontribs" ng-bind="'Contributors: ' + db.Contributors"></label>
+        <div class="col-md-12">
+            <table width="100%" class="table table-bordered">
+                <tr>
+                    <td>
+                        <label id="viewupdates" ng-bind="'Updates: ' + db.Updates"></label>
+                    </td>
+                    <td>
+                        <label id="viewbranches" ng-bind="'Branches: ' + db.Branches"></label>
+                    </td>
+                    <td>
+                        <label id="viewreleases" ng-bind="'Releases: ' + db.Releases"></label>
+                    </td>
+                    <td>
+                        <label id="viewcontribs" ng-bind="'Contributors: ' + db.Contributors"></label>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
-    <div class="row">
+    <div class="row" style="padding-bottom: 10px;">
         <div class="dropdown col-md-5">
             <div class="btn-group" uib-dropdown keyboard-nav="true">
                 <button id="viewtable" type="button" class="btn">{{ 'Table: ' + db.Tablename }}</button>
@@ -99,14 +104,10 @@
         <div class="col-md-1">
             &nbsp;
         </div>
-        <div class="col-md-2">
-            <button class="btn btn-default">Create new database</button>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-default">Upload database</button>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-default">Download</button>
+        <div class="col-md-6">
+            <button class="btn btn-default pull-right">Create new database</button>
+            <button class="btn btn-default pull-right">Upload database</button>
+            <button class="btn btn-default pull-right">Download</button>
         </div>
     </div>
     <div class="row">
@@ -124,6 +125,9 @@
     </div>
     <div class="row">
         <div class="col-md-12">
+            <div class="page-header">
+                <h1>README</h1>
+            </div>
             <label id="viewreadme" ng-bind="db.Readme"></label>
         </div>
     </div>
