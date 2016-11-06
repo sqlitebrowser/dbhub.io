@@ -30,7 +30,7 @@
             </h2>
         </div>
     </div>
-    <div class="row" style="padding-bottom: 10px; padding-top: 10px;">
+    <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
         <div class="col-md-10">
             <div class="row">
                 <div class="col-md-2">
@@ -43,10 +43,10 @@
                     <a href="">Schedule</a>
                 </div>
                 <div class="col-md-2">
-                    <label id="viewdiscuss" ng-bind="'Discussions: ' + db.Discussions"></label>
+                    <label id="viewdiscuss"><a href="">{{ 'Discussions: ' }}</a>{{ db.Discussions }}</label>
                 </div>
                 <div class="col-md-2">
-                    <label id="viewprs" ng-bind="'Pull Requests: ' + db.PRs"></label>
+                    <label id="viewprs"><a href="">{{ 'Pull Requests: ' }}</a>{{ db.PRs }}</label>
                 </div>
                 <div class="col-md-2">
                     <a href="">Statistics</a>
@@ -59,14 +59,14 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            <div class="well well-sm">
+            <div class="well well-sm" style="margin-bottom: 10px;">
                 <label id="viewdesc" ng-bind="db.Description"></label>
             </div>
         </div>
     </div>
     <div class="row">
         <div class="col-md-12">
-            <table width="100%" class="table table-bordered">
+            <table width="100%" class="table table-bordered" style="margin-bottom: 10px;">
                 <tr>
                     <td>
                         <label id="viewupdates" ng-bind="'Updates: ' + db.Updates"></label>
