@@ -117,8 +117,7 @@
                     <th ng-repeat="header in db.TableHeaders">{{ header }}</th>
                 </tr>
                 <tr ng-repeat="row in db.Records">
-                    <td>{{ row.Name }}</td>
-                    <td>{{ row.Country }}</td>
+                    <td ng-repeat="val in row">{{ val.Value }}</td>
                 </tr>
             </table>
         </div>
