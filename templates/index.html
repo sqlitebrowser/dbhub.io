@@ -134,9 +134,26 @@
 
 <script>
     var app = angular.module('DBHub-front', ['ui.bootstrap']);
-    app.controller('databaseView', function($scope, $http) {
-        $http.get("http://localhost:9080/foo/devcrapdb1.sqlite")
-                .then(function (response) {$scope.db = response.data;});
+    app.controller('databaseView', function($scope) {
+        $scope.db = { Username: "[[ .Username ]]",
+                      Database: "[[ .Database ]]",
+                      Watchers: "[[ .Watchers ]]",
+                      Tablename: "[[ .Tablename ]]",
+                      Stars: "[[ .Stars ]]",
+                      Forks: "[[ .Forks ]]",
+                      Discussions: "[[ .Discussions ]]",
+                      PRs: "[[ .PRs ]]",
+                      Description: "[[ .Description ]]",
+                      Updates: "[[ .Updates ]]",
+                      Branches: "[[ .Branches ]]",
+                      Releases: "[[ .Releases ]]",
+                      Contributors: "[[ .Contributors ]]",
+                      Readme: "[[ .Readme ]]",
+                      Records: [[ .Records ]]
+        }
+//    app.controller('databaseView', function($scope, $http) {
+//        $http.get("http://localhost:9080/foo/devcrapdb1.sqlite")
+//                .then(function (response) {$scope.db = response.data;});
     });
 </script>
 </body>
