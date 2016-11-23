@@ -149,7 +149,8 @@
                       Contributors: "[[ .Contributors ]]",
                       Readme: "[[ .Readme ]]",
                       Tables: [[ .Tables ]],
-                      Records: [[ .Records ]]
+                      Records: [[ .Records ]],
+                      TableHeaders: [[ .TableHeaders ]]
         }
         $scope.changeTable = function(newtable) {
             $http.get("http://localhost:9080/foo/devcrapdb1.sqlite?" + newtable)
