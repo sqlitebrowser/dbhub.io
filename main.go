@@ -73,7 +73,7 @@ func mainHandler(w http.ResponseWriter, _ *http.Request) {
 	var dataRows dbInfo
 	var rowCount int
 	tableRows, err := db.Query(
-		"SELECT name FROM sqlite_master WHERE type='table'",
+		"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name ASC",
 	)
 	defer tableRows.Close()
 	for tableRows.Next() {
@@ -90,8 +90,7 @@ func mainHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	// Select the first table
-	//selectedTable := dataRows.Tables[0]
-	selectedTable := "Sometable1"
+	selectedTable := dataRows.Tables[0]
 
 	// Retrieve (up to) x rows from the selected database
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
