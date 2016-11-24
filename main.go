@@ -61,6 +61,8 @@ type dbInfo struct {
 	MinioID      string
 	Size         int
 	Version      int
+	Protocol     string
+	Server       string
 }
 
 // Configuration file
@@ -96,6 +98,11 @@ var (
 	// Connection handles
 	db          *pgx.Conn
 	minioClient *minio.Client
+
+	// Address to listen on
+	listenProtocol = "http"
+	listenAddr = "localhost"
+	listenPort = 8080
 )
 
 func main() {
@@ -126,7 +133,7 @@ func main() {
 
 	log.Println("Running...")
 	http.HandleFunc("/", mainHandler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(listenAddr + ":" + strconv.Itoa(listenPort), nil))
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
@@ -362,12 +369,14 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 	dataRows.Username = userName
 	dataRows.Database = databaseName
 	dataRows.Tablename = selectedTable
+	dataRows.Protocol = listenProtocol
+	dataRows.Server = listenAddr + ":9080"
 
 	// Parse the template, but use "[[" and "]]" as delimiters.  This is because both Go and AngularJS use
 	// "{{" "}}" by default, so one needs to be changed ;)
-	t := template.New("index.html")
+	t := template.New("database.html")
 	t.Delims("[[", "]]")
-	t, err = t.ParseFiles("templates/index.html")
+	t, err = t.ParseFiles("templates/database.html")
 	if err != nil {
 		log.Printf("Error: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

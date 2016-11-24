@@ -158,10 +158,10 @@
                       Readme: "[[ .Readme ]]",
                       Tables: [[ .Tables ]],
                       Records: [[ .Records ]],
-                      TableHeaders: [[ .TableHeaders ]]
+                      TableHeaders: [[ .TableHeaders ]],
         }
         $scope.changeTable = function(newtable) {
-            $http.get("http://localhost:9080/foo/devcrapdb1.sqlite?" + newtable)
+            $http.get("[[ .Protocol ]]://[[ .Server ]]/[[ .Username ]]/[[ .Database ]]?" + newtable)
                 .then(function (response) { $scope.db = response.data; })
         }
     });
