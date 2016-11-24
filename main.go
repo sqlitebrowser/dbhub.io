@@ -101,8 +101,8 @@ var (
 
 	// Address to listen on
 	listenProtocol = "http"
-	listenAddr = "localhost"
-	listenPort = 8080
+	listenAddr     = "localhost"
+	listenPort     = 8080
 )
 
 func main() {
@@ -133,7 +133,7 @@ func main() {
 
 	log.Println("Running...")
 	http.HandleFunc("/", mainHandler)
-	log.Fatal(http.ListenAndServe(listenAddr + ":" + strconv.Itoa(listenPort), nil))
+	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
@@ -360,11 +360,11 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 
 		return nil
 	})
-	defer stmt.Finalize()
 	if err != nil {
 		log.Printf("Error when retrieving select data from database: %s\v", err)
 		return
 	}
+	defer stmt.Finalize()
 
 	dataRows.Username = userName
 	dataRows.Database = databaseName
