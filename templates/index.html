@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html ng-app="DBHub-front" ng-controller="databaseView">
 <head>
     <meta charset="UTF-8">
@@ -116,7 +116,7 @@
                     <th ng-repeat="header in db.TableHeaders">{{ header }}</th>
                 </tr>
                 <tr ng-repeat="row in db.Records">
-                    <td ng-repeat="val in row"><span ng-bind-html="trustAsHtml(printValue(val.Value))"></span></td>
+                    <td ng-repeat="val in row"><span ng-bind-html="val.Value | fixSpaces"></span></td>
                 </tr>
             </table>
         </div>
@@ -132,8 +132,16 @@
 </div>
 
 <script>
-    var app = angular.module('DBHub-front', ['ui.bootstrap']);
-    app.controller('databaseView', function($scope, $http, $sce) {
+    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    app.filter("fixSpaces", ['$sce', '$sanitize', function($sce, $sanitize) {
+        return function(htmlCode){
+            if (htmlCode == "") {
+                htmlCode = '&nbsp;';
+            }
+            return $sanitize(htmlCode);
+        }
+    }]);
+    app.controller('databaseView', function($scope, $http) {
         $scope.db = { Username: "[[ .Username ]]",
                       Database: "[[ .Database ]]",
                       Watchers: "[[ .Watchers ]]",
@@ -156,16 +164,6 @@
             $http.get("http://localhost:9080/foo/devcrapdb1.sqlite?" + newtable)
                 .then(function (response) { $scope.db = response.data; })
         }
-        $scope.printValue = function(fieldVal) {
-            if (fieldVal == "") {
-                fieldVal = "&nbsp;"
-            }
-            return fieldVal
-        }
-        // FIXME: Using $sce.trustAsHtml in this way seems like a security risk, as it will probably allow embedded
-        // FIXME  HTML (in a user database field) to be presented unescaped.  Find a better way.  Maybe an AngularJS
-        // FIXME  filter instead?
-        $scope.trustAsHtml = $sce.trustAsHtml;
     });
 </script>
 </body>
