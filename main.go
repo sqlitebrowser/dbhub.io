@@ -425,9 +425,11 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 			// Retrieve the data type for the field
 			fieldType := stmt.ColumnType(i)
 
+			isNull := false
 			switch fieldType {
 			case sqlite.Integer:
-				val, isNull, err := s.ScanInt(i)
+				var val int
+				val, isNull, err = s.ScanInt(i)
 				if err != nil {
 					log.Printf("Something went wrong with ScanInt(): %v\n", err)
 					break
@@ -436,12 +438,10 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 					stringVal := fmt.Sprintf("%d", val)
 					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Integer,
 						Value: stringVal})
-				} else {
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Null,
-						Value: "NULL"})
 				}
 			case sqlite.Float:
-				val, isNull, err := s.ScanDouble(i)
+				var val float64
+				val, isNull, err = s.ScanDouble(i)
 				if err != nil {
 					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
 					break
@@ -450,31 +450,26 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
 					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Float,
 						Value: stringVal})
-				} else {
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Null,
-						Value: "NULL"})
 				}
 			case sqlite.Text:
-				val, isNull := s.ScanText(i)
+				var val string
+				val, isNull = s.ScanText(i)
 				if !isNull {
 					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Text,
 						Value: val})
-				} else {
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Null,
-						Value: "NULL"})
 				}
 			case sqlite.Blob:
-				val, isNull := s.ScanBlob(i)
+				_, isNull = s.ScanBlob(i)
 				if !isNull {
 					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Binary,
-						Value: val})
-				} else {
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Null,
-						Value: "NULL"})
+						Value: "<i>BINARY DATA</i>"})
 				}
 			case sqlite.Null:
+				isNull = true
+			}
+			if isNull {
 				row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Null,
-					Value: "NULL"})
+					Value: "<i>NULL</i>"})
 			}
 		}
 		dataRows.Records = append(dataRows.Records, row)
