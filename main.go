@@ -401,7 +401,7 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 	// Retrieve (up to) x rows from the selected database
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
-	stmt, err := db.Prepare("SELECT * FROM " + selectedTable + " LIMIT 8")
+	stmt, err := db.Prepare("SELECT * FROM " + selectedTable + " LIMIT 10")
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
 		return
@@ -530,14 +530,22 @@ func renderUserPage(w http.ResponseWriter, userName string) {
 	userData.Username = userName
 
 	// Retrieve list of public databases for the user
-	rows, err := db.Query(
-		"SELECT DISTINCT ON (dbname) dbname, last_modified, size, version, watchers, stars, forks, "+
-			"discussions, pull_requests, updates, branches, releases, contributors, description "+
-			"FROM public.sqlite_databases "+
-			"WHERE username = $1 "+
-			"AND public = TRUE "+
-			"ORDER BY dbname, last_modified DESC",
-		userName)
+	dbQuery := "WITH user_public_databases AS (" +
+		"SELECT DISTINCT ON (dbname) dbname, version " +
+		"FROM public.sqlite_databases " +
+		"WHERE username = $1 " +
+		"AND public = TRUE " +
+		"ORDER BY dbname, version DESC" +
+		") " +
+		"SELECT i.dbname, last_modified, size, i.version, watchers, stars, forks, " +
+		"discussions, pull_requests, updates, branches, releases, contributors, description " +
+		"FROM user_public_databases AS l, public.sqlite_databases AS i " +
+		"WHERE username = $1 " +
+		"AND l.dbname = i.dbname " +
+		"AND l.version = i.version " +
+		"AND public = TRUE " +
+		"ORDER BY last_modified DESC"
+	rows, err := db.Query(dbQuery, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: \n%v", pageName, err)
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
