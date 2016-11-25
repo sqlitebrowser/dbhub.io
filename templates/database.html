@@ -33,7 +33,7 @@
         <div class="col-md-10">
             <div class="row">
                 <div class="col-md-2">
-                    <a href="">Data</a>
+                    Data
                 </div>
                 <div class="col-md-2">
                     <a href="">Visualise</a>
@@ -48,12 +48,12 @@
                     <label id="viewprs"><a href="">{{ 'Pull Requests: ' }}</a>{{ meta.PRs }}</label>
                 </div>
                 <div class="col-md-2">
-                    <a href="">Statistics</a>
+                    &nbsp;
                 </div>
             </div>
         </div>
         <div class="col-md-2">
-            &nbsp;
+            <b>Size</b>: {{ meta.Size / 1024 | number : 0 }} KB
         </div>
     </div>
     <div class="row">
@@ -96,16 +96,18 @@
                         <a href="#{{ row }}">{{ row }}</a>
                     </li>
                 </ul>
-                <button class="btn btn-default">New Pull Request</button>
+                <button class="btn btn-primary">New Pull Request</button>
             </div>
         </div>
-        <div class="col-md-1">
+        <div class="col-md-2" style="vertical-align: text-bottom;">
             &nbsp;
         </div>
-        <div class="col-md-6">
-            <button class="btn btn-default pull-right">Download</button>
-            <button class="btn btn-default pull-right">Upload database</button>
-            <button class="btn btn-default pull-right">Create new database</button>
+        <div class="col-md-5">
+            <span class="pull-right">
+                <button class="btn btn-primary">Create new database</button>
+                <button class="btn btn-primary">Upload database</button>
+                <button class="btn btn-success">Download</button>
+            </span>
         </div>
     </div>
     <div class="row">
@@ -154,6 +156,7 @@
             Releases: "[[ .Releases ]]",
             Contributors: "[[ .Contributors ]]",
             Readme: "[[ .Readme ]]",
+            Size: "[[ .Size ]]",
             Tables: [[ .Tables ]],
         }
         $scope.db = { Tablename: "[[ .Tablename ]]",
