@@ -1,0 +1,55 @@
+<!doctype html>
+<html ng-app="DBHub-front" ng-controller="userView">
+<head>
+    <meta charset="UTF-8">
+    <title>DBHub.io - {{ db.Username }}</title>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-sanitize.min.js"></script>
+    <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-2.2.0.min.js"></script>
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
+
+        #viewupdates, #viewbranches, #viewreleases, #viewcontribs {
+            margin-left: 30%;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 id="viewuser">
+                <div class="pull-left">[[ .Username ]]'s public databases</div>
+            </h2>
+        </div>
+    </div>
+    <div>&nbsp;</div>
+    <div class="row">
+        <div class="col-md-12">
+            <table class="table table-bordered table-striped table-responsive">
+                <tr ng-repeat="row in db.Databases">
+                    <td><h4><a href="{{ meta.Username + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
+                        <b>Version:</b> {{ row.Version }} &nbsp; <b>Size:</b> {{ row.Size }} bytes &nbsp;
+                        <b>Watchers:</b> {{ row.Watchers }} &nbsp; <b>Stars:</b> {{ row.Stars }} &nbsp;
+                        <b>Forks:</b> {{ row.Forks }} &nbsp; <b>Discussions:</b> {{ row. Discussions }} &nbsp;
+                        <b>PRs:</b> {{ row.PRs }} &nbsp; <b>Updates:</b> {{ row.Updates }} &nbsp;
+                        <b>Branches:</b> {{ row.Branches }} &nbsp; <b>Releases:</b> {{ row.Releases }} &nbsp;
+                        <b>Contributors:</b> {{ row.Contributors }}<br />
+                        <b>Last modified:</b> {{ row.LastModified }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('userView', function($scope) {
+        $scope.meta = { Username: "[[ .Username ]]" }
+        $scope.db = { Databases: [[ .DataRows ]] }
+    });
+</script>
+</body>
+</html>

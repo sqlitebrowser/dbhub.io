@@ -2,7 +2,7 @@
 <html ng-app="DBHub-front" ng-controller="databaseView">
 <head>
     <meta charset="UTF-8">
-    <title>DBHub.io - {{ meta.Username }} / {{ meta.Database }}</title>
+    <title>DBHub.io - [[ .Username ]] / [[ .Database ]]</title>
     <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular.min.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-sanitize.min.js"></script>
     <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-2.2.0.min.js"></script>
@@ -20,7 +20,7 @@
     <div class="row">
         <div class="col-md-12">
             <h2 id="viewuser">
-                <div class="pull-left"><a href="/{{ meta.Username }}">{{ meta.Username }}</a> / {{ meta.Database }}</div>
+                <div class="pull-left"><a href="/[[ .Username ]]">[[ .Username ]]</a> / [[ .Database ]]</div>
                 <div class="btn-group pull-right">
                     <button type="button" class="btn btn-default" ng-bind="'Watchers: ' + meta.Watchers"></button>
                     <button type="button" class="btn btn-default" ng-bind="'Stars: ' + meta.Stars"></button>
