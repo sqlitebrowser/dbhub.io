@@ -105,6 +105,89 @@ var (
 	listenPort     = 8080
 )
 
+func downloadHandler(w http.ResponseWriter, req *http.Request) {
+	pageName := "Download Handler"
+
+	// Split the request URL into path components
+	pathStrings := strings.Split(req.URL.Path, "/")
+
+	// Basic sanity check
+	numPieces := len(pathStrings)
+	if numPieces < 4 {
+		http.Error(w, "Invalid database requested", http.StatusBadRequest)
+		return
+	}
+
+	// Extract the username, database, and version requested
+	// TODO: Validate the user supplied data better, or at least verify that net/http does so itself sufficiently
+	var dbVersion int64
+	userName := pathStrings[2]
+	dbName := pathStrings[3]
+	queryValues := req.URL.Query()
+	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0)
+	if err != nil {
+		log.Printf("%s: Invalid version number: \n%v", pageName, err)
+		http.Error(w, fmt.Sprintf("Invalid version number"), http.StatusBadRequest)
+		return
+	}
+
+	// Verify the given database exists and is ok to be downloaded (and get the MinioID while at it)
+	rows, err := db.Query("SELECT minioid FROM public.sqlite_databases "+
+		"WHERE dbname = $1 "+
+		"AND version = $2 "+
+		"AND username = $3 " +
+		"AND public = true", dbName, dbVersion, userName)
+	if err != nil {
+		log.Printf("%s: Database query failed: \n%v", pageName, err)
+		http.Error(w, fmt.Sprintf("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	var minioID string
+	for rows.Next() {
+		err = rows.Scan(&minioID)
+		if err != nil {
+			log.Printf("%s: Error retrieving MinioID: %v\n", pageName, err)
+			http.Error(w, fmt.Sprintf("Database query failed"), http.StatusInternalServerError)
+			return
+		}
+	}
+	if minioID == "" {
+		log.Printf("%s: Couldn't retrieve required MinioID\n", pageName)
+		http.Error(w, fmt.Sprintf("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+
+	// Get a handle from Minio for the database object
+	userDB, err := minioClient.GetObject(userName, minioID)
+	if err != nil {
+		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
+		http.Error(w, fmt.Sprintf("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+
+	// Close the object handle when this function finishes
+	defer func() {
+		err := userDB.Close()
+		if err != nil {
+			log.Printf("%s: Error closing object handle: %v\n", pageName, err)
+		}
+	}()
+
+	// Send the database to the user
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", dbName))
+	w.Header().Set("Content-Type", "application/x-sqlite3")
+	bytesWritten, err := io.Copy(w, userDB)
+	if err != nil {
+		log.Printf("%s: Error returning DB file: %v\n", pageName, err)
+		fmt.Fprintf(w, "%s: Error returning DB file: %v\n", pageName, err)
+		return
+	}
+
+	// Log the number of bytes written
+	log.Printf("%s: '%v' downloaded by user '%v', %v bytes", pageName, dbName, userName, bytesWritten)
+}
+
 func main() {
 	// Read server configuration
 	var err error
@@ -133,6 +216,7 @@ func main() {
 
 	log.Println("Running...")
 	http.HandleFunc("/", mainHandler)
+	http.HandleFunc("/download/", downloadHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
 

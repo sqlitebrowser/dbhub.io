@@ -96,8 +96,8 @@
                         <a href="#{{ row }}">{{ row }}</a>
                     </li>
                 </ul>
-                <button class="btn btn-primary">New Pull Request</button>
             </div>
+            <button class="btn btn-primary">New Pull Request</button>
         </div>
         <div class="col-md-2" style="vertical-align: text-bottom;">
             &nbsp;
@@ -106,7 +106,15 @@
             <span class="pull-right">
                 <button class="btn btn-primary">Create new database</button>
                 <button class="btn btn-primary">Upload database</button>
-                <button class="btn btn-success">Download</button>
+                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <button type="button" class="btn btn-success" uib-dropdown-toggle>
+                        Download <span class="caret"></span>
+                    </button>
+                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                      <li><a href="/download/[[ .Username ]]/[[ .Database ]]?version=[[ .Version ]]">Entire database</a></li>
+                      <li><a href="#">Selected table as CSV</a></li>
+                    </ul>
+                </div>
             </span>
         </div>
     </div>
@@ -157,6 +165,7 @@
             Contributors: "[[ .Contributors ]]",
             Readme: "[[ .Readme ]]",
             Size: "[[ .Size ]]",
+            Version: "[[ .Version ]]",
             Tables: [[ .Tables ]],
         }
         $scope.db = { Tablename: "[[ .Tablename ]]",
