@@ -508,10 +508,55 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 }
 
 func renderRootPage(w http.ResponseWriter) {
-	// TODO: Create a template for the root directory
-	fmt.Fprintf(w, "Root directory")
+	pageName := "User Page"
 
-	return
+	// Structure to hold user list
+	type userInfo struct {
+		Username string
+		LastModified time.Time
+	}
+	var userList []userInfo
+
+	// Retrieve list of users with public databases
+	dbQuery := "WITH user_list AS ( " +
+		"SELECT DISTINCT ON (username) username, last_modified " +
+		"FROM public.sqlite_databases " +
+		"WHERE public = true " +
+		"ORDER BY username, last_modified DESC " +
+		") SELECT username, last_modified " +
+		"FROM user_list " +
+		"ORDER BY last_modified DESC"
+	rows, err := db.Query(dbQuery)
+	if err != nil {
+		log.Printf("%s: Database query failed: \n%v", pageName, err)
+		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var oneRow userInfo
+		err = rows.Scan(&oneRow.Username, &oneRow.LastModified)
+		if err != nil {
+			log.Printf("%s: Error retrieving database list for user: %v\n", pageName, err)
+			http.Error(w, "Error retrieving database list for user", http.StatusInternalServerError)
+			return
+		}
+		userList = append(userList, oneRow)
+	}
+
+	// Parse and execute the template
+	t := template.New("root.html")
+	t.Delims("[[", "]]")
+	t, err = t.ParseFiles("templates/root.html")
+	if err != nil {
+		log.Printf("Error: %s", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = t.Execute(w, userList)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
 }
 
 func renderUserPage(w http.ResponseWriter, userName string) {

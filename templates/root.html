@@ -1,0 +1,48 @@
+<!doctype html>
+<html ng-app="DBHub-front" ng-controller="rootView">
+<head>
+    <meta charset="UTF-8">
+    <title>DBHub.io - SQLite storage "in the cloud"</title>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-sanitize.min.js"></script>
+    <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-2.2.0.min.js"></script>
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
+
+        #viewupdates, #viewbranches, #viewreleases, #viewcontribs {
+            margin-left: 30%;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 id="viewuser">
+                <div class="pull-left">Users with public databases</div>
+            </h2>
+        </div>
+    </div>
+    <div>&nbsp;</div>
+    <div class="row">
+        <div class="col-md-12">
+            <table class="table table-bordered table-striped table-responsive">
+                <tr ng-repeat="user in users.List">
+                    <td><h4><a href="/{{ user.Username }}">{{ user.Username }}</a></h4>
+                        <b>Last modified:</b> {{ user.LastModified | date : 'd MMMM, y h:mm a' : 'UTC' }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('rootView', function($scope) {
+        $scope.users = { List: [[ . ]] }
+    });
+</script>
+</body>
+</html>
