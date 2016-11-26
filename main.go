@@ -105,6 +105,11 @@ var (
 	listenPort     = 8080
 )
 
+func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
+	http.Error(w, "CSV file!", http.StatusOK)
+	return
+}
+
 func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	pageName := "Download Handler"
 
@@ -188,6 +193,11 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("%s: '%v' downloaded by user '%v', %v bytes", pageName, dbName, userName, bytesWritten)
 }
 
+func downloadXLSHandler(w http.ResponseWriter, req *http.Request) {
+	http.Error(w, "XLS file!", http.StatusOK)
+	return
+}
+
 func main() {
 	// Read server configuration
 	var err error
@@ -217,6 +227,8 @@ func main() {
 	log.Println("Running...")
 	http.HandleFunc("/", mainHandler)
 	http.HandleFunc("/download/", downloadHandler)
+	http.HandleFunc("/downloadcsv/", downloadCSVHandler)
+	http.HandleFunc("/downloadxls/", downloadXLSHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
 
