@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/csv"
 	"fmt"
 	"html/template"
 	"io"
@@ -106,8 +108,199 @@ var (
 )
 
 func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
-	http.Error(w, "CSV file!", http.StatusOK)
-	return
+	pageName := "Download CSV"
+
+	// Split the request URL into path components
+	pathStrings := strings.Split(req.URL.Path, "/")
+
+	// Basic sanity check
+	numPieces := len(pathStrings)
+	if numPieces < 4 {
+		http.Error(w, "Invalid database requested", http.StatusBadRequest)
+		return
+	}
+
+	// Extract the username, database, table, and version requested
+	// TODO: Validate the user supplied data properly, as net/http doesn't do any useful (to us) sanitisation
+	var dbVersion int64
+	userName := pathStrings[2]
+	dbName := pathStrings[3]
+	queryValues := req.URL.Query()
+	dbTable := queryValues["table"][0]
+	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0)
+	if err != nil {
+		log.Printf("%s: Invalid version number: \n%v", pageName, err)
+		http.Error(w, fmt.Sprint("Invalid version number"), http.StatusBadRequest)
+		return
+	}
+
+	// Abort if no table name was given
+	if dbTable == "" {
+		log.Printf("%s: No table name given\n", pageName)
+		http.Error(w, "No table name given", http.StatusBadRequest)
+		return
+	}
+
+	// Verify the given database exists and is ok to be downloaded (and get the MinioID while at it)
+	rows, err := db.Query("SELECT minioid FROM public.sqlite_databases "+
+		"WHERE dbname = $1 "+
+		"AND version = $2 "+
+		"AND username = $3 " +
+		"AND public = true", dbName, dbVersion, userName)
+	if err != nil {
+		log.Printf("%s: Database query failed: \n%v", pageName, err)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	var minioID string
+	for rows.Next() {
+		err = rows.Scan(&minioID)
+		if err != nil {
+			log.Printf("%s: Error retrieving MinioID: %v\n", pageName, err)
+			http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+			return
+		}
+	}
+	if minioID == "" {
+		log.Printf("%s: Couldn't retrieve required MinioID\n", pageName)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+
+	// Get a handle from Minio for the database object
+	userDB, err := minioClient.GetObject(userName, minioID)
+	if err != nil {
+		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+
+	// Close the object handle when this function finishes
+	defer func() {
+		err := userDB.Close()
+		if err != nil {
+			log.Printf("%s: Error closing object handle: %v\n", pageName, err)
+		}
+	}()
+
+	// Save the database locally to a temporary file
+	tempfileHandle, err := ioutil.TempFile("", "databaseViewHandler-")
+	if err != nil {
+		log.Printf("%s: Error creating tempfile: %v\n", pageName, err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	tempfile := tempfileHandle.Name()
+	bytesWritten, err := io.Copy(tempfileHandle, userDB)
+	if err != nil {
+		log.Printf("%s: Error writing database to temporary file: %v\n", pageName, err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	if bytesWritten == 0 {
+		log.Printf("%s: 0 bytes written to the temporary file: %v\n", pageName, dbName)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	tempfileHandle.Close()
+	defer os.Remove(tempfile) // Delete the temporary file when this function finishes
+
+	// Open database
+	db, err := sqlite.Open(tempfile, sqlite.OpenReadOnly)
+	if err != nil {
+		log.Printf("Couldn't open database: %s", err)
+		return
+	}
+	defer db.Close()
+
+	// Retrieve all of the data from the selected database table
+	stmt, err := db.Prepare("SELECT * FROM " + dbTable)
+	if err != nil {
+		log.Printf("Error when preparing statement for database: %s\v", err)
+		return
+	}
+
+	// Process each row
+	fieldCount := -1
+	var resultSet [][]string
+	err = stmt.Select(func(s *sqlite.Stmt) error {
+
+		// Get the number of fields in the result
+		if fieldCount == -1 {
+			fieldCount = stmt.DataCount()
+		}
+
+		// Retrieve the data for each row
+		var row []string
+		for i := 0; i < fieldCount; i++ {
+			// Retrieve the data type for the field
+			fieldType := stmt.ColumnType(i)
+
+			isNull := false
+			switch fieldType {
+			case sqlite.Integer:
+				var val int
+				val, isNull, err = s.ScanInt(i)
+				if err != nil {
+					log.Printf("Something went wrong with ScanInt(): %v\n", err)
+					break
+				}
+				if !isNull {
+					row = append(row, fmt.Sprintf("%d", val))
+				}
+			case sqlite.Float:
+				var val float64
+				val, isNull, err = s.ScanDouble(i)
+				if err != nil {
+					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
+					break
+				}
+				if !isNull {
+					row = append(row, strconv.FormatFloat(val, 'f', 4, 64))
+				}
+			case sqlite.Text:
+				var val string
+				val, isNull = s.ScanText(i)
+				if !isNull {
+					row = append(row, val)
+				}
+			case sqlite.Blob:
+				var val []byte
+				val, isNull = s.ScanBlob(i)
+				if !isNull {
+					// Base64 encode the value
+					row = append(row, base64.StdEncoding.EncodeToString(val))
+				}
+			case sqlite.Null:
+				isNull = true
+			}
+			if isNull {
+				row = append(row, "NULL")
+			}
+		}
+		resultSet = append(resultSet, row)
+
+		return nil
+	})
+	if err != nil {
+		log.Printf("Error when reading data from database: %s\v", err)
+		http.Error(w, fmt.Sprintf("Error reading data from '%s'.  Possibly malformed?", dbName),
+			http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Finalize()
+
+	// Convert resultSet into CSV and send to the user
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", dbTable))
+	w.Header().Set("Content-Type", "text/csv")
+	csvFile := csv.NewWriter(w)
+	err = csvFile.WriteAll(resultSet)
+	if err != nil {
+		log.Printf("%s: Error when generating CSV: %v\n", pageName, err)
+		http.Error(w, "Error when generating CSV", http.StatusInternalServerError)
+		return
+	}
 }
 
 func downloadHandler(w http.ResponseWriter, req *http.Request) {
@@ -124,7 +317,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Extract the username, database, and version requested
-	// TODO: Validate the user supplied data better, or at least verify that net/http does so itself sufficiently
+	// TODO: Validate the user supplied data properly, as net/http doesn't do any useful (to us) sanitisation
 	var dbVersion int64
 	userName := pathStrings[2]
 	dbName := pathStrings[3]
@@ -132,7 +325,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0)
 	if err != nil {
 		log.Printf("%s: Invalid version number: \n%v", pageName, err)
-		http.Error(w, fmt.Sprintf("Invalid version number"), http.StatusBadRequest)
+		http.Error(w, fmt.Sprint("Invalid version number"), http.StatusBadRequest)
 		return
 	}
 
@@ -144,7 +337,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 		"AND public = true", dbName, dbVersion, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: \n%v", pageName, err)
-		http.Error(w, fmt.Sprintf("Database query failed"), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -153,13 +346,13 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 		err = rows.Scan(&minioID)
 		if err != nil {
 			log.Printf("%s: Error retrieving MinioID: %v\n", pageName, err)
-			http.Error(w, fmt.Sprintf("Database query failed"), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
 			return
 		}
 	}
 	if minioID == "" {
 		log.Printf("%s: Couldn't retrieve required MinioID\n", pageName)
-		http.Error(w, fmt.Sprintf("Database query failed"), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
 		return
 	}
 
@@ -167,7 +360,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	userDB, err := minioClient.GetObject(userName, minioID)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
-		http.Error(w, fmt.Sprintf("Database query failed"), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
 		return
 	}
 
@@ -191,11 +384,6 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 
 	// Log the number of bytes written
 	log.Printf("%s: '%v' downloaded by user '%v', %v bytes", pageName, dbName, userName, bytesWritten)
-}
-
-func downloadXLSHandler(w http.ResponseWriter, req *http.Request) {
-	http.Error(w, "XLS file!", http.StatusOK)
-	return
 }
 
 func main() {
@@ -228,7 +416,6 @@ func main() {
 	http.HandleFunc("/", mainHandler)
 	http.HandleFunc("/download/", downloadHandler)
 	http.HandleFunc("/downloadcsv/", downloadCSVHandler)
-	http.HandleFunc("/downloadxls/", downloadXLSHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
 
@@ -407,8 +594,8 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 			&dataRows.Discussions, &dataRows.PRs, &dataRows.Updates, &dataRows.Branches, &dataRows.Releases,
 			&dataRows.Contributors, &Desc, &Readme)
 		if err != nil {
-			log.Printf("%s: Error retrieving MinioID from database: %v\n", pageName, err)
-			http.Error(w, "Error retrieving MinioID from database", http.StatusInternalServerError)
+			log.Printf("%s: Error retrieving metadata from database: %v\n", pageName, err)
+			http.Error(w, "Error retrieving metadata from database", http.StatusInternalServerError)
 			return
 		}
 		if !Desc.Valid {
