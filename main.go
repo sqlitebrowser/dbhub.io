@@ -18,8 +18,10 @@ import (
 	"github.com/BurntSushi/toml"
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/jackc/pgx"
+	//"github.com/leebenson/conform"
 	"github.com/minio/go-homedir"
 	"github.com/minio/minio-go"
+	valid "gopkg.in/go-playground/validator.v9"
 )
 
 type ValType int
@@ -105,6 +107,9 @@ var (
 	listenProtocol = "http"
 	listenAddr     = "localhost"
 	listenPort     = 8080
+
+	// For input validation
+	validate *valid.Validate
 )
 
 func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
@@ -121,16 +126,23 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Extract the username, database, table, and version requested
-	// TODO: Validate the user supplied data properly, as net/http doesn't do any useful (to us) sanitisation
 	var dbVersion int64
 	userName := pathStrings[2]
 	dbName := pathStrings[3]
 	queryValues := req.URL.Query()
 	dbTable := queryValues["table"][0]
-	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0)
+	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0) // This also validates the version input
 	if err != nil {
 		log.Printf("%s: Invalid version number: \n%v", pageName, err)
 		http.Error(w, fmt.Sprint("Invalid version number"), http.StatusBadRequest)
+		return
+	}
+
+	// Validate the user supplied user, database, and table name
+	err = validateUserDBTable(userName, dbName, dbTable)
+	if err != nil {
+		log.Printf("Validation failed for user, database, or table name: %s", err)
+		http.Error(w, "Invalid user, database, or table name", http.StatusBadRequest)
 		return
 	}
 
@@ -317,15 +329,22 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Extract the username, database, and version requested
-	// TODO: Validate the user supplied data properly, as net/http doesn't do any useful (to us) sanitisation
 	var dbVersion int64
 	userName := pathStrings[2]
 	dbName := pathStrings[3]
 	queryValues := req.URL.Query()
-	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0)
+	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0) // This also validates the version input
 	if err != nil {
 		log.Printf("%s: Invalid version number: \n%v", pageName, err)
 		http.Error(w, fmt.Sprint("Invalid version number"), http.StatusBadRequest)
+		return
+	}
+
+	// Validate the user supplied user and database name
+	err = validateUserDB(userName, dbName)
+	if err != nil {
+		log.Printf("Validation failed for user or database name: %s", err)
+		http.Error(w, "Invalid user or database name", http.StatusBadRequest)
 		return
 	}
 
@@ -387,6 +406,9 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	// Load validation code
+	validate = valid.New()
+
 	// Read server configuration
 	var err error
 	if err = readConfig(); err != nil {
@@ -420,8 +442,6 @@ func main() {
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
-	//pageName := "mainHandler()"
-
 	// Split the request URL into path components
 	pathStrings := strings.Split(req.URL.Path, "/")
 
@@ -444,6 +464,14 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 
 	userName := pathStrings[1]
 	databaseName := pathStrings[2]
+
+	// Validate the user supplied user and database name
+	err := validateUserDB(userName, databaseName)
+	if err != nil {
+		log.Printf("Validation failed of user or database name: %s", err)
+		http.Error(w, "Invalid user or database name", http.StatusBadRequest)
+		return
+	}
 
 	// This catches the case where a "/" is on the end of a user page URL
 	// TODO: Refactor this and the above identical code.  Doing it this way is non-optimal
