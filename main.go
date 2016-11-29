@@ -801,17 +801,8 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 	dataRows.Protocol = listenProtocol
 	dataRows.Server = listenAddr + ":9080"
 
-	// Parse the template, but use "[[" and "]]" as delimiters.  This is because both Go and AngularJS use
-	// "{{" "}}" by default, so one needs to be changed ;)
-	t := template.New("database.html")
-	t.Delims("[[", "]]")
-	t, err = t.ParseFiles("templates/database.html")
-	if err != nil {
-		log.Printf("Error: %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+	// Parse and render the template
+	var t = template.Must(template.New("database.html").Delims("[[", "]]").ParseFiles("templates/database.html"))
 	err = t.Execute(w, dataRows)
 	if err != nil {
 		log.Printf("Error: %s", err)
@@ -855,15 +846,8 @@ func renderRootPage(w http.ResponseWriter) {
 		userList = append(userList, oneRow)
 	}
 
-	// Parse and execute the template
-	t := template.New("root.html")
-	t.Delims("[[", "]]")
-	t, err = t.ParseFiles("templates/root.html")
-	if err != nil {
-		log.Printf("Error: %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// Parse and render the template
+	var t = template.Must(template.New("root.html").Delims("[[", "]]").ParseFiles("templates/root.html"))
 	err = t.Execute(w, userList)
 	if err != nil {
 		log.Printf("Error: %s", err)
@@ -922,15 +906,8 @@ func renderUserPage(w http.ResponseWriter, userName string) {
 		userData.DataRows = append(userData.DataRows, oneRow)
 	}
 
-	// Parse and execute the template
-	t := template.New("user.html")
-	t.Delims("[[", "]]")
-	t, err = t.ParseFiles("templates/user.html")
-	if err != nil {
-		log.Printf("Error: %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// Parse and render the template
+	var t = template.Must(template.New("user.html").Delims("[[", "]]").ParseFiles("templates/user.html"))
 	err = t.Execute(w, userData)
 	if err != nil {
 		log.Printf("Error: %s", err)
