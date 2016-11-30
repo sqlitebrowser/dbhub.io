@@ -36,7 +36,7 @@ func databasePage(w http.ResponseWriter, userName string, databaseName string) {
 
 	var pageData struct {
 		Meta metaInfo
-		DB dbInfo
+		DB   dbInfo
 	}
 
 	var minioID string
@@ -241,7 +241,7 @@ func frontPage(w http.ResponseWriter) {
 
 	// Structure to hold page data
 	type userInfo struct {
-		Username string
+		Username     string
 		LastModified time.Time
 	}
 	var pageData struct {
@@ -290,7 +290,7 @@ func userPage(w http.ResponseWriter, userName string) {
 
 	// Structure to hold page data
 	var pageData struct {
-		Meta metaInfo
+		Meta     metaInfo
 		DataRows []dbInfo
 	}
 	pageData.Meta.Username = userName
@@ -345,4 +345,3 @@ func userPage(w http.ResponseWriter, userName string) {
 		log.Printf("Error: %s", err)
 	}
 }
-

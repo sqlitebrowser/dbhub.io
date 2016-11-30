@@ -65,11 +65,11 @@ type dbInfo struct {
 }
 
 type metaInfo struct {
-	Protocol     string
-	Server       string
-	Title        string
-	Username     string
-	Database     string
+	Protocol string
+	Server   string
+	Title    string
+	Username string
+	Database string
 }
 
 // Configuration file
@@ -163,7 +163,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	rows, err := db.Query("SELECT minioid FROM public.sqlite_databases "+
 		"WHERE dbname = $1 "+
 		"AND version = $2 "+
-		"AND username = $3 " +
+		"AND username = $3 "+
 		"AND public = true", dbName, dbVersion, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: \n%v", pageName, err)
@@ -358,7 +358,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	rows, err := db.Query("SELECT minioid FROM public.sqlite_databases "+
 		"WHERE dbname = $1 "+
 		"AND version = $2 "+
-		"AND username = $3 " +
+		"AND username = $3 "+
 		"AND public = true", dbName, dbVersion, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: \n%v", pageName, err)
