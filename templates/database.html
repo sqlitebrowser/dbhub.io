@@ -2,11 +2,12 @@
 <html ng-app="DBHub-front" ng-controller="databaseView">
 [[ template "head" . ]]
 <body>
+[[ template "header" . ]]
 <div class="container">
     <div class="row">
         <div class="col-md-12">
-            <h2 id="viewuser">
-                <div class="pull-left"><a href="/">/</a> <a href="/[[ .Meta.Username ]]">[[ .Meta.Username ]]</a> / [[ .Meta.Database ]]</div>
+            <h2 id="viewuser" style="margin-top: 10px;">
+                <div class="pull-left"><a href="/[[ .Meta.Username ]]">[[ .Meta.Username ]]</a> / [[ .Meta.Database ]]</div>
                 <div class="btn-group pull-right">
                     <button type="button" class="btn btn-default" ng-bind="'Watchers: ' + meta.Watchers"></button>
                     <button type="button" class="btn btn-default" ng-bind="'Stars: ' + meta.Stars"></button>
