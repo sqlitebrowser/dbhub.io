@@ -24,9 +24,12 @@ func validateUserDBTable(user string, db string, table string) error {
 		return errs
 	}
 
-	// TODO: Improve this to work with all valid PostgreSQL identifiers
-	// https://www.postgresql.org/docs/current/static/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
-	errs = validate.Var(table, "required,alphanum,max=63")
+	// TODO: Improve this to work with all valid SQLite identifiers
+	// TODO  Not seeing a definitive reference page for SQLite yet, so using the PostgreSQL one is
+	// TODO  probably ok as a fallback:
+	// TODO      https://www.postgresql.org/docs/current/static/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
+	// TODO: Should we exclude SQLite internal tables too? (eg "sqlite_*" https://sqlite.org/lang_createtable.html)
+	errs = validate.Var(table, "required,alphanum|contains=-|contains=_|contains=.,max=63")
 	if errs != nil {
 		return errs
 	}
