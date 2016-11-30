@@ -286,11 +286,14 @@ func frontPage(w http.ResponseWriter) {
 }
 
 func registerPage(w http.ResponseWriter) {
-	//pageName := "Register Page"
+	var pageData struct {
+		Meta metaInfo
+	}
+	pageData.Meta.Title = "Register"
 
 	// Render the page
 	t := tmpl.Lookup("registerPage")
-	err := t.Execute(w, nil)
+	err := t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
