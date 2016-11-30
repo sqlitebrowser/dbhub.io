@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/minio/go-homedir"
 	"github.com/minio/minio-go"
+	"golang.org/x/crypto/bcrypt"
 	valid "gopkg.in/go-playground/validator.v9"
 )
 
@@ -139,7 +140,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	dbTable := queryValues["table"][0]
 	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0) // This also validates the version input
 	if err != nil {
-		log.Printf("%s: Invalid version number: \n%v", pageName, err)
+		log.Printf("%s: Invalid version number: %v\n", pageName, err)
 		http.Error(w, fmt.Sprint("Invalid version number"), http.StatusBadRequest)
 		return
 	}
@@ -166,7 +167,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 		"AND username = $3 "+
 		"AND public = true", dbName, dbVersion, userName)
 	if err != nil {
-		log.Printf("%s: Database query failed: \n%v", pageName, err)
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
 		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
 		return
 	}
@@ -341,7 +342,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	queryValues := req.URL.Query()
 	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0) // This also validates the version input
 	if err != nil {
-		log.Printf("%s: Invalid version number: \n%v", pageName, err)
+		log.Printf("%s: Invalid version number: %v\n", pageName, err)
 		http.Error(w, fmt.Sprint("Invalid version number"), http.StatusBadRequest)
 		return
 	}
@@ -361,7 +362,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 		"AND username = $3 "+
 		"AND public = true", dbName, dbVersion, userName)
 	if err != nil {
-		log.Printf("%s: Database query failed: \n%v", pageName, err)
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
 		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
 		return
 	}
@@ -608,18 +609,155 @@ func readConfig() error {
 }
 
 func registerHandler(w http.ResponseWriter, req *http.Request) {
+	pageName := "Registration page"
 
-	// TODO: Check if filled out form details have been provided
+	// TODO: Add browser side validation of the form data too (using AngularJS?) to save a trip to the server
+	// TODO  and make for a nicer user experience for sign up
 
-	// TODO: If not...
-	// Render the registration page
-	registerPage(w)
+	// Gather submitted form data (if any)
+	err := req.ParseForm()
+	if err != nil {
+		log.Printf("Error when parsing registration data: %s\n", err)
+		http.Error(w, "Error when parsing registration data", http.StatusBadRequest)
+		return
+	}
+	userName := req.PostFormValue("username")
+	password := req.PostFormValue("pass")
+	passConfirm := req.PostFormValue("pconfirm")
+	email := req.PostFormValue("email")
+	agree := req.PostFormValue("agree")
 
-	// TODO: Check if the username or email address is already in our system
+	// Check if any (relevant) form data was submitted
+	if userName == "" && password == "" && passConfirm == "" && email == "" && agree == "" {
+		// No, so render the registration page
+		registerPage(w)
+		return
+	}
 
-	// TODO: Create a bcrypt() hash of the user's password
+	// Validate the user supplied username and email address
+	err = validateUserEmail(userName, email)
+	if err != nil {
+		log.Printf("Validation failed of username or email: %s", err)
+		http.Error(w, "Invalid username or email", http.StatusBadRequest)
+		return
+	}
 
-	// TODO: Create the user's account
+	// Check the password and confirmation match
+	if len(password) != len(passConfirm) || password != passConfirm {
+		log.Println("Password and confirmation do not match")
+		http.Error(w, "Password and confirmation do not match", http.StatusBadRequest)
+		return
+	}
 
-	// TODO: Display a success message
+	// Check the password isn't blank
+	if len(password) < 6 {
+		log.Println("Password must be 6 characters or greater")
+		http.Error(w, "Password must be 6 characters or greater", http.StatusBadRequest)
+		return
+	}
+
+	// Check the Terms and Conditions was agreed to
+	if agree != "on" {
+		log.Println("Terms and Conditions wasn't agreed to")
+		http.Error(w, "Terms and Conditions wasn't agreed to", http.StatusBadRequest)
+		return
+	}
+
+	// Ensure the username isn't a reserved one
+	err = reservedUsernamesCheck(userName)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Username: '%s' Password: '%s' Password confirm: '%s' Email: '%s' Agree: '%v'", userName, password,
+		passConfirm, email, agree)
+
+	// Check if the username is already in our system
+	rows, err := db.Query("SELECT count(username) FROM public.users WHERE username = $1", userName)
+	if err != nil {
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	var userCount int
+	for rows.Next() {
+		err = rows.Scan(&userCount)
+		if err != nil {
+			log.Printf("%s: Error checking if user '%s' already exists: %v\n", pageName, userName, err)
+			http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+			return
+		}
+	}
+	if userCount > 0 {
+		log.Println("That username is already taken")
+		http.Error(w, "That username is already taken", http.StatusConflict)
+		return
+	}
+
+	// Check if the email address is already in our system
+	rows, err = db.Query("SELECT count(username) FROM public.users WHERE email = $1", email)
+	if err != nil {
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+	var emailCount int
+	for rows.Next() {
+		err = rows.Scan(&emailCount)
+		if err != nil {
+			log.Printf("%s: Error checking if email '%s' already exists: %v\n", pageName, email, err)
+			http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+			return
+		}
+	}
+	if emailCount > 0 {
+		log.Println("That email address is already associated with an account in our system")
+		http.Error(w, "That email address is already associated with an account in our system",
+			http.StatusConflict)
+		return
+	}
+
+	// Hash the user's password
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("%s: Failed to bcrypt hash user password. User: '%v', error: %v.\n", pageName, userName,
+			err)
+		http.Error(w, fmt.Sprint("Something went wrong during user creation"), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: Create the users certificate
+
+	// Add the new user to the database
+	insertQuery := "INSERT INTO public.users (username, email, password_hash, client_certificate) " +
+		"VALUES ($1, $2, $3, $4)"
+	commandTag, err := db.Exec(insertQuery, userName, email, hash, "") // TODO: Real certificate string should go here
+	if err != nil {
+		log.Printf("%s: Adding user to database failed: %v\n", pageName, err)
+		http.Error(w, fmt.Sprint("Something went wrong during user creation"), http.StatusInternalServerError)
+		return
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("%s: Wrong number of rows affected: %v, username: %v\n", pageName, numRows, userName)
+		return
+	}
+
+	// Create a new bucket for the user in Minio
+	err = minioClient.MakeBucket(userName, "us-east-1")
+	if err != nil {
+		log.Printf("%s: Error creating new bucket: %v\n", pageName, err)
+		http.Error(w, fmt.Sprint("Something went wrong during user creation"), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: Send a confirmation email, with verification link
+
+	// TODO: Display a proper success page
+	// TODO: This should probably bounce the user to their logged in profile page
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintf(w, `<html><body>Account created successfully, please login: <a href="/login">Login</a></body></html>`)
 }
