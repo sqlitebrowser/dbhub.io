@@ -28,7 +28,7 @@ func databasePage(w http.ResponseWriter, userName string, databaseName string) {
 			"LIMIT 1",
 		userName, databaseName)
 	if err != nil {
-		log.Printf("%s: Database query failed: \n%v", pageName, err)
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
 		return
 	}
@@ -260,7 +260,7 @@ func frontPage(w http.ResponseWriter) {
 		"ORDER BY last_modified DESC"
 	rows, err := db.Query(dbQuery)
 	if err != nil {
-		log.Printf("%s: Database query failed: \n%v", pageName, err)
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
 		return
 	}
@@ -325,7 +325,7 @@ func userPage(w http.ResponseWriter, userName string) {
 		"ORDER BY last_modified DESC"
 	rows, err := db.Query(dbQuery, userName)
 	if err != nil {
-		log.Printf("%s: Database query failed: \n%v", pageName, err)
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
 		http.Error(w, "Database query failed", http.StatusInternalServerError)
 		return
 	}
@@ -348,6 +348,10 @@ func userPage(w http.ResponseWriter, userName string) {
 		}
 		pageData.DataRows = append(pageData.DataRows, oneRow)
 	}
+
+	// TODO: Check if the user exists, and display an error message if they don't, or if they have no public
+	// TODO  databases.  This can probably be done by checking the row count from dbQuery above, and barfing if
+	// TODO  it's 0
 
 	// Render the page
 	t := tmpl.Lookup("userPage")
