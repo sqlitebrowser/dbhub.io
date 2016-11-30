@@ -114,6 +114,9 @@ var (
 
 	// For input validation
 	validate *valid.Validate
+
+	// Our parsed HTML templates
+	tmpl *template.Template
 )
 
 func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
@@ -418,6 +421,9 @@ func main() {
 	if err = readConfig(); err != nil {
 		log.Fatalf("Configuration file problem\n\n%v", err)
 	}
+
+	// Parse our template files
+	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob("templates/*.html"))
 
 	// Connect to Minio server
 	minioClient, err = minio.New(conf.Minio.Server, conf.Minio.AccessKey, conf.Minio.Secret, conf.Minio.HTTPS)
@@ -815,10 +821,8 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 	pageData.Meta.Server = listenAddr + ":9080"
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, databaseName)
 
-	// Parse and render the template
-	// TODO: Parsing the templates for each http request is non-optimal.  Do it once at application start instead
-	var t = template.Must(template.New("database.html").Delims("[[", "]]").ParseFiles(
-		"templates/database.html", "templates/head.html", "templates/header.html", "templates/footer.html"))
+	// Render the page
+	t := tmpl.Lookup("databasePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
@@ -866,10 +870,8 @@ func renderRootPage(w http.ResponseWriter) {
 	}
 	pageData.Meta.Title = `SQLite storage "in the cloud"`
 
-	// Parse and render the template
-	// TODO: Parsing the templates for each http request is non-optimal.  Do it once at application start instead
-	var t = template.Must(template.New("root.html").Delims("[[", "]]").ParseFiles(
-		"templates/root.html", "templates/head.html", "templates/header.html", "templates/footer.html"))
+	// Render the page
+	t := tmpl.Lookup("rootPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
@@ -929,10 +931,8 @@ func renderUserPage(w http.ResponseWriter, userName string) {
 		pageData.DataRows = append(pageData.DataRows, oneRow)
 	}
 
-	// Parse and render the template
-	// TODO: Parsing the templates for each http request is non-optimal.  Do it once at application start instead
-	var t = template.Must(template.New("user.html").Delims("[[", "]]").ParseFiles(
-		"templates/user.html", "templates/head.html", "templates/header.html", "templates/footer.html"))
+	// Render the page
+	t := tmpl.Lookup("userPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
