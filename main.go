@@ -815,7 +815,7 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 	// Parse and render the template
 	// TODO: Parsing the templates for each http request is non-optimal.  Do it once at application start instead
 	var t = template.Must(template.New("database.html").Delims("[[", "]]").ParseFiles(
-		"templates/database.html", "templates/head.html"))
+		"templates/database.html", "templates/head.html", "templates/footer.html"))
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
@@ -866,7 +866,7 @@ func renderRootPage(w http.ResponseWriter) {
 	// Parse and render the template
 	// TODO: Parsing the templates for each http request is non-optimal.  Do it once at application start instead
 	var t = template.Must(template.New("root.html").Delims("[[", "]]").ParseFiles(
-		"templates/root.html", "templates/head.html"))
+		"templates/root.html", "templates/head.html", "templates/footer.html"))
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
@@ -929,7 +929,7 @@ func renderUserPage(w http.ResponseWriter, userName string) {
 	// Parse and render the template
 	// TODO: Parsing the templates for each http request is non-optimal.  Do it once at application start instead
 	var t = template.Must(template.New("user.html").Delims("[[", "]]").ParseFiles(
-		"templates/user.html", "templates/head.html"))
+		"templates/user.html", "templates/head.html", "templates/footer.html"))
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)

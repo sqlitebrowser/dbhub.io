@@ -121,14 +121,21 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            <div class="page-header">
-                <h1>README</h1>
-            </div>
-            <label id="viewreadme" ng-bind="meta.Readme"></label>
+            <table class="table table-striped table-bordered table-responsive">
+                <tr>
+                    <td class="page-header"><h4>README</h4></td>
+                </tr>
+                <tr>
+                    <td id="viewreadme" ng-bind="meta.Readme"></td>
+                </tr>
+            </table>
         </div>
     </div>
+    <div class="row">
+        &nbsp;
+    </div>
 </div>
-
+[[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
     app.filter("fixSpaces", ['$sce', '$sanitize', function($sce, $sanitize) {
