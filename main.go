@@ -450,6 +450,7 @@ func main() {
 	http.HandleFunc("/images/sqlitebrowser.svg", func(w http.ResponseWriter, req *http.Request) {
 		http.ServeFile(w, req, "images/sqlitebrowser.svg")
 	})
+	http.HandleFunc("/register", registerHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
 
@@ -604,4 +605,21 @@ func readConfig() error {
 
 	// The configuration file seems good
 	return nil
+}
+
+func registerHandler(w http.ResponseWriter, req *http.Request) {
+
+	// TODO: Check if filled out form details have been provided
+
+	// TODO: If not...
+	// Render the registration page
+	registerPage(w)
+
+	// TODO: Check if the username or email address is already in our system
+
+	// TODO: Create a bcrypt() hash of the user's password
+
+	// TODO: Create the user's account
+
+	// TODO: Display a success message
 }

@@ -285,6 +285,17 @@ func frontPage(w http.ResponseWriter) {
 	}
 }
 
+func registerPage(w http.ResponseWriter) {
+	//pageName := "Register Page"
+
+	// Render the page
+	t := tmpl.Lookup("registerPage")
+	err := t.Execute(w, nil)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 func userPage(w http.ResponseWriter, userName string) {
 	pageName := "User Page"
 
