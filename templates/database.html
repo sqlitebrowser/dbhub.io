@@ -1,26 +1,12 @@
 <!doctype html>
 <html ng-app="DBHub-front" ng-controller="databaseView">
-<head>
-    <meta charset="UTF-8">
-    <title>DBHub.io - [[ .Username ]] / [[ .Database ]]</title>
-    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular.min.js"></script>
-    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-sanitize.min.js"></script>
-    <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-2.2.0.min.js"></script>
-    <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
-
-        #viewupdates, #viewbranches, #viewreleases, #viewcontribs {
-            margin-left: 30%;
-        }
-    </style>
-</head>
+[[ template "header" . ]]
 <body>
 <div class="container">
     <div class="row">
         <div class="col-md-12">
             <h2 id="viewuser">
-                <div class="pull-left"><a href="/">/</a> <a href="/[[ .Username ]]">[[ .Username ]]</a> / [[ .Database ]]</div>
+                <div class="pull-left"><a href="/">/</a> <a href="/[[ .Meta.Username ]]">[[ .Meta.Username ]]</a> / [[ .Meta.Database ]]</div>
                 <div class="btn-group pull-right">
                     <button type="button" class="btn btn-default" ng-bind="'Watchers: ' + meta.Watchers"></button>
                     <button type="button" class="btn btn-default" ng-bind="'Stars: ' + meta.Stars"></button>
@@ -114,8 +100,8 @@
                         Download <span class="caret"></span>
                     </button>
                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li><a href="/download/[[ .Username ]]/[[ .Database ]]?version=[[ .Version ]]">Entire database</a></li>
-                        <li><a href="/downloadcsv/[[ .Username ]]/[[ .Database ]]?version=[[ .Version ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
+                        <li><a href="/download/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Version ]]">Entire database</a></li>
+                        <li><a href="/downloadcsv/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Version ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
                     </ul>
                 </div>
             </span>
@@ -154,30 +140,30 @@
         }
     }]);
     app.controller('databaseView', function($scope, $http) {
-        $scope.meta = { Username: "[[ .Username ]]",
-            Database: "[[ .Database ]]",
-            Watchers: "[[ .Watchers ]]",
-            Stars: "[[ .Stars ]]",
-            Forks: "[[ .Forks ]]",
-            Discussions: "[[ .Discussions ]]",
-            PRs: "[[ .PRs ]]",
-            Description: "[[ .Description ]]",
-            Updates: "[[ .Updates ]]",
-            Branches: "[[ .Branches ]]",
-            Releases: "[[ .Releases ]]",
-            Contributors: "[[ .Contributors ]]",
-            Readme: "[[ .Readme ]]",
-            Size: "[[ .Size ]]",
-            Version: "[[ .Version ]]",
-            Tables: [[ .Tables ]],
+        $scope.meta = { Username: "[[ .Meta.Username ]]",
+            Database: "[[ .Meta.Database ]]",
+            Watchers: "[[ .DB.Watchers ]]",
+            Stars: "[[ .DB.Stars ]]",
+            Forks: "[[ .DB.Forks ]]",
+            Discussions: "[[ .DB.Discussions ]]",
+            PRs: "[[ .DB.PRs ]]",
+            Description: "[[ .DB.Description ]]",
+            Updates: "[[ .DB.Updates ]]",
+            Branches: "[[ .DB.Branches ]]",
+            Releases: "[[ .DB.Releases ]]",
+            Contributors: "[[ .DB.Contributors ]]",
+            Readme: "[[ .DB.Readme ]]",
+            Size: "[[ .DB.Size ]]",
+            Version: "[[ .DB.Version ]]",
+            Tables: [[ .DB.Tables ]],
         }
-        $scope.db = { Tablename: "[[ .Tablename ]]",
-                      Records: [[ .Records ]],
-                      TableHeaders: [[ .TableHeaders ]],
+        $scope.db = { Tablename: "[[ .DB.Tablename ]]",
+                      Records: [[ .DB.Records ]],
+                      TableHeaders: [[ .DB.TableHeaders ]],
         }
 
         $scope.changeTable = function(newtable) {
-            $http.get("[[ .Protocol ]]://[[ .Server ]]/[[ .Username ]]/[[ .Database ]]?" + newtable)
+            $http.get("[[ .Meta.Protocol ]]://[[ .Meta.Server ]]/[[ .Meta.Username ]]/[[ .Meta.Database ]]?" + newtable)
                 .then(function (response) { $scope.db = response.data; })
         }
     });

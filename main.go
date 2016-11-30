@@ -42,11 +42,10 @@ type dataValue struct {
 }
 type dataRow []dataValue
 type dbInfo struct {
+	Database     string
 	TableHeaders []string
 	Records      []dataRow
 	Tables       []string
-	Username     string
-	Database     string
 	Tablename    string
 	Watchers     int
 	Stars        int
@@ -62,11 +61,16 @@ type dbInfo struct {
 	DateCreated  time.Time
 	LastModified time.Time
 	Public       bool
-	MinioID      string
 	Size         int
 	Version      int
+}
+
+type metaInfo struct {
 	Protocol     string
 	Server       string
+	Title        string
+	Username     string
+	Database     string
 }
 
 // Configuration file
@@ -613,38 +617,44 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 		return
 	}
 	defer rows.Close()
-	var dataRows dbInfo
+
+	var pageData struct {
+		Meta metaInfo
+		DB dbInfo
+	}
+
+	var minioID string
 	for rows.Next() {
 		var Desc pgx.NullString
 		var Readme pgx.NullString
-		err = rows.Scan(&dataRows.MinioID, &dataRows.DateCreated, &dataRows.LastModified, &dataRows.Size,
-			&dataRows.Version, &dataRows.Public, &dataRows.Watchers, &dataRows.Stars, &dataRows.Forks,
-			&dataRows.Discussions, &dataRows.PRs, &dataRows.Updates, &dataRows.Branches, &dataRows.Releases,
-			&dataRows.Contributors, &Desc, &Readme)
+		err = rows.Scan(&minioID, &pageData.DB.DateCreated, &pageData.DB.LastModified, &pageData.DB.Size,
+			&pageData.DB.Version, &pageData.DB.Public, &pageData.DB.Watchers, &pageData.DB.Stars,
+			&pageData.DB.Forks, &pageData.DB.Discussions, &pageData.DB.PRs, &pageData.DB.Updates,
+			&pageData.DB.Branches, &pageData.DB.Releases, &pageData.DB.Contributors, &Desc, &Readme)
 		if err != nil {
 			log.Printf("%s: Error retrieving metadata from database: %v\n", pageName, err)
 			http.Error(w, "Error retrieving metadata from database", http.StatusInternalServerError)
 			return
 		}
 		if !Desc.Valid {
-			dataRows.Description = "No description"
+			pageData.DB.Description = "No description"
 		} else {
-			dataRows.Description = Desc.String
+			pageData.DB.Description = Desc.String
 		}
 		if !Readme.Valid {
-			dataRows.Readme = "No readme"
+			pageData.DB.Readme = "No readme"
 		} else {
-			dataRows.Readme = Readme.String
+			pageData.DB.Readme = Readme.String
 		}
 	}
-	if dataRows.MinioID == "" {
+	if minioID == "" {
 		log.Printf("%s: Requested database not found: %v for user: %v \n", pageName, databaseName, userName)
 		http.Error(w, "The requested database doesn't exist", http.StatusNotFound)
 		return
 	}
 
 	// Get a handle from Minio for the database object
-	userDB, err := minioClient.GetObject(userName, dataRows.MinioID)
+	userDB, err := minioClient.GetObject(userName, minioID)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
 		http.Error(w, "Error retrieving DB from Minio", http.StatusInternalServerError)
@@ -704,10 +714,10 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", databaseName)
 		return
 	}
-	dataRows.Tables = tables
+	pageData.DB.Tables = tables
 
 	// Select the first table
-	selectedTable := dataRows.Tables[0]
+	selectedTable := pageData.DB.Tables[0]
 
 	// Retrieve (up to) x rows from the selected database
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
@@ -719,7 +729,7 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 	}
 
 	// Retrieve the field names
-	dataRows.TableHeaders = stmt.ColumnNames()
+	pageData.DB.TableHeaders = stmt.ColumnNames()
 
 	// Process each row
 	fieldCount := -1
@@ -747,7 +757,7 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 				}
 				if !isNull {
 					stringVal := fmt.Sprintf("%d", val)
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Integer,
+					row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Integer,
 						Value: stringVal})
 				}
 			case sqlite.Float:
@@ -759,31 +769,31 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 				}
 				if !isNull {
 					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Float,
+					row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Float,
 						Value: stringVal})
 				}
 			case sqlite.Text:
 				var val string
 				val, isNull = s.ScanText(i)
 				if !isNull {
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Text,
+					row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Text,
 						Value: val})
 				}
 			case sqlite.Blob:
 				_, isNull = s.ScanBlob(i)
 				if !isNull {
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Binary,
+					row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Binary,
 						Value: "<i>BINARY DATA</i>"})
 				}
 			case sqlite.Null:
 				isNull = true
 			}
 			if isNull {
-				row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Null,
+				row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Null,
 					Value: "<i>NULL</i>"})
 			}
 		}
-		dataRows.Records = append(dataRows.Records, row)
+		pageData.DB.Records = append(pageData.DB.Records, row)
 
 		return nil
 	})
@@ -795,15 +805,18 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 	}
 	defer stmt.Finalize()
 
-	dataRows.Username = userName
-	dataRows.Database = databaseName
-	dataRows.Tablename = selectedTable
-	dataRows.Protocol = listenProtocol
-	dataRows.Server = listenAddr + ":9080"
+	pageData.DB.Tablename = selectedTable
+	pageData.Meta.Username = userName
+	pageData.Meta.Database = databaseName
+	pageData.Meta.Protocol = listenProtocol
+	pageData.Meta.Server = listenAddr + ":9080"
+	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, databaseName)
 
 	// Parse and render the template
-	var t = template.Must(template.New("database.html").Delims("[[", "]]").ParseFiles("templates/database.html"))
-	err = t.Execute(w, dataRows)
+	// TODO: Parsing the templates for each http request is non-optimal.  Do it once at application start instead
+	var t = template.Must(template.New("database.html").Delims("[[", "]]").ParseFiles(
+		"templates/database.html", "templates/header.html"))
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -812,12 +825,15 @@ func renderDatabasePage(w http.ResponseWriter, userName string, databaseName str
 func renderRootPage(w http.ResponseWriter) {
 	pageName := "User Page"
 
-	// Structure to hold user list
+	// Structure to hold page data
 	type userInfo struct {
 		Username string
 		LastModified time.Time
 	}
-	var userList []userInfo
+	var pageData struct {
+		Meta metaInfo
+		List []userInfo
+	}
 
 	// Retrieve list of users with public databases
 	dbQuery := "WITH user_list AS ( " +
@@ -843,12 +859,15 @@ func renderRootPage(w http.ResponseWriter) {
 			http.Error(w, "Error retrieving database list for user", http.StatusInternalServerError)
 			return
 		}
-		userList = append(userList, oneRow)
+		pageData.List = append(pageData.List, oneRow)
 	}
+	pageData.Meta.Title = `SQLite storage "in the cloud"`
 
 	// Parse and render the template
-	var t = template.Must(template.New("root.html").Delims("[[", "]]").ParseFiles("templates/root.html"))
-	err = t.Execute(w, userList)
+	// TODO: Parsing the templates for each http request is non-optimal.  Do it once at application start instead
+	var t = template.Must(template.New("root.html").Delims("[[", "]]").ParseFiles(
+		"templates/root.html", "templates/header.html"))
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -857,12 +876,13 @@ func renderRootPage(w http.ResponseWriter) {
 func renderUserPage(w http.ResponseWriter, userName string) {
 	pageName := "User Page"
 
-	// Structure to hold user data
-	var userData struct {
-		Username string
+	// Structure to hold page data
+	var pageData struct {
+		Meta metaInfo
 		DataRows []dbInfo
 	}
-	userData.Username = userName
+	pageData.Meta.Username = userName
+	pageData.Meta.Title = userName
 
 	// Retrieve list of public databases for the user
 	dbQuery := "WITH user_public_databases AS (" +
@@ -903,12 +923,14 @@ func renderUserPage(w http.ResponseWriter, userName string) {
 		} else {
 			oneRow.Description = fmt.Sprintf(": %s", Desc.String)
 		}
-		userData.DataRows = append(userData.DataRows, oneRow)
+		pageData.DataRows = append(pageData.DataRows, oneRow)
 	}
 
 	// Parse and render the template
-	var t = template.Must(template.New("user.html").Delims("[[", "]]").ParseFiles("templates/user.html"))
-	err = t.Execute(w, userData)
+	// TODO: Parsing the templates for each http request is non-optimal.  Do it once at application start instead
+	var t = template.Must(template.New("user.html").Delims("[[", "]]").ParseFiles(
+		"templates/user.html", "templates/header.html"))
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}

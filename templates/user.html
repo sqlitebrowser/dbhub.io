@@ -1,26 +1,12 @@
 <!doctype html>
 <html ng-app="DBHub-front" ng-controller="userView">
-<head>
-    <meta charset="UTF-8">
-    <title>DBHub.io - {{ db.Username }}</title>
-    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular.min.js"></script>
-    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.8/angular-sanitize.min.js"></script>
-    <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-2.2.0.min.js"></script>
-    <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
-
-        #viewupdates, #viewbranches, #viewreleases, #viewcontribs {
-            margin-left: 30%;
-        }
-    </style>
-</head>
+[[ template "header" . ]]
 <body>
 <div class="container">
     <div class="row">
         <div class="col-md-12">
             <h2 id="viewuser">
-                <div class="pull-left"><a href="/">/</a> [[ .Username ]]'s public databases</div>
+                <div class="pull-left"><a href="/">/</a> [[ .Meta.Username ]]'s public databases</div>
             </h2>
         </div>
     </div>
@@ -47,7 +33,7 @@
 <script>
     var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
     app.controller('userView', function($scope) {
-        $scope.meta = { Username: "[[ .Username ]]" }
+        $scope.meta = { Username: "[[ .Meta.Username ]]" }
         $scope.db = { Databases: [[ .DataRows ]] }
     });
 </script>
