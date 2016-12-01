@@ -8,7 +8,11 @@
         </div>
         <div id="auth" class="col-md-6">
             <div class="pull-right">
-                <a href="/login">Login</a> | <a href="/register">Register</a>
+                [[ if .Meta.LoggedInUser ]]
+                  <a href="/[[ .Meta.LoggedInUser ]]">Profile</a> | <a href="/logout">Log out</a>
+                [[ else ]]
+                  <a href="/login">Login</a> | <a href="/register">Register</a>
+                [[  end ]]
             </div>
         </div>
     </div>

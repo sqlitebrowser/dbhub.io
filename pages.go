@@ -11,10 +11,11 @@ import (
 	"time"
 
 	sqlite "github.com/gwenn/gosqlite"
+	"github.com/icza/session"
 	"github.com/jackc/pgx"
 )
 
-func databasePage(w http.ResponseWriter, userName string, databaseName string) {
+func databasePage(w http.ResponseWriter, req *http.Request, userName string, databaseName string) {
 	pageName := "Render Database Page"
 
 	// Retrieve the MinioID, and the user visible info for the requested database
@@ -37,6 +38,13 @@ func databasePage(w http.ResponseWriter, userName string, databaseName string) {
 	var pageData struct {
 		Meta metaInfo
 		DB   dbInfo
+	}
+
+	// Retrieve session data (if any)
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser := sess.CAttr("UserName")
+		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
 	}
 
 	var minioID string
@@ -236,7 +244,7 @@ func databasePage(w http.ResponseWriter, userName string, databaseName string) {
 	}
 }
 
-func frontPage(w http.ResponseWriter) {
+func frontPage(w http.ResponseWriter, req *http.Request) {
 	pageName := "User Page"
 
 	// Structure to hold page data
@@ -247,6 +255,13 @@ func frontPage(w http.ResponseWriter) {
 	var pageData struct {
 		Meta metaInfo
 		List []userInfo
+	}
+
+	// Retrieve session data (if any)
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser := sess.CAttr("UserName")
+		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
 	}
 
 	// Retrieve list of users with public databases
@@ -285,11 +300,39 @@ func frontPage(w http.ResponseWriter) {
 	}
 }
 
-func registerPage(w http.ResponseWriter) {
+func loginPage(w http.ResponseWriter, req *http.Request) {
+	var pageData struct {
+		Meta metaInfo
+	}
+	pageData.Meta.Title = "Login"
+
+	// Retrieve session data (if any)
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser := sess.CAttr("UserName")
+		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+	}
+
+	// Render the page
+	t := tmpl.Lookup("loginPage")
+	err := t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+func registerPage(w http.ResponseWriter, req *http.Request) {
 	var pageData struct {
 		Meta metaInfo
 	}
 	pageData.Meta.Title = "Register"
+
+	// Retrieve session data (if any)
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser := sess.CAttr("UserName")
+		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+	}
 
 	// Render the page
 	t := tmpl.Lookup("registerPage")
@@ -299,7 +342,7 @@ func registerPage(w http.ResponseWriter) {
 	}
 }
 
-func userPage(w http.ResponseWriter, userName string) {
+func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	pageName := "User Page"
 
 	// Structure to hold page data
@@ -309,6 +352,13 @@ func userPage(w http.ResponseWriter, userName string) {
 	}
 	pageData.Meta.Username = userName
 	pageData.Meta.Title = userName
+
+	// Retrieve session data (if any)
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser := sess.CAttr("UserName")
+		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+	}
 
 	// Retrieve list of public databases for the user
 	dbQuery := "WITH user_public_databases AS (" +

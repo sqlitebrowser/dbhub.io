@@ -1,10 +1,23 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>$Title$</title>
-</head>
+[[ define "profilePage" ]]
+<!doctype html>
+<html ng-app="DBHub-front" ng-controller="profileView">
+[[ template "head" . ]]
 <body>
-$END$
+[[ template "header" . ]]
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            Logged in user profile page
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    //    app.controller('profileView', function($scope) {
+    //        $scope.users = { TBD }
+    //    });
+</script>
 </body>
 </html>
+[[ end ]]

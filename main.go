@@ -17,6 +17,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	sqlite "github.com/gwenn/gosqlite"
+	"github.com/icza/session"
 	"github.com/jackc/pgx"
 	"github.com/minio/go-homedir"
 	"github.com/minio/minio-go"
@@ -71,6 +72,7 @@ type metaInfo struct {
 	Title    string
 	Username string
 	Database string
+	LoggedInUser string
 }
 
 // Configuration file
@@ -412,7 +414,95 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	log.Printf("%s: '%v' downloaded by user '%v', %v bytes", pageName, dbName, userName, bytesWritten)
 }
 
+func loginHandler(w http.ResponseWriter, req *http.Request) {
+	pageName := "Login page"
+
+	// TODO: Add browser side validation of the form data too (using AngularJS?) to save a trip to the server
+	// TODO  and make for a nicer user experience for sign up
+
+	// Gather submitted form data (if any)
+	err := req.ParseForm()
+	if err != nil {
+		log.Printf("%s: Error when parsing login data: %s\n", pageName, err)
+		http.Error(w, "Error when parsing login data", http.StatusBadRequest)
+		return
+	}
+	userName := req.PostFormValue("username")
+	password := req.PostFormValue("pass")
+
+	// Check if any (relevant) form data was submitted
+	if userName == "" && password == "" {
+		// No, so render the login page
+		loginPage(w, req)
+		return
+	}
+
+	// Check the password isn't blank
+	if len(password) < 1 {
+		log.Printf("%s: Password missing", pageName)
+		http.Error(w, "Password missing", http.StatusBadRequest)
+		return
+	}
+
+	// Validate the username
+	err = validateUser(userName)
+	if err != nil {
+		log.Printf("%s: Validation failed for username: %s", pageName, err)
+		http.Error(w, "Invalid username", http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve the password hash for the user, if they exist in the database
+	row := db.QueryRow("SELECT password_hash FROM public.users WHERE username = $1", userName)
+	var passHash []byte
+	err = row.Scan(&passHash)
+	if err != nil {
+		log.Printf("%s: Error looking up password hash for login. User: '%s' Error: %v\n", pageName, userName,
+			err)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+
+	// Hash the user's password
+	err = bcrypt.CompareHashAndPassword(passHash, []byte(password))
+	if err != nil {
+		log.Printf("%s: Login failure, username/password not correct. User: '%s'\n", pageName, userName)
+		http.Error(w, fmt.Sprint("Login failed. Username/password not correct"), http.StatusInternalServerError)
+		return
+	}
+
+	// Create session cookie
+	sess := session.NewSessionOptions(&session.SessOptions{
+		CAttrs: map[string]interface{}{"UserName": userName},
+	})
+	session.Add(sess, w)
+
+	// Bounce to the user page
+	http.Redirect(w, req, "/" + userName, http.StatusTemporaryRedirect)
+}
+
+func logoutHandler(w http.ResponseWriter, req *http.Request) {
+	//pageName := "Log out page"
+
+	// Remove session info
+	sess := session.Get(req)
+	if sess != nil {
+		// Session data was present, so remove it
+		session.Remove(sess, w)
+	}
+
+	// Bounce to the front page
+	// TODO: This should probably reload the existing page instead
+	http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
+}
+
 func main() {
+	// Setup session storage
+	// TODO: Is this better placed in init()?
+	session.Global.Close()
+	session.Global = session.NewCookieManagerOptions(session.NewInMemStore(),
+		&session.CookieMngrOptions{AllowHTTP: true}) // TODO: Make this HTTPS only in near future
+
 	// Load validation code
 	validate = valid.New()
 
@@ -451,6 +541,8 @@ func main() {
 	http.HandleFunc("/images/sqlitebrowser.svg", func(w http.ResponseWriter, req *http.Request) {
 		http.ServeFile(w, req, "images/sqlitebrowser.svg")
 	})
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/register", registerHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
@@ -467,12 +559,12 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 		// Check if the request was for the root directory
 		if pathStrings[1] == "" {
 			// Yep, root directory request
-			frontPage(w)
+			frontPage(w, req)
 			return
 		}
 
 		// The request was for a user page
-		userPage(w, userName)
+		userPage(w, req, userName)
 		return
 	}
 
@@ -491,13 +583,13 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 	// TODO: Refactor this and the above identical code.  Doing it this way is non-optimal
 	if pathStrings[2] == "" {
 		// The request was for a user page
-		userPage(w, userName)
+		userPage(w, req, userName)
 		return
 	}
 
 	// A specific database was requested
 	// TODO: Add support for folders and sub-folders in request paths
-	databasePage(w, userName, databaseName)
+	databasePage(w, req, userName, databaseName)
 }
 
 // Read the server configuration file
@@ -630,7 +722,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	// Check if any (relevant) form data was submitted
 	if userName == "" && password == "" && passConfirm == "" && email == "" && agree == "" {
 		// No, so render the registration page
-		registerPage(w)
+		registerPage(w, req)
 		return
 	}
 
@@ -724,8 +816,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	// Hash the user's password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("%s: Failed to bcrypt hash user password. User: '%v', error: %v.\n", pageName, userName,
-			err)
+		log.Printf("%s: Failed to hash user password. User: '%v', error: %v.\n", pageName, userName, err)
 		http.Error(w, fmt.Sprint("Something went wrong during user creation"), http.StatusInternalServerError)
 		return
 	}

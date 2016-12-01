@@ -1,10 +1,48 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>$Title$</title>
-</head>
+[[ define "loginPage" ]]
+<!doctype html>
+<html ng-app="DBHub-front" ng-controller="loginView">
+[[ template "head" . ]]
 <body>
-$END$
+[[ template "header" . ]]
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            &nbsp;
+        </div>
+        <div class="col-md-6">
+            <h2 style="text-align: center;">Login</h2>
+            <form action="/login" method="post">
+                <table class="table table-bordered table-striped table-responsive">
+                    <tr>
+                        <th>Username:</th>
+                        <td><input type="text" name="username"></td>
+                    </tr>
+                    <tr>
+                        <th>Password:</th>
+                        <td><input type="password" name="pass"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div style="text-align: center;">
+                                <input type="submit">
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        <div class="col-md-3">
+            &nbsp;
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    //    app.controller('loginView', function($scope) {
+    //        $scope.users = { Meta: { Title: "Register" } }
+    //    });
+</script>
 </body>
 </html>
+[[ end ]]
