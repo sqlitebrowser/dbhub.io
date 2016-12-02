@@ -8,7 +8,13 @@
     <div class="row" style="margin-bottom: 10px;">
         <div class="col-md-12">
             <h2 id="viewuser" style="margin-top: 10px;">
-                <div class="pull-left">[[ .Meta.Username ]]'s public databases</div>
+                <div class="pull-left">
+                    [[ if eq .Meta.LoggedInUser .Meta.Username ]]
+                        Your databases
+                    [[ else ]]
+                        [[ .Meta.Username ]]'s public databases
+                    [[  end ]]
+                </div>
             </h2>
         </div>
     </div>
