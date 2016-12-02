@@ -244,6 +244,31 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	}
 }
 
+// General error display page
+func errorPage(w http.ResponseWriter, req *http.Request, httpcode int, msg string) {
+	var pageData struct {
+		Meta metaInfo
+		Message string
+	}
+	pageData.Message = msg
+
+	// Retrieve session data (if any)
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser := sess.CAttr("UserName")
+		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+	}
+
+	// Render the page
+	w.WriteHeader(httpcode)
+	t := tmpl.Lookup("errorPage")
+	err := t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+// Renders the front page of the website
 func frontPage(w http.ResponseWriter, req *http.Request) {
 	pageName := "User Page"
 
@@ -358,6 +383,22 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	if sess != nil {
 		loggedInUser := sess.CAttr("UserName")
 		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+	}
+
+	// Check if the desired user exists
+	row := db.QueryRow("SELECT count(username) FROM public.users WHERE username = $1", userName)
+	var userCount int
+	err := row.Scan(&userCount)
+	if err != nil {
+		log.Printf("%s: Error looking up user details failed. User: '%s' Error: %v\n", pageName, userName, err)
+		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		return
+	}
+
+	// If the user doesn't exist, display an error page
+	if userCount == 0 {
+		errorPage(w, req, http.StatusNotFound, fmt.Sprintf("Unknown user: %s", userName))
+		return
 	}
 
 	// Retrieve list of public databases for the user
