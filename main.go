@@ -130,7 +130,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	// Basic sanity check
 	numPieces := len(pathStrings)
 	if numPieces < 4 {
-		http.Error(w, "Invalid database requested", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Invalid database requested")
 		return
 	}
 
@@ -143,7 +143,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0) // This also validates the version input
 	if err != nil {
 		log.Printf("%s: Invalid version number: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Invalid version number"), http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Invalid version number")
 		return
 	}
 
@@ -151,14 +151,14 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	err = validateUserDBTable(userName, dbName, dbTable)
 	if err != nil {
 		log.Printf("Validation failed for user, database, or table name: %s", err)
-		http.Error(w, "Invalid user, database, or table name", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Invalid user, database, or table name")
 		return
 	}
 
 	// Abort if no table name was given
 	if dbTable == "" {
 		log.Printf("%s: No table name given\n", pageName)
-		http.Error(w, "No table name given", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "No table name given")
 		return
 	}
 
@@ -170,7 +170,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 		"AND public = true", dbName, dbVersion, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -179,13 +179,13 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 		err = rows.Scan(&minioID)
 		if err != nil {
 			log.Printf("%s: Error retrieving MinioID: %v\n", pageName, err)
-			http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 			return
 		}
 	}
 	if minioID == "" {
 		log.Printf("%s: Couldn't retrieve required MinioID\n", pageName)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 
@@ -193,7 +193,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	userDB, err := minioClient.GetObject(userName, minioID)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 
@@ -209,19 +209,19 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	tempfileHandle, err := ioutil.TempFile("", "databaseViewHandler-")
 	if err != nil {
 		log.Printf("%s: Error creating tempfile: %v\n", pageName, err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 	tempfile := tempfileHandle.Name()
 	bytesWritten, err := io.Copy(tempfileHandle, userDB)
 	if err != nil {
 		log.Printf("%s: Error writing database to temporary file: %v\n", pageName, err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 	if bytesWritten == 0 {
 		log.Printf("%s: 0 bytes written to the temporary file: %v\n", pageName, dbName)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 	tempfileHandle.Close()
@@ -231,6 +231,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	db, err := sqlite.Open(tempfile, sqlite.OpenReadOnly)
 	if err != nil {
 		log.Printf("Couldn't open database: %s", err)
+		errorPage(w, req, http.StatusInternalServerError, "Internal error")
 		return
 	}
 	defer db.Close()
@@ -239,6 +240,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	stmt, err := db.Prepare("SELECT * FROM " + dbTable)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
+		errorPage(w, req, http.StatusInternalServerError, "Internal error")
 		return
 	}
 
@@ -306,8 +308,8 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	})
 	if err != nil {
 		log.Printf("Error when reading data from database: %s\v", err)
-		http.Error(w, fmt.Sprintf("Error reading data from '%s'.  Possibly malformed?", dbName),
-			http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError,
+			fmt.Sprintf("Error reading data from '%s'.  Possibly malformed?", dbName))
 		return
 	}
 	defer stmt.Finalize()
@@ -319,7 +321,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	err = csvFile.WriteAll(resultSet)
 	if err != nil {
 		log.Printf("%s: Error when generating CSV: %v\n", pageName, err)
-		http.Error(w, "Error when generating CSV", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Error when generating CSV")
 		return
 	}
 }
@@ -333,7 +335,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	// Basic sanity check
 	numPieces := len(pathStrings)
 	if numPieces < 4 {
-		http.Error(w, "Invalid database requested", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Invalid database requested")
 		return
 	}
 
@@ -345,7 +347,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0) // This also validates the version input
 	if err != nil {
 		log.Printf("%s: Invalid version number: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Invalid version number"), http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Invalid version number")
 		return
 	}
 
@@ -353,7 +355,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	err = validateUserDB(userName, dbName)
 	if err != nil {
 		log.Printf("Validation failed for user or database name: %s", err)
-		http.Error(w, "Invalid user or database name", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Invalid user or database name")
 		return
 	}
 
@@ -365,7 +367,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 		"AND public = true", dbName, dbVersion, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -374,13 +376,13 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 		err = rows.Scan(&minioID)
 		if err != nil {
 			log.Printf("%s: Error retrieving MinioID: %v\n", pageName, err)
-			http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 			return
 		}
 	}
 	if minioID == "" {
 		log.Printf("%s: Couldn't retrieve required MinioID\n", pageName)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 
@@ -388,7 +390,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	userDB, err := minioClient.GetObject(userName, minioID)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 
@@ -424,7 +426,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
 		log.Printf("%s: Error when parsing login data: %s\n", pageName, err)
-		http.Error(w, "Error when parsing login data", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Error when parsing login data")
 		return
 	}
 	userName := req.PostFormValue("username")
@@ -440,7 +442,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	// Check the password isn't blank
 	if len(password) < 1 {
 		log.Printf("%s: Password missing", pageName)
-		http.Error(w, "Password missing", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Password missing")
 		return
 	}
 
@@ -448,7 +450,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	err = validateUser(userName)
 	if err != nil {
 		log.Printf("%s: Validation failed for username: %s", pageName, err)
-		http.Error(w, "Invalid username", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Invalid username")
 		return
 	}
 
@@ -459,7 +461,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Printf("%s: Error looking up password hash for login. User: '%s' Error: %v\n", pageName, userName,
 			err)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 
@@ -467,7 +469,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	err = bcrypt.CompareHashAndPassword(passHash, []byte(password))
 	if err != nil {
 		log.Printf("%s: Login failure, username/password not correct. User: '%s'\n", pageName, userName)
-		http.Error(w, fmt.Sprint("Login failed. Username/password not correct"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusBadRequest, fmt.Sprint("Login failed. Username/password not correct"))
 		return
 	}
 
@@ -575,7 +577,7 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 	err := validateUserDB(userName, databaseName)
 	if err != nil {
 		log.Printf("Validation failed of user or database name: %s", err)
-		http.Error(w, "Invalid user or database name", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Invalid user or database name")
 		return
 	}
 
@@ -710,7 +712,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
 		log.Printf("Error when parsing registration data: %s\n", err)
-		http.Error(w, "Error when parsing registration data", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Error when parsing registration data")
 		return
 	}
 	userName := req.PostFormValue("username")
@@ -730,28 +732,28 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	err = validateUserEmail(userName, email)
 	if err != nil {
 		log.Printf("Validation failed of username or email: %s", err)
-		http.Error(w, "Invalid username or email", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Invalid username or email")
 		return
 	}
 
 	// Check the password and confirmation match
 	if len(password) != len(passConfirm) || password != passConfirm {
 		log.Println("Password and confirmation do not match")
-		http.Error(w, "Password and confirmation do not match", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Password and confirmation do not match")
 		return
 	}
 
 	// Check the password isn't blank
 	if len(password) < 6 {
 		log.Println("Password must be 6 characters or greater")
-		http.Error(w, "Password must be 6 characters or greater", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Password must be 6 characters or greater")
 		return
 	}
 
 	// Check the Terms and Conditions was agreed to
 	if agree != "on" {
 		log.Println("Terms and Conditions wasn't agreed to")
-		http.Error(w, "Terms and Conditions wasn't agreed to", http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, "Terms and Conditions weren't agreed to")
 		return
 	}
 
@@ -759,7 +761,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	err = reservedUsernamesCheck(userName)
 	if err != nil {
 		log.Println(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errorPage(w, req, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -770,7 +772,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	rows, err := db.Query("SELECT count(username) FROM public.users WHERE username = $1", userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -779,13 +781,13 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 		err = rows.Scan(&userCount)
 		if err != nil {
 			log.Printf("%s: Error checking if user '%s' already exists: %v\n", pageName, userName, err)
-			http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 			return
 		}
 	}
 	if userCount > 0 {
 		log.Println("That username is already taken")
-		http.Error(w, "That username is already taken", http.StatusConflict)
+		errorPage(w, req, http.StatusConflict, "That username is already taken")
 		return
 	}
 
@@ -793,7 +795,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	rows, err = db.Query("SELECT count(username) FROM public.users WHERE email = $1", email)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -802,14 +804,14 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 		err = rows.Scan(&emailCount)
 		if err != nil {
 			log.Printf("%s: Error checking if email '%s' already exists: %v\n", pageName, email, err)
-			http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 			return
 		}
 	}
 	if emailCount > 0 {
 		log.Println("That email address is already associated with an account in our system")
-		http.Error(w, "That email address is already associated with an account in our system",
-			http.StatusConflict)
+		errorPage(w, req, http.StatusConflict,
+			"That email address is already associated with an account in our system")
 		return
 	}
 
@@ -817,7 +819,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("%s: Failed to hash user password. User: '%v', error: %v.\n", pageName, userName, err)
-		http.Error(w, fmt.Sprint("Something went wrong during user creation"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Something went wrong during user creation")
 		return
 	}
 
@@ -829,7 +831,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	commandTag, err := db.Exec(insertQuery, userName, email, hash, "") // TODO: Real certificate string should go here
 	if err != nil {
 		log.Printf("%s: Adding user to database failed: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Something went wrong during user creation"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Something went wrong during user creation")
 		return
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
@@ -841,7 +843,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	err = minioClient.MakeBucket(userName, "us-east-1")
 	if err != nil {
 		log.Printf("%s: Error creating new bucket: %v\n", pageName, err)
-		http.Error(w, fmt.Sprint("Something went wrong during user creation"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Something went wrong during user creation")
 		return
 	}
 

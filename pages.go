@@ -29,7 +29,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 		userName, databaseName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -56,7 +56,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 			&pageData.DB.Releases, &pageData.DB.Contributors, &Desc, &Readme)
 		if err != nil {
 			log.Printf("%s: Error retrieving metadata from database: %v\n", pageName, err)
-			http.Error(w, "Error retrieving metadata from database", http.StatusInternalServerError)
+			errorPage(w, req, http.StatusInternalServerError, "Error retrieving metadata from database")
 			return
 		}
 		if !Desc.Valid {
@@ -72,7 +72,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	}
 	if minioID == "" {
 		log.Printf("%s: Requested database not found: %v for user: %v \n", pageName, databaseName, userName)
-		http.Error(w, "The requested database doesn't exist", http.StatusNotFound)
+		errorPage(w, req, http.StatusInternalServerError, "The requested database doesn't exist")
 		return
 	}
 
@@ -80,7 +80,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	userDB, err := minioClient.GetObject(userName, minioID)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
-		http.Error(w, "Error retrieving DB from Minio", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Internal retrieving database from object store")
 		return
 	}
 
@@ -96,19 +96,19 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	tempfileHandle, err := ioutil.TempFile("", "databaseViewHandler-")
 	if err != nil {
 		log.Printf("%s: Error creating tempfile: %v\n", pageName, err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 	tempfile := tempfileHandle.Name()
 	bytesWritten, err := io.Copy(tempfileHandle, userDB)
 	if err != nil {
 		log.Printf("%s: Error writing database to temporary file: %v\n", pageName, err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 	if bytesWritten == 0 {
 		log.Printf("%s: 0 bytes written to the temporary file: %v\n", pageName, databaseName)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 	tempfileHandle.Close()
@@ -118,6 +118,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	db, err := sqlite.Open(tempfile, sqlite.OpenReadOnly)
 	if err != nil {
 		log.Printf("Couldn't open database: %s", err)
+		errorPage(w, req, http.StatusInternalServerError, "Internal error")
 		return
 	}
 	defer db.Close()
@@ -128,13 +129,14 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 		log.Printf("Error retrieving table names: %s", err)
 		// TODO: Add proper error handing here.  Maybe display the page, but show the error where
 		// TODO  the table data would otherwise be?
-		http.Error(w, fmt.Sprintf("Error reading from '%s'.  Possibly encrypted or not a database?",
-			databaseName), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError,
+			fmt.Sprintf("Error reading from '%s'.  Possibly encrypted or not a database?", databaseName))
 		return
 	}
 	if len(tables) == 0 {
 		// No table names were returned, so abort
 		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", databaseName)
+		errorPage(w, req, http.StatusInternalServerError, "Database has no tables?")
 		return
 	}
 	pageData.DB.Tables = tables
@@ -148,6 +150,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	stmt, err := db.Prepare("SELECT * FROM " + selectedTable + " LIMIT 10")
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
+		errorPage(w, req, http.StatusInternalServerError, "Internal error")
 		return
 	}
 
@@ -222,8 +225,8 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	})
 	if err != nil {
 		log.Printf("Error when retrieving select data from database: %s\v", err)
-		http.Error(w, fmt.Sprintf("Error reading data from '%s'.  Possibly malformed?", databaseName),
-			http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError,
+			fmt.Sprintf("Error reading data from '%s'.  Possibly malformed?", databaseName))
 		return
 	}
 	defer stmt.Finalize()
@@ -305,7 +308,7 @@ func frontPage(w http.ResponseWriter, req *http.Request) {
 	rows, err := db.Query(dbQuery)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -314,7 +317,7 @@ func frontPage(w http.ResponseWriter, req *http.Request) {
 		err = rows.Scan(&oneRow.Username, &oneRow.LastModified)
 		if err != nil {
 			log.Printf("%s: Error retrieving database list for user: %v\n", pageName, err)
-			http.Error(w, "Error retrieving database list for user", http.StatusInternalServerError)
+			errorPage(w, req, http.StatusInternalServerError, "Error retrieving database list for user")
 			return
 		}
 		pageData.List = append(pageData.List, oneRow)
@@ -395,7 +398,7 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	err := row.Scan(&userCount)
 	if err != nil {
 		log.Printf("%s: Error looking up user details failed. User: '%s' Error: %v\n", pageName, userName, err)
-		http.Error(w, fmt.Sprint("Database query failed"), http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 
@@ -419,7 +422,7 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	rows, err := db.Query(dbQuery, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		http.Error(w, "Database query failed", http.StatusInternalServerError)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 	defer rows.Close()
@@ -431,7 +434,7 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &Desc)
 		if err != nil {
 			log.Printf("%s: Error retrieving database list for user: %v\n", pageName, err)
-			http.Error(w, "Error retrieving database list for user", http.StatusInternalServerError)
+			errorPage(w, req, http.StatusInternalServerError, "Error retrieving database list for user")
 			return
 		}
 		if !Desc.Valid {
