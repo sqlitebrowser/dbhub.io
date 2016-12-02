@@ -20,13 +20,12 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 
 	// Retrieve the MinioID, and the user visible info for the requested database
 	rows, err := db.Query(
-		"SELECT minioid, date_created, last_modified, size, version, public, watchers, stars, forks, "+
-			"discussions, pull_requests, updates, branches, releases, contributors, description, readme "+
-			"FROM public.sqlite_databases "+
-			"WHERE username = $1 "+
-			"AND dbname = $2 "+
-			"ORDER BY version DESC "+
-			"LIMIT 1",
+		`SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers, db.stars, db.forks,
+	db.discussions, db.pull_requests, db.updates, db.branches, db.releases, db.contributors, db.description, db.readme
+	FROM sqlite_databases AS db, database_versions AS ver
+	WHERE db.username = $1 AND db.dbname = $2 AND db.idnum = ver.db
+	ORDER BY version DESC
+	LIMIT 1`,
 		userName, databaseName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
@@ -52,9 +51,9 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 		var Desc pgx.NullString
 		var Readme pgx.NullString
 		err = rows.Scan(&minioID, &pageData.DB.DateCreated, &pageData.DB.LastModified, &pageData.DB.Size,
-			&pageData.DB.Version, &pageData.DB.Public, &pageData.DB.Watchers, &pageData.DB.Stars,
-			&pageData.DB.Forks, &pageData.DB.Discussions, &pageData.DB.PRs, &pageData.DB.Updates,
-			&pageData.DB.Branches, &pageData.DB.Releases, &pageData.DB.Contributors, &Desc, &Readme)
+			&pageData.DB.Version, &pageData.DB.Watchers, &pageData.DB.Stars, &pageData.DB.Forks,
+			&pageData.DB.Discussions, &pageData.DB.PRs, &pageData.DB.Updates, &pageData.DB.Branches,
+			&pageData.DB.Releases, &pageData.DB.Contributors, &Desc, &Readme)
 		if err != nil {
 			log.Printf("%s: Error retrieving metadata from database: %v\n", pageName, err)
 			http.Error(w, "Error retrieving metadata from database", http.StatusInternalServerError)
@@ -247,7 +246,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 // General error display page
 func errorPage(w http.ResponseWriter, req *http.Request, httpcode int, msg string) {
 	var pageData struct {
-		Meta metaInfo
+		Meta    metaInfo
 		Message string
 	}
 	pageData.Message = msg
@@ -290,12 +289,17 @@ func frontPage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Retrieve list of users with public databases
-	dbQuery := "WITH user_list AS ( " +
-		"SELECT DISTINCT ON (username) username, last_modified " +
-		"FROM public.sqlite_databases " +
+	dbQuery := "WITH public_dbs AS (" +
+		"SELECT DISTINCT ON (db) db, last_modified " +
+		"FROM database_versions " +
 		"WHERE public = true " +
-		"ORDER BY username, last_modified DESC " +
-		") SELECT username, last_modified " +
+		"ORDER BY db, last_modified DESC " +
+		"), user_list AS (" +
+		"SELECT DISTINCT ON (username) username, public_dbs.last_modified " +
+		"FROM sqlite_databases, public_dbs " +
+		"WHERE idnum = public_dbs.db" +
+		") " +
+		"SELECT username, last_modified " +
 		"FROM user_list " +
 		"ORDER BY last_modified DESC"
 	rows, err := db.Query(dbQuery)
@@ -402,21 +406,16 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 
 	// Retrieve list of public databases for the user
-	dbQuery := "WITH user_public_databases AS (" +
-		"SELECT DISTINCT ON (dbname) dbname, version " +
-		"FROM public.sqlite_databases " +
-		"WHERE username = $1 " +
-		"AND public = TRUE " +
-		"ORDER BY dbname, version DESC" +
-		") " +
-		"SELECT i.dbname, last_modified, size, i.version, watchers, stars, forks, " +
-		"discussions, pull_requests, updates, branches, releases, contributors, description " +
-		"FROM user_public_databases AS l, public.sqlite_databases AS i " +
-		"WHERE username = $1 " +
-		"AND l.dbname = i.dbname " +
-		"AND l.version = i.version " +
-		"AND public = TRUE " +
-		"ORDER BY last_modified DESC"
+	dbQuery := `WITH public_dbs AS (
+	SELECT db.dbname, db.last_modified, ver.size, ver.version, db.watchers, db.stars, db.forks, db.discussions,
+		db.pull_requests, db.updates, db.branches, db.releases, db.contributors, db.description
+	FROM sqlite_databases AS db, database_versions AS ver
+	WHERE db.idnum = ver.db AND db.username = $1 AND ver.public = true
+	ORDER BY dbname, version DESC
+	), unique_dbs AS (
+		SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
+	)
+	SELECT * FROM unique_dbs ORDER BY last_modified DESC`
 	rows, err := db.Query(dbQuery, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
