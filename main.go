@@ -67,11 +67,11 @@ type dbInfo struct {
 }
 
 type metaInfo struct {
-	Protocol string
-	Server   string
-	Title    string
-	Username string
-	Database string
+	Protocol     string
+	Server       string
+	Title        string
+	Username     string
+	Database     string
 	LoggedInUser string
 }
 
@@ -478,7 +478,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	session.Add(sess, w)
 
 	// Bounce to the user page
-	http.Redirect(w, req, "/" + userName, http.StatusTemporaryRedirect)
+	http.Redirect(w, req, "/"+userName, http.StatusTemporaryRedirect)
 }
 
 func logoutHandler(w http.ResponseWriter, req *http.Request) {
