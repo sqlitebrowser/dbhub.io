@@ -4,9 +4,8 @@ import "fmt"
 
 // Checks a username against the list of reserved ones
 func reservedUsernamesCheck(userName string) error {
-	reserved := []string{"about", "admin", "download", "legal", "login", "mail", "news", "register", "root",
-		"printer"}
-
+	reserved := []string{"about", "admin", "download", "legal", "login", "mail", "news", "printer", "register",
+		"root", "star"}
 	for _, word := range reserved {
 		if userName == word {
 			return fmt.Errorf("That username is not available: %s\n", userName)

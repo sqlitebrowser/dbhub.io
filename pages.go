@@ -235,7 +235,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	pageData.Meta.Username = userName
 	pageData.Meta.Database = databaseName
 	pageData.Meta.Protocol = listenProtocol
-	pageData.Meta.Server = listenAddr + ":9080"
+	pageData.Meta.Server = listenAddr + ":8080"
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, databaseName)
 
 	// Render the page

@@ -11,7 +11,7 @@
                 <div class="pull-left"><a href="/[[ .Meta.Username ]]">[[ .Meta.Username ]]</a> / [[ .Meta.Database ]]</div>
                 <div class="btn-group pull-right">
                     <button type="button" class="btn btn-default" ng-bind="'Watchers: ' + meta.Watchers"></button>
-                    <button type="button" class="btn btn-default" ng-bind="'Stars: ' + meta.Stars"></button>
+                    <button type="button" class="btn btn-default" ng-bind="'Stars: ' + meta.Stars" ng-click="toggleStars()"></button>
                     <button type="button" class="btn btn-default" ng-bind="'Forks: ' + meta.Forks"></button>
                 </div>
             </h2>
@@ -173,6 +173,16 @@
         $scope.changeTable = function(newtable) {
             $http.get("[[ .Meta.Protocol ]]://[[ .Meta.Server ]]/[[ .Meta.Username ]]/[[ .Meta.Database ]]?" + newtable)
                 .then(function (response) { $scope.db = response.data; })
+        }
+
+        $scope.toggleStars = function() {
+            $http.get("[[ .Meta.Protocol ]]://[[ .Meta.Server ]]/star/[[ .Meta.Username ]]/[[ .Meta.Database ]]")
+                .then(function (response) {
+                    tempval = response.data;
+                    if (tempval != "-1") {
+                        $scope.meta.Stars = tempval;
+                    }
+                })
         }
     });
 </script>

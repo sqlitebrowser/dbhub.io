@@ -546,10 +546,14 @@ func main() {
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/star/", starHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
+
+	log.Printf("Request received: %v\n", req.URL)
+
 	// Split the request URL into path components
 	pathStrings := strings.Split(req.URL.Path, "/")
 
@@ -852,5 +856,130 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	// TODO: Display a proper success page
 	// TODO: This should probably bounce the user to their logged in profile page
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, `<html><body>Account created successfully, please login: <a href="/login">Login</a></body></html>`)
+	fmt.Fprint(w, `<html><body>Account created successfully, please login: <a href="/login">Login</a></body></html>`)
+}
+
+func starHandler(w http.ResponseWriter, req *http.Request) {
+	pageName := "Star toggle Handler"
+
+	// Split the request URL into path components
+	pathStrings := strings.Split(req.URL.Path, "/")
+
+	// Basic sanity check
+	numPieces := len(pathStrings)
+	if numPieces != 4 {
+		return
+	}
+
+	// Extract the username, database, and version requested
+	userName := pathStrings[2]
+	dbName := pathStrings[3]
+
+	// Validate the user supplied user and database name
+	err := validateUserDB(userName, dbName)
+	if err != nil {
+		log.Printf("%s: Validation failed for user or database name: %s", pageName, err)
+		return
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser interface{}
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser = sess.CAttr("UserName")
+	} else {
+		// No logged in username, so nothing to update
+		fmt.Fprint(w, "-1") // -1 tells the front end not to update the displayed star count
+		return
+	}
+
+	// Retrieve the database id
+	row := db.QueryRow(`SELECT idnum FROM sqlite_databases WHERE username = $1 AND dbname = $2`, userName, dbName)
+	var dbId int
+	err = row.Scan(&dbId)
+	if err != nil {
+		log.Printf("%s: Error looking up database id. User: '%s' Error: %v\n", pageName, loggedInUser, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+
+	// Check if this user has already starred this username/database
+	row = db.QueryRow(`
+		SELECT count(db)
+		FROM database_stars
+		WHERE database_stars.db = $1
+		AND database_stars.username = $2`, dbId, loggedInUser)
+	var starCount int
+	err = row.Scan(&starCount)
+	if err != nil {
+		log.Printf("%s: Error looking up star count for database. User: '%s' Error: %v\n", pageName,
+			loggedInUser, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+
+	}
+
+	// Add or remove the star
+	if starCount != 0 {
+		// Unstar the database
+		deleteQuery := `DELETE FROM database_stars WHERE db = $1 AND username = $2`
+		commandTag, err := db.Exec(deleteQuery, dbId, loggedInUser)
+		if err != nil {
+			log.Printf("%s: Removing star from database failed: %v\n", pageName, err)
+			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+			return
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf("%s: Wrong number of rows affected: %v, username: %v\n", pageName, numRows, userName)
+			return
+		}
+
+	} else {
+		// Add a star for the database
+		insertQuery := `INSERT INTO database_stars (db, username) VALUES ($1, $2)`
+		commandTag, err := db.Exec(insertQuery, dbId, loggedInUser)
+		if err != nil {
+			log.Printf("%s: Adding star to database failed: %v\n", pageName, err)
+			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+			return
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf("%s: Wrong number of rows affected: %v, username: %v\n", pageName, numRows, userName)
+			return
+		}
+	}
+
+	// Refresh the main database table with the updated star count
+	updateQuery := `
+		UPDATE sqlite_databases
+		SET stars = (
+			SELECT count(db)
+			FROM database_stars
+			WHERE db = $1
+		) WHERE idnum = $1`
+	commandTag, err := db.Exec(updateQuery, dbId)
+	if err != nil {
+		log.Printf("%s: Updating star count in database failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("%s: Wrong number of rows affected: %v, username: %v\n", pageName, numRows, userName)
+		return
+	}
+
+	// Return the updated star count to the user
+	row = db.QueryRow(`
+		SELECT stars
+		FROM sqlite_databases
+		WHERE idnum = $1`, dbId)
+	var newStarCount int
+	err = row.Scan(&newStarCount)
+	if err != nil {
+		log.Printf("%s: Error looking up new star count for database. User: '%s' Error: %v\n", pageName,
+			loggedInUser, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+	fmt.Fprint(w, newStarCount)
 }
