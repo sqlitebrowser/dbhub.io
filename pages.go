@@ -235,7 +235,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	pageData.Meta.Username = userName
 	pageData.Meta.Database = databaseName
 	pageData.Meta.Protocol = listenProtocol
-	pageData.Meta.Server = listenAddr + ":8080"
+	pageData.Meta.Server = listenAddr + ":" + strconv.Itoa(listenPort)
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, databaseName)
 
 	// Render the page
@@ -386,9 +386,10 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	pageData.Meta.Title = userName
 
 	// Retrieve session data (if any)
+	var loggedInUser interface{}
 	sess := session.Get(req)
 	if sess != nil {
-		loggedInUser := sess.CAttr("UserName")
+		loggedInUser = sess.CAttr("UserName")
 		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
 	}
 
@@ -408,17 +409,39 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 		return
 	}
 
-	// Retrieve list of public databases for the user
-	dbQuery := `WITH public_dbs AS (
-	SELECT db.dbname, db.last_modified, ver.size, ver.version, db.watchers, db.stars, db.forks, db.discussions,
-		db.pull_requests, db.updates, db.branches, db.releases, db.contributors, db.description
-	FROM sqlite_databases AS db, database_versions AS ver
-	WHERE db.idnum = ver.db AND db.username = $1 AND ver.public = true
-	ORDER BY dbname, version DESC
-	), unique_dbs AS (
-		SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
-	)
-	SELECT * FROM unique_dbs ORDER BY last_modified DESC`
+	var dbQuery string
+	if loggedInUser != userName {
+		// Retrieve list of public databases for the user
+		dbQuery = `
+			WITH public_dbs AS (
+				SELECT db.dbname, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
+					db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+					db.releases, db.contributors, db.description
+				FROM sqlite_databases AS db, database_versions AS ver
+				WHERE db.idnum = ver.db
+					AND db.username = $1
+					AND ver.public = true
+				ORDER BY dbname, version DESC
+			), unique_dbs AS (
+				SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
+			)
+			SELECT * FROM unique_dbs ORDER BY last_modified DESC`
+	} else {
+		// Retrieve all databases for the user
+		dbQuery = `
+			WITH public_dbs AS (
+				SELECT db.dbname, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
+					db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+					db.releases, db.contributors, db.description
+				FROM sqlite_databases AS db, database_versions AS ver
+				WHERE db.idnum = ver.db
+					AND db.username = $1
+				ORDER BY dbname, version DESC
+			), unique_dbs AS (
+				SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
+			)
+			SELECT * FROM unique_dbs ORDER BY last_modified DESC`
+	}
 	rows, err := db.Query(dbQuery, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
@@ -444,10 +467,6 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 		}
 		pageData.DataRows = append(pageData.DataRows, oneRow)
 	}
-
-	// TODO: Check if the user exists, and display an error message if they don't, or if they have no public
-	// TODO  databases.  This can probably be done by checking the row count from dbQuery above, and barfing if
-	// TODO  it's 0
 
 	// Render the page
 	t := tmpl.Lookup("userPage")

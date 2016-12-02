@@ -171,7 +171,7 @@
         }
 
         $scope.changeTable = function(newtable) {
-            $http.get("[[ .Meta.Protocol ]]://[[ .Meta.Server ]]/[[ .Meta.Username ]]/[[ .Meta.Database ]]?" + newtable)
+            $http.get("[[ .Meta.Protocol ]]://[[ .Meta.Server ]]/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?" + newtable)
                 .then(function (response) { $scope.db = response.data; })
         }
 

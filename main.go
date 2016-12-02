@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -547,6 +548,7 @@ func main() {
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/star/", starHandler)
+	http.HandleFunc("/table/", tableViewHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
 
@@ -908,7 +910,7 @@ func starHandler(w http.ResponseWriter, req *http.Request) {
 		SELECT count(db)
 		FROM database_stars
 		WHERE database_stars.db = $1
-		AND database_stars.username = $2`, dbId, loggedInUser)
+			AND database_stars.username = $2`, dbId, loggedInUser)
 	var starCount int
 	err = row.Scan(&starCount)
 	if err != nil {
@@ -982,4 +984,271 @@ func starHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	fmt.Fprint(w, newStarCount)
+}
+
+func tableViewHandler(w http.ResponseWriter, req *http.Request) {
+	pageName := "databaseViewHandler()"
+
+	// Split the request URL into path components
+	pathStrings := strings.Split(req.URL.Path, "/")
+
+	// Check that at least a username/database combination was requested
+	if len(pathStrings) < 3 {
+		log.Printf("Something wrong with the requested URL: %v\n", req.URL.Path)
+		return
+	}
+	userName := pathStrings[2]
+	dbName := pathStrings[3]
+
+	// If a specific table was requested, get that info too
+	var requestedTable string
+	requestedTable = req.URL.RawQuery
+
+	// TODO: Add support for database versions, instead of always using the latest
+
+	// Validate the user supplied user and database name
+	err := validateUserDB(userName, dbName)
+	if err != nil {
+		log.Printf("%s: Validation failed for user or database name: %s", pageName, err)
+		return
+	}
+
+	// If a table name was supplied, validate it
+	if requestedTable != "" {
+		err = validatePGTable(requestedTable)
+		if err != nil {
+			log.Printf("%s: Validation failed for table name: %s", pageName, err)
+			return
+		}
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser interface{}
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser = sess.CAttr("UserName")
+	}
+
+	// TODO: Implement caching
+
+	// Check if the user has access to the requested database
+	var minioId string
+	if loggedInUser != userName {
+		// * The request is for another users database, so it needs to be a public one *
+
+		// Retrieve the MinioID of a public database with the given username/database combination
+		row := db.QueryRow(`
+			WITH requested_db AS (
+				SELECT idnum
+				FROM sqlite_databases
+				WHERE username = $1
+					AND dbname = $2
+			)
+			SELECT ver.minioid
+			FROM database_versions AS ver, requested_db AS db
+			WHERE ver.db = db.idnum
+				AND ver.public = true
+			ORDER BY version DESC
+			LIMIT 1`, userName, dbName)
+		err = row.Scan(&minioId)
+		if err != nil {
+			log.Printf("%s: Error looking up MinioID. User: '%s' Database: %v Error: %v\n", pageName,
+				userName, dbName, err)
+			return
+		}
+	} else {
+		// Retrieve the MinioID of a database with the given username/database combination
+		row := db.QueryRow(`
+			WITH requested_db AS (
+				SELECT idnum
+				FROM sqlite_databases
+				WHERE username = $1
+					AND dbname = $2
+			)
+			SELECT ver.minioid
+			FROM database_versions AS ver, requested_db AS db
+			WHERE ver.db = db.idnum
+			ORDER BY version DESC
+			LIMIT 1`, userName, dbName)
+		err = row.Scan(&minioId)
+		if err != nil {
+			log.Printf("%s: Error looking up database id. User: '%s' Error: %v\n", pageName, loggedInUser,
+				err)
+			return
+		}
+	}
+
+	// Sanity check
+	if minioId == "" {
+		// The requested database wasn't found
+		log.Printf("%s: Requested database not found. Username: '%s' Database: '%s'", pageName, userName,
+			dbName)
+		return
+	}
+
+	// Get a handle from Minio for the database object
+	userDB, err := minioClient.GetObject(userName, minioId)
+	if err != nil {
+		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
+		return
+	}
+
+	// Close the object handle when this function finishes
+	defer func() {
+		err := userDB.Close()
+		if err != nil {
+			log.Printf("%s: Error closing object handle: %v\n", pageName, err)
+		}
+	}()
+
+	// Save the database locally to a temporary file
+	tempfileHandle, err := ioutil.TempFile("", "databaseViewHandler-")
+	if err != nil {
+		log.Printf("%s: Error creating tempfile: %v\n", pageName, err)
+		return
+	}
+	tempfile := tempfileHandle.Name()
+	bytesWritten, err := io.Copy(tempfileHandle, userDB)
+	if err != nil {
+		log.Printf("%s: Error writing database to temporary file: %v\n", pageName, err)
+		return
+	}
+	if bytesWritten == 0 {
+		log.Printf("%s: 0 bytes written to the temporary file: %v\n", pageName, dbName)
+		return
+	}
+	tempfileHandle.Close()
+	defer os.Remove(tempfile) // Delete the temporary file when this function finishes
+
+	// Open database
+	db, err := sqlite.Open(tempfile, sqlite.OpenReadOnly)
+	if err != nil {
+		log.Printf("Couldn't open database: %s", err)
+		return
+	}
+	defer db.Close()
+
+	// Retrieve the list of tables in the database
+	tables, err := db.Tables("")
+	if err != nil {
+		log.Printf("Error retrieving table names: %s", err)
+		return
+	}
+	if len(tables) == 0 {
+		// No table names were returned, so abort
+		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
+		return
+	}
+
+	// If no specific table was requested, use the first one
+	var dataRows dbInfo
+	if requestedTable == "" {
+		requestedTable = tables[0]
+	}
+	dataRows.Tablename = requestedTable
+
+	// Retrieve (up to) x rows from the selected database
+	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
+	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
+	stmt, err := db.Prepare("SELECT * FROM " + requestedTable + " LIMIT 10")
+	if err != nil {
+		log.Printf("Error when preparing statement for database: %s\v", err)
+		return
+	}
+
+	// Retrieve the field names
+	dataRows.TableHeaders = stmt.ColumnNames()
+
+	// Process each row
+	var rowCount int
+	fieldCount := -1
+	err = stmt.Select(func(s *sqlite.Stmt) error {
+
+		// Get the number of fields in the result
+		if fieldCount == -1 {
+			fieldCount = stmt.DataCount()
+		}
+
+		// Retrieve the data for each row
+		var row []dataValue
+		for i := 0; i < fieldCount; i++ {
+			// Retrieve the data type for the field
+			fieldType := stmt.ColumnType(i)
+
+			isNull := false
+			switch fieldType {
+			case sqlite.Integer:
+				var val int
+				val, isNull, err = s.ScanInt(i)
+				if err != nil {
+					log.Printf("Something went wrong with ScanInt(): %v\n", err)
+					break
+				}
+				if !isNull {
+					stringVal := fmt.Sprintf("%d", val)
+					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Integer,
+						Value: stringVal})
+				}
+			case sqlite.Float:
+				var val float64
+				val, isNull, err = s.ScanDouble(i)
+				if err != nil {
+					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
+					break
+				}
+				if !isNull {
+					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
+					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Float,
+						Value: stringVal})
+				}
+			case sqlite.Text:
+				var val string
+				val, isNull = s.ScanText(i)
+				if !isNull {
+					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Text,
+						Value: val})
+				}
+			case sqlite.Blob:
+				_, isNull = s.ScanBlob(i)
+				if !isNull {
+					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Binary,
+						Value: "<i>BINARY DATA</i>"})
+				}
+			case sqlite.Null:
+				isNull = true
+			}
+			if isNull {
+				row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Null,
+					Value: "<i>NULL</i>"})
+			}
+		}
+		dataRows.Records = append(dataRows.Records, row)
+		rowCount += 1
+
+		return nil
+	})
+	if err != nil {
+		log.Printf("Error when retrieving select data from database: %s\v", err)
+		return
+	}
+	defer stmt.Finalize()
+
+	var jsonResponse []byte
+	if rowCount > 0 {
+		// Use json.MarshalIndent() for nicer looking output
+		jsonResponse, err = json.MarshalIndent(dataRows, "", " ")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	} else {
+		// Return an empty set indicator, instead of "null"
+		jsonResponse = []byte{'{', ']'}
+	}
+
+	// TODO: Cache the response
+
+	// TODO: Send the response from cache
+	//w.Header().Set("Access-Control-Allow-Origin", "*")
+	fmt.Fprintf(w, "%s", jsonResponse)
 }
