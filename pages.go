@@ -389,6 +389,21 @@ func settingsPage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 }
 
+func uploadPage(w http.ResponseWriter, req *http.Request, userName string) {
+	var pageData struct {
+		Meta metaInfo
+	}
+	pageData.Meta.Title = "Upload database"
+	pageData.Meta.LoggedInUser = userName
+
+	// Render the page
+	t := tmpl.Lookup("uploadPage")
+	err := t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	pageName := "User Page"
 

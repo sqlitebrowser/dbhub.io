@@ -550,6 +550,7 @@ func main() {
 	http.HandleFunc("/settings", settingsHandler)
 	http.HandleFunc("/star/", starHandler)
 	http.HandleFunc("/table/", tableViewHandler)
+	http.HandleFunc("/upload/", uploadHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
 
@@ -864,7 +865,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 
 // This handles incoming requests for the settings page by logged in users
 func settingsHandler(w http.ResponseWriter, req *http.Request) {
-	//pageName := "Settings page"
+	//pageName := "Settings handler"
 
 	// Ensure user is logged in
 	var loggedInUser interface{}
@@ -872,7 +873,6 @@ func settingsHandler(w http.ResponseWriter, req *http.Request) {
 	if sess != nil {
 		loggedInUser = sess.CAttr("UserName")
 	} else {
-		// TODO: Error page goes here
 		errorPage(w, req, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
@@ -1271,4 +1271,25 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	// TODO: Send the response from cache
 	//w.Header().Set("Access-Control-Allow-Origin", "*")
 	fmt.Fprintf(w, "%s", jsonResponse)
+}
+
+// This handles database uploads from logged in users
+func uploadHandler(w http.ResponseWriter, req *http.Request) {
+	//pageName := "Upload handler"
+
+	// Ensure user is logged in
+	var loggedInUser interface{}
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser = sess.CAttr("UserName")
+	} else {
+		errorPage(w, req, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// TODO: If uploaded file + form data is present, process, it, otherwise
+	// TODO  render the upload page
+
+	// Render the upload page
+	uploadPage(w, req, fmt.Sprintf("%s", loggedInUser))
 }

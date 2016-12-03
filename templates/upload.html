@@ -1,0 +1,52 @@
+[[ define "uploadPage" ]]
+<!doctype html>
+<html ng-app="DBHub-front" ng-controller="uploadView">
+[[ template "head" . ]]
+<body>
+[[ template "header" . ]]
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            &nbsp;
+        </div>
+        <div class="col-md-6">
+            <h2 style="text-align: center;">Upload database</h2>
+            <form action="/upload" method="post">
+                <table class="table table-bordered table-striped table-responsive">
+                    <tr>
+                        <th>Database</th>
+                        <td><input type="file" name="database"></td>
+                    </tr>
+                    <tr>
+                        <th>Public or Private?</th>
+                        <td>
+                            <input type="radio" name="public" value="yes"> Public - world readable<br />
+                            <input type="radio" name="public" value="no" checked> Private - only you have access<br />
+                            <i>You can change this later at any time</i>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div style="text-align: center;">
+                                <input type="submit">
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        <div class="col-md-3">
+            &nbsp;
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    //    app.controller('uploadView', function($scope) {
+    //        $scope.users = { Meta: { Title: "Register" } }
+    //    });
+</script>
+</body>
+</html>
+[[ end ]]
