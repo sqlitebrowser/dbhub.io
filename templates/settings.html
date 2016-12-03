@@ -1,0 +1,52 @@
+[[ define "settingsPage" ]]
+<!doctype html>
+<html ng-app="DBHub-front" ng-controller="settingsView">
+[[ template "head" . ]]
+<body>
+[[ template "header" . ]]
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            &nbsp;
+        </div>
+        <div class="col-md-6">
+            <h2 style="text-align: center;">Settings</h2>
+            <form action="/settings" method="post">
+                <table class="table table-bordered table-striped table-responsive">
+                    <tr>
+                        <th>Setting A</th>
+                        <td><input type="text" name="settinga"></td>
+                    </tr>
+                    <tr>
+                        <th>Setting B</th>
+                        <td><input type="text" name="settingb"></td>
+                    </tr>
+                    <tr>
+                        <th>Setting C</th>
+                        <td><input type="text" name="settingc"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div style="text-align: center;">
+                                <input type="submit">
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        <div class="col-md-3">
+            &nbsp;
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    //    app.controller('settingsView', function($scope) {
+    //        $scope.users = { Meta: { Title: "Register" } }
+    //    });
+</script>
+</body>
+</html>
+[[ end ]]

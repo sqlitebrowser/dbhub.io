@@ -547,6 +547,7 @@ func main() {
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/logout", logoutHandler)
 	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/settings", settingsHandler)
 	http.HandleFunc("/star/", starHandler)
 	http.HandleFunc("/table/", tableViewHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
@@ -859,6 +860,25 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	// TODO: This should probably bounce the user to their logged in profile page
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprint(w, `<html><body>Account created successfully, please login: <a href="/login">Login</a></body></html>`)
+}
+
+// This handles incoming requests for the settings page by logged in users
+func settingsHandler(w http.ResponseWriter, req *http.Request) {
+	//pageName := "Settings page"
+
+	// Ensure user is logged in
+	var loggedInUser interface{}
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser = sess.CAttr("UserName")
+	} else {
+		// TODO: Error page goes here
+		errorPage(w, req, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Render the settings page
+	settingsPage(w, req, fmt.Sprintf("%s", loggedInUser))
 }
 
 func starHandler(w http.ResponseWriter, req *http.Request) {
