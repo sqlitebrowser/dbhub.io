@@ -95,9 +95,6 @@
         </div>
         <div class="col-md-5">
             <span class="pull-right">
-                [[ if .Meta.LoggedInUser ]]
-                    <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button>
-                [[ end ]]
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                     <button type="button" class="btn btn-success" uib-dropdown-toggle>
                         Download <span class="caret"></span>
@@ -185,10 +182,6 @@
                         $scope.meta.Stars = tempval;
                     }
                 })
-        }
-
-        $scope.uploadForm = function(newtable) {
-            window.location = '[[ .Meta.Protocol ]]://[[ .Meta.Server ]]/upload/'
         }
     });
 </script>

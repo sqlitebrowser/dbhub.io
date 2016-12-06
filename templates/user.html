@@ -18,6 +18,11 @@
             </h2>
         </div>
     </div>
+    [[ if .Meta.LoggedInUser ]]
+        <div class="row col-md-12" style="margin-bottom: 10px">
+            <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button>
+        </div>
+    [[ end ]]
     <div class="row">
         <div class="col-md-12">
             <table class="table table-bordered table-striped table-responsive">
@@ -42,6 +47,10 @@
     app.controller('userView', function($scope) {
         $scope.meta = { Username: "[[ .Meta.Username ]]" }
         $scope.db = { Databases: [[ .DataRows ]] }
+
+        $scope.uploadForm = function(newtable) {
+            window.location = '[[ .Meta.Protocol ]]://[[ .Meta.Server ]]/upload/'
+        }
     });
 </script>
 </body>

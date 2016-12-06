@@ -414,6 +414,8 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 	pageData.Meta.Username = userName
 	pageData.Meta.Title = userName
+	pageData.Meta.Protocol = listenProtocol
+	pageData.Meta.Server = listenAddr + ":" + strconv.Itoa(listenPort)
 
 	// Retrieve session data (if any)
 	var loggedInUser interface{}

@@ -550,7 +550,8 @@ func main() {
 	http.HandleFunc("/settings", settingsHandler)
 	http.HandleFunc("/star/", starHandler)
 	http.HandleFunc("/table/", tableViewHandler)
-	http.HandleFunc("/upload/", uploadHandler)
+	http.HandleFunc("/upload/", uploadFormHandler)
+	http.HandleFunc("/uploaddata/", uploadDataHandler)
 	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
 }
 
@@ -1273,8 +1274,8 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "%s", jsonResponse)
 }
 
-// This handles database uploads from logged in users
-func uploadHandler(w http.ResponseWriter, req *http.Request) {
+// This function presents the database upload form to logged in users
+func uploadFormHandler(w http.ResponseWriter, req *http.Request) {
 	//pageName := "Upload handler"
 
 	// Ensure user is logged in
@@ -1292,4 +1293,10 @@ func uploadHandler(w http.ResponseWriter, req *http.Request) {
 
 	// Render the upload page
 	uploadPage(w, req, fmt.Sprintf("%s", loggedInUser))
+}
+
+// This function processes new database data submitted through the upload form
+func uploadDataHandler(w http.ResponseWriter, req *http.Request) {
+	log.Println("Upload data form reached")
+	fmt.Fprintln(w, "Upload data form reached")
 }
