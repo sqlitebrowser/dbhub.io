@@ -15,6 +15,16 @@ func reservedUsernamesCheck(userName string) error {
 	return nil
 }
 
+// Validate the database name
+func validateDB(dbName string) error {
+	errs := validate.Var(dbName, "required,alphanum|contains=.,min=1,max=1024")
+	if errs != nil {
+		return errs
+	}
+
+	return nil
+}
+
 // Validate the provided email address
 func validateEmail(email string) error {
 	errs := validate.Var(email, "required,email")
@@ -57,7 +67,7 @@ func validateUserDB(user string, db string) error {
 		return errs
 	}
 
-	errs = validate.Var(db, "required,alphanum|contains=.,min=1,max=1024")
+	errs = validateDB(db)
 	if errs != nil {
 		return errs
 	}

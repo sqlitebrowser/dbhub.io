@@ -18,7 +18,7 @@
             </h2>
         </div>
     </div>
-    [[ if .Meta.LoggedInUser ]]
+    [[ if eq .Meta.LoggedInUser .Meta.Username ]]
         <div class="row col-md-12" style="margin-bottom: 10px">
             <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button>
         </div>

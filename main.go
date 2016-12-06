@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
+	mathrand "math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -1297,6 +1301,231 @@ func uploadFormHandler(w http.ResponseWriter, req *http.Request) {
 
 // This function processes new database data submitted through the upload form
 func uploadDataHandler(w http.ResponseWriter, req *http.Request) {
-	log.Println("Upload data form reached")
-	fmt.Fprintln(w, "Upload data form reached")
+	pageName := "Upload DB handler"
+
+	// Ensure user is logged in
+	var loggedInUser string
+	sess := session.Get(req)
+	if sess == nil {
+		errorPage(w, req, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+	loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+
+	// Prepare the form data
+	req.ParseMultipartForm(32 << 20) // 64MB of ram max
+	if err := req.ParseForm(); err != nil {
+		fmt.Errorf("%s: ParseForm() error: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Grab and validate the supplied "public" form field
+	userPublic := req.PostFormValue("public")
+	public, err := strconv.ParseBool(userPublic)
+	if err != nil {
+		log.Printf("%s: Error when converting public value to boolean: %v\n", pageName, err)
+		errorPage(w, req, http.StatusBadRequest, "Public value incorrect")
+		return
+	}
+
+	// TODO: Add support for folders and subfolders
+	folder := "/"
+
+	tempFile, handler, err := req.FormFile("database")
+	if err != nil {
+		log.Printf("%s: Uploading file failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database file missing from upload data?")
+		return
+	}
+	dbName := handler.Filename
+	defer tempFile.Close()
+
+	// Validate the database name
+	err = validateDB(dbName)
+	if err != nil {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		errorPage(w, req, http.StatusBadRequest, "Invalid database name")
+		return
+	}
+
+	// Write the temporary file locally, so we can try opening it with SQLite to verify it's ok
+	var tempBuf bytes.Buffer
+	bytesWritten, err := io.Copy(&tempBuf, tempFile)
+	if err != nil {
+		log.Printf("%s: Error: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Internal error")
+		return
+	}
+	if bytesWritten == 0 {
+		log.Printf("%s: Database seems to be 0 bytes in length. Username: %s, Database: %s\n", pageName,
+			loggedInUser, dbName)
+		errorPage(w, req, http.StatusBadRequest, "Database file is 0 length?")
+		return
+	}
+	tempDB, err := ioutil.TempFile("", "dbhub-upload-")
+	if err != nil {
+		log.Printf("%s: Error creating temporary file. User: %s, Database: %s, Filename: %s, Error: %v\n",
+			pageName, loggedInUser, dbName, tempDB.Name(), err)
+		errorPage(w, req, http.StatusInternalServerError, "Internal error")
+		return
+	}
+	_, err = tempDB.Write(tempBuf.Bytes())
+	if err != nil {
+		log.Printf("%s: Error when writing the uploaded db to a temp file. User: %s, Database: %s"+
+			"Error: %v\n", pageName, loggedInUser, dbName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Internal error")
+		return
+	}
+	tempDBName := tempDB.Name()
+
+	// Delete the temporary file when this function finishes
+	defer os.Remove(tempDBName)
+
+	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
+	sqliteDB, err := sqlite.Open(tempDBName, sqlite.OpenReadOnly)
+	if err != nil {
+		log.Printf("Couldn't open database when sanity checking upload: %s", err)
+		errorPage(w, req, http.StatusInternalServerError, "Internal error")
+		return
+	}
+	defer sqliteDB.Close()
+	tables, err := sqliteDB.Tables("")
+	if err != nil {
+		log.Printf("Error retrieving table names when sanity checking upload: %s", err)
+		errorPage(w, req, http.StatusInternalServerError,
+			"Error when sanity checking file.  Possibly encrypted or not a database?")
+		return
+	}
+	if len(tables) == 0 {
+		// No table names were returned, so abort
+		log.Printf("The attemped upload for '%s' failed, as it doesn't seem to have any tables.", dbName)
+		errorPage(w, req, http.StatusInternalServerError, "Database has no tables?")
+		return
+	}
+
+	// Generate sha256 of the uploaded file
+	shaSum := sha256.Sum256(tempBuf.Bytes())
+
+	// Check if the database already exists
+	var highestVersion int
+	err = db.QueryRow(`
+		SELECT version
+		FROM database_versions
+		WHERE db = (SELECT idnum
+			FROM sqlite_databases
+			WHERE username = $1
+			AND dbname = $2)
+		ORDER BY version DESC
+		LIMIT 1`, loggedInUser, dbName).Scan(&highestVersion)
+	if err != nil && err != pgx.ErrNoRows {
+		log.Printf("%s: Error when querying database: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failure")
+		return
+	}
+	var newVersion int
+	if highestVersion > 0 {
+		// The database already exists
+		newVersion = highestVersion + 1
+	} else {
+		newVersion = 1
+	}
+
+	// Generate random filename to store the database as
+	mathrand.Seed(time.Now().UnixNano())
+	const alphaNum = "abcdefghijklmnopqrstuvwxyz0123456789"
+	randomString := make([]byte, 8)
+	for i := range randomString {
+		randomString[i] = alphaNum[mathrand.Intn(len(alphaNum))]
+	}
+	minioId := string(randomString) + ".db"
+
+	// TODO: We should probably check if the randomly generated filename is already used for the user, just in case
+
+	// Store the database file in Minio
+	dbSize, err := minioClient.PutObject(loggedInUser, minioId, &tempBuf, handler.Header["Content-Type"][0])
+	if err != nil {
+		log.Printf("%s: Storing file in Minio failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Storing in object store failed")
+		return
+	}
+
+	// TODO: Put these queries inside a single transaction
+
+	// Add the new database details to the PG database
+	var dbQuery string
+	if newVersion == 1 {
+		dbQuery = `
+			INSERT INTO sqlite_databases (username, folder, dbname)
+			VALUES ($1, $2, $3)`
+		commandTag, err := db.Exec(dbQuery, loggedInUser, folder, dbName)
+		if err != nil {
+			log.Printf("%s: Adding database to PostgreSQL failed: %v\n", pageName, err)
+			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+			return
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf("%s: Wrong number of rows affected: %v, user: %s, database: %v\n", pageName,
+				numRows, loggedInUser, dbName)
+			return
+		}
+	}
+
+	// Add the database to database_versions
+	dbQuery = `
+		WITH databaseid AS (
+			SELECT idnum
+			FROM sqlite_databases
+			WHERE username = $1
+				AND dbname = $2)
+		INSERT INTO database_versions (db, size, version, sha256, public, minioid)
+		SELECT idnum, $3, $4, $5, $6, $7 FROM databaseid`
+	commandTag, err := db.Exec(dbQuery, loggedInUser, dbName, dbSize, newVersion, hex.EncodeToString(shaSum[:]),
+		public, minioId)
+	if err != nil {
+		log.Printf("%s: Adding version info to PostgreSQL failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+
+	// Update the last_modified date for the database in sqlite_databases
+	dbQuery = `
+		UPDATE sqlite_databases
+		SET last_modified = (
+			SELECT last_modified
+			FROM database_versions
+			WHERE db = (
+				SELECT idnum
+				FROM sqlite_databases
+				WHERE username = $1
+					AND dbname = $2)
+				AND version = $3)
+		WHERE username = $1
+			AND dbname = $2`
+	commandTag, err = db.Exec(dbQuery, loggedInUser, dbName, newVersion)
+	if err != nil {
+		log.Printf("%s: Updating last_modified date in PostgreSQL failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("%s: Wrong number of rows affected: %v, user: %s, database: %v\n", pageName, numRows,
+			loggedInUser, dbName)
+		return
+	}
+
+	// Log the successful database upload
+	log.Printf("%s: Username: %v, database '%v' uploaded as '%v', bytes: %v\n", pageName, loggedInUser, dbName,
+		minioId, dbSize)
+
+	// Database upload succeeded.  Tell the user then bounce back to their profile page
+	fmt.Fprintf(w, `
+	<html><head><script type="text/javascript"><!--
+		function delayer(){
+			window.location = "/%s"
+		}//-->
+	</script></head>
+	<body onLoad="setTimeout('delayer()', 5000)">
+	<body>Upload succeeded<br /><br /><a href="/%s">Continuing to profile page...</a></body></html>`,
+		loggedInUser, loggedInUser)
 }
