@@ -168,11 +168,15 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the MinioID while at it)
-	rows, err := db.Query("SELECT minioid FROM public.sqlite_databases "+
-		"WHERE dbname = $1 "+
-		"AND version = $2 "+
-		"AND username = $3 "+
-		"AND public = true", dbName, dbVersion, userName)
+	rows, err := db.Query(`
+		SELECT minioid
+		FROM database_versions
+		WHERE db = (SELECT idnum
+			FROM sqlite_databases
+			WHERE username = $1
+				AND dbname = $2
+				AND version = $3)`,
+		userName, dbName, dbVersion)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
@@ -365,11 +369,15 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the MinioID while at it)
-	rows, err := db.Query("SELECT minioid FROM public.sqlite_databases "+
-		"WHERE dbname = $1 "+
-		"AND version = $2 "+
-		"AND username = $3 "+
-		"AND public = true", dbName, dbVersion, userName)
+	rows, err := db.Query(`
+		SELECT minioid
+		FROM database_versions
+		WHERE db = (SELECT idnum
+			FROM sqlite_databases
+			WHERE username = $1
+				AND dbname = $2
+				AND version = $3)`,
+		userName, dbName, dbVersion)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
