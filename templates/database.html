@@ -170,12 +170,12 @@
         }
 
         $scope.changeTable = function(newtable) {
-            $http.get("[[ .Meta.Protocol ]]://[[ .Meta.Server ]]/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?" + newtable)
+            $http.get("/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?" + newtable)
                 .then(function (response) { $scope.db = response.data; })
         }
 
         $scope.toggleStars = function() {
-            $http.get("[[ .Meta.Protocol ]]://[[ .Meta.Server ]]/star/[[ .Meta.Username ]]/[[ .Meta.Database ]]")
+            $http.get("/star/[[ .Meta.Username ]]/[[ .Meta.Database ]]")
                 .then(function (response) {
                     tempval = response.data;
                     if (tempval != "-1") {

@@ -84,6 +84,7 @@ type metaInfo struct {
 type tomlConfig struct {
 	Minio minioInfo
 	Pg    pgInfo
+	App   appInfo
 }
 
 // Minio connection parameters
@@ -103,6 +104,12 @@ type pgInfo struct {
 	Database string
 }
 
+type appInfo struct {
+	Addr           string
+	Certificate    string
+	CertificateKey string `toml:"certificate_key"`
+}
+
 var (
 	// Our configuration info
 	conf tomlConfig
@@ -113,11 +120,6 @@ var (
 	// Connection handles
 	db          *pgx.Conn
 	minioClient *minio.Client
-
-	// Address to listen on
-	listenProtocol = "http"
-	listenAddr     = "localhost"
-	listenPort     = 8080
 
 	// For input validation
 	validate *valid.Validate
@@ -564,7 +566,10 @@ func main() {
 	http.HandleFunc("/table/", tableViewHandler)
 	http.HandleFunc("/upload/", uploadFormHandler)
 	http.HandleFunc("/uploaddata/", uploadDataHandler)
-	log.Fatal(http.ListenAndServe(listenAddr+":"+strconv.Itoa(listenPort), nil))
+
+	// Start server
+	log.Printf("Starting server on https://%s\n", conf.App.Addr)
+	log.Fatal(http.ListenAndServeTLS(conf.App.Addr, conf.App.Certificate, conf.App.CertificateKey, nil))
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
