@@ -234,7 +234,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	pageData.DB.Tablename = selectedTable
 	pageData.Meta.Username = userName
 	pageData.Meta.Database = databaseName
-	pageData.Meta.Server = conf.Web.Addr
+	pageData.Meta.Server = conf.Web.Server
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, databaseName)
 
 	// Render the page
@@ -413,7 +413,7 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 	pageData.Meta.Username = userName
 	pageData.Meta.Title = userName
-	pageData.Meta.Server = conf.Web.Addr
+	pageData.Meta.Server = conf.Web.Server
 
 	// Retrieve session data (if any)
 	var loggedInUser interface{}

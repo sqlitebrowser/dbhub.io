@@ -105,7 +105,7 @@ type pgInfo struct {
 }
 
 type webInfo struct {
-	Addr           string
+	Server         string
 	Certificate    string
 	CertificateKey string `toml:"certificate_key"`
 }
@@ -568,13 +568,13 @@ func main() {
 	http.HandleFunc("/uploaddata/", uploadDataHandler)
 
 	// Start server
-	log.Printf("Starting server on https://%s\n", conf.Web.Addr)
-	log.Fatal(http.ListenAndServeTLS(conf.Web.Addr, conf.Web.Certificate, conf.Web.CertificateKey, nil))
+	log.Printf("Starting server on https://%s\n", conf.Web.Server)
+	log.Fatal(http.ListenAndServeTLS(conf.Web.Server, conf.Web.Certificate, conf.Web.CertificateKey, nil))
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
 
-	log.Printf("Request received: %v\n", req.URL)
+	log.Printf("Request received from '%v' - '%v'\n", req.RemoteAddr, req.URL)
 
 	// Split the request URL into path components
 	pathStrings := strings.Split(req.URL.Path, "/")
