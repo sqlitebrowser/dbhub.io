@@ -84,7 +84,7 @@ type metaInfo struct {
 type tomlConfig struct {
 	Minio minioInfo
 	Pg    pgInfo
-	App   appInfo
+	Web   webInfo
 }
 
 // Minio connection parameters
@@ -104,7 +104,7 @@ type pgInfo struct {
 	Database string
 }
 
-type appInfo struct {
+type webInfo struct {
 	Addr           string
 	Certificate    string
 	CertificateKey string `toml:"certificate_key"`
@@ -568,8 +568,8 @@ func main() {
 	http.HandleFunc("/uploaddata/", uploadDataHandler)
 
 	// Start server
-	log.Printf("Starting server on https://%s\n", conf.App.Addr)
-	log.Fatal(http.ListenAndServeTLS(conf.App.Addr, conf.App.Certificate, conf.App.CertificateKey, nil))
+	log.Printf("Starting server on https://%s\n", conf.Web.Addr)
+	log.Fatal(http.ListenAndServeTLS(conf.Web.Addr, conf.Web.Certificate, conf.Web.CertificateKey, nil))
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
