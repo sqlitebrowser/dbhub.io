@@ -353,6 +353,162 @@ func loginPage(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func profilePage(w http.ResponseWriter, req *http.Request, userName string) {
+	pageName := "User Page"
+
+	// Structure to hold page data
+	type starRow struct {
+		Username    string
+		Database    string
+		DateStarred time.Time
+	}
+	var pageData struct {
+		Meta       metaInfo
+		PublicDBS  []dbInfo
+		PrivateDBS []dbInfo
+		Stars      []starRow
+	}
+	pageData.Meta.Username = userName
+	pageData.Meta.Title = userName
+	pageData.Meta.Server = conf.Web.Server
+	pageData.Meta.LoggedInUser = userName
+
+	// Check if the desired user exists
+	row := db.QueryRow("SELECT count(username) FROM public.users WHERE username = $1", userName)
+	var userCount int
+	err := row.Scan(&userCount)
+	if err != nil {
+		log.Printf("%s: Error looking up user details failed. User: '%s' Error: %v\n", pageName, userName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+
+	// If the user doesn't exist, display an error page
+	if userCount == 0 {
+		errorPage(w, req, http.StatusNotFound, fmt.Sprintf("Unknown user: %s", userName))
+		return
+	}
+
+	var dbQuery string
+	// Retrieve list of public databases for the user
+	dbQuery = `
+		WITH public_dbs AS (
+			SELECT db.dbname, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
+				db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+				db.releases, db.contributors, db.description
+			FROM sqlite_databases AS db, database_versions AS ver
+			WHERE db.idnum = ver.db
+				AND db.username = $1
+				AND ver.public = true
+			ORDER BY dbname, version DESC
+		), unique_dbs AS (
+			SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
+		)
+		SELECT * FROM unique_dbs ORDER BY last_modified DESC`
+	rows, err := db.Query(dbQuery, userName)
+	if err != nil {
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var oneRow dbInfo
+		var Desc pgx.NullString
+		err = rows.Scan(&oneRow.Database, &oneRow.LastModified, &oneRow.Size, &oneRow.Version,
+			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.PRs,
+			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &Desc)
+		if err != nil {
+			log.Printf("%s: Error retrieving public database list for user: %v\n", pageName, err)
+			errorPage(w, req, http.StatusInternalServerError, "Error retrieving database list")
+			return
+		}
+		if !Desc.Valid {
+			oneRow.Description = ""
+		} else {
+			oneRow.Description = fmt.Sprintf(": %s", Desc.String)
+		}
+		pageData.PublicDBS = append(pageData.PublicDBS, oneRow)
+	}
+
+	// Retrieve list of private databases for the user
+	dbQuery = `
+		WITH public_dbs AS (
+			SELECT db.dbname, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
+				db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+				db.releases, db.contributors, db.description
+			FROM sqlite_databases AS db, database_versions AS ver
+			WHERE db.idnum = ver.db
+				AND db.username = $1
+				AND ver.public = false
+			ORDER BY dbname, version DESC
+		), unique_dbs AS (
+			SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
+		)
+		SELECT * FROM unique_dbs ORDER BY last_modified DESC`
+	rows2, err := db.Query(dbQuery, userName)
+	if err != nil {
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+	defer rows2.Close()
+	for rows2.Next() {
+		var oneRow dbInfo
+		var Desc pgx.NullString
+		err = rows2.Scan(&oneRow.Database, &oneRow.LastModified, &oneRow.Size, &oneRow.Version,
+			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.PRs,
+			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &Desc)
+		if err != nil {
+			log.Printf("%s: Error retrieving private database list for user: %v\n", pageName, err)
+			errorPage(w, req, http.StatusInternalServerError, "Error retrieving database list")
+			return
+		}
+		if !Desc.Valid {
+			oneRow.Description = ""
+		} else {
+			oneRow.Description = fmt.Sprintf(": %s", Desc.String)
+		}
+		pageData.PrivateDBS = append(pageData.PrivateDBS, oneRow)
+	}
+
+	// Retrieve the list of starred databases for the user
+	dbQuery = `
+		WITH stars AS (
+			SELECT db, date_starred
+			FROM database_stars
+			WHERE username = $1
+		)
+		SELECT dbs.username, dbs.dbname, stars.date_starred
+		FROM sqlite_databases AS dbs, stars
+		WHERE dbs.idnum = stars.db
+		ORDER BY date_starred DESC`
+	rows3, err := db.Query(dbQuery, userName)
+	if err != nil {
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+	defer rows3.Close()
+	for rows3.Next() {
+		var oneRow starRow
+		err = rows3.Scan(&oneRow.Username, &oneRow.Database, &oneRow.DateStarred)
+		if err != nil {
+			log.Printf("%s: Error retrieving stars list for user: %v\n", pageName, err)
+			errorPage(w, req, http.StatusInternalServerError, "Error retrieving stars list")
+			return
+		}
+		pageData.Stars = append(pageData.Stars, oneRow)
+	}
+
+	// Render the page
+	t := tmpl.Lookup("profilePage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 func registerPage(w http.ResponseWriter, req *http.Request) {
 	var pageData struct {
 		Meta metaInfo
@@ -417,11 +573,16 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	pageData.Meta.Server = conf.Web.Server
 
 	// Retrieve session data (if any)
-	var loggedInUser interface{}
+	var loggedInUser string
 	sess := session.Get(req)
 	if sess != nil {
-		loggedInUser = sess.CAttr("UserName")
-		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+		if loggedInUser == userName {
+			// The logged in user is looking at their own user page
+			profilePage(w, req, loggedInUser)
+			return
+		}
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Check if the desired user exists
@@ -441,38 +602,21 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 
 	var dbQuery string
-	if loggedInUser != userName {
-		// Retrieve list of public databases for the user
-		dbQuery = `
-			WITH public_dbs AS (
-				SELECT db.dbname, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
-					db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
-					db.releases, db.contributors, db.description
-				FROM sqlite_databases AS db, database_versions AS ver
-				WHERE db.idnum = ver.db
-					AND db.username = $1
-					AND ver.public = true
-				ORDER BY dbname, version DESC
-			), unique_dbs AS (
-				SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
-			)
-			SELECT * FROM unique_dbs ORDER BY last_modified DESC`
-	} else {
-		// Retrieve all databases for the user
-		dbQuery = `
-			WITH public_dbs AS (
-				SELECT db.dbname, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
-					db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
-					db.releases, db.contributors, db.description
-				FROM sqlite_databases AS db, database_versions AS ver
-				WHERE db.idnum = ver.db
-					AND db.username = $1
-				ORDER BY dbname, version DESC
-			), unique_dbs AS (
-				SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
-			)
-			SELECT * FROM unique_dbs ORDER BY last_modified DESC`
-	}
+	// Retrieve list of public databases for the user
+	dbQuery = `
+		WITH public_dbs AS (
+			SELECT db.dbname, db.last_modified, ver.size, ver.version, db.watchers, db.stars, db.forks,
+				db.discussions, db.pull_requests, db.updates, db.branches, db.releases,
+				db.contributors, db.description
+			FROM sqlite_databases AS db, database_versions AS ver
+			WHERE db.idnum = ver.db
+				AND db.username = $1
+				AND ver.public = true
+			ORDER BY dbname, version DESC
+		), unique_dbs AS (
+			SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
+		)
+		SELECT * FROM unique_dbs ORDER BY last_modified DESC`
 	rows, err := db.Query(dbQuery, userName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
