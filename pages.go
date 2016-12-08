@@ -291,19 +291,20 @@ func frontPage(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Retrieve list of users with public databases
-	dbQuery := "WITH public_dbs AS (" +
-		"SELECT DISTINCT ON (db) db, last_modified " +
-		"FROM database_versions " +
-		"WHERE public = true " +
-		"ORDER BY db, last_modified DESC " +
-		"), user_list AS (" +
-		"SELECT DISTINCT ON (username) username, public_dbs.last_modified " +
-		"FROM sqlite_databases, public_dbs " +
-		"WHERE idnum = public_dbs.db" +
-		") " +
-		"SELECT username, last_modified " +
-		"FROM user_list " +
-		"ORDER BY last_modified DESC"
+	dbQuery := `
+		WITH public_dbs AS (
+			SELECT DISTINCT ON (ver.db) ver.db, ver.version, ver.last_modified
+			FROM database_versions AS ver
+			WHERE ver.public = true
+			ORDER BY ver.db DESC, ver.version DESC
+		), public_users AS (
+			SELECT DISTINCT ON (db.username) db.username, pub.db, pub.version, pub.last_modified
+			FROM public_dbs as pub, sqlite_databases AS db
+			WHERE db.idnum = pub.db
+			ORDER BY db.username, last_modified DESC
+		)
+		SELECT username, last_modified FROM public_users
+		ORDER BY last_modified DESC`
 	rows, err := db.Query(dbQuery)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
