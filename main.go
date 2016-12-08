@@ -108,24 +108,28 @@ type webInfo struct {
 	Server         string
 	Certificate    string
 	CertificateKey string `toml:"certificate_key"`
+	RequestLog     string `toml:"request_log"`
 }
 
 var (
 	// Our configuration info
 	conf tomlConfig
 
-	// PostgreSQL configuration info
-	pgConfig = new(pgx.ConnConfig)
-
 	// Connection handles
 	db          *pgx.Conn
 	minioClient *minio.Client
 
-	// For input validation
-	validate *valid.Validate
+	// PostgreSQL configuration info
+	pgConfig = new(pgx.ConnConfig)
+
+	// Log file for incoming HTTPS requests
+	reqLog *os.File
 
 	// Our parsed HTML templates
 	tmpl *template.Template
+
+	// For input validation
+	validate *valid.Validate
 )
 
 func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
@@ -428,7 +432,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Log the number of bytes written
-	log.Printf("%s: '%v' downloaded by user '%v', %v bytes", pageName, dbName, userName, bytesWritten)
+	log.Printf("%s: '%s/%s' downloaded. %d bytes", pageName, userName, dbName, bytesWritten)
 }
 
 func loginHandler(w http.ResponseWriter, req *http.Request) {
@@ -513,13 +517,29 @@ func logoutHandler(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "/", http.StatusTemporaryRedirect)
 }
 
-func main() {
-	// Setup session storage
-	// TODO: Is this better placed in init()?
-	session.Global.Close()
-	session.Global = session.NewCookieManagerOptions(session.NewInMemStore(),
-		&session.CookieMngrOptions{AllowHTTP: true}) // TODO: Make this HTTPS only in near future
+// Wrapper function to log incoming https requests
+func logReq(fn http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		// Check if user is logged in
+		var loggedInUser string
+		sess := session.Get(req)
+		if sess == nil {
+			loggedInUser = "-"
+		} else {
+			loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+		}
 
+		// Write request details to the request log
+		fmt.Fprintf(reqLog, "%v - %s [%s] \"%s %s %s\" \"-\" \"-\" \"%s\" \"%s\"\n", req.RemoteAddr,
+			loggedInUser, time.Now().Format(time.RFC3339Nano), req.Method, req.URL, req.Proto,
+			req.Referer(), req.Header.Get("User-Agent"))
+
+		// Call the original function
+		fn(w, req)
+	}
+}
+
+func main() {
 	// Load validation code
 	validate = valid.New()
 
@@ -528,6 +548,19 @@ func main() {
 	if err = readConfig(); err != nil {
 		log.Fatalf("Configuration file problem\n\n%v", err)
 	}
+
+	// Open the request log for writing
+	reqLog, err = os.OpenFile(conf.Web.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
+	if err != nil {
+		log.Fatalf("Error when opening request log: %s\n", err)
+	}
+	defer reqLog.Close()
+	log.Printf("Request log opened: %s\n", conf.Web.RequestLog)
+
+	// Setup session storage
+	session.Global.Close()
+	session.Global = session.NewCookieManagerOptions(session.NewInMemStore(),
+		&session.CookieMngrOptions{AllowHTTP: false})
 
 	// Parse our template files
 	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob("templates/*.html"))
@@ -539,7 +572,7 @@ func main() {
 	}
 
 	// Log Minio server end point
-	log.Printf("Minio server config ok: %v\n", conf.Minio.Server)
+	log.Printf("Minio server config ok. Address: %v\n", conf.Minio.Server)
 
 	// Connect to PostgreSQL server
 	db, err = pgx.Connect(*pgConfig)
@@ -551,31 +584,27 @@ func main() {
 	// Log successful connection message
 	log.Printf("Connected to PostgreSQL server: %v:%v\n", conf.Pg.Server, uint16(conf.Pg.Port))
 
-	log.Println("Running...")
-	http.HandleFunc("/", mainHandler)
-	http.HandleFunc("/download/", downloadHandler)
-	http.HandleFunc("/downloadcsv/", downloadCSVHandler)
-	http.HandleFunc("/images/sqlitebrowser.svg", func(w http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/", logReq(mainHandler))
+	http.HandleFunc("/download/", logReq(downloadHandler))
+	http.HandleFunc("/downloadcsv/", logReq(downloadCSVHandler))
+	http.HandleFunc("/images/sqlitebrowser.svg", logReq(func(w http.ResponseWriter, req *http.Request) {
 		http.ServeFile(w, req, "images/sqlitebrowser.svg")
-	})
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/logout", logoutHandler)
-	http.HandleFunc("/register", registerHandler)
-	http.HandleFunc("/settings", settingsHandler)
-	http.HandleFunc("/star/", starHandler)
-	http.HandleFunc("/table/", tableViewHandler)
-	http.HandleFunc("/upload/", uploadFormHandler)
-	http.HandleFunc("/uploaddata/", uploadDataHandler)
+	}))
+	http.HandleFunc("/login", logReq(loginHandler))
+	http.HandleFunc("/logout", logReq(logoutHandler))
+	http.HandleFunc("/register", logReq(registerHandler))
+	http.HandleFunc("/settings", logReq(settingsHandler))
+	http.HandleFunc("/star/", logReq(starHandler))
+	http.HandleFunc("/table/", logReq(tableViewHandler))
+	http.HandleFunc("/upload/", logReq(uploadFormHandler))
+	http.HandleFunc("/uploaddata/", logReq(uploadDataHandler))
 
 	// Start server
-	log.Printf("Starting server on https://%s\n", conf.Web.Server)
+	log.Printf("DBHub server starting on https://%s\n", conf.Web.Server)
 	log.Fatal(http.ListenAndServeTLS(conf.Web.Server, conf.Web.Certificate, conf.Web.CertificateKey, nil))
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
-
-	log.Printf("Request received from '%v' - '%v'\n", req.RemoteAddr, req.URL)
-
 	// Split the request URL into path components
 	pathStrings := strings.Split(req.URL.Path, "/")
 
