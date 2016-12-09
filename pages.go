@@ -578,6 +578,66 @@ func settingsPage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 }
 
+func starsPage(w http.ResponseWriter, req *http.Request, userName string, dbName string) {
+	pageName := "Stars page"
+
+	type userInfo struct {
+		Username    string
+		DateStarred time.Time
+	}
+	var pageData struct {
+		Meta  metaInfo
+		Stars []userInfo
+	}
+	pageData.Meta.Title = "Stars"
+	pageData.Meta.Username = userName
+	pageData.Meta.Database = dbName
+
+	// Retrieve session data (if any)
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser := sess.CAttr("UserName")
+		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+	}
+
+	// Retrieve list of users who starred the database
+	dbQuery := `
+		SELECT username, date_starred
+		FROM database_stars
+		WHERE db = (
+			SELECT idnum
+			FROM sqlite_databases
+			WHERE username = $1
+				AND dbname = $2
+			)
+		ORDER BY date_starred DESC`
+	rows, err := db.Query(dbQuery, userName, dbName)
+	if err != nil {
+		log.Printf("%s: Database query failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var oneRow userInfo
+		err = rows.Scan(&oneRow.Username, &oneRow.DateStarred)
+		if err != nil {
+			log.Printf("%s: Error retrieving list of stars for %s/%s: %v\n", pageName, userName, dbName,
+				err)
+			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+			return
+		}
+		pageData.Stars = append(pageData.Stars, oneRow)
+	}
+
+	// Render the page
+	t := tmpl.Lookup("starsPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 func uploadPage(w http.ResponseWriter, req *http.Request, userName string) {
 	var pageData struct {
 		Meta metaInfo

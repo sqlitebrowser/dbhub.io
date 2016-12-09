@@ -614,6 +614,7 @@ func main() {
 	http.HandleFunc("/register", logReq(registerHandler))
 	http.HandleFunc("/settings", logReq(settingsHandler))
 	http.HandleFunc("/star/", logReq(starHandler))
+	http.HandleFunc("/stars/", logReq(starsHandler))
 	http.HandleFunc("/table/", logReq(tableViewHandler))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
 	http.HandleFunc("/uploaddata/", logReq(uploadDataHandler))
@@ -663,7 +664,7 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 	// Validate the user supplied user and database name
 	err := validateUserDB(userName, dbName)
 	if err != nil {
-		log.Printf("Validation failed of user or database name: %s", err)
+		log.Printf("%s: Validation failed of user or database name: %s", pageName, err)
 		errorPage(w, req, http.StatusBadRequest, "Invalid user or database name")
 		return
 	}
@@ -1101,6 +1102,33 @@ func starHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	fmt.Fprint(w, newStarCount)
+}
+
+func starsHandler(w http.ResponseWriter, req *http.Request) {
+
+	// Split the request URL into path components
+	pathStrings := strings.Split(req.URL.Path, "/")
+
+	// Make sure we've been given a username and database
+	numPieces := len(pathStrings)
+	if numPieces != 4 {
+		errorPage(w, req, http.StatusBadRequest, "Invalid user or database name")
+		return
+	}
+
+	userName := pathStrings[2]
+	dbName := pathStrings[3]
+
+	// Validate the user supplied user and database name
+	err := validateUserDB(userName, dbName)
+	if err != nil {
+		log.Printf("Validation failed of user or database name: %s", err)
+		errorPage(w, req, http.StatusBadRequest, "Invalid user or database name")
+		return
+	}
+
+	// Render the stars page
+	starsPage(w, req, userName, dbName)
 }
 
 func tableViewHandler(w http.ResponseWriter, req *http.Request) {

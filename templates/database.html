@@ -9,10 +9,19 @@
         <div class="col-md-12">
             <h2 id="viewuser" style="margin-top: 10px;">
                 <div class="pull-left"><a href="/[[ .Meta.Username ]]">[[ .Meta.Username ]]</a> / [[ .Meta.Database ]]</div>
-                <div class="btn-group pull-right">
-                    <button type="button" class="btn btn-default" ng-bind="'Watchers: ' + meta.Watchers"></button>
-                    <button type="button" class="btn btn-default" ng-bind="'Stars: ' + meta.Stars" ng-click="toggleStars()"></button>
-                    <button type="button" class="btn btn-default" ng-bind="'Forks: ' + meta.Forks"></button>
+                <div class="pull-right">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-bind="'Watchers:'"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Watchers"></button>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-bind="'Stars:'" ng-click="toggleStars()"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Stars" ng-click="starsPage()"></button>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-bind="'Forks:'"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Forks"></button>
+                    </div>
                 </div>
             </h2>
         </div>
@@ -180,6 +189,10 @@
         $scope.changeTable = function(newtable) {
             $http.get("/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?" + newtable)
                 .then(function (response) { $scope.db = response.data; })
+        }
+
+        $scope.starsPage = function() {
+            window.location = "/stars/[[ .Meta.Username ]]/[[ .Meta.Database ]]"
         }
 
         $scope.toggleStars = function() {
