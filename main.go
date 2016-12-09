@@ -614,6 +614,8 @@ func main() {
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
+	pageName := "Main handler"
+
 	// Split the request URL into path components
 	pathStrings := strings.Split(req.URL.Path, "/")
 
@@ -635,10 +637,10 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	userName := pathStrings[1]
-	databaseName := pathStrings[2]
+	dbName := pathStrings[2]
 
 	// Validate the user supplied user and database name
-	err := validateUserDB(userName, databaseName)
+	err := validateUserDB(userName, dbName)
 	if err != nil {
 		log.Printf("Validation failed of user or database name: %s", err)
 		errorPage(w, req, http.StatusBadRequest, "Invalid user or database name")
@@ -653,9 +655,27 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// A specific database was requested
+	// * A specific database was requested *
+
+	// Check if a table name was also requested
+	err = req.ParseForm()
+	if err != nil {
+		log.Printf("%s: Error with ParseForm() in main handler: %s\n", pageName, err)
+	}
+	dbTable := req.FormValue("table")
+
+	// If a table name was supplied, validate it
+	if dbTable != "" {
+		err = validatePGTable(dbTable)
+		if err != nil {
+			// Validation failed, so don't pass on the table name
+			log.Printf("%s: Validation failed for table name: %s", pageName, err)
+			dbTable = ""
+		}
+	}
+
 	// TODO: Add support for folders and sub-folders in request paths
-	databasePage(w, req, userName, databaseName)
+	databasePage(w, req, userName, dbName, dbTable)
 }
 
 // Read the server configuration file

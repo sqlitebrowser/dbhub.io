@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx"
 )
 
-func databasePage(w http.ResponseWriter, req *http.Request, userName string, databaseName string) {
+func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbName string, dbTable string) {
 	pageName := "Render Database Page"
 
 	// Retrieve the MinioID, and the user visible info for the requested database
@@ -26,7 +26,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	WHERE db.username = $1 AND db.dbname = $2 AND db.idnum = ver.db
 	ORDER BY version DESC
 	LIMIT 1`,
-		userName, databaseName)
+		userName, dbName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
@@ -71,7 +71,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 		}
 	}
 	if minioID == "" {
-		log.Printf("%s: Requested database not found: %v for user: %v \n", pageName, databaseName, userName)
+		log.Printf("%s: Requested database not found: %v for user: %v \n", pageName, dbName, userName)
 		errorPage(w, req, http.StatusInternalServerError, "The requested database doesn't exist")
 		return
 	}
@@ -107,7 +107,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 		return
 	}
 	if bytesWritten == 0 {
-		log.Printf("%s: 0 bytes written to the temporary file: %v\n", pageName, databaseName)
+		log.Printf("%s: 0 bytes written to the temporary file: %v\n", pageName, dbName)
 		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
 		return
 	}
@@ -130,24 +130,40 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 		// TODO: Add proper error handing here.  Maybe display the page, but show the error where
 		// TODO  the table data would otherwise be?
 		errorPage(w, req, http.StatusInternalServerError,
-			fmt.Sprintf("Error reading from '%s'.  Possibly encrypted or not a database?", databaseName))
+			fmt.Sprintf("Error reading from '%s'.  Possibly encrypted or not a database?", dbName))
 		return
 	}
 	if len(tables) == 0 {
 		// No table names were returned, so abort
-		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", databaseName)
+		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
 		errorPage(w, req, http.StatusInternalServerError, "Database has no tables?")
 		return
 	}
 	pageData.DB.Tables = tables
 
-	// Select the first table
-	selectedTable := pageData.DB.Tables[0]
+	// If a specific table was requested, check that it's present
+	if dbTable != "" {
+		// Check the requested table is present
+		tablePresent := false
+		for _, tbl := range tables {
+			if tbl == dbTable {
+				tablePresent = true
+			}
+		}
+		if tablePresent == false {
+			// The requested table doesn't exist in the database
+			dbTable = ""
+		}
+	}
+	// If a specific table wasn't requested, or the one requested isn't present, use the first table in the database
+	if dbTable == "" {
+		dbTable = pageData.DB.Tables[0]
+	}
 
 	// Retrieve (up to) x rows from the selected database
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
-	stmt, err := db.Prepare("SELECT * FROM " + selectedTable + " LIMIT 10")
+	stmt, err := db.Prepare("SELECT * FROM " + dbTable + " LIMIT 10")
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
 		errorPage(w, req, http.StatusInternalServerError, "Internal error")
@@ -226,16 +242,16 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dat
 	if err != nil {
 		log.Printf("Error when retrieving select data from database: %s\v", err)
 		errorPage(w, req, http.StatusInternalServerError,
-			fmt.Sprintf("Error reading data from '%s'.  Possibly malformed?", databaseName))
+			fmt.Sprintf("Error reading data from '%s'.  Possibly malformed?", dbName))
 		return
 	}
 	defer stmt.Finalize()
 
-	pageData.DB.Tablename = selectedTable
+	pageData.DB.Tablename = dbTable
 	pageData.Meta.Username = userName
-	pageData.Meta.Database = databaseName
+	pageData.Meta.Database = dbName
 	pageData.Meta.Server = conf.Web.Server
-	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, databaseName)
+	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, dbName)
 
 	// Render the page
 	t := tmpl.Lookup("databasePage")
