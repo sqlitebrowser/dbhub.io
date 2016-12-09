@@ -127,6 +127,12 @@
                 <tr ng-repeat="row in db.Records">
                     <td ng-repeat="val in row"><span ng-bind-html="val.Value | fixSpaces"></span></td>
                 </tr>
+                <tr>
+                    <td colspan="{{ db.ColCount }}" style="text-align: center;">
+                        <span ng-bind-html="totalRowCount()"></span>
+                    </td>
+                </tr>
+
             </table>
         </div>
     </div>
@@ -150,7 +156,7 @@
 <script>
     var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
     app.filter("fixSpaces", ['$sce', '$sanitize', function($sce, $sanitize) {
-        return function(htmlCode){
+        return function(htmlCode) {
             if (htmlCode == "") {
                 htmlCode = '&nbsp;';
             }
@@ -184,17 +190,36 @@
         $scope.db = { Tablename: "[[ .DB.Tablename ]]",
                       Records: [[ .DB.Records ]],
                       TableHeaders: [[ .DB.TableHeaders ]],
+                      RowCount: [[ .RowCount ]],
+                      ColCount: [[ .ColCount ]],
         }
 
+        // Retrieves the table data for a given table
         $scope.changeTable = function(newtable) {
             $http.get("/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?" + newtable)
                 .then(function (response) { $scope.db = response.data; })
         }
 
+        // Sends the user to the stars page for the database
         $scope.starsPage = function() {
             window.location = "/stars/[[ .Meta.Username ]]/[[ .Meta.Database ]]"
         }
 
+        // Returns a text string with the total count of rows in the table
+        $scope.totalRowCount = function() {
+            if (isNaN($scope.db.RowCount)) {
+                return "0 total rows"
+            } else if ($scope.db.RowCount == 1) {
+                return "1 total row"
+            } else if ($scope.db.RowCount <= 10) {
+                return $scope.db.RowCount + " total rows";
+            } else {
+                updatedCount = $scope.db.RowCount - 10;
+                return "... and " + updatedCount.toLocaleString() + " more rows";
+            }
+        }
+
+        // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
         $scope.toggleStars = function() {
             if ($scope.meta.Loggedin == "true") {
                 $http.get("/star/[[ .Meta.Username ]]/[[ .Meta.Database ]]")

@@ -20,15 +20,25 @@ import (
 func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbName string, dbTable string) {
 	pageName := "Render Database Page"
 
+	var pageData struct {
+		Meta     metaInfo
+		DB       dbInfo
+		ColCount int
+		RowCount int
+	}
+
 	// Retrieve the MinioID, and the user visible info for the requested database
-	rows, err := db.Query(
-		`SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers, db.stars, db.forks,
-	db.discussions, db.pull_requests, db.updates, db.branches, db.releases, db.contributors, db.description, db.readme
-	FROM sqlite_databases AS db, database_versions AS ver
-	WHERE db.username = $1 AND db.dbname = $2 AND db.idnum = ver.db
-	ORDER BY version DESC
-	LIMIT 1`,
-		userName, dbName)
+	dbQuery := `
+		SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
+			db.forks, db.discussions, db.pull_requests, db.updates, db.branches, db.releases,
+			db.contributors, db.description, db.readme
+		FROM sqlite_databases AS db, database_versions AS ver
+		WHERE db.username = $1
+			AND db.dbname = $2
+			AND db.idnum = ver.db
+		ORDER BY version DESC
+		LIMIT 1`
+	rows, err := db.Query(dbQuery, userName, dbName)
 	if err != nil {
 		log.Printf("%s: Database query failed: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
@@ -36,16 +46,12 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	}
 	defer rows.Close()
 
-	var pageData struct {
-		Meta metaInfo
-		DB   dbInfo
-	}
-
 	// Retrieve session data (if any)
+	var loggedInUser string
 	sess := session.Get(req)
 	if sess != nil {
-		loggedInUser := sess.CAttr("UserName")
-		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	var minioID string
@@ -157,6 +163,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 			dbTable = ""
 		}
 	}
+
 	// If a specific table wasn't requested, or the one requested isn't present, use the first table in the database
 	if dbTable == "" {
 		dbTable = pageData.DB.Tables[0]
@@ -174,6 +181,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 
 	// Retrieve the field names
 	pageData.DB.TableHeaders = stmt.ColumnNames()
+	pageData.ColCount = len(pageData.DB.TableHeaders)
 
 	// Process each row
 	fieldCount := -1
@@ -248,6 +256,15 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		return
 	}
 	defer stmt.Finalize()
+
+	// Count the total number of rows in the selected table
+	dbQuery = "SELECT count(*) FROM " + dbTable
+	err = db.OneValue(dbQuery, &pageData.RowCount)
+	if err != nil {
+		log.Printf("%s: Error occurred when counting total table rows: %s\n", err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failure")
+		return
+	}
 
 	pageData.DB.Tablename = dbTable
 	pageData.Meta.Username = userName

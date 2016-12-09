@@ -70,6 +70,8 @@ type dbInfo struct {
 	Public       bool
 	Size         int
 	Version      int
+	RowCount     int
+	ColCount     int
 }
 
 type metaInfo struct {
@@ -1131,6 +1133,7 @@ func starsHandler(w http.ResponseWriter, req *http.Request) {
 	starsPage(w, req, userName, dbName)
 }
 
+// This passes table row data back to the main UI in JSON format
 func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	pageName := "databaseViewHandler()"
 
@@ -1303,6 +1306,7 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 
 	// Retrieve the field names
 	dataRows.TableHeaders = stmt.ColumnNames()
+	dataRows.ColCount = len(dataRows.TableHeaders)
 
 	// Process each row
 	var rowCount int
@@ -1377,6 +1381,15 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer stmt.Finalize()
+
+	// Count the total number of rows in the requested table
+	dbQuery := "SELECT count(*) FROM " + requestedTable
+	err = db.OneValue(dbQuery, &dataRows.RowCount)
+	if err != nil {
+		log.Printf("%s: Error occurred when counting total table rows: %s\n", err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failure")
+		return
+	}
 
 	var jsonResponse []byte
 	if rowCount > 0 {
