@@ -584,12 +584,10 @@ func main() {
 	// Log successful connection message
 	log.Printf("Connected to PostgreSQL server: %v:%v\n", conf.Pg.Server, uint16(conf.Pg.Port))
 
+	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
 	http.HandleFunc("/download/", logReq(downloadHandler))
 	http.HandleFunc("/downloadcsv/", logReq(downloadCSVHandler))
-	http.HandleFunc("/images/sqlitebrowser.svg", logReq(func(w http.ResponseWriter, req *http.Request) {
-		http.ServeFile(w, req, "images/sqlitebrowser.svg")
-	}))
 	http.HandleFunc("/login", logReq(loginHandler))
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/register", logReq(registerHandler))
@@ -598,6 +596,17 @@ func main() {
 	http.HandleFunc("/table/", logReq(tableViewHandler))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
 	http.HandleFunc("/uploaddata/", logReq(uploadDataHandler))
+
+	// Static files
+	http.HandleFunc("/images/sqlitebrowser.svg", logReq(func(w http.ResponseWriter, req *http.Request) {
+		http.ServeFile(w, req, "images/sqlitebrowser.svg")
+	}))
+	http.HandleFunc("/favicon.ico", logReq(func(w http.ResponseWriter, req *http.Request) {
+		http.ServeFile(w, req, "favicon.ico")
+	}))
+	http.HandleFunc("/robots.txt", logReq(func(w http.ResponseWriter, req *http.Request) {
+		http.ServeFile(w, req, "robots.txt")
+	}))
 
 	// Start server
 	log.Printf("DBHub server starting on https://%s\n", conf.Web.Server)
