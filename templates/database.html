@@ -165,7 +165,13 @@
             Size: "[[ .DB.Size ]]",
             Version: "[[ .DB.Version ]]",
             Tables: [[ .DB.Tables ]],
+            [[ if .Meta.LoggedInUser ]]
+                Loggedin: "true",
+            [[ else ]]
+                Loggedin: "false",
+            [[ end ]]
         }
+
         $scope.db = { Tablename: "[[ .DB.Tablename ]]",
                       Records: [[ .DB.Records ]],
                       TableHeaders: [[ .DB.TableHeaders ]],
@@ -177,13 +183,17 @@
         }
 
         $scope.toggleStars = function() {
-            $http.get("/star/[[ .Meta.Username ]]/[[ .Meta.Database ]]")
-                .then(function (response) {
-                    tempval = response.data;
-                    if (tempval != "-1") {
-                        $scope.meta.Stars = tempval;
-                    }
-                })
+            if ($scope.meta.Loggedin == "true") {
+                $http.get("/star/[[ .Meta.Username ]]/[[ .Meta.Database ]]")
+                    .then(function (response) {
+                        tempval = response.data;
+                        if (tempval != "-1") {
+                            $scope.meta.Stars = tempval;
+                        }
+                    })
+            } else {
+                window.location = "/login"
+            }
         }
     });
 </script>
