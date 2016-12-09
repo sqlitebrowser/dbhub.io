@@ -602,14 +602,19 @@ func starsPage(w http.ResponseWriter, req *http.Request, userName string, dbName
 
 	// Retrieve list of users who starred the database
 	dbQuery := `
+		WITH star_users AS (
+			SELECT DISTINCT ON (username) username, date_starred
+			FROM database_stars
+			WHERE db = (
+				SELECT idnum
+				FROM sqlite_databases
+				WHERE username = $1
+					AND dbname = $2
+				)
+			ORDER BY username DESC
+		)
 		SELECT username, date_starred
-		FROM database_stars
-		WHERE db = (
-			SELECT idnum
-			FROM sqlite_databases
-			WHERE username = $1
-				AND dbname = $2
-			)
+		FROM star_users
 		ORDER BY date_starred DESC`
 	rows, err := db.Query(dbQuery, userName, dbName)
 	if err != nil {
