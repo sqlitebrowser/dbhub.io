@@ -873,9 +873,6 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Printf("Username: '%s' Password: '%s' Password confirm: '%s' Email: '%s' Agree: '%v'", userName, password,
-		passConfirm, email, agree)
-
 	// Check if the username is already in our system
 	rows, err := db.Query("SELECT count(username) FROM public.users WHERE username = $1", userName)
 	if err != nil {
@@ -956,6 +953,9 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// TODO: Send a confirmation email, with verification link
+
+	// Log the user registration
+	log.Printf("User registered: '%s' Email: '%s'\n", userName, email)
 
 	// TODO: Display a proper success page
 	// TODO: This should probably bounce the user to their logged in profile page
