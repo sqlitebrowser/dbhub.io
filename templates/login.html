@@ -24,6 +24,9 @@
                     <tr>
                         <td colspan="2">
                             <div style="text-align: center;">
+                                [[ if .SourceRef ]]
+                                    <input type="hidden" name="sourceref" value="[[ .SourceRef ]]">
+                                [[ end ]]
                                 <input type="submit">
                             </div>
                         </td>

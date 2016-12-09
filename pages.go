@@ -6,8 +6,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	sqlite "github.com/gwenn/gosqlite"
@@ -350,7 +352,8 @@ func frontPage(w http.ResponseWriter, req *http.Request) {
 
 func loginPage(w http.ResponseWriter, req *http.Request) {
 	var pageData struct {
-		Meta metaInfo
+		Meta      metaInfo
+		SourceRef string
 	}
 	pageData.Meta.Title = "Login"
 
@@ -359,6 +362,20 @@ func loginPage(w http.ResponseWriter, req *http.Request) {
 	if sess != nil {
 		loggedInUser := sess.CAttr("UserName")
 		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+	}
+
+	// If the referrer is a page from our website, pass that to the login page
+	referrer := req.Referer()
+	if referrer != "" {
+		ref, err := url.Parse(referrer)
+		if err != nil {
+			log.Printf("Error when parsing referrer URL for login page: %s\n", err)
+		} else {
+			// localhost:8080 means the server is running on a local (development) box ;)
+			if ref.Host == "localhost:8080" || strings.HasSuffix(ref.Host, "dbhub.io") {
+				pageData.SourceRef = ref.Path
+			}
+		}
 	}
 
 	// Render the page

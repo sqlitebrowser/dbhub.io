@@ -14,6 +14,7 @@ import (
 	"log"
 	mathrand "math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -438,7 +439,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 func loginHandler(w http.ResponseWriter, req *http.Request) {
 	pageName := "Login page"
 
-	// TODO: Add browser side validation of the form data too (using AngularJS?) to save a trip to the server
+	// TODO: Add browser side validation of the form data too to save a trip to the server
 	// TODO  and make for a nicer user experience for sign up
 
 	// Gather submitted form data (if any)
@@ -450,8 +451,9 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	userName := req.PostFormValue("username")
 	password := req.PostFormValue("pass")
+	sourceRef := req.PostFormValue("sourceref")
 
-	// Check if any (relevant) form data was submitted
+	// Check if the required form data was submitted
 	if userName == "" && password == "" {
 		// No, so render the login page
 		loginPage(w, req)
@@ -471,6 +473,20 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 		log.Printf("%s: Validation failed for username: %s", pageName, err)
 		errorPage(w, req, http.StatusBadRequest, "Invalid username")
 		return
+	}
+
+	// Validate the source referrer (if present)
+	var bounceURL string
+	if sourceRef != "" {
+		ref, err := url.Parse(sourceRef)
+		if err != nil {
+			log.Printf("Error when parsing referrer URL for login form: %s\n", err)
+		} else {
+			// Only use the referrer path if no hostname is set (eg check if someone is screwing around)
+			if ref.Host == "" {
+				bounceURL = ref.Path
+			}
+		}
 	}
 
 	// Retrieve the password hash for the user, if they exist in the database
@@ -498,8 +514,13 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	})
 	session.Add(sess, w)
 
-	// Bounce to the user page
-	http.Redirect(w, req, "/"+userName, http.StatusTemporaryRedirect)
+	if bounceURL != "" {
+		// Bounce to the original referring page
+		http.Redirect(w, req, bounceURL, http.StatusTemporaryRedirect)
+	} else {
+		// Bounce to the user's own page
+		http.Redirect(w, req, "/"+userName, http.StatusTemporaryRedirect)
+	}
 }
 
 func logoutHandler(w http.ResponseWriter, req *http.Request) {
