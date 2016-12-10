@@ -985,21 +985,61 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 
 // This handles incoming requests for the preferences page by logged in users
 func prefHandler(w http.ResponseWriter, req *http.Request) {
-	//pageName := "Preferences handler"
+	pageName := "Preferences handler"
 
 	// Ensure user is logged in
-	var loggedInUser interface{}
+	var loggedInUser string
 	sess := session.Get(req)
 	if sess != nil {
-		loggedInUser = sess.CAttr("UserName")
+		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
 	} else {
 		// Bounce to the login page
 		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
 		return
 	}
 
-	// Render the preferences page
-	prefPage(w, req, fmt.Sprintf("%s", loggedInUser))
+	// Gather submitted form data (if any)
+	err := req.ParseForm()
+	if err != nil {
+		log.Printf("%s: Error when parsing preference data: %s\n", pageName, err)
+		errorPage(w, req, http.StatusBadRequest, "Error when parsing preference data")
+		return
+	}
+	maxRows := req.PostFormValue("maxrows")
+
+	// If no form data was submitted, display the preferences page form
+	if maxRows == "" {
+		prefPage(w, req, fmt.Sprintf("%s", loggedInUser))
+		return
+	}
+
+	// Validate submitted form data
+	err = validate.Var(maxRows, "required,numeric,min=1,max=500")
+	if err != nil {
+		log.Printf("%s: Preference data failed validation: %s\n", pageName, err)
+		errorPage(w, req, http.StatusBadRequest, "Error when parsing preference data")
+		return
+	}
+
+	// Update the preference data in the database
+	dbQuery := `
+		UPDATE users
+		SET pref_max_rows = $1
+		WHERE username = $2`
+	commandTag, err := db.Exec(dbQuery, maxRows, loggedInUser)
+	if err != nil {
+		log.Printf("%s: Updating user preferences failed: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Error when updating preferences")
+		return
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("%s: Wrong number of rows affected when updating user preferences: %v, username: %v\n",
+			pageName, numRows, loggedInUser)
+		return
+	}
+
+	// Bounce to the user home page
+	http.Redirect(w, req, "/"+loggedInUser, http.StatusTemporaryRedirect)
 }
 
 func starHandler(w http.ResponseWriter, req *http.Request) {
