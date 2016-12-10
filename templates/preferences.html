@@ -1,6 +1,6 @@
-[[ define "settingsPage" ]]
+[[ define "prefPage" ]]
 <!doctype html>
-<html ng-app="DBHub-front" ng-controller="settingsView">
+<html ng-app="DBHub-front" ng-controller="prefView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -10,25 +10,21 @@
             &nbsp;
         </div>
         <div class="col-md-6">
-            <h2 style="text-align: center;">Settings</h2>
-            <form action="/settings" method="post">
+            <h2 style="text-align: center;">Preferences</h2>
+            <form action="/pref" method="post">
                 <table class="table table-bordered table-striped table-responsive">
                     <tr>
-                        <th>Setting A</th>
-                        <td><input type="text" name="settinga"></td>
+                        <th>Maximum number of rows to display</th>
+                        <td><input type="text" name="maxrows"></td>
                     </tr>
                     <tr>
-                        <th>Setting B</th>
-                        <td><input type="text" name="settingb"></td>
-                    </tr>
-                    <tr>
-                        <th>Setting C</th>
-                        <td><input type="text" name="settingc"></td>
+                        <th>Maximum number of columns to display</th>
+                        <td><input type="text" name="maxcols"></td>
                     </tr>
                     <tr>
                         <td colspan="2">
                             <div style="text-align: center;">
-                                <input type="submit">
+                                <input type="submit" value="Update">
                             </div>
                         </td>
                     </tr>
@@ -43,8 +39,8 @@
 [[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
-    //    app.controller('settingsView', function($scope) {
-    //        $scope.users = { Meta: { Title: "Register" } }
+    //    app.controller('prefView', function($scope) {
+    //        $scope.users = { Meta: { Title: "Preferences" } }
     //    });
 </script>
 </body>

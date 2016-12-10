@@ -585,15 +585,16 @@ func registerPage(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func settingsPage(w http.ResponseWriter, req *http.Request, userName string) {
+// Renders the user Preferences page
+func prefPage(w http.ResponseWriter, req *http.Request, userName string) {
 	var pageData struct {
 		Meta metaInfo
 	}
-	pageData.Meta.Title = "Settings"
+	pageData.Meta.Title = "Preferences"
 	pageData.Meta.LoggedInUser = userName
 
 	// Render the page
-	t := tmpl.Lookup("settingsPage")
+	t := tmpl.Lookup("prefPage")
 	err := t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)

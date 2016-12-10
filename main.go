@@ -451,8 +451,6 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 func loginHandler(w http.ResponseWriter, req *http.Request) {
 	pageName := "Login page"
 
-log.Printf("%s reached\n", pageName)
-
 	// TODO: Add browser side validation of the form data too to save a trip to the server
 	// TODO  and make for a nicer user experience for sign up
 
@@ -625,8 +623,8 @@ func main() {
 	http.HandleFunc("/downloadcsv/", logReq(downloadCSVHandler))
 	http.HandleFunc("/login", logReq(loginHandler))
 	http.HandleFunc("/logout", logReq(logoutHandler))
+	http.HandleFunc("/pref", logReq(prefHandler))
 	http.HandleFunc("/register", logReq(registerHandler))
-	http.HandleFunc("/settings", logReq(settingsHandler))
 	http.HandleFunc("/star/", logReq(starHandler))
 	http.HandleFunc("/stars/", logReq(starsHandler))
 	http.HandleFunc("/table/", logReq(tableViewHandler))
@@ -985,9 +983,9 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(w, `<html><body>Account created successfully, please login: <a href="/login">Login</a></body></html>`)
 }
 
-// This handles incoming requests for the settings page by logged in users
-func settingsHandler(w http.ResponseWriter, req *http.Request) {
-	//pageName := "Settings handler"
+// This handles incoming requests for the preferences page by logged in users
+func prefHandler(w http.ResponseWriter, req *http.Request) {
+	//pageName := "Preferences handler"
 
 	// Ensure user is logged in
 	var loggedInUser interface{}
@@ -995,12 +993,13 @@ func settingsHandler(w http.ResponseWriter, req *http.Request) {
 	if sess != nil {
 		loggedInUser = sess.CAttr("UserName")
 	} else {
-		errorPage(w, req, http.StatusUnauthorized, "You need to be logged in")
+		// Bounce to the login page
+		http.Redirect(w, req, "/login", http.StatusTemporaryRedirect)
 		return
 	}
 
-	// Render the settings page
-	settingsPage(w, req, fmt.Sprintf("%s", loggedInUser))
+	// Render the preferences page
+	prefPage(w, req, fmt.Sprintf("%s", loggedInUser))
 }
 
 func starHandler(w http.ResponseWriter, req *http.Request) {
