@@ -176,39 +176,44 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Verify the given database exists and is ok to be downloaded (and get the MinioID while at it)
-	rows, err := db.Query(`
-		SELECT minioid
-		FROM database_versions
-		WHERE db = (SELECT idnum
-			FROM sqlite_databases
-			WHERE username = $1
-				AND dbname = $2
-				AND version = $3)`,
-		userName, dbName, dbVersion)
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+	}
+
+	// Verify the given database exists and is ok to be downloaded (and get the Minio details while at it)
+	var dbQuery string
+	if loggedInUser != userName {
+		// * The request is for another users database, so it needs to be a public one *
+		dbQuery = `
+			SELECT db.minio_bucket, ver.minioid
+			FROM database_versions AS ver, sqlite_databases AS db
+			WHERE ver.db = db.idnum
+				AND db.username = $1
+				AND db.dbname = $2
+				AND ver.version = $3
+				AND ver.public = true`
+	} else {
+		dbQuery = `
+			SELECT db.minio_bucket, ver.minioid
+			FROM database_versions AS ver, sqlite_databases AS db
+			WHERE ver.db = db.idnum
+				AND db.username = $1
+				AND db.dbname = $2
+				AND ver.version = $3`
+	}
+	var minioBucket, minioId string
+	err = db.QueryRow(dbQuery, userName, dbName, dbVersion).Scan(&minioBucket, &minioId)
 	if err != nil {
-		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
-		return
-	}
-	defer rows.Close()
-	var minioID string
-	for rows.Next() {
-		err = rows.Scan(&minioID)
-		if err != nil {
-			log.Printf("%s: Error retrieving MinioID: %v\n", pageName, err)
-			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
-			return
-		}
-	}
-	if minioID == "" {
-		log.Printf("%s: Couldn't retrieve required MinioID\n", pageName)
-		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		log.Printf("%s: Error retrieving MinioID: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "The requested database doesn't exist")
 		return
 	}
 
 	// Get a handle from Minio for the database object
-	userDB, err := minioClient.GetObject(userName, minioID)
+	userDB, err := minioClient.GetObject(minioBucket, minioId)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
@@ -377,39 +382,44 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Verify the given database exists and is ok to be downloaded (and get the MinioID while at it)
-	rows, err := db.Query(`
-		SELECT minioid
-		FROM database_versions
-		WHERE db = (SELECT idnum
-			FROM sqlite_databases
-			WHERE username = $1
-				AND dbname = $2
-				AND version = $3)`,
-		userName, dbName, dbVersion)
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+	}
+
+	// Verify the given database exists and is ok to be downloaded (and get the Minio details while at it)
+	var dbQuery string
+	if loggedInUser != userName {
+		// * The request is for another users database, so it needs to be a public one *
+		dbQuery = `
+			SELECT db.minio_bucket, ver.minioid
+			FROM database_versions AS ver, sqlite_databases AS db
+			WHERE ver.db = db.idnum
+				AND db.username = $1
+				AND db.dbname = $2
+				AND ver.version = $3
+				AND ver.public = true`
+	} else {
+		dbQuery = `
+			SELECT db.minio_bucket, ver.minioid
+			FROM database_versions AS ver, sqlite_databases AS db
+			WHERE ver.db = db.idnum
+				AND db.username = $1
+				AND db.dbname = $2
+				AND ver.version = $3`
+	}
+	var minioBucket, minioId string
+	err = db.QueryRow(dbQuery, userName, dbName, dbVersion).Scan(&minioBucket, &minioId)
 	if err != nil {
-		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
-		return
-	}
-	defer rows.Close()
-	var minioID string
-	for rows.Next() {
-		err = rows.Scan(&minioID)
-		if err != nil {
-			log.Printf("%s: Error retrieving MinioID: %v\n", pageName, err)
-			errorPage(w, req, http.StatusInternalServerError, "Database query failed")
-			return
-		}
-	}
-	if minioID == "" {
-		log.Printf("%s: Couldn't retrieve required MinioID\n", pageName)
-		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
+		log.Printf("%s: Error retrieving MinioID: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "The requested database doesn't exist")
 		return
 	}
 
 	// Get a handle from Minio for the database object
-	userDB, err := minioClient.GetObject(userName, minioID)
+	userDB, err := minioClient.GetObject(minioBucket, minioId)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
@@ -440,6 +450,8 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 
 func loginHandler(w http.ResponseWriter, req *http.Request) {
 	pageName := "Login page"
+
+log.Printf("%s reached\n", pageName)
 
 	// TODO: Add browser side validation of the form data too to save a trip to the server
 	// TODO  and make for a nicer user experience for sign up
@@ -516,12 +528,12 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	})
 	session.Add(sess, w)
 
-	if bounceURL != "" {
-		// Bounce to the original referring page
-		http.Redirect(w, req, bounceURL, http.StatusTemporaryRedirect)
-	} else {
+	if bounceURL == "" || bounceURL == "/register" {
 		// Bounce to the user's own page
 		http.Redirect(w, req, "/"+userName, http.StatusTemporaryRedirect)
+	} else {
+		// Bounce to the original referring page
+		http.Redirect(w, req, bounceURL, http.StatusTemporaryRedirect)
 	}
 }
 
@@ -928,12 +940,22 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Generate a random string, to be used as the bucket name for the user
+	mathrand.Seed(time.Now().UnixNano())
+	const alphaNum = "abcdefghijklmnopqrstuvwxyz0123456789"
+	randomString := make([]byte, 16)
+	for i := range randomString {
+		randomString[i] = alphaNum[mathrand.Intn(len(alphaNum))]
+	}
+	bucketName := string(randomString) + ".bkt"
+
 	// TODO: Create the users certificate
 
 	// Add the new user to the database
-	insertQuery := "INSERT INTO public.users (username, email, password_hash, client_certificate) " +
-		"VALUES ($1, $2, $3, $4)"
-	commandTag, err := db.Exec(insertQuery, userName, email, hash, "") // TODO: Real certificate string should go here
+	insertQuery := `
+		INSERT INTO public.users (username, email, password_hash, client_certificate, minio_bucket)
+		VALUES ($1, $2, $3, $4, $5)`
+	commandTag, err := db.Exec(insertQuery, userName, email, hash, "", bucketName) // TODO: Real certificate string should go here
 	if err != nil {
 		log.Printf("%s: Adding user to database failed: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Something went wrong during user creation")
@@ -945,7 +967,7 @@ func registerHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Create a new bucket for the user in Minio
-	err = minioClient.MakeBucket(userName, "us-east-1")
+	err = minioClient.MakeBucket(bucketName, "us-east-1")
 	if err != nil {
 		log.Printf("%s: Error creating new bucket: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Something went wrong during user creation")
@@ -1180,50 +1202,42 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	// TODO: Implement caching
 
 	// Check if the user has access to the requested database
-	var minioId string
+	var dbQuery string
 	if loggedInUser != userName {
 		// * The request is for another users database, so it needs to be a public one *
-
-		// Retrieve the MinioID of a public database with the given username/database combination
-		row := db.QueryRow(`
+		dbQuery = `
 			WITH requested_db AS (
-				SELECT idnum
+				SELECT idnum, minio_bucket
 				FROM sqlite_databases
 				WHERE username = $1
 					AND dbname = $2
 			)
-			SELECT ver.minioid
+			SELECT db.minio_bucket, ver.minioid
 			FROM database_versions AS ver, requested_db AS db
 			WHERE ver.db = db.idnum
 				AND ver.public = true
 			ORDER BY version DESC
-			LIMIT 1`, userName, dbName)
-		err = row.Scan(&minioId)
-		if err != nil {
-			log.Printf("%s: Error looking up MinioID. User: '%s' Database: %v Error: %v\n", pageName,
-				userName, dbName, err)
-			return
-		}
+			LIMIT 1`
 	} else {
-		// Retrieve the MinioID of a database with the given username/database combination
-		row := db.QueryRow(`
+		dbQuery = `
 			WITH requested_db AS (
-				SELECT idnum
+				SELECT idnum, minio_bucket
 				FROM sqlite_databases
 				WHERE username = $1
 					AND dbname = $2
 			)
-			SELECT ver.minioid
+			SELECT db.minio_bucket, ver.minioid
 			FROM database_versions AS ver, requested_db AS db
 			WHERE ver.db = db.idnum
 			ORDER BY version DESC
-			LIMIT 1`, userName, dbName)
-		err = row.Scan(&minioId)
-		if err != nil {
-			log.Printf("%s: Error looking up database id. User: '%s' Error: %v\n", pageName, loggedInUser,
-				err)
-			return
-		}
+			LIMIT 1`
+	}
+	var minioBucket, minioId string
+	err = db.QueryRow(dbQuery, userName, dbName).Scan(&minioBucket, &minioId)
+	if err != nil {
+		log.Printf("%s: Error looking up MinioID. User: '%s' Database: %v Error: %v\n", pageName,
+			userName, dbName, err)
+		return
 	}
 
 	// Sanity check
@@ -1235,7 +1249,7 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Get a handle from Minio for the database object
-	userDB, err := minioClient.GetObject(userName, minioId)
+	userDB, err := minioClient.GetObject(minioBucket, minioId)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
 		return
@@ -1383,7 +1397,7 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	defer stmt.Finalize()
 
 	// Count the total number of rows in the requested table
-	dbQuery := "SELECT count(*) FROM " + requestedTable
+	dbQuery = "SELECT count(*) FROM " + requestedTable
 	err = db.OneValue(dbQuery, &dataRows.RowCount)
 	if err != nil {
 		log.Printf("%s: Error occurred when counting total table rows: %s\n", err)
@@ -1413,7 +1427,7 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 
 // This function presents the database upload form to logged in users
 func uploadFormHandler(w http.ResponseWriter, req *http.Request) {
-	//pageName := "Upload handler"
+	//pageName := "Upload form"
 
 	// Ensure user is logged in
 	var loggedInUser interface{}
@@ -1424,9 +1438,6 @@ func uploadFormHandler(w http.ResponseWriter, req *http.Request) {
 		errorPage(w, req, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
-
-	// TODO: If uploaded file + form data is present, process, it, otherwise
-	// TODO  render the upload page
 
 	// Render the upload page
 	uploadPage(w, req, fmt.Sprintf("%s", loggedInUser))
@@ -1564,6 +1575,18 @@ func uploadDataHandler(w http.ResponseWriter, req *http.Request) {
 		newVersion = 1
 	}
 
+	// Retrieve the Minio bucket to store the database in
+	var minioBucket string
+	err = db.QueryRow(`
+		SELECT minio_bucket
+		FROM users
+		WHERE username = $1`, loggedInUser).Scan(&minioBucket)
+	if err != nil && err != pgx.ErrNoRows {
+		log.Printf("%s: Error when querying database: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Database query failure")
+		return
+	}
+
 	// Generate random filename to store the database as
 	mathrand.Seed(time.Now().UnixNano())
 	const alphaNum = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -1576,7 +1599,7 @@ func uploadDataHandler(w http.ResponseWriter, req *http.Request) {
 	// TODO: We should probably check if the randomly generated filename is already used for the user, just in case
 
 	// Store the database file in Minio
-	dbSize, err := minioClient.PutObject(loggedInUser, minioId, &tempBuf, handler.Header["Content-Type"][0])
+	dbSize, err := minioClient.PutObject(minioBucket, minioId, &tempBuf, handler.Header["Content-Type"][0])
 	if err != nil {
 		log.Printf("%s: Storing file in Minio failed: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Storing in object store failed")
@@ -1589,9 +1612,9 @@ func uploadDataHandler(w http.ResponseWriter, req *http.Request) {
 	var dbQuery string
 	if newVersion == 1 {
 		dbQuery = `
-			INSERT INTO sqlite_databases (username, folder, dbname)
-			VALUES ($1, $2, $3)`
-		commandTag, err := db.Exec(dbQuery, loggedInUser, folder, dbName)
+			INSERT INTO sqlite_databases (username, folder, dbname, minio_bucket)
+			VALUES ($1, $2, $3, $4)`
+		commandTag, err := db.Exec(dbQuery, loggedInUser, folder, dbName, minioBucket)
 		if err != nil {
 			log.Printf("%s: Adding database to PostgreSQL failed: %v\n", pageName, err)
 			errorPage(w, req, http.StatusInternalServerError, "Database query failed")

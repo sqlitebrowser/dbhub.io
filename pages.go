@@ -27,25 +27,6 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		RowCount int
 	}
 
-	// Retrieve the MinioID, and the user visible info for the requested database
-	dbQuery := `
-		SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
-			db.forks, db.discussions, db.pull_requests, db.updates, db.branches, db.releases,
-			db.contributors, db.description, db.readme
-		FROM sqlite_databases AS db, database_versions AS ver
-		WHERE db.username = $1
-			AND db.dbname = $2
-			AND db.idnum = ver.db
-		ORDER BY version DESC
-		LIMIT 1`
-	rows, err := db.Query(dbQuery, userName, dbName)
-	if err != nil {
-		log.Printf("%s: Database query failed: %v\n", pageName, err)
-		errorPage(w, req, http.StatusInternalServerError, "Database query failed")
-		return
-	}
-	defer rows.Close()
-
 	// Retrieve session data (if any)
 	var loggedInUser string
 	sess := session.Get(req)
@@ -54,38 +35,62 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
-	var minioID string
-	for rows.Next() {
-		var Desc pgx.NullString
-		var Readme pgx.NullString
-		err = rows.Scan(&minioID, &pageData.DB.DateCreated, &pageData.DB.LastModified, &pageData.DB.Size,
-			&pageData.DB.Version, &pageData.DB.Watchers, &pageData.DB.Stars, &pageData.DB.Forks,
-			&pageData.DB.Discussions, &pageData.DB.PRs, &pageData.DB.Updates, &pageData.DB.Branches,
-			&pageData.DB.Releases, &pageData.DB.Contributors, &Desc, &Readme)
-		if err != nil {
-			log.Printf("%s: Error retrieving metadata from database: %v\n", pageName, err)
-			errorPage(w, req, http.StatusInternalServerError, "Error retrieving metadata from database")
-			return
-		}
-		if !Desc.Valid {
-			pageData.DB.Description = "No description"
-		} else {
-			pageData.DB.Description = Desc.String
-		}
-		if !Readme.Valid {
-			pageData.DB.Readme = "No readme"
-		} else {
-			pageData.DB.Readme = Readme.String
-		}
+	// TODO: Implement caching
+
+	// Check if the user has access to the requested database
+	var dbQuery string
+	if loggedInUser != userName {
+		// * The request is for another users database, so it needs to be a public one *
+		dbQuery = `
+			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
+				db.stars, db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+				db.releases, db.contributors, db.description, db.readme, db.minio_bucket
+			FROM sqlite_databases AS db, database_versions AS ver
+			WHERE db.username = $1
+				AND db.dbname = $2
+				AND db.idnum = ver.db
+				AND ver.public = true
+			ORDER BY version DESC
+			LIMIT 1`
+	} else {
+		dbQuery = `
+			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
+				db.stars, db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+				db.releases, db.contributors, db.description, db.readme, db.minio_bucket
+			FROM sqlite_databases AS db, database_versions AS ver
+			WHERE db.username = $1
+				AND db.dbname = $2
+				AND db.idnum = ver.db
+			ORDER BY version DESC
+			LIMIT 1`
 	}
-	if minioID == "" {
+
+	// Retrieve the requested database details
+	var minioBucket, minioId string
+	var Desc, Readme pgx.NullString
+	err := db.QueryRow(dbQuery, userName, dbName).Scan(&minioId, &pageData.DB.DateCreated, &pageData.DB.LastModified,
+		&pageData.DB.Size, &pageData.DB.Version, &pageData.DB.Watchers, &pageData.DB.Stars,
+		&pageData.DB.Forks, &pageData.DB.Discussions, &pageData.DB.PRs, &pageData.DB.Updates,
+		&pageData.DB.Branches, &pageData.DB.Releases, &pageData.DB.Contributors, &Desc, &Readme,
+		&minioBucket)
+	if err != nil {
 		log.Printf("%s: Requested database not found: %v for user: %v \n", pageName, dbName, userName)
 		errorPage(w, req, http.StatusInternalServerError, "The requested database doesn't exist")
 		return
 	}
+	if !Desc.Valid {
+		pageData.DB.Description = "No description"
+	} else {
+		pageData.DB.Description = Desc.String
+	}
+	if !Readme.Valid {
+		pageData.DB.Readme = "No readme"
+	} else {
+		pageData.DB.Readme = Readme.String
+	}
 
 	// Get a handle from Minio for the database object
-	userDB, err := minioClient.GetObject(userName, minioID)
+	userDB, err := minioClient.GetObject(minioBucket, minioId)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Internal retrieving database from object store")
