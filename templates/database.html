@@ -179,6 +179,7 @@
             Readme: "[[ .DB.Readme ]]",
             Size: "[[ .DB.Size ]]",
             Version: "[[ .DB.Version ]]",
+            MaxRows: "[[ .MaxRows ]]",
             Tables: [[ .DB.Tables ]],
             [[ if .Meta.LoggedInUser ]]
                 Loggedin: "true",
@@ -211,10 +212,10 @@
                 return "0 total rows"
             } else if ($scope.db.RowCount == 1) {
                 return "1 total row"
-            } else if ($scope.db.RowCount <= 10) {
+            } else if ($scope.db.RowCount <= $scope.meta.MaxRows) {
                 return $scope.db.RowCount + " total rows";
             } else {
-                updatedCount = $scope.db.RowCount - 10;
+                updatedCount = $scope.db.RowCount - $scope.meta.MaxRows;
                 return "... and " + updatedCount.toLocaleString() + " more rows";
             }
         }

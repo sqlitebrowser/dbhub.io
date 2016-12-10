@@ -25,6 +25,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		DB       dbInfo
 		ColCount int
 		RowCount int
+		MaxRows  int
 	}
 
 	// Retrieve session data (if any)
@@ -87,6 +88,24 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		pageData.DB.Readme = "No readme"
 	} else {
 		pageData.DB.Readme = Readme.String
+	}
+
+	// Determine the number of rows to display
+	if loggedInUser != "" {
+		// Retrieve the user preference data
+		dbQuery = `
+			SELECT pref_max_rows
+			FROM users
+			WHERE username = $1`
+		err = db.QueryRow(dbQuery, loggedInUser).Scan(&pageData.MaxRows)
+		if err != nil {
+			log.Printf("%s: Error retrieving User preference data: %v\n", pageName, err)
+			errorPage(w, req, http.StatusInternalServerError, "Error retrieving preference data")
+			return
+		}
+	} else {
+		// Not logged in, so default to 10 rows
+		pageData.MaxRows = 10
 	}
 
 	// Get a handle from Minio for the database object
@@ -177,7 +196,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	// Retrieve (up to) x rows from the selected database
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
-	stmt, err := db.Prepare("SELECT * FROM " + dbTable + " LIMIT 10")
+	stmt, err := db.Prepare("SELECT * FROM "+dbTable+" LIMIT ?", pageData.MaxRows)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
 		errorPage(w, req, http.StatusInternalServerError, "Internal error")

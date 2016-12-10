@@ -1196,7 +1196,7 @@ func starsHandler(w http.ResponseWriter, req *http.Request) {
 
 // This passes table row data back to the main UI in JSON format
 func tableViewHandler(w http.ResponseWriter, req *http.Request) {
-	pageName := "databaseViewHandler()"
+	pageName := "Table data handler"
 
 	// Split the request URL into path components
 	pathStrings := strings.Split(req.URL.Path, "/")
@@ -1232,10 +1232,10 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	var loggedInUser interface{}
+	var loggedInUser string
 	sess := session.Get(req)
 	if sess != nil {
-		loggedInUser = sess.CAttr("UserName")
+		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
 	}
 
 	// TODO: Implement caching
@@ -1285,6 +1285,25 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 		log.Printf("%s: Requested database not found. Username: '%s' Database: '%s'", pageName, userName,
 			dbName)
 		return
+	}
+
+	// Determine the number of rows to display
+	var maxRows int
+	if loggedInUser != "" {
+		// Retrieve the user preference data
+		dbQuery = `
+			SELECT pref_max_rows
+			FROM users
+			WHERE username = $1`
+		err = db.QueryRow(dbQuery, loggedInUser).Scan(&maxRows)
+		if err != nil {
+			log.Printf("%s: Error retrieving User preference data: %v\n", pageName, err)
+			errorPage(w, req, http.StatusInternalServerError, "Error retrieving preference data")
+			return
+		}
+	} else {
+		// Not logged in, so default to 10 rows
+		maxRows = 10
 	}
 
 	// Get a handle from Minio for the database object
@@ -1351,7 +1370,7 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	// Retrieve (up to) x rows from the selected database
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
-	stmt, err := db.Prepare("SELECT * FROM " + requestedTable + " LIMIT 10")
+	stmt, err := db.Prepare("SELECT * FROM "+requestedTable+" LIMIT ?", maxRows)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
 		return
@@ -1439,7 +1458,7 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	dbQuery = "SELECT count(*) FROM " + requestedTable
 	err = db.OneValue(dbQuery, &dataRows.RowCount)
 	if err != nil {
-		log.Printf("%s: Error occurred when counting total table rows: %s\n", err)
+		log.Printf("%s: Error occurred when counting total table rows: %s\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Database query failure")
 		return
 	}
