@@ -266,7 +266,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	dbQuery = "SELECT count(*) FROM " + dbTable
 	err = db.OneValue(dbQuery, &pageData.RowCount)
 	if err != nil {
-		log.Printf("%s: Error occurred when counting total table rows: %s\n", err)
+		log.Printf("%s: Error occurred when counting total table rows: %s\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Database query failure")
 		return
 	}
