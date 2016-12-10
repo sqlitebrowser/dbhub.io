@@ -526,7 +526,7 @@ func loginHandler(w http.ResponseWriter, req *http.Request) {
 	})
 	session.Add(sess, w)
 
-	if bounceURL == "" || bounceURL == "/register" {
+	if bounceURL == "" || bounceURL == "/register" || bounceURL == "/login" {
 		// Bounce to the user's own page
 		http.Redirect(w, req, "/"+userName, http.StatusTemporaryRedirect)
 	} else {
