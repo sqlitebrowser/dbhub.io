@@ -152,9 +152,8 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	var dbVersion int64
 	userName := pathStrings[2]
 	dbName := pathStrings[3]
-	queryValues := req.URL.Query()
-	dbTable := queryValues["table"][0]
-	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0) // This also validates the version input
+	dbTable := req.FormValue("table")
+	dbVersion, err := strconv.ParseInt(req.FormValue("version"), 10, 0) // This also validates the version input
 	if err != nil {
 		log.Printf("%s: Invalid version number: %v\n", pageName, err)
 		errorPage(w, req, http.StatusBadRequest, "Invalid version number")
@@ -168,7 +167,6 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 		errorPage(w, req, http.StatusBadRequest, "Invalid user, database, or table name")
 		return
 	}
-
 	// Abort if no table name was given
 	if dbTable == "" {
 		log.Printf("%s: No table name given\n", pageName)
@@ -366,8 +364,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	var dbVersion int64
 	userName := pathStrings[2]
 	dbName := pathStrings[3]
-	queryValues := req.URL.Query()
-	dbVersion, err := strconv.ParseInt(queryValues["version"][0], 10, 0) // This also validates the version input
+	dbVersion, err := strconv.ParseInt(req.FormValue("version"), 10, 0) // This also validates the version input
 	if err != nil {
 		log.Printf("%s: Invalid version number: %v\n", pageName, err)
 		errorPage(w, req, http.StatusBadRequest, "Invalid version number")
