@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/bradfitz/gomemcache/memcache"
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
 	"github.com/jackc/pgx"
@@ -85,9 +86,15 @@ type metaInfo struct {
 
 // Configuration file
 type tomlConfig struct {
+	Cache cacheInfo
 	Minio minioInfo
 	Pg    pgInfo
 	Web   webInfo
+}
+
+// Memcached connection parameters
+type cacheInfo struct {
+	Server string
 }
 
 // Minio connection parameters
@@ -120,6 +127,7 @@ var (
 
 	// Connection handles
 	db          *pgx.Conn
+	memCache    *memcache.Client
 	minioClient *minio.Client
 
 	// PostgreSQL configuration info
@@ -614,6 +622,16 @@ func main() {
 	// Log successful connection message
 	log.Printf("Connected to PostgreSQL server: %v:%v\n", conf.Pg.Server, uint16(conf.Pg.Port))
 
+	// Connect to memcached server
+	memCache = memcache.New(conf.Cache.Server)
+
+	// Test the memcached connection
+	cacheTest := memcache.Item{Key: "connecttext", Value: []byte("1"), Expiration: 10}
+	err = memCache.Set(&cacheTest)
+	if err != nil {
+		log.Fatalf("Memcached server seems offline: %s", err)
+	}
+
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
 	http.HandleFunc("/download/", logReq(downloadHandler))
@@ -813,6 +831,8 @@ func readConfig() error {
 	pgConfig.Password = conf.Pg.Password
 	pgConfig.Database = conf.Pg.Database
 	pgConfig.TLSConfig = nil
+
+	// TODO: Add environment variable overrides for memcached
 
 	// The configuration file seems good
 	return nil
