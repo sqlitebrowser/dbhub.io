@@ -636,6 +636,9 @@ func main() {
 		log.Fatalf("Memcached server seems offline: %s", err)
 	}
 
+	// Log successful connection message for Memcached
+	log.Printf("Connected to Memcached: %v\n", conf.Cache.Server)
+
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
 	http.HandleFunc("/download/", logReq(downloadHandler))
