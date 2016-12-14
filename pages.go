@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bradfitz/gomemcache/memcache"
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
 	"github.com/jackc/pgx"
@@ -29,6 +28,8 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		ColCount int
 		RowCount int
 		MaxRows  int
+		MinioBkt string
+		MinioId  string
 	}
 
 	// Retrieve session data (if any)
@@ -40,7 +41,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	}
 
 	// Check if the user has access to the requested database
-	var cacheKey, dbQuery string
+	var pageCacheKey, queryCacheKey, dbQuery string
 	if loggedInUser != userName {
 		// * The request is for another users database, so it needs to be a public one *
 		dbQuery = `
@@ -54,7 +55,10 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 				AND ver.public = true
 			ORDER BY version DESC
 			LIMIT 1`
-		cacheKey = "dwndb-pub-" + userName + "/" + dbName + "/" + dbTable
+		tempArr := md5.Sum([]byte(userName + "/" + dbName + "/" + dbTable))
+		pageCacheKey = "dwndb-pub-" + hex.EncodeToString(tempArr[:])
+		tempArr2 := md5.Sum([]byte(fmt.Sprintf(dbQuery, userName, dbName)))
+		queryCacheKey = "pub/" + hex.EncodeToString(tempArr2[:])
 	} else {
 		dbQuery = `
 			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
@@ -66,33 +70,47 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 				AND db.idnum = ver.db
 			ORDER BY version DESC
 			LIMIT 1`
-		cacheKey = "dwndb-" + loggedInUser + "-" + userName + "/" + dbName + "/" + dbTable
+		tempArr := md5.Sum([]byte(loggedInUser + "-" + userName + "/" + dbName + "/" + dbTable))
+		pageCacheKey = "dwndb-" + hex.EncodeToString(tempArr[:])
+		tempArr2 := md5.Sum([]byte(fmt.Sprintf(dbQuery, userName, dbName)))
+		queryCacheKey = loggedInUser + "/" + hex.EncodeToString(tempArr2[:])
 	}
 
-	// Retrieve the requested database details
-	var minioBucket, minioId string
-	var Desc, Readme pgx.NullString
-	err := db.QueryRow(dbQuery, userName, dbName).Scan(&minioId, &pageData.DB.DateCreated, &pageData.DB.LastModified,
-		&pageData.DB.Size, &pageData.DB.Version, &pageData.DB.Watchers, &pageData.DB.Stars,
-		&pageData.DB.Forks, &pageData.DB.Discussions, &pageData.DB.PRs, &pageData.DB.Updates,
-		&pageData.DB.Branches, &pageData.DB.Releases, &pageData.DB.Contributors, &Desc, &Readme,
-		&minioBucket)
+	// Use a cached version of the query response if it exists
+	ok, err := getCachedData(queryCacheKey, &pageData)
 	if err != nil {
-		log.Printf("%s: Requested database not found: %v for user: %v \n", pageName, dbName, userName)
-		errorPage(w, req, http.StatusInternalServerError, "The requested database doesn't exist")
-		return
+		log.Printf("%s: Error retrieving data from cache: %v\n", pageName, err)
 	}
-	if !Desc.Valid {
-		pageData.DB.Description = "No description"
-	} else {
-		pageData.DB.Description = Desc.String
-	}
-	if !Readme.Valid {
-		pageData.DB.Readme = "No readme"
-	} else {
-		pageData.DB.Readme = Readme.String
-	}
+	if !ok {
+		// Retrieve the requested database details
+		var Desc, Readme pgx.NullString
+		err := db.QueryRow(dbQuery, userName, dbName).Scan(&pageData.MinioId, &pageData.DB.DateCreated,
+			&pageData.DB.LastModified, &pageData.DB.Size, &pageData.DB.Version, &pageData.DB.Watchers,
+			&pageData.DB.Stars, &pageData.DB.Forks, &pageData.DB.Discussions, &pageData.DB.PRs,
+			&pageData.DB.Updates, &pageData.DB.Branches, &pageData.DB.Releases, &pageData.DB.Contributors,
+			&Desc, &Readme, &pageData.MinioBkt)
+		if err != nil {
+			log.Printf("%s: Requested database not found: %v for user: %v \n", pageName, dbName, userName)
+			errorPage(w, req, http.StatusInternalServerError, "The requested database doesn't exist")
+			return
+		}
+		if !Desc.Valid {
+			pageData.DB.Description = "No description"
+		} else {
+			pageData.DB.Description = Desc.String
+		}
+		if !Readme.Valid {
+			pageData.DB.Readme = "No readme"
+		} else {
+			pageData.DB.Readme = Readme.String
+		}
 
+		// Cache the database details
+		err = cacheData(queryCacheKey, pageData, 120)
+		if err != nil {
+			log.Printf("%s: Error when caching page data: %v\n", pageName, err)
+		}
+	}
 	// * Execution can only get here if the user has access to the requested database *
 
 	// Determine the number of rows to display
@@ -114,36 +132,23 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	}
 
 	// If a cached version of the page data exists, use it
-	cacheKey += "/" + strconv.Itoa(pageData.MaxRows)
-	cacheItem, err := memCache.Get(cacheKey)
+	pageCacheKey += "/" + strconv.Itoa(pageData.MaxRows)
+	ok, err = getCachedData(pageCacheKey, &pageData)
 	if err != nil {
-		if err == memcache.ErrCacheMiss {
-			log.Printf("%s: Memcache cache miss: %s\n", pageName, cacheKey)
-		} else {
-			log.Printf("%s: Memcache returned an error. Cachekey: '%v'. Error: '%v'\n", pageName,
-				cacheKey, err)
+		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
+	}
+	if ok {
+		// Render the page from cache
+		t := tmpl.Lookup("databasePage")
+		err = t.Execute(w, pageData)
+		if err != nil {
+			log.Printf("Error: %s", err)
 		}
-	} else {
-		log.Printf("%s: Memcache cache hit: %v\n", pageName, cacheKey)
-		if cacheItem != nil {
-			// Decode the serialised data
-			var decBuf bytes.Buffer
-			io.Copy(&decBuf, bytes.NewReader(cacheItem.Value))
-			dec := gob.NewDecoder(&decBuf)
-			dec.Decode(&pageData)
-
-			// Render the page from cache
-			t := tmpl.Lookup("databasePage")
-			err = t.Execute(w, pageData)
-			if err != nil {
-				log.Printf("Error: %s", err)
-			}
-			return
-		}
+		return
 	}
 
 	// Get a handle from Minio for the database object
-	userDB, err := minioClient.GetObject(minioBucket, minioId)
+	userDB, err := minioClient.GetObject(pageData.MinioBkt, pageData.MinioId)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Internal retrieving database from object store")
@@ -331,17 +336,12 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, dbName)
 
 	// Cache the page data
-	var encodedData bytes.Buffer
-	enc := gob.NewEncoder(&encodedData)
-	err = enc.Encode(pageData)
+	err = cacheData(pageCacheKey, pageData, cacheTime)
 	if err != nil {
-		log.Printf("%s: Error serialising page data: %v\n", pageName, err)
+		log.Printf("%s: Error when caching page data: %v\n", pageName, err)
 	}
-	cachedData := memcache.Item{Key: cacheKey, Value: encodedData.Bytes(), Expiration: cacheTime}
-	err = memCache.Set(&cachedData)
-	if err != nil {
-		log.Printf("%s: Memcache gave an error when setting a value: %v\n", pageName, err)
-	}
+
+	// TODO: Should we cache the rendered page too?
 
 	// Render the page
 	t := tmpl.Lookup("databasePage")

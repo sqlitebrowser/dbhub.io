@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/csv"
@@ -1259,10 +1260,8 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
 	}
 
-	// TODO: Implement caching
-
 	// Check if the user has access to the requested database
-	var dbQuery string
+	var dbQuery, jsonCacheKey, queryCacheKey string
 	if loggedInUser != userName {
 		// * The request is for another users database, so it needs to be a public one *
 		dbQuery = `
@@ -1278,6 +1277,11 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 				AND ver.public = true
 			ORDER BY version DESC
 			LIMIT 1`
+		tempArr := md5.Sum([]byte(userName + "/" + dbName + "/" + requestedTable))
+		jsonCacheKey = "tbl-pub-" + hex.EncodeToString(tempArr[:])
+		tempArr2 := md5.Sum([]byte(fmt.Sprintf(dbQuery, userName, dbName)))
+		queryCacheKey = "pub/" + hex.EncodeToString(tempArr2[:])
+
 	} else {
 		dbQuery = `
 			WITH requested_db AS (
@@ -1291,17 +1295,41 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 			WHERE ver.db = db.idnum
 			ORDER BY version DESC
 			LIMIT 1`
+		tempArr := md5.Sum([]byte(loggedInUser + "-" + userName + "/" + dbName + "/" + requestedTable))
+		jsonCacheKey = "tbl-" + hex.EncodeToString(tempArr[:])
+		tempArr2 := md5.Sum([]byte(fmt.Sprintf(dbQuery, userName, dbName)))
+		queryCacheKey = loggedInUser + "/" + hex.EncodeToString(tempArr2[:])
 	}
-	var minioBucket, minioId string
-	err = db.QueryRow(dbQuery, userName, dbName).Scan(&minioBucket, &minioId)
+
+	var jsonResponse []byte
+	var minioInfo struct {
+		Bucket string
+		Id     string
+	}
+
+	// Use a cached version of the query response if it exists
+	ok, err := getCachedData(queryCacheKey, &minioInfo)
 	if err != nil {
-		log.Printf("%s: Error looking up MinioID. User: '%s' Database: %v Error: %v\n", pageName,
-			userName, dbName, err)
-		return
+		log.Printf("%s: Error retrieving data from cache: %v\n", pageName, err)
+	}
+	if !ok {
+		// Cached version doesn't exist, so query the database
+		err = db.QueryRow(dbQuery, userName, dbName).Scan(&minioInfo.Bucket, &minioInfo.Id)
+		if err != nil {
+			log.Printf("%s: Error looking up MinioID. User: '%s' Database: %v Error: %v\n", pageName,
+				userName, dbName, err)
+			return
+		}
+
+		// Cache the database details
+		err = cacheData(queryCacheKey, minioInfo, 120)
+		if err != nil {
+			log.Printf("%s: Error when caching page data: %v\n", pageName, err)
+		}
 	}
 
 	// Sanity check
-	if minioId == "" {
+	if minioInfo.Id == "" {
 		// The requested database wasn't found
 		log.Printf("%s: Requested database not found. Username: '%s' Database: '%s'", pageName, userName,
 			dbName)
@@ -1327,8 +1355,20 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 		maxRows = 10
 	}
 
+	// Use a cached version of the full json response if it exists
+	jsonCacheKey += "/" + strconv.Itoa(maxRows)
+	ok, err = getCachedData(jsonCacheKey, &jsonResponse)
+	if err != nil {
+		log.Printf("%s: Error retrieving data from cache: %v\n", pageName, err)
+	}
+	if ok {
+		// Serve the response from cache
+		fmt.Fprintf(w, "%s", jsonResponse)
+		return
+	}
+
 	// Get a handle from Minio for the database object
-	userDB, err := minioClient.GetObject(minioBucket, minioId)
+	userDB, err := minioClient.GetObject(minioInfo.Bucket, minioInfo.Id)
 	if err != nil {
 		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
 		return
@@ -1483,8 +1523,6 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 		errorPage(w, req, http.StatusInternalServerError, "Database query failure")
 		return
 	}
-
-	var jsonResponse []byte
 	if rowCount > 0 {
 		// Use json.MarshalIndent() for nicer looking output
 		jsonResponse, err = json.MarshalIndent(dataRows, "", " ")
@@ -1497,9 +1535,12 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 		jsonResponse = []byte{'{', ']'}
 	}
 
-	// TODO: Cache the response
+	// Cache the JSON data
+	err = cacheData(jsonCacheKey, jsonResponse, cacheTime)
+	if err != nil {
+		log.Printf("%s: Error when caching JSON data: %v\n", pageName, err)
+	}
 
-	// TODO: Send the response from cache
 	//w.Header().Set("Access-Control-Allow-Origin", "*")
 	fmt.Fprintf(w, "%s", jsonResponse)
 }
