@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,13 +14,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bradfitz/gomemcache/memcache"
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
 	"github.com/jackc/pgx"
 )
 
 func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbName string, dbTable string) {
-	pageName := "Render Database Page"
+	pageName := "Render database page"
 
 	var pageData struct {
 		Meta     metaInfo
@@ -36,10 +39,8 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
-	// TODO: Implement caching
-
 	// Check if the user has access to the requested database
-	var dbQuery string
+	var cacheKey, dbQuery string
 	if loggedInUser != userName {
 		// * The request is for another users database, so it needs to be a public one *
 		dbQuery = `
@@ -53,6 +54,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 				AND ver.public = true
 			ORDER BY version DESC
 			LIMIT 1`
+		cacheKey = "dwndb-pub-" + userName + "/" + dbName + "/" + dbTable
 	} else {
 		dbQuery = `
 			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
@@ -64,6 +66,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 				AND db.idnum = ver.db
 			ORDER BY version DESC
 			LIMIT 1`
+		cacheKey = "dwndb-" + loggedInUser + "-" + userName + "/" + dbName + "/" + dbTable
 	}
 
 	// Retrieve the requested database details
@@ -90,6 +93,8 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		pageData.DB.Readme = Readme.String
 	}
 
+	// * Execution can only get here if the user has access to the requested database *
+
 	// Determine the number of rows to display
 	if loggedInUser != "" {
 		// Retrieve the user preference data
@@ -106,6 +111,35 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	} else {
 		// Not logged in, so default to 10 rows
 		pageData.MaxRows = 10
+	}
+
+	// If a cached version of the page data exists, use it
+	cacheKey += "/" + strconv.Itoa(pageData.MaxRows)
+	cacheItem, err := memCache.Get(cacheKey)
+	if err != nil {
+		if err == memcache.ErrCacheMiss {
+			log.Printf("%s: Memcache cache miss: %s\n", pageName, cacheKey)
+		} else {
+			log.Printf("%s: Memcache returned an error. Cachekey: '%v'. Error: '%v'\n", pageName,
+				cacheKey, err)
+		}
+	} else {
+		log.Printf("%s: Memcache cache hit: %v\n", pageName, cacheKey)
+		if cacheItem != nil {
+			// Decode the serialised data
+			var decBuf bytes.Buffer
+			io.Copy(&decBuf, bytes.NewReader(cacheItem.Value))
+			dec := gob.NewDecoder(&decBuf)
+			dec.Decode(&pageData)
+
+			// Render the page from cache
+			t := tmpl.Lookup("databasePage")
+			err = t.Execute(w, pageData)
+			if err != nil {
+				log.Printf("Error: %s", err)
+			}
+			return
+		}
 	}
 
 	// Get a handle from Minio for the database object
@@ -295,6 +329,19 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = conf.Web.Server
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, dbName)
+
+	// Cache the page data
+	var encodedData bytes.Buffer
+	enc := gob.NewEncoder(&encodedData)
+	err = enc.Encode(pageData)
+	if err != nil {
+		log.Printf("%s: Error serialising page data: %v\n", pageName, err)
+	}
+	cachedData := memcache.Item{Key: cacheKey, Value: encodedData.Bytes(), Expiration: cacheTime}
+	err = memCache.Set(&cachedData)
+	if err != nil {
+		log.Printf("%s: Memcache gave an error when setting a value: %v\n", pageName, err)
+	}
 
 	// Render the page
 	t := tmpl.Lookup("databasePage")

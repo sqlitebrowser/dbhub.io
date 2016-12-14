@@ -43,6 +43,9 @@ const (
 	Float
 )
 
+// Stored cached data in memcache for 1/2 hour by default
+const cacheTime = 1800
+
 type dataValue struct {
 	Name  string
 	Type  ValType
