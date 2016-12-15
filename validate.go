@@ -14,21 +14,13 @@ var regexPGTable = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 // At the moment it just allows alphanumeric and ".-_ " chars, though it should probably be extended to cover any
 // valid file name
 func checkDBName(fl validator.FieldLevel) bool {
-	if !regexDBName.MatchString(fl.Field().String()) {
-		return false
-	}
-
-	return true
+	return regexDBName.MatchString(fl.Field().String())
 }
 
 // Custom validation function for PostgreSQL table names
 // At the moment it just allows alphanumeric and ".-_" chars (may need to be expanded out at some point)
 func checkPGTableName(fl validator.FieldLevel) bool {
-	if !regexPGTable.MatchString(fl.Field().String()) {
-		return false
-	}
-
-	return true
+	return regexPGTable.MatchString(fl.Field().String())
 }
 
 // Checks a username against the list of reserved ones
