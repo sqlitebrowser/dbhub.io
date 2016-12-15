@@ -1,6 +1,35 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+
+	"gopkg.in/go-playground/validator.v9"
+)
+
+var regexDBName = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
+var regexPGTable = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+
+// Custom validation function for SQLite database names
+// At the moment it just allows alphanumeric and ".-_ " chars, though it should probably be extended to cover any
+// valid file name
+func checkDBName(fl validator.FieldLevel) bool {
+	if !regexDBName.MatchString(fl.Field().String()) {
+		return false
+	}
+
+	return true
+}
+
+// Custom validation function for PostgreSQL table names
+// At the moment it just allows alphanumeric and ".-_" chars (may need to be expanded out at some point)
+func checkPGTableName(fl validator.FieldLevel) bool {
+	if !regexPGTable.MatchString(fl.Field().String()) {
+		return false
+	}
+
+	return true
+}
 
 // Checks a username against the list of reserved ones
 func reservedUsernamesCheck(userName string) error {
@@ -18,7 +47,7 @@ func reservedUsernamesCheck(userName string) error {
 
 // Validate the database name
 func validateDB(dbName string) error {
-	errs := validate.Var(dbName, "required,alphanum|contains=.,min=1,max=1024")
+	errs := validate.Var(dbName, "required,dbname,min=1,max=256") // 256 char limit seems reasonable
 	if errs != nil {
 		return errs
 	}
@@ -43,7 +72,7 @@ func validatePGTable(table string) error {
 	// TODO  probably ok as a fallback:
 	// TODO      https://www.postgresql.org/docs/current/static/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
 	// TODO: Should we exclude SQLite internal tables too? (eg "sqlite_*" https://sqlite.org/lang_createtable.html)
-	errs := validate.Var(table, "required,alphanum|contains=-|contains=_|contains=.,max=63")
+	errs := validate.Var(table, "required,pgtable,max=63")
 	if errs != nil {
 		return errs
 	}

@@ -584,6 +584,8 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 func main() {
 	// Load validation code
 	validate = valid.New()
+	validate.RegisterValidation("dbname", checkDBName)
+	validate.RegisterValidation("pgtable", checkPGTableName)
 
 	// Read server configuration
 	var err error
@@ -698,8 +700,8 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 	// Validate the user supplied user and database name
 	err := validateUserDB(userName, dbName)
 	if err != nil {
-		log.Printf("%s: Validation failed of user or database name. Username: '%v', Database: '%s', Error: %s\n"+
-			"pathStrings: '%v'\n", pageName, userName, dbName, err, pathStrings)
+		log.Printf("%s: Validation failed of user or database name. Username: '%v', Database: '%s', Error: %s",
+			pageName, userName, dbName, err)
 		errorPage(w, req, http.StatusBadRequest, "Invalid user or database name")
 		return
 	}
