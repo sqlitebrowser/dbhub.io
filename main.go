@@ -656,6 +656,12 @@ func main() {
 	http.HandleFunc("/uploaddata/", logReq(uploadDataHandler))
 
 	// Static files
+	http.HandleFunc("/images/auth0.svg", logReq(func(w http.ResponseWriter, req *http.Request) {
+		http.ServeFile(w, req, "images/auth0.svg")
+	}))
+	http.HandleFunc("/images/rackspace.svg", logReq(func(w http.ResponseWriter, req *http.Request) {
+		http.ServeFile(w, req, "images/rackspace.svg")
+	}))
 	http.HandleFunc("/images/sqlitebrowser.svg", logReq(func(w http.ResponseWriter, req *http.Request) {
 		http.ServeFile(w, req, "images/sqlitebrowser.svg")
 	}))
