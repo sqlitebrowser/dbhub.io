@@ -161,6 +161,30 @@ func getUDT(ignore_leading int, r *http.Request) (string, string, string, error)
 	return userName, dbName, requestedTable, nil
 }
 
+// Extracts and returns the requested username, database, table name, and version number
+func getUDTV(ignore_leading int, r *http.Request) (string, string, string, int64, error) {
+	// Grab user and database name
+	userName, dbName, err := getUD(ignore_leading, r)
+	if err != nil {
+		return "", "", "", 0, err
+	}
+
+	// If a specific table was requested, get that info too
+	requestedTable, err := getTable(r)
+	if err != nil {
+		return "", "", "", 0, err
+	}
+
+	// Extract the version number
+	dbVersion, err := getVersion(r)
+	if err != nil {
+		return "", "", "", 0, err
+	}
+
+	// Everything seems ok
+	return userName, dbName, requestedTable, dbVersion, nil
+}
+
 // Extracts and returns the requested username, database, and database version
 func getUDV(ignore_leading int, r *http.Request) (string, string, int64, error) {
 	// Grab user and database name

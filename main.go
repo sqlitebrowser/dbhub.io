@@ -72,35 +72,13 @@ var (
 func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Download CSV"
 
-	// Split the request URL into path components
-	pathStrings := strings.Split(r.URL.Path, "/")
-
-	// Basic sanity check
-	numPieces := len(pathStrings)
-	if numPieces < 4 {
-		errorPage(w, r, http.StatusBadRequest, "Invalid database requested")
-		return
-	}
-
 	// Extract the username, database, table, and version requested
-	var dbVersion int64
-	userName := pathStrings[2]
-	dbName := pathStrings[3]
-	dbTable := r.FormValue("table")
-	dbVersion, err := strconv.ParseInt(r.FormValue("version"), 10, 0) // This also validates the version input
+	userName, dbName, dbTable, dbVersion, err := getUDTV(2, r) // 2 = Ignore "/x/download/" at the start of the URL
 	if err != nil {
-		log.Printf("%s: Invalid version number: %v\n", pageName, err)
-		errorPage(w, r, http.StatusBadRequest, "Invalid version number")
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Validate the user supplied user, database, and table name
-	err = validateUserDBTable(userName, dbName, dbTable)
-	if err != nil {
-		log.Printf("Validation failed for user, database, or table name: %s", err)
-		errorPage(w, r, http.StatusBadRequest, "Invalid user, database, or table name")
-		return
-	}
 	// Abort if no table name was given
 	if dbTable == "" {
 		log.Printf("%s: No table name given\n", pageName)
@@ -284,7 +262,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Download Handler"
 
-	userName, dbName, dbVersion, err := getUDV(1, r) // 1 = Ignore "/download/" at the start of the URL
+	userName, dbName, dbVersion, err := getUDV(2, r) // 2 = Ignore "/x/download/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -542,18 +520,18 @@ func main() {
 
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
-	http.HandleFunc("/download/", logReq(downloadHandler))
-	http.HandleFunc("/downloadcsv/", logReq(downloadCSVHandler))
 	http.HandleFunc("/login", logReq(loginHandler))
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))
 	http.HandleFunc("/register", logReq(registerHandler))
-	http.HandleFunc("/star/", logReq(starHandler))
 	http.HandleFunc("/stars/", logReq(starsHandler))
-	http.HandleFunc("/table/", logReq(tableViewHandler))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
-	http.HandleFunc("/uploaddata/", logReq(uploadDataHandler))
 	http.HandleFunc("/vis/", logReq(visualisePage))
+	http.HandleFunc("/x/download/", logReq(downloadHandler))
+	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
+	http.HandleFunc("/x/star/", logReq(starHandler))
+	http.HandleFunc("/x/table/", logReq(tableViewHandler))
+	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
 
 	// Static files
 	http.HandleFunc("/images/auth0.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
@@ -978,23 +956,10 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 func starHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Star toggle Handler"
 
-	// Split the request URL into path components
-	pathStrings := strings.Split(r.URL.Path, "/")
-
-	// Basic sanity check
-	numPieces := len(pathStrings)
-	if numPieces != 4 {
-		return
-	}
-
-	// Extract the username, database, and version requested
-	userName := pathStrings[2]
-	dbName := pathStrings[3]
-
-	// Validate the user supplied user and database name
-	err := validateUserDB(userName, dbName)
+	// Extract the user and database name
+	userName, dbName, err := getUD(2, r) // 2 = Ignore "/x/star/" at the start of the URL
 	if err != nil {
-		log.Printf("%s: Validation failed for user or database name: %s", pageName, err)
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -1101,25 +1066,10 @@ func starHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func starsHandler(w http.ResponseWriter, r *http.Request) {
-
-	// Split the request URL into path components
-	pathStrings := strings.Split(r.URL.Path, "/")
-
-	// Make sure we've been given a username and database
-	numPieces := len(pathStrings)
-	if numPieces != 4 {
-		errorPage(w, r, http.StatusBadRequest, "Invalid user or database name")
-		return
-	}
-
-	userName := pathStrings[2]
-	dbName := pathStrings[3]
-
-	// Validate the user supplied user and database name
-	err := validateUserDB(userName, dbName)
+	// Retrieve user and database name
+	userName, dbName, err := getUD(1, r) // 2 = Ignore "/stars/" at the start of the URL
 	if err != nil {
-		log.Printf("Validation failed of user or database name: %s", err)
-		errorPage(w, r, http.StatusBadRequest, "Invalid user or database name")
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -1134,7 +1084,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add support for database versions too
 
 	// Retrieve user, database, and table name
-	userName, dbName, requestedTable, err := getUDT(1, r) // 1 = Ignore "/table/" at the start of the URL
+	userName, dbName, requestedTable, err := getUDT(2, r) // 1 = Ignore "/x/table/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return

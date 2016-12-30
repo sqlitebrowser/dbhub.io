@@ -115,8 +115,8 @@
                         Download <span class="caret"></span>
                     </button>
                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li><a href="/download/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
-                        <li><a href="/downloadcsv/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
+                        <li><a href="/x/download/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
+                        <li><a href="/x/downloadcsv/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
                     </ul>
                 </div>
             </span>
@@ -201,7 +201,7 @@
 
         // Retrieves the table data for a given table
         $scope.changeTable = function(newtable) {
-            $http.get("/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?table=" + newtable)
+            $http.get("/x/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?table=" + newtable)
                 .then(function (response) { $scope.db = response.data; })
         };
 
@@ -235,7 +235,7 @@
         // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
         $scope.toggleStars = function() {
             if ($scope.meta.Loggedin == "true") {
-                $http.get("/star/[[ .Meta.Username ]]/[[ .Meta.Database ]]")
+                $http.get("/x/star/[[ .Meta.Username ]]/[[ .Meta.Database ]]")
                     .then(function (response) {
                         tempval = response.data;
                         if (tempval != "-1") {
