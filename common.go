@@ -101,9 +101,9 @@ func getSQLiteRowCount(db *sqlite.Conn, dbTable string) (int, error) {
 }
 
 // Extracts and returns the requested table name (if any)
-func getTable(req *http.Request) (string, error) {
+func getTable(r *http.Request) (string, error) {
 	var requestedTable string
-	requestedTable = req.FormValue("table")
+	requestedTable = r.FormValue("table")
 
 	// If a table name was supplied, validate it
 	// FIXME: We should probably create a validation function for SQLite table names, not use our one for PG
@@ -120,13 +120,13 @@ func getTable(req *http.Request) (string, error) {
 }
 
 // Extracts and returns the requested user and database name
-func getUD(ignore_leading int, req *http.Request) (string, string, error) {
+func getUD(ignore_leading int, r *http.Request) (string, string, error) {
 	// Split the request URL into path components
-	pathStrings := strings.Split(req.URL.Path, "/")
+	pathStrings := strings.Split(r.URL.Path, "/")
 
 	// Check that at least a username/database combination was requested
 	if len(pathStrings) < (3 + ignore_leading) {
-		log.Printf("Something wrong with the requested URL: %v\n", req.URL.Path)
+		log.Printf("Something wrong with the requested URL: %v\n", r.URL.Path)
 		return "", "", errors.New("Invalid URL")
 	}
 	userName := pathStrings[1+ignore_leading]
@@ -144,15 +144,15 @@ func getUD(ignore_leading int, req *http.Request) (string, string, error) {
 }
 
 // Extracts and returns the requested username, database, and table name
-func getUDT(ignore_leading int, req *http.Request) (string, string, string, error) {
+func getUDT(ignore_leading int, r *http.Request) (string, string, string, error) {
 	// Grab user and database name
-	userName, dbName, err := getUD(ignore_leading, req)
+	userName, dbName, err := getUD(ignore_leading, r)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// If a specific table was requested, get that info too
-	requestedTable, err := getTable(req)
+	requestedTable, err := getTable(r)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -162,15 +162,15 @@ func getUDT(ignore_leading int, req *http.Request) (string, string, string, erro
 }
 
 // Extracts and returns the requested username, database, and database version
-func getUDV(ignore_leading int, req *http.Request) (string, string, int64, error) {
+func getUDV(ignore_leading int, r *http.Request) (string, string, int64, error) {
 	// Grab user and database name
-	userName, dbName, err := getUD(ignore_leading, req)
+	userName, dbName, err := getUD(ignore_leading, r)
 	if err != nil {
 		return "", "", 0, err
 	}
 
 	// Extract the version number
-	dbVersion, err := getVersion(req)
+	dbVersion, err := getVersion(r)
 	if err != nil {
 		return "", "", 0, err
 	}
@@ -197,8 +197,8 @@ func getUserMaxRowsPref(loggedInUser string) int {
 }
 
 // Extract and return the requested version number
-func getVersion(req *http.Request) (int64, error) {
-	dbVersion, err := strconv.ParseInt(req.FormValue("version"), 10, 0) // This also validates the version input
+func getVersion(r *http.Request) (int64, error) {
+	dbVersion, err := strconv.ParseInt(r.FormValue("version"), 10, 0) // This also validates the version input
 	if err != nil {
 		log.Printf("Invalid database version number: %v\n", err)
 		return 0, errors.New("Invalid database version number")
