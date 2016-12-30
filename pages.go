@@ -4,12 +4,9 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -23,13 +20,9 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	pageName := "Render database page"
 
 	var pageData struct {
-		Meta     metaInfo
-		DB       dbInfo
-		ColCount int
-		RowCount int
-		MaxRows  int
-		MinioBkt string
-		MinioId  string
+		Meta metaInfo
+		DB   sqliteDBinfo
+		Data sqliteRecordSet
 	}
 
 	// Retrieve session data (if any)
@@ -41,99 +34,35 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	}
 
 	// Check if the user has access to the requested database
-	var pageCacheKey, queryCacheKey, dbQuery string
+	err := checkUserDBAccess(&pageData.DB, loggedInUser, userName, dbName)
+	if err != nil {
+		errorPage(w, req, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// * Execution can only get here if the user has access to the requested database *
+
+	// Generate a predictable cache key for the whole page data
+	var pageCacheKey string
 	if loggedInUser != userName {
-		// * The request is for another users database, so it needs to be a public one *
-		dbQuery = `
-			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
-				db.stars, db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
-				db.releases, db.contributors, db.description, db.readme, db.minio_bucket
-			FROM sqlite_databases AS db, database_versions AS ver
-			WHERE db.username = $1
-				AND db.dbname = $2
-				AND db.idnum = ver.db
-				AND ver.public = true
-			ORDER BY version DESC
-			LIMIT 1`
 		tempArr := md5.Sum([]byte(userName + "/" + dbName + "/" + dbTable))
 		pageCacheKey = "dwndb-pub-" + hex.EncodeToString(tempArr[:])
-		tempArr2 := md5.Sum([]byte(fmt.Sprintf(dbQuery, userName, dbName)))
-		queryCacheKey = "pub/" + hex.EncodeToString(tempArr2[:])
 	} else {
-		dbQuery = `
-			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
-				db.stars, db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
-				db.releases, db.contributors, db.description, db.readme, db.minio_bucket
-			FROM sqlite_databases AS db, database_versions AS ver
-			WHERE db.username = $1
-				AND db.dbname = $2
-				AND db.idnum = ver.db
-			ORDER BY version DESC
-			LIMIT 1`
 		tempArr := md5.Sum([]byte(loggedInUser + "-" + userName + "/" + dbName + "/" + dbTable))
 		pageCacheKey = "dwndb-" + hex.EncodeToString(tempArr[:])
-		tempArr2 := md5.Sum([]byte(fmt.Sprintf(dbQuery, userName, dbName)))
-		queryCacheKey = loggedInUser + "/" + hex.EncodeToString(tempArr2[:])
 	}
-
-	// Use a cached version of the query response if it exists
-	ok, err := getCachedData(queryCacheKey, &pageData)
-	if err != nil {
-		log.Printf("%s: Error retrieving data from cache: %v\n", pageName, err)
-	}
-	if !ok {
-		// Retrieve the requested database details
-		var Desc, Readme pgx.NullString
-		err := db.QueryRow(dbQuery, userName, dbName).Scan(&pageData.MinioId, &pageData.DB.DateCreated,
-			&pageData.DB.LastModified, &pageData.DB.Size, &pageData.DB.Version, &pageData.DB.Watchers,
-			&pageData.DB.Stars, &pageData.DB.Forks, &pageData.DB.Discussions, &pageData.DB.PRs,
-			&pageData.DB.Updates, &pageData.DB.Branches, &pageData.DB.Releases, &pageData.DB.Contributors,
-			&Desc, &Readme, &pageData.MinioBkt)
-		if err != nil {
-			log.Printf("%s: Requested database not found: %v for user: %v \n", pageName, dbName, userName)
-			errorPage(w, req, http.StatusInternalServerError, "The requested database doesn't exist")
-			return
-		}
-		if !Desc.Valid {
-			pageData.DB.Description = "No description"
-		} else {
-			pageData.DB.Description = Desc.String
-		}
-		if !Readme.Valid {
-			pageData.DB.Readme = "No readme"
-		} else {
-			pageData.DB.Readme = Readme.String
-		}
-
-		// Cache the database details
-		err = cacheData(queryCacheKey, pageData, 120)
-		if err != nil {
-			log.Printf("%s: Error when caching page data: %v\n", pageName, err)
-		}
-	}
-	// * Execution can only get here if the user has access to the requested database *
 
 	// Determine the number of rows to display
 	if loggedInUser != "" {
-		// Retrieve the user preference data
-		dbQuery = `
-			SELECT pref_max_rows
-			FROM users
-			WHERE username = $1`
-		err = db.QueryRow(dbQuery, loggedInUser).Scan(&pageData.MaxRows)
-		if err != nil {
-			log.Printf("%s: Error retrieving User preference data: %v\n", pageName, err)
-			errorPage(w, req, http.StatusInternalServerError, "Error retrieving preference data")
-			return
-		}
+		pageData.DB.MaxRows = getUserMaxRowsPref(loggedInUser)
 	} else {
 		// Not logged in, so default to 10 rows
-		pageData.MaxRows = 10
+		pageData.DB.MaxRows = 10
 	}
 
 	// If a cached version of the page data exists, use it
-	pageCacheKey += "/" + strconv.Itoa(pageData.MaxRows)
-	ok, err = getCachedData(pageCacheKey, &pageData)
+	pageCacheKey += "/" + strconv.Itoa(pageData.DB.MaxRows)
+	ok, err := getCachedData(pageCacheKey, &pageData)
 	if err != nil {
 		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
 	}
@@ -148,48 +77,9 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	}
 
 	// Get a handle from Minio for the database object
-	userDB, err := minioClient.GetObject(pageData.MinioBkt, pageData.MinioId)
+	db, err := openMinioObject(pageData.DB.MinioBkt, pageData.DB.MinioId)
 	if err != nil {
-		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
-		errorPage(w, req, http.StatusInternalServerError, "Internal retrieving database from object store")
-		return
-	}
-
-	// Close the object handle when this function finishes
-	defer func() {
-		err := userDB.Close()
-		if err != nil {
-			log.Printf("%s: Error closing object handle: %v\n", pageName, err)
-		}
-	}()
-
-	// Save the database locally to a temporary file
-	tempfileHandle, err := ioutil.TempFile("", "databaseViewHandler-")
-	if err != nil {
-		log.Printf("%s: Error creating tempfile: %v\n", pageName, err)
-		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
-		return
-	}
-	tempfile := tempfileHandle.Name()
-	bytesWritten, err := io.Copy(tempfileHandle, userDB)
-	if err != nil {
-		log.Printf("%s: Error writing database to temporary file: %v\n", pageName, err)
-		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
-		return
-	}
-	if bytesWritten == 0 {
-		log.Printf("%s: 0 bytes written to the temporary file: %v\n", pageName, dbName)
-		errorPage(w, req, http.StatusInternalServerError, "Internal server error")
-		return
-	}
-	tempfileHandle.Close()
-	defer os.Remove(tempfile) // Delete the temporary file when this function finishes
-
-	// Open database
-	db, err := sqlite.Open(tempfile, sqlite.OpenReadOnly)
-	if err != nil {
-		log.Printf("Couldn't open database: %s", err)
-		errorPage(w, req, http.StatusInternalServerError, "Internal error")
+		errorPage(w, req, http.StatusInternalServerError, err.Error())
 		return
 	}
 	defer db.Close()
@@ -210,7 +100,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		errorPage(w, req, http.StatusInternalServerError, "Database has no tables?")
 		return
 	}
-	pageData.DB.Tables = tables
+	pageData.DB.Info.Tables = tables
 
 	// If a specific table was requested, check that it's present
 	if dbTable != "" {
@@ -223,19 +113,22 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 		}
 		if tablePresent == false {
 			// The requested table doesn't exist in the database
-			dbTable = ""
+			log.Printf("%s: Requested table not present in database. DB: '%s/%s', Table: '%s'\n", pageName,
+				userName, dbName, dbTable)
+			errorPage(w, req, http.StatusBadRequest, "Requested table not present")
+			return
 		}
 	}
 
-	// If a specific table wasn't requested, or the one requested isn't present, use the first table in the database
+	// If a specific table wasn't requested, use the first table in the database
 	if dbTable == "" {
-		dbTable = pageData.DB.Tables[0]
+		dbTable = pageData.DB.Info.Tables[0]
 	}
 
 	// Retrieve (up to) x rows from the selected database
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
-	stmt, err := db.Prepare("SELECT * FROM "+dbTable+" LIMIT ?", pageData.MaxRows)
+	stmt, err := db.Prepare("SELECT * FROM "+dbTable+" LIMIT ?", pageData.DB.MaxRows)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
 		errorPage(w, req, http.StatusInternalServerError, "Internal error")
@@ -243,8 +136,8 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	}
 
 	// Retrieve the field names
-	pageData.DB.TableHeaders = stmt.ColumnNames()
-	pageData.ColCount = len(pageData.DB.TableHeaders)
+	pageData.Data.ColNames = stmt.ColumnNames()
+	pageData.Data.ColCount = len(pageData.Data.ColNames)
 
 	// Process each row
 	fieldCount := -1
@@ -272,7 +165,7 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 				}
 				if !isNull {
 					stringVal := fmt.Sprintf("%d", val)
-					row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Integer,
+					row = append(row, dataValue{Name: pageData.Data.ColNames[i], Type: Integer,
 						Value: stringVal})
 				}
 			case sqlite.Float:
@@ -284,31 +177,31 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 				}
 				if !isNull {
 					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
-					row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Float,
+					row = append(row, dataValue{Name: pageData.Data.ColNames[i], Type: Float,
 						Value: stringVal})
 				}
 			case sqlite.Text:
 				var val string
 				val, isNull = s.ScanText(i)
 				if !isNull {
-					row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Text,
+					row = append(row, dataValue{Name: pageData.Data.ColNames[i], Type: Text,
 						Value: val})
 				}
 			case sqlite.Blob:
 				_, isNull = s.ScanBlob(i)
 				if !isNull {
-					row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Binary,
+					row = append(row, dataValue{Name: pageData.Data.ColNames[i], Type: Binary,
 						Value: "<i>BINARY DATA</i>"})
 				}
 			case sqlite.Null:
 				isNull = true
 			}
 			if isNull {
-				row = append(row, dataValue{Name: pageData.DB.TableHeaders[i], Type: Null,
+				row = append(row, dataValue{Name: pageData.Data.ColNames[i], Type: Null,
 					Value: "<i>NULL</i>"})
 			}
 		}
-		pageData.DB.Records = append(pageData.DB.Records, row)
+		pageData.Data.Records = append(pageData.Data.Records, row)
 
 		return nil
 	})
@@ -321,15 +214,15 @@ func databasePage(w http.ResponseWriter, req *http.Request, userName string, dbN
 	defer stmt.Finalize()
 
 	// Count the total number of rows in the selected table
-	dbQuery = "SELECT count(*) FROM " + dbTable
-	err = db.OneValue(dbQuery, &pageData.RowCount)
+	dbQuery := "SELECT count(*) FROM " + dbTable
+	err = db.OneValue(dbQuery, &pageData.Data.RowCount)
 	if err != nil {
 		log.Printf("%s: Error occurred when counting total table rows: %s\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, "Database query failure")
 		return
 	}
 
-	pageData.DB.Tablename = dbTable
+	pageData.Data.Tablename = dbTable
 	pageData.Meta.Username = userName
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = conf.Web.Server
@@ -474,6 +367,37 @@ func loginPage(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// Renders the user Preferences page
+func prefPage(w http.ResponseWriter, req *http.Request, userName string) {
+	pageName := "Preference page form"
+
+	var pageData struct {
+		Meta    metaInfo
+		MaxRows int
+	}
+	pageData.Meta.Title = "Preferences"
+	pageData.Meta.LoggedInUser = userName
+
+	// Retrieve the user preference data
+	dbQuery := `
+		SELECT pref_max_rows
+		FROM users
+		WHERE username = $1`
+	err := db.QueryRow(dbQuery, userName).Scan(&pageData.MaxRows)
+	if err != nil {
+		log.Printf("%s: Error retrieving User preference data: %v\n", pageName, err)
+		errorPage(w, req, http.StatusInternalServerError, "Error retrieving preference data")
+		return
+	}
+
+	// Render the page
+	t := tmpl.Lookup("prefPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 func profilePage(w http.ResponseWriter, req *http.Request, userName string) {
 	pageName := "User Page"
 
@@ -485,8 +409,8 @@ func profilePage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 	var pageData struct {
 		Meta       metaInfo
-		PublicDBS  []dbInfo
-		PrivateDBS []dbInfo
+		PrivateDBs []dbInfo
+		PublicDBs  []dbInfo
 		Stars      []starRow
 	}
 	pageData.Meta.Username = userName
@@ -534,22 +458,22 @@ func profilePage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var desc pgx.NullString
 		var oneRow dbInfo
-		var Desc pgx.NullString
 		err = rows.Scan(&oneRow.Database, &oneRow.LastModified, &oneRow.Size, &oneRow.Version,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.PRs,
-			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &Desc)
+			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &desc)
 		if err != nil {
 			log.Printf("%s: Error retrieving public database list for user: %v\n", pageName, err)
 			errorPage(w, req, http.StatusInternalServerError, "Error retrieving database list")
 			return
 		}
-		if !Desc.Valid {
+		if !desc.Valid {
 			oneRow.Description = ""
 		} else {
-			oneRow.Description = fmt.Sprintf(": %s", Desc.String)
+			oneRow.Description = fmt.Sprintf(": %s", desc.String)
 		}
-		pageData.PublicDBS = append(pageData.PublicDBS, oneRow)
+		pageData.PublicDBs = append(pageData.PublicDBs, oneRow)
 	}
 
 	// Retrieve list of private databases for the user
@@ -575,22 +499,22 @@ func profilePage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 	defer rows2.Close()
 	for rows2.Next() {
+		var desc pgx.NullString
 		var oneRow dbInfo
-		var Desc pgx.NullString
 		err = rows2.Scan(&oneRow.Database, &oneRow.LastModified, &oneRow.Size, &oneRow.Version,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.PRs,
-			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &Desc)
+			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &desc)
 		if err != nil {
 			log.Printf("%s: Error retrieving private database list for user: %v\n", pageName, err)
 			errorPage(w, req, http.StatusInternalServerError, "Error retrieving database list")
 			return
 		}
-		if !Desc.Valid {
+		if !desc.Valid {
 			oneRow.Description = ""
 		} else {
-			oneRow.Description = fmt.Sprintf(": %s", Desc.String)
+			oneRow.Description = fmt.Sprintf(": %s", desc.String)
 		}
-		pageData.PrivateDBS = append(pageData.PrivateDBS, oneRow)
+		pageData.PrivateDBs = append(pageData.PrivateDBs, oneRow)
 	}
 
 	// Retrieve the list of starred databases for the user
@@ -646,37 +570,6 @@ func registerPage(w http.ResponseWriter, req *http.Request) {
 	// Render the page
 	t := tmpl.Lookup("registerPage")
 	err := t.Execute(w, pageData)
-	if err != nil {
-		log.Printf("Error: %s", err)
-	}
-}
-
-// Renders the user Preferences page
-func prefPage(w http.ResponseWriter, req *http.Request, userName string) {
-	pageName := "Preference page form"
-
-	var pageData struct {
-		Meta    metaInfo
-		MaxRows int
-	}
-	pageData.Meta.Title = "Preferences"
-	pageData.Meta.LoggedInUser = userName
-
-	// Retrieve the user preference data
-	dbQuery := `
-		SELECT pref_max_rows
-		FROM users
-		WHERE username = $1`
-	err := db.QueryRow(dbQuery, userName).Scan(&pageData.MaxRows)
-	if err != nil {
-		log.Printf("%s: Error retrieving User preference data: %v\n", pageName, err)
-		errorPage(w, req, http.StatusInternalServerError, "Error retrieving preference data")
-		return
-	}
-
-	// Render the page
-	t := tmpl.Lookup("prefPage")
-	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -767,8 +660,8 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 
 	// Structure to hold page data
 	var pageData struct {
-		Meta     metaInfo
-		DataRows []dbInfo
+		Meta   metaInfo
+		DBRows []dbInfo
 	}
 	pageData.Meta.Username = userName
 	pageData.Meta.Title = userName
@@ -827,26 +720,125 @@ func userPage(w http.ResponseWriter, req *http.Request, userName string) {
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var desc pgx.NullString
 		var oneRow dbInfo
-		var Desc pgx.NullString
 		err = rows.Scan(&oneRow.Database, &oneRow.LastModified, &oneRow.Size, &oneRow.Version,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.PRs,
-			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &Desc)
+			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &desc)
 		if err != nil {
 			log.Printf("%s: Error retrieving database list for user: %v\n", pageName, err)
 			errorPage(w, req, http.StatusInternalServerError, "Error retrieving database list for user")
 			return
 		}
-		if !Desc.Valid {
+		if !desc.Valid {
 			oneRow.Description = ""
 		} else {
-			oneRow.Description = fmt.Sprintf(": %s", Desc.String)
+			oneRow.Description = fmt.Sprintf(": %s", desc.String)
 		}
-		pageData.DataRows = append(pageData.DataRows, oneRow)
+		pageData.DBRows = append(pageData.DBRows, oneRow)
 	}
 
 	// Render the page
 	t := tmpl.Lookup("userPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+func visualisePage(w http.ResponseWriter, req *http.Request) {
+	// Structure to hold page data
+	var pageData struct {
+		Meta metaInfo
+		DB   sqliteDBinfo
+		Data sqliteRecordSet
+	}
+	pageData.Meta.Title = "Visualise data"
+
+	// Retrieve user and database name
+	userName, dbName, requestedTable, err := getUDT(1, req)
+	if err != nil {
+		errorPage(w, req, http.StatusBadRequest, err.Error())
+		return
+	}
+	pageData.Meta.Username = userName
+	pageData.Meta.Database = dbName
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(req)
+	if sess != nil {
+		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+		pageData.Meta.LoggedInUser = loggedInUser
+	}
+
+	// Check if the user has access to the requested database
+	err = checkUserDBAccess(&pageData.DB, loggedInUser, pageData.Meta.Username, dbName)
+	if err != nil {
+		errorPage(w, req, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get a handle from Minio for the database object
+	db, err := openMinioObject(pageData.DB.MinioBkt, pageData.DB.MinioId)
+	if err != nil {
+		errorPage(w, req, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer db.Close()
+
+	// Retrieve the list of tables in the database
+	tables, err := db.Tables("")
+	if err != nil {
+		log.Printf("Error retrieving table names: %s", err)
+		// TODO: Add proper error handing here.  Maybe display the page, but show the error where
+		// TODO  the table data would otherwise be?
+		errorPage(w, req, http.StatusInternalServerError,
+			fmt.Sprintf("Error reading from '%s'.  Possibly encrypted or not a database?", dbName))
+		return
+	}
+	if len(tables) == 0 {
+		// No table names were returned, so abort
+		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
+		errorPage(w, req, http.StatusInternalServerError, "Database has no tables?")
+		return
+	}
+	pageData.DB.Info.Tables = tables
+
+	// If a specific table was requested, check it exists
+	if requestedTable != "" {
+		tablePresent := false
+		for _, tableName := range tables {
+			if requestedTable == tableName {
+				tablePresent = true
+			}
+		}
+		if tablePresent == false {
+			// The requested table doesn't exist
+			errorPage(w, req, http.StatusBadRequest, "Requested table does not exist")
+			return
+		}
+	}
+
+	// If no specific table was requested, just choose the first one given to us in the list from the database
+	if requestedTable == "" {
+		requestedTable = tables[0]
+	}
+	pageData.Data.Tablename = requestedTable
+
+	// TODO: If a full visualisation profile was specified, we should gather the data for it and provide it to the
+	// TODO  render function
+
+	// Read all of the data from the requested (or default) table, add it to the page data
+	pageData.Data, err = readSQLiteDB(db, requestedTable, 1000) // 1000 row maximum for now
+	if err != nil {
+		// Some kind of error when reading the database data
+		errorPage(w, req, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Render the page
+	t := tmpl.Lookup("visualisePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)

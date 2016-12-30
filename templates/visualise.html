@@ -1,0 +1,266 @@
+[[ define "visualisePage" ]]
+<!doctype html>
+<html ng-app="DBHub-front" ng-controller="visualiseView">
+[[ template "headvis" . ]]
+<body>
+[[ template "header" . ]]
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 id="visdb" style="margin-top: 10px;">
+                <div class="pull-left"><a href="/[[ .Meta.Username ]]">[[ .Meta.Username ]]</a> / [[ .Meta.Database ]]</div>
+                <div class="pull-right">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-bind="'Watchers:'"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Watchers"></button>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-bind="'Stars:'" ng-click="toggleStars()"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Stars" ng-click="starsPage()"></button>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-bind="'Forks:'"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Forks"></button>
+                    </div>
+                </div>
+            </h2>
+        </div>
+    </div>
+    <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
+        <div class="col-md-9">
+            <div class="row">
+                <div class="col-md-2">
+                    <a href="/[[ .Meta.Username ]]/[[ .Meta.Database ]]?table={{ db.Tablename }}">Data</a>
+                </div>
+                <div class="col-md-2">
+                    Visualise
+                </div>
+                <div class="col-md-2">
+                    <a href="">Schedule</a>
+                </div>
+                <div class="col-md-2">
+                    <label id="viewdiscuss"><a href="">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label>
+                </div>
+                <div class="col-md-2">
+                    <label id="viewprs"><a href="">{{ 'Pull Requests: ' }}</a>{{ meta.PRs }}</label>
+                </div>
+                <div class="col-md-2">
+                    &nbsp;
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="pull-right">
+                <b>Version:</b> {{ meta.Version }} &nbsp;
+                <b>Size:</b> {{ meta.Size / 1024 | number : 0 }} KB
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="dropdown">
+                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <button id="viewtable" type="button" class="btn">{{ 'Table: ' + db.Tablename }}</button>
+
+                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                        <span class="caret"></span>
+                    </button>
+                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                        <li ng-repeat="row in meta.Tables" role="menuitem" ng-click="changeTable(row)">
+                            <a>{{ row }}</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <button id="viewtable" type="button" class="btn">{{ 'X Axis: ' + axis.X }}</button>
+
+                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                        <span class="caret"></span>
+                    </button>
+                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                        <li ng-repeat="row in db.ColNames" role="menuitem" ng-click="c">
+                            <a>{{ row }}</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <button id="viewtable" type="button" class="btn">{{ 'Y Axis: ' + axis.Y }}</button>
+
+                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                        <span class="caret"></span>
+                    </button>
+                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                        <li ng-repeat="row in db.ColNames" role="menuitem" ng-click="c">
+                            <a>{{ row }}</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-12">
+        <svg width="1000" height="300"></svg>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script type="text/javascript">
+    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('visualiseView', function($scope, $http) {
+        $scope.meta = {
+            Username: "[[ .Meta.Username ]]",
+            Database: "[[ .Meta.Database ]]",
+            Watchers: "[[ .DB.Info.Watchers ]]",
+            Stars: "[[ .DB.Info.Stars ]]",
+            Forks: "[[ .DB.Info.Forks ]]",
+            Discussions: "[[ .DB.Info.Discussions ]]",
+            PRs: "[[ .DB.Info.PRs ]]",
+            Description: "[[ .DB.Info.Description ]]",
+            Updates: "[[ .DB.Info.Updates ]]",
+            Branches: "[[ .DB.Info.Branches ]]",
+            Releases: "[[ .DB.Info.Releases ]]",
+            Contributors: "[[ .DB.Info.Contributors ]]",
+            Readme: "[[ .DB.Info.Readme ]]",
+            Size: "[[ .DB.Info.Size ]]",
+            Version: "[[ .DB.Info.Version ]]",
+            MaxRows: "[[ .DB.MaxRows ]]",
+            Tables: [[.DB.Info.Tables]]
+        }
+
+        $scope.db = {
+            Tablename: "[[ .Data.Tablename ]]",
+            Records: [[.Data.Records]],
+            ColNames: [[.Data.ColNames]],
+            RowCount: [[.Data.RowCount]],
+            ColCount: [[.Data.ColCount]]
+        }
+
+        $scope.axis = {
+            X: $scope.db.ColNames[0],
+            Y: $scope.db.ColNames[1]
+        };
+
+        // TODO: Display labels for the X and Y axes
+
+        // TODO: Allow the user to choose the columns in the table for each axis
+
+        $scope.data = $scope.db.Records;
+
+        // Select the SVG
+        var svg = d3.select('svg');
+
+        var svg_data = svg.append('g')
+            .attr('class', 'data');
+
+        var svg_axis = svg.append('g')
+            .attr('class', 'axis');
+
+        var svg_x_axis = svg_axis.append('g')
+            .attr('class', 'x-axis');
+
+        var svg_y_axis = svg_axis.append('g')
+            .attr('class', 'y-axis');
+
+        var margin = {top: 40, right: 40, bottom: 40, left: 60};
+
+        $scope.draw = function () {
+            var x_scale = d3.scaleTime()
+            // Determine the start and end dates from the data
+                .domain([
+                    d3.min($scope.data, function (d) {
+                        return new Date(d[0]["Value"]);
+                    }), // Start date
+                    d3.max($scope.data, function (d) {
+                        return new Date(d[0]["Value"]);
+                    })  // End date
+                ])
+                .range([margin.left, 1000 - margin.right])
+                .nice();
+
+            var max_value = d3.max($scope.data, function (d) {
+                return d[1]["Value"];
+            });
+
+            var min_value = d3.min($scope.data, function (d) {
+                return d[1]["Value"];
+            });
+
+            var range = max_value - min_value;
+            var border = 0.2 * range;
+            var new_max = parseFloat(border) + parseFloat(max_value);
+            var new_min = parseFloat(min_value) - parseFloat(border);
+
+            console.log("Max value = "+max_value);
+            console.log("Min value = "+min_value);
+            console.log("Range = "+range);
+            console.log("Border = "+border);
+            console.log("New max = "+new_max);
+            console.log("New min = "+new_min);
+
+            var y_scale = d3.scaleLinear()
+                .domain([new_max, new_min])
+                .range([margin.top, 300 - margin.bottom])
+                .nice();
+
+            var x_axis = d3.axisBottom(x_scale)
+                .tickFormat(d3.timeFormat('%Y-%m'));
+
+            svg_x_axis
+                .attr("transform", "translate(0, " + (300 - margin.bottom) + ")")
+                .call(x_axis);
+
+            var y_axis = d3.axisLeft(y_scale)
+                .tickFormat(d3.format(".3s"));
+
+            svg_y_axis
+                .attr("transform", "translate(" + margin.left + ")")
+                .call(y_axis);
+
+            // Key function to identify elements
+            function key(d, i) {
+                return d[0]["Value"];
+            }
+
+            var colour = d3.scaleOrdinal(d3.schemeCategory10);
+
+            var circles = svg_data.selectAll('circle').data($scope.data, key);
+
+            circles
+
+                .enter()
+                .append('circle')
+
+                .attr('r', 1)
+                .attr('cx', function (d) {
+                    return x_scale(new Date(d[0]["Value"]));
+                })
+                .attr('cy', function (d) {
+                    return y_scale(d[1]["Value"]);
+                })
+                .attr('fill', colour(1));
+
+            circles
+                .exit()
+                .remove();
+
+        };
+
+        // Retrieves the table data for a given table
+        $scope.changeTable = function (newtable) {
+
+            // Retrieve and display table data
+            $http.get("/table/" + $scope.meta.Username + "/" + $scope.meta.Database + "?table=" + newtable)
+                .then(function (response) {
+                    $scope.data = response.data["Records"];
+                    $scope.db.Tablename = newtable;
+
+                    // Redraw the visualisation
+                    $scope.draw();
+                })
+        };
+
+        $scope.draw();
+    });
+</script>
+</body>
+</html>
+[[ end ]]

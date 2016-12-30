@@ -47,84 +47,6 @@ const (
 // Stored cached data in memcache for 1/2 hour by default
 const cacheTime = 1800
 
-type dataValue struct {
-	Name  string
-	Type  ValType
-	Value interface{}
-}
-type dataRow []dataValue
-type dbInfo struct {
-	Database     string
-	TableHeaders []string
-	Records      []dataRow
-	Tables       []string
-	Tablename    string
-	Watchers     int
-	Stars        int
-	Forks        int
-	Discussions  int
-	PRs          int
-	Description  string
-	Updates      int
-	Branches     int
-	Releases     int
-	Contributors int
-	Readme       string
-	DateCreated  time.Time
-	LastModified time.Time
-	Public       bool
-	Size         int
-	Version      int
-	RowCount     int
-	ColCount     int
-}
-
-type metaInfo struct {
-	Protocol     string
-	Server       string
-	Title        string
-	Username     string
-	Database     string
-	LoggedInUser string
-}
-
-// Configuration file
-type tomlConfig struct {
-	Cache cacheInfo
-	Minio minioInfo
-	Pg    pgInfo
-	Web   webInfo
-}
-
-// Memcached connection parameters
-type cacheInfo struct {
-	Server string
-}
-
-// Minio connection parameters
-type minioInfo struct {
-	Server    string
-	AccessKey string `toml:"access_key"`
-	Secret    string
-	HTTPS     bool
-}
-
-// PostgreSQL connection parameters
-type pgInfo struct {
-	Server   string
-	Port     int
-	Username string
-	Password string
-	Database string
-}
-
-type webInfo struct {
-	Server         string
-	Certificate    string
-	CertificateKey string `toml:"certificate_key"`
-	RequestLog     string `toml:"request_log"`
-}
-
 var (
 	// Our configuration info
 	conf tomlConfig
@@ -348,7 +270,7 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 	defer stmt.Finalize()
 
 	// Convert resultSet into CSV and send to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", dbTable))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", url.QueryEscape(dbTable)))
 	w.Header().Set("Content-Type", "text/csv")
 	csvFile := csv.NewWriter(w)
 	err = csvFile.WriteAll(resultSet)
@@ -362,32 +284,9 @@ func downloadCSVHandler(w http.ResponseWriter, req *http.Request) {
 func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	pageName := "Download Handler"
 
-	// Split the request URL into path components
-	pathStrings := strings.Split(req.URL.Path, "/")
-
-	// Basic sanity check
-	numPieces := len(pathStrings)
-	if numPieces < 4 {
-		errorPage(w, req, http.StatusBadRequest, "Invalid database requested")
-		return
-	}
-
-	// Extract the username, database, and version requested
-	var dbVersion int64
-	userName := pathStrings[2]
-	dbName := pathStrings[3]
-	dbVersion, err := strconv.ParseInt(req.FormValue("version"), 10, 0) // This also validates the version input
+	userName, dbName, dbVersion, err := getUDV(1, req) // 1 = Ignore "/download/" at the start of the URL
 	if err != nil {
-		log.Printf("%s: Invalid version number: %v\n", pageName, err)
-		errorPage(w, req, http.StatusBadRequest, "Invalid version number")
-		return
-	}
-
-	// Validate the user supplied user and database name
-	err = validateUserDB(userName, dbName)
-	if err != nil {
-		log.Printf("Validation failed for user or database name: %s", err)
-		errorPage(w, req, http.StatusBadRequest, "Invalid user or database name")
+		errorPage(w, req, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -444,7 +343,7 @@ func downloadHandler(w http.ResponseWriter, req *http.Request) {
 	}()
 
 	// Send the database to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", dbName))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", url.QueryEscape(dbName)))
 	w.Header().Set("Content-Type", "application/x-sqlite3")
 	bytesWritten, err := io.Copy(w, userDB)
 	if err != nil {
@@ -654,6 +553,7 @@ func main() {
 	http.HandleFunc("/table/", logReq(tableViewHandler))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
 	http.HandleFunc("/uploaddata/", logReq(uploadDataHandler))
+	http.HandleFunc("/vis/", logReq(visualisePage))
 
 	// Static files
 	http.HandleFunc("/images/auth0.svg", logReq(func(w http.ResponseWriter, req *http.Request) {
@@ -1231,37 +1131,13 @@ func starsHandler(w http.ResponseWriter, req *http.Request) {
 func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	pageName := "Table data handler"
 
-	// Split the request URL into path components
-	pathStrings := strings.Split(req.URL.Path, "/")
+	// TODO: Add support for database versions too
 
-	// Check that at least a username/database combination was requested
-	if len(pathStrings) < 3 {
-		log.Printf("Something wrong with the requested URL: %v\n", req.URL.Path)
-		return
-	}
-	userName := pathStrings[2]
-	dbName := pathStrings[3]
-
-	// If a specific table was requested, get that info too
-	var requestedTable string
-	requestedTable = req.URL.RawQuery
-
-	// TODO: Add support for database versions, instead of always using the latest
-
-	// Validate the user supplied user and database name
-	err := validateUserDB(userName, dbName)
+	// Retrieve user, database, and table name
+	userName, dbName, requestedTable, err := getUDT(1, req) // 1 = Ignore "/table/" at the start of the URL
 	if err != nil {
-		log.Printf("%s: Validation failed for user or database name: %s", pageName, err)
+		errorPage(w, req, http.StatusBadRequest, err.Error())
 		return
-	}
-
-	// If a table name was supplied, validate it
-	if requestedTable != "" {
-		err = validatePGTable(requestedTable)
-		if err != nil {
-			log.Printf("%s: Validation failed for table name: %s", pageName, err)
-			return
-		}
 	}
 
 	// Retrieve session data (if any)
@@ -1351,16 +1227,7 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 	var maxRows int
 	if loggedInUser != "" {
 		// Retrieve the user preference data
-		dbQuery = `
-			SELECT pref_max_rows
-			FROM users
-			WHERE username = $1`
-		err = db.QueryRow(dbQuery, loggedInUser).Scan(&maxRows)
-		if err != nil {
-			log.Printf("%s: Error retrieving User preference data: %v\n", pageName, err)
-			errorPage(w, req, http.StatusInternalServerError, "Error retrieving preference data")
-			return
-		}
+		maxRows = getUserMaxRowsPref(loggedInUser)
 	} else {
 		// Not logged in, so default to 10 rows
 		maxRows = 10
@@ -1432,109 +1299,43 @@ func tableViewHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// If a specific table was requested, check it exists
+	if requestedTable != "" {
+		tablePresent := false
+		for _, tableName := range tables {
+			if requestedTable == tableName {
+				tablePresent = true
+			}
+		}
+		if tablePresent == false {
+			// The requested table doesn't exist
+			errorPage(w, req, http.StatusBadRequest, "Requested table does not exist")
+			return
+		}
+	}
+
 	// If no specific table was requested, use the first one
-	var dataRows dbInfo
 	if requestedTable == "" {
 		requestedTable = tables[0]
 	}
-	dataRows.Tablename = requestedTable
 
-	// Retrieve (up to) x rows from the selected database
-	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
-	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
-	stmt, err := db.Prepare("SELECT * FROM "+requestedTable+" LIMIT ?", maxRows)
+	// Read the data from the database
+	dataRows, err := readSQLiteDB(db, requestedTable, maxRows)
 	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\v", err)
+		// Some kind of error when reading the database data
+		errorPage(w, req, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// Retrieve the field names
-	dataRows.TableHeaders = stmt.ColumnNames()
-	dataRows.ColCount = len(dataRows.TableHeaders)
-
-	// Process each row
-	var rowCount int
-	fieldCount := -1
-	err = stmt.Select(func(s *sqlite.Stmt) error {
-
-		// Get the number of fields in the result
-		if fieldCount == -1 {
-			fieldCount = stmt.DataCount()
-		}
-
-		// Retrieve the data for each row
-		var row []dataValue
-		for i := 0; i < fieldCount; i++ {
-			// Retrieve the data type for the field
-			fieldType := stmt.ColumnType(i)
-
-			isNull := false
-			switch fieldType {
-			case sqlite.Integer:
-				var val int
-				val, isNull, err = s.ScanInt(i)
-				if err != nil {
-					log.Printf("Something went wrong with ScanInt(): %v\n", err)
-					break
-				}
-				if !isNull {
-					stringVal := fmt.Sprintf("%d", val)
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Integer,
-						Value: stringVal})
-				}
-			case sqlite.Float:
-				var val float64
-				val, isNull, err = s.ScanDouble(i)
-				if err != nil {
-					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
-					break
-				}
-				if !isNull {
-					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Float,
-						Value: stringVal})
-				}
-			case sqlite.Text:
-				var val string
-				val, isNull = s.ScanText(i)
-				if !isNull {
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Text,
-						Value: val})
-				}
-			case sqlite.Blob:
-				_, isNull = s.ScanBlob(i)
-				if !isNull {
-					row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Binary,
-						Value: "<i>BINARY DATA</i>"})
-				}
-			case sqlite.Null:
-				isNull = true
-			}
-			if isNull {
-				row = append(row, dataValue{Name: dataRows.TableHeaders[i], Type: Null,
-					Value: "<i>NULL</i>"})
-			}
-		}
-		dataRows.Records = append(dataRows.Records, row)
-		rowCount += 1
-
-		return nil
-	})
-	if err != nil {
-		log.Printf("Error when retrieving select data from database: %s\v", err)
-		return
-	}
-	defer stmt.Finalize()
 
 	// Count the total number of rows in the requested table
-	dbQuery = "SELECT count(*) FROM " + requestedTable
-	err = db.OneValue(dbQuery, &dataRows.RowCount)
+	dataRows.TotalRows, err = getSQLiteRowCount(db, requestedTable)
 	if err != nil {
-		log.Printf("%s: Error occurred when counting total table rows: %s\n", pageName, err)
-		errorPage(w, req, http.StatusInternalServerError, "Database query failure")
+		errorPage(w, req, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if rowCount > 0 {
+
+	// Format the output
+	if dataRows.RowCount > 0 {
 		// Use json.MarshalIndent() for nicer looking output
 		jsonResponse, err = json.MarshalIndent(dataRows, "", " ")
 		if err != nil {
@@ -1590,7 +1391,7 @@ func uploadDataHandler(w http.ResponseWriter, req *http.Request) {
 	// Prepare the form data
 	req.ParseMultipartForm(32 << 20) // 64MB of ram max
 	if err := req.ParseForm(); err != nil {
-		fmt.Errorf("%s: ParseForm() error: %v\n", pageName, err)
+		log.Printf("%s: ParseForm() error: %v\n", pageName, err)
 		errorPage(w, req, http.StatusInternalServerError, err.Error())
 		return
 	}

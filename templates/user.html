@@ -36,8 +36,8 @@
 <script>
     var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
     app.controller('userView', function($scope) {
-        $scope.meta = { Username: "[[ .Meta.Username ]]" }
-        $scope.db = { Databases: [[ .DataRows ]] }
+        $scope.meta = { Username: "[[ .Meta.Username ]]" };
+        $scope.db = { Databases: [[ .DBRows ]] };
 
         $scope.uploadForm = function(newtable) {
             window.location = '/upload/'

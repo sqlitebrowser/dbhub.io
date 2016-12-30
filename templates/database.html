@@ -7,7 +7,7 @@
 <div class="container">
     <div class="row">
         <div class="col-md-12">
-            <h2 id="viewuser" style="margin-top: 10px;">
+            <h2 id="viewdb" style="margin-top: 10px;">
                 <div class="pull-left"><a href="/[[ .Meta.Username ]]">[[ .Meta.Username ]]</a> / [[ .Meta.Database ]]</div>
                 <div class="pull-right">
                     <div class="btn-group">
@@ -33,7 +33,7 @@
                     Data
                 </div>
                 <div class="col-md-2">
-                    <a href="">Visualise</a>
+                    <a href="/vis/[[ .Meta.Username ]]/[[ .Meta.Database ]]?table={{ db.Tablename }}">Visualise</a>
                 </div>
                 <div class="col-md-2">
                     <a href="">Schedule</a>
@@ -84,18 +84,20 @@
         </div>
     </div>
     <div class="row" style="padding-bottom: 10px;">
-        <div class="dropdown col-md-5">
-            <div class="btn-group" uib-dropdown keyboard-nav="true">
-                <button id="viewtable" type="button" class="btn">{{ 'Table: ' + db.Tablename }}</button>
+        <div class="col-md-5">
+            <div class="dropdown">
+                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <button id="viewtable" type="button" class="btn">{{ 'Table: ' + db.Tablename }}</button>
 
-                <button type="button" uib-dropdown-toggle class="btn btn-default">
-                    <span class="caret"></span>
-                </button>
-                <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                    <li ng-repeat="row in meta.Tables" role="menuitem" ng-click="changeTable(row)">
-                        <a>{{ row }}</a>
-                    </li>
-                </ul>
+                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                        <span class="caret"></span>
+                    </button>
+                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                        <li ng-repeat="row in meta.Tables" role="menuitem" ng-click="changeTable(row)">
+                            <a>{{ row }}</a>
+                        </li>
+                    </ul>
+                </div>
             </div>
 <!-- // Don't show this for now
             [[ if .Meta.LoggedInUser ]]
@@ -113,8 +115,8 @@
                         Download <span class="caret"></span>
                     </button>
                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li><a href="/download/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Version ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
-                        <li><a href="/downloadcsv/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Version ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
+                        <li><a href="/download/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
+                        <li><a href="/downloadcsv/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
                     </ul>
                 </div>
             </span>
@@ -124,7 +126,7 @@
         <div class="col-md-12">
             <table class="table table-bordered table-striped table-responsive">
                 <tr>
-                    <th ng-repeat="header in db.TableHeaders">{{ header }}</th>
+                    <th ng-repeat="header in db.ColNames">{{ header }}</th>
                 </tr>
                 <tr ng-repeat="row in db.Records">
                     <td ng-repeat="val in row"><span ng-bind-html="val.Value | fixSpaces"></span></td>
@@ -168,21 +170,21 @@
     app.controller('databaseView', function($scope, $http) {
         $scope.meta = { Username: "[[ .Meta.Username ]]",
             Database: "[[ .Meta.Database ]]",
-            Watchers: "[[ .DB.Watchers ]]",
-            Stars: "[[ .DB.Stars ]]",
-            Forks: "[[ .DB.Forks ]]",
-            Discussions: "[[ .DB.Discussions ]]",
-            PRs: "[[ .DB.PRs ]]",
-            Description: "[[ .DB.Description ]]",
-            Updates: "[[ .DB.Updates ]]",
-            Branches: "[[ .DB.Branches ]]",
-            Releases: "[[ .DB.Releases ]]",
-            Contributors: "[[ .DB.Contributors ]]",
-            Readme: "[[ .DB.Readme ]]",
-            Size: "[[ .DB.Size ]]",
-            Version: "[[ .DB.Version ]]",
-            MaxRows: "[[ .MaxRows ]]",
-            Tables: [[ .DB.Tables ]],
+            Watchers: "[[ .DB.Info.Watchers ]]",
+            Stars: "[[ .DB.Info.Stars ]]",
+            Forks: "[[ .DB.Info.Forks ]]",
+            Discussions: "[[ .DB.Info.Discussions ]]",
+            PRs: "[[ .DB.Info.PRs ]]",
+            Description: "[[ .DB.Info.Description ]]",
+            Updates: "[[ .DB.Info.Updates ]]",
+            Branches: "[[ .DB.Info.Branches ]]",
+            Releases: "[[ .DB.Info.Releases ]]",
+            Contributors: "[[ .DB.Info.Contributors ]]",
+            Readme: "[[ .DB.Info.Readme ]]",
+            Size: "[[ .DB.Info.Size ]]",
+            Version: "[[ .DB.Info.Version ]]",
+            MaxRows: "[[ .DB.MaxRows ]]",
+            Tables: [[ .DB.Info.Tables ]],
             [[ if .Meta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
@@ -190,25 +192,25 @@
             [[ end ]]
         }
 
-        $scope.db = { Tablename: "[[ .DB.Tablename ]]",
-                      Records: [[ .DB.Records ]],
-                      TableHeaders: [[ .DB.TableHeaders ]],
-                      RowCount: [[ .RowCount ]],
-                      ColCount: [[ .ColCount ]],
+        $scope.db = { Tablename: "[[ .Data.Tablename ]]",
+                      Records: [[ .Data.Records ]],
+                      ColNames: [[ .Data.ColNames ]],
+                      RowCount: [[ .Data.RowCount ]],
+                      ColCount: [[ .Data.ColCount ]],
         }
 
         // Retrieves the table data for a given table
         $scope.changeTable = function(newtable) {
-            $http.get("/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?" + newtable)
+            $http.get("/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?table=" + newtable)
                 .then(function (response) { $scope.db = response.data; })
-        }
+        };
 
         // Sends the user to the stars page for the database
         $scope.starsPage = function() {
             window.location = "/stars/[[ .Meta.Username ]]/[[ .Meta.Database ]]"
-        }
+        };
 
-        // Returns a text string with the total count of rows in the table
+        // Returns a text string with row count information for the table
         $scope.totalRowCount = function() {
             if (isNaN($scope.db.RowCount)) {
                 return "0 total rows"
@@ -217,10 +219,18 @@
             } else if ($scope.db.RowCount <= $scope.meta.MaxRows) {
                 return $scope.db.RowCount + " total rows";
             } else {
-                updatedCount = $scope.db.RowCount - $scope.meta.MaxRows;
-                return "... and " + updatedCount.toLocaleString() + " more rows";
+                updatedCount = $scope.db.RowCount - $scope.db.Records.length;
+                if (updatedCount > 0) {
+                    if (updatedCount == 1) {
+                        return "... and 1 more row";
+                    } else {
+                        return "... and " + updatedCount.toLocaleString() + " more rows";
+                    }
+                } else {
+                    return $scope.db.RowCount + " total rows";
+                }
             }
-        }
+        };
 
         // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
         $scope.toggleStars = function() {

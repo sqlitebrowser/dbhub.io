@@ -22,7 +22,7 @@
     <div class="row">
         <div class="col-md-6">
             <h3>Public databases</h3>
-            [[ if .PublicDBS ]]
+            [[ if .PublicDBs ]]
                 <table class="table table-bordered table-striped table-responsive">
                     <tr ng-repeat="row in pubdb.Databases">
                         <td><h4><a href="/{{ meta.Username + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
@@ -48,7 +48,7 @@
         </div>
         <div class="col-md-6">
             <h3>Private databases</h3>
-            [[ if .PrivateDBS ]]
+            [[ if .PrivateDBs ]]
                 <table class="table table-bordered table-striped table-responsive">
                     <tr ng-repeat="row in privdb.Databases">
                         <td><h4><a href="/{{ meta.Username + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
@@ -117,8 +117,8 @@
     var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
     app.controller('profileView', function($scope) {
         $scope.meta = { Username: "[[ .Meta.Username ]]" }
-        $scope.pubdb = { Databases: [[ .PublicDBS ]] }
-        $scope.privdb = { Databases: [[ .PrivateDBS ]] }
+        $scope.pubdb = { Databases: [[ .PublicDBs ]] }
+        $scope.privdb = { Databases: [[ .PrivateDBs ]] }
         $scope.stars = { Stars: [[ .Stars ]] }
 
         $scope.uploadForm = function(newtable) {
