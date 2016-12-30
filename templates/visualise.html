@@ -1,6 +1,6 @@
 [[ define "visualisePage" ]]
 <!doctype html>
-<html ng-app="DBHub-front" ng-controller="visualiseView">
+<html ng-app="DBHub" ng-controller="visualiseView">
 [[ template "headvis" . ]]
 <body>
 [[ template "header" . ]]
@@ -104,7 +104,7 @@
 </div>
 [[ template "footer" . ]]
 <script type="text/javascript">
-    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('visualiseView', function($scope, $http) {
         $scope.meta = {
             Username: "[[ .Meta.Username ]]",

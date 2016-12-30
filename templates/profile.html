@@ -1,6 +1,6 @@
 [[ define "profilePage" ]]
 <!doctype html>
-<html ng-app="DBHub-front" ng-controller="profileView">
+<html ng-app="DBHub" ng-controller="profileView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -114,7 +114,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('profileView', function($scope) {
         $scope.meta = { Username: "[[ .Meta.Username ]]" }
         $scope.pubdb = { Databases: [[ .PublicDBs ]] }

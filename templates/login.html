@@ -1,6 +1,6 @@
 [[ define "loginPage" ]]
 <!doctype html>
-<html ng-app="DBHub-front" ng-controller="loginView">
+<html ng-app="DBHub" ng-controller="loginView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -56,7 +56,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     //    app.controller('loginView', function($scope) {
     //        $scope.users = { Meta: { Title: "Register" } }
     //    });

@@ -1,6 +1,6 @@
 [[ define "errorPage" ]]
 <!doctype html>
-<html ng-app="DBHub-front" ng-controller="errorView">
+<html ng-app="DBHub" ng-controller="errorView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -18,7 +18,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub-front', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     //    app.controller('errorView', function($scope) {
     //        $scope.users = { TBD }
     //    });
