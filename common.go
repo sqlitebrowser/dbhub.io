@@ -60,7 +60,7 @@ func checkUserDBAccess(DB *sqliteDBinfo, loggedInUser string, dbUser string, dbN
 		var Desc, Readme pgx.NullString
 		err := db.QueryRow(dbQuery, dbUser, dbName).Scan(&DB.MinioId, &DB.Info.DateCreated,
 			&DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version, &DB.Info.Watchers,
-			&DB.Info.Stars, &DB.Info.Forks, &DB.Info.Discussions, &DB.Info.PRs,
+			&DB.Info.Stars, &DB.Info.Forks, &DB.Info.Discussions, &DB.Info.MRs,
 			&DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors,
 			&Desc, &Readme, &DB.MinioBkt)
 		if err != nil {
@@ -278,6 +278,11 @@ func openMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 
 // Reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then read all rows.
 func readSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int) (sqliteRecordSet, error) {
+	return readSQLiteDBCols(db, dbTable, false, false, maxRows, "*")
+}
+
+// Reads up to maxRows # of rows from a SQLite database.  Only returns the requested columns
+func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignoreNull bool, maxRows int, cols ...string) (sqliteRecordSet, error) {
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
 	var dataRows sqliteRecordSet
@@ -287,11 +292,32 @@ func readSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int) (sqliteRecordSet
 	// Set the table name
 	dataRows.Tablename = dbTable
 
-	// Choose the SQL statement to run
-	if maxRows < 0 {
-		stmt, err = db.Prepare("SELECT * FROM " + dbTable)
+	// Construct the main SQL query
+	var colString string
+	for i, d := range cols {
+		if i != 0 {
+			colString += ", "
+		}
+		// Queries for "*" need special treatment
+		if d == "*" {
+			colString += "*"
+		} else {
+			colString += "?"
+		}
+	}
+	dbQuery := fmt.Sprintf("SELECT %s FROM %s", colString, dbTable)
+
+	// If a row limit was given, add it
+	if maxRows >= 0 {
+
+		dbQuery = fmt.Sprintf("%s LIMIT %d", dbQuery, maxRows)
+	}
+
+	// Queries for "*" need special handling, as "*" doesn't seem to work as a valid column substitution
+	if len(cols) == 1 && cols[0] == "*" {
+		stmt, err = db.Prepare(dbQuery)
 	} else {
-		stmt, err = db.Prepare("SELECT * FROM "+dbTable+" LIMIT ?", maxRows)
+		stmt, err = db.Prepare(dbQuery, cols)
 	}
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
@@ -351,15 +377,19 @@ func readSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int) (sqliteRecordSet
 						Value: val})
 				}
 			case sqlite.Blob:
-				_, isNull = s.ScanBlob(i)
-				if !isNull {
-					row = append(row, dataValue{Name: dataRows.ColNames[i], Type: Binary,
-						Value: "<i>BINARY DATA</i>"})
+				// BLOBs can be ignored (via flag to this function) for situations like the vis data
+				if !ignoreBinary {
+					_, isNull = s.ScanBlob(i)
+					if !isNull {
+						row = append(row, dataValue{Name: dataRows.ColNames[i], Type: Binary,
+							Value: "<i>BINARY DATA</i>"})
+					}
 				}
 			case sqlite.Null:
 				isNull = true
 			}
-			if isNull {
+			if isNull && !ignoreNull {
+				// NULLS can be ignored (via flag to this function) for situations like the vis data
 				row = append(row, dataValue{Name: dataRows.ColNames[i], Type: Null,
 					Value: "<i>NULL</i>"})
 			}
