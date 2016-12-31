@@ -234,20 +234,24 @@
 
         };
 
-        // Retrieves the table data for a given table
+        // Retrieves data for a given table
         $scope.changeTable = function (newtable) {
 
             // Retrieve and display table data
-            $http.get("/x/table/"
+            $http.get("/x/visdata/"
                 + $scope.meta.Username + "/"
                 + $scope.meta.Database + "?"
                 + "table=" + newtable)
                 .then(function (response) {
                     $scope.db = response.data;
 
+                    // Change the column names in the drop down selectors
+                    $scope.axis.X = $scope.db["ColNames"][0];
+                    $scope.axis.Y = $scope.db["ColNames"][1];
+
                     // Redraw the visualisation
                     $scope.draw();
-                })
+                });
         };
 
         // Change columns being displayed

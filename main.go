@@ -532,6 +532,7 @@ func main() {
 	http.HandleFunc("/x/star/", logReq(starHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))
 	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
+	http.HandleFunc("/x/visdata/", logReq(visData))
 
 	// Static files
 	http.HandleFunc("/images/auth0.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
@@ -1566,4 +1567,155 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	<body onLoad="setTimeout('delayer()', 5000)">
 	<body>Upload succeeded<br /><br /><a href="/%s">Continuing to profile page...</a></body></html>`,
 		loggedInUser, loggedInUser)
+}
+
+// Receives a request for specific table data from the front end, returning it as JSON
+func visData(w http.ResponseWriter, r *http.Request) {
+	pageName := "Visualisation data handler"
+
+	var pageData struct {
+		Meta metaInfo
+		DB   sqliteDBinfo
+		Data sqliteRecordSet
+	}
+
+	// Retrieve user, database, and table name
+	userName, dbName, requestedTable, err := getUDT(2, r) // 1 = Ignore "/x/table/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if X and Y column names were given
+	var reqXCol, reqYCol, xCol, yCol string
+	reqXCol = r.FormValue("xcol")
+	reqYCol = r.FormValue("ycol")
+
+	// Validate column names if present
+	// FIXME: Create a proper validation function for SQLite column names
+	if reqXCol != "" {
+		err = validatePGTable(reqXCol)
+		if err != nil {
+			log.Printf("Validation failed for SQLite column name: %s", err)
+			return
+		}
+		xCol = reqXCol
+	}
+	if reqYCol != "" {
+		err = validatePGTable(reqYCol)
+		if err != nil {
+			log.Printf("Validation failed for SQLite column name: %s", err)
+			return
+		}
+		yCol = reqYCol
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(r)
+	if sess != nil {
+		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+	}
+
+	// Check if the user has access to the requested database
+	err = checkUserDBAccess(&pageData.DB, loggedInUser, userName, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// * Execution can only get here if the user has access to the requested database *
+
+	// Generate a predictable cache key for the whole page data
+	var pageCacheKey string
+	if loggedInUser != userName {
+		tempArr := md5.Sum([]byte(userName + "/" + dbName + "/" + requestedTable))
+		pageCacheKey = "visdat-pub-" + hex.EncodeToString(tempArr[:])
+	} else {
+		tempArr := md5.Sum([]byte(loggedInUser + "-" + userName + "/" + dbName + "/" + requestedTable))
+		pageCacheKey = "visdat-" + hex.EncodeToString(tempArr[:])
+	}
+
+	// If a cached version of the page data exists, use it
+	var jsonResponse []byte
+	ok, err := getCachedData(pageCacheKey, &jsonResponse)
+	if err != nil {
+		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
+	}
+	if ok {
+		// Render the JSON response from cache
+		fmt.Fprintf(w, "%s", jsonResponse)
+		return
+	}
+
+	// Get a handle from Minio for the database object
+	db, err := openMinioObject(pageData.DB.MinioBkt, pageData.DB.MinioId)
+	if err != nil {
+		return
+	}
+	defer db.Close()
+
+	// Retrieve the list of tables in the database
+	tables, err := db.Tables("")
+	if err != nil {
+		log.Printf("%s: Error retrieving table names: %s", pageName, err)
+		return
+	}
+	if len(tables) == 0 {
+		// No table names were returned, so abort
+		log.Printf("%s: The database '%s' doesn't seem to have any tables. Aborting.", pageName, dbName)
+		return
+	}
+	pageData.DB.Info.Tables = tables
+
+	// If a specific table was requested, check that it's present
+	var dbTable string
+	if requestedTable != "" {
+		// Check the requested table is present
+		for _, tbl := range tables {
+			if tbl == requestedTable {
+				dbTable = requestedTable
+			}
+		}
+	}
+
+	// If a specific table wasn't requested, use the first table in the database
+	if dbTable == "" {
+		dbTable = pageData.DB.Info.Tables[0]
+	}
+
+	// Retrieve the table data requested by the user
+	if xCol != "" && yCol != "" {
+		// 1000 row maximum for now
+		pageData.Data, err = readSQLiteDBCols(db, requestedTable, true, true, 1000, xCol, yCol)
+	} else {
+		pageData.Data, err = readSQLiteDB(db, requestedTable, 1000) // 1000 row maximum for now
+	}
+	if err != nil {
+		// Some kind of error when reading the database data
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Format the output
+	if pageData.Data.RowCount > 0 {
+		// Use json.MarshalIndent() for nicer looking output
+		jsonResponse, err = json.MarshalIndent(pageData.Data, "", " ")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	} else {
+		// Return an empty set indicator, instead of "null"
+		jsonResponse = []byte{'{', ']'}
+	}
+
+	// Cache the JSON data
+	err = cacheData(pageCacheKey, jsonResponse, cacheTime)
+	if err != nil {
+		log.Printf("%s: Error when caching JSON data: %v\n", pageName, err)
+	}
+
+	//w.Header().Set("Access-Control-Allow-Origin", "*")
+	fmt.Fprintf(w, "%s", jsonResponse)
 }
