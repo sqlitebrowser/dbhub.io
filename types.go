@@ -54,7 +54,7 @@ type dbInfo struct {
 	Stars        int
 	Forks        int
 	Discussions  int
-	PRs          int
+	MRs          int
 	Description  string
 	Updates      int
 	Branches     int

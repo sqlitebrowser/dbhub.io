@@ -27,7 +27,7 @@
         </div>
     </div>
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
-        <div class="col-md-9">
+        <div class="col-md-10">
             <div class="row">
                 <div class="col-md-2">
                     <a href="/[[ .Meta.Username ]]/[[ .Meta.Database ]]?table={{ db.Tablename }}">Data</a>
@@ -42,14 +42,14 @@
                     <label id="viewdiscuss"><a href="">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label>
                 </div>
                 <div class="col-md-2">
-                    <label id="viewprs"><a href="">{{ 'Pull Requests: ' }}</a>{{ meta.PRs }}</label>
+                    <label id="viewmrs"><a href="">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label>
                 </div>
                 <div class="col-md-2">
                     &nbsp;
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="pull-right">
                 <b>Version:</b> {{ meta.Version }} &nbsp;
                 <b>Size:</b> {{ meta.Size / 1024 | number : 0 }} KB
@@ -113,7 +113,7 @@
             Stars: "[[ .DB.Info.Stars ]]",
             Forks: "[[ .DB.Info.Forks ]]",
             Discussions: "[[ .DB.Info.Discussions ]]",
-            PRs: "[[ .DB.Info.PRs ]]",
+            MRs: "[[ .DB.Info.MRs ]]",
             Description: "[[ .DB.Info.Description ]]",
             Updates: "[[ .DB.Info.Updates ]]",
             Branches: "[[ .DB.Info.Branches ]]",
@@ -270,7 +270,6 @@
             // Change the selected column name in the drop downs
             $scope.axis.X = x_col;
             $scope.axis.Y = y_col;
-
         };
 
         $scope.draw();

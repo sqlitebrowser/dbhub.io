@@ -461,7 +461,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		var desc pgx.NullString
 		var oneRow dbInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.LastModified, &oneRow.Size, &oneRow.Version,
-			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.PRs,
+			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.MRs,
 			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &desc)
 		if err != nil {
 			log.Printf("%s: Error retrieving public database list for user: %v\n", pageName, err)
@@ -502,7 +502,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		var desc pgx.NullString
 		var oneRow dbInfo
 		err = rows2.Scan(&oneRow.Database, &oneRow.LastModified, &oneRow.Size, &oneRow.Version,
-			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.PRs,
+			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.MRs,
 			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &desc)
 		if err != nil {
 			log.Printf("%s: Error retrieving private database list for user: %v\n", pageName, err)
@@ -723,7 +723,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		var desc pgx.NullString
 		var oneRow dbInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.LastModified, &oneRow.Size, &oneRow.Version,
-			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.PRs,
+			&oneRow.Watchers, &oneRow.Stars, &oneRow.Forks, &oneRow.Discussions, &oneRow.MRs,
 			&oneRow.Updates, &oneRow.Branches, &oneRow.Releases, &oneRow.Contributors, &desc)
 		if err != nil {
 			log.Printf("%s: Error retrieving database list for user: %v\n", pageName, err)
