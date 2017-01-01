@@ -282,7 +282,7 @@ func readSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int) (sqliteRecordSet
 }
 
 // Reads up to maxRows # of rows from a SQLite database.  Only returns the requested columns
-func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignoreNull bool, maxRows int, cols ...string) (sqliteRecordSet, error) {
+func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignoreNull bool, maxRows int, cols ...interface{}) (sqliteRecordSet, error) {
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
 	var dataRows sqliteRecordSet
@@ -317,7 +317,7 @@ func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignore
 	if len(cols) == 1 && cols[0] == "*" {
 		stmt, err = db.Prepare(dbQuery)
 	} else {
-		stmt, err = db.Prepare(dbQuery, cols)
+		stmt, err = db.Prepare(dbQuery, cols...)
 	}
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
