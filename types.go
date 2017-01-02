@@ -92,3 +92,9 @@ type sqliteRecordSet struct {
 	TotalRows int
 	Records   []dataRow
 }
+
+type whereClause struct {
+	Column string
+	Type   string
+	Value  string
+}

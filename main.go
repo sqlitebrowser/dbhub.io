@@ -1610,6 +1610,48 @@ func visData(w http.ResponseWriter, r *http.Request) {
 		yCol = reqYCol
 	}
 
+	// Validate WHERE clause values if present
+	var reqWCol, reqWType, reqWVal, wCol, wType, wVal string
+	reqWCol = r.FormValue("wherecol")
+	reqWType = r.FormValue("wheretype")
+	reqWVal = r.FormValue("whereval")
+
+	// WHERE column
+	if reqWCol != "" {
+		err = validatePGTable(reqWCol)
+		if err != nil {
+			log.Printf("Validation failed for SQLite column name: %s", err)
+			return
+		}
+		wCol = reqWCol
+	}
+
+	// WHERE type
+	switch reqWType {
+	case "NONE":
+		// We don't pass along "NONE"
+	case "LIKE", "=", "!=", "<", "<=", ">", ">=":
+		wType = reqWType
+	default:
+		// This should never be reached
+		log.Printf("%s: Validation failed on WHERE clause type. wType = '%v'\n", pageName, wType)
+		return
+	}
+
+	// TODO: Add ORDER BY clase
+	// TODO: We'll probably need some kind of optional data transformation for columns too
+	// TODO    eg column foo → DATE (type)
+
+	// WHERE value
+	var whereClauses []whereClause
+	if reqWVal != "" && wType != "" {
+		whereClauses = append(whereClauses, whereClause{Column: wCol, Type: wType, Value: reqWVal})
+
+		// TODO: Double check if we should be filtering out potentially devious characters here. I don't
+		// TODO  (at the moment) *think* we need to, as we're using parameter binding on the passed in values
+		wVal = reqWVal
+	}
+
 	// Retrieve session data (if any)
 	var loggedInUser string
 	sess := session.Get(r)
@@ -1626,13 +1668,15 @@ func visData(w http.ResponseWriter, r *http.Request) {
 
 	// * Execution can only get here if the user has access to the requested database *
 
-	// Generate a predictable cache key for the whole page data
+	// Generate a predictable cache key for the JSON data
 	var pageCacheKey string
 	if loggedInUser != userName {
-		tempArr := md5.Sum([]byte(userName + "/" + dbName + "/" + requestedTable))
+		tempArr := md5.Sum([]byte(userName + "/" + dbName + "/" + requestedTable + xCol + yCol +
+			wCol + wType + wVal))
 		pageCacheKey = "visdat-pub-" + hex.EncodeToString(tempArr[:])
 	} else {
-		tempArr := md5.Sum([]byte(loggedInUser + "-" + userName + "/" + dbName + "/" + requestedTable))
+		tempArr := md5.Sum([]byte(loggedInUser + "-" + userName + "/" + dbName + "/" + requestedTable +
+			xCol + yCol + wCol + wType + wVal))
 		pageCacheKey = "visdat-" + hex.EncodeToString(tempArr[:])
 	}
 
@@ -1687,7 +1731,7 @@ func visData(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the table data requested by the user
 	if xCol != "" && yCol != "" {
 		// 1000 row maximum for now
-		pageData.Data, err = readSQLiteDBCols(db, requestedTable, true, true, 1000, xCol, yCol)
+		pageData.Data, err = readSQLiteDBCols(db, requestedTable, true, true, 1000, whereClauses, xCol, yCol)
 	} else {
 		pageData.Data, err = readSQLiteDB(db, requestedTable, 1000) // 1000 row maximum for now
 	}
@@ -1697,17 +1741,11 @@ func visData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Format the output
-	if pageData.Data.RowCount > 0 {
-		// Use json.MarshalIndent() for nicer looking output
-		jsonResponse, err = json.MarshalIndent(pageData.Data, "", " ")
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	} else {
-		// Return an empty set indicator, instead of "null"
-		jsonResponse = []byte{'{', ']'}
+	// Use json.MarshalIndent() for nicer looking output
+	jsonResponse, err = json.Marshal(pageData.Data)
+	if err != nil {
+		log.Println(err)
+		return
 	}
 
 	// Cache the JSON data

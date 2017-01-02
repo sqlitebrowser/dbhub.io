@@ -278,11 +278,12 @@ func openMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 
 // Reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then read all rows.
 func readSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int) (sqliteRecordSet, error) {
-	return readSQLiteDBCols(db, dbTable, false, false, maxRows, "*")
+	return readSQLiteDBCols(db, dbTable, false, false, maxRows, nil, "*")
 }
 
 // Reads up to maxRows # of rows from a SQLite database.  Only returns the requested columns
-func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignoreNull bool, maxRows int, cols ...interface{}) (sqliteRecordSet, error) {
+func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignoreNull bool, maxRows int,
+	filters []whereClause, cols ...string) (sqliteRecordSet, error) {
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
 	var dataRows sqliteRecordSet
@@ -298,14 +299,21 @@ func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignore
 		if i != 0 {
 			colString += ", "
 		}
-		// Queries for "*" need special treatment
-		if d == "*" {
-			colString += "*"
-		} else {
-			colString += "?"
-		}
+		colString += fmt.Sprintf("%s", d)
 	}
 	dbQuery := fmt.Sprintf("SELECT %s FROM %s", colString, dbTable)
+
+	// If filters were given, add them
+	var filterVals []interface{}
+	if filters != nil {
+		for i, d := range filters {
+			if i != 0 {
+				dbQuery += " AND "
+			}
+			dbQuery = fmt.Sprintf("%s WHERE %s %s ?", dbQuery, d.Column, d.Type)
+			filterVals = append(filterVals, d.Value)
+		}
+	}
 
 	// If a row limit was given, add it
 	if maxRows >= 0 {
@@ -313,11 +321,12 @@ func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignore
 		dbQuery = fmt.Sprintf("%s LIMIT %d", dbQuery, maxRows)
 	}
 
-	// Queries for "*" need special handling, as "*" doesn't seem to work as a valid column substitution
-	if len(cols) == 1 && cols[0] == "*" {
-		stmt, err = db.Prepare(dbQuery)
+	// Use parameter binding for the WHERE clause values
+	if filters != nil {
+		// Use parameter binding for the user supplied WHERE expression (safety!)
+		stmt, err = db.Prepare(dbQuery, filterVals...)
 	} else {
-		stmt, err = db.Prepare(dbQuery, cols...)
+		stmt, err = db.Prepare(dbQuery)
 	}
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
