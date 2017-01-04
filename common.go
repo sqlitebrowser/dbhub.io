@@ -348,6 +348,7 @@ func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignore
 
 		// Retrieve the data for each row
 		var row []dataValue
+		addRow := true
 		for i := 0; i < fieldCount; i++ {
 			// Retrieve the data type for the field
 			fieldType := stmt.ColumnType(i)
@@ -393,6 +394,8 @@ func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignore
 						row = append(row, dataValue{Name: dataRows.ColNames[i], Type: Binary,
 							Value: "<i>BINARY DATA</i>"})
 					}
+				} else {
+					addRow = false
 				}
 			case sqlite.Null:
 				isNull = true
@@ -402,8 +405,13 @@ func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignore
 				row = append(row, dataValue{Name: dataRows.ColNames[i], Type: Null,
 					Value: "<i>NULL</i>"})
 			}
+			if isNull && ignoreNull {
+				addRow = false
+			}
 		}
-		dataRows.Records = append(dataRows.Records, row)
+		if addRow == true {
+			dataRows.Records = append(dataRows.Records, row)
+		}
 		dataRows.RowCount++
 
 		return nil
