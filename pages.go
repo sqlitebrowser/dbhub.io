@@ -749,9 +749,10 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 func visualisePage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	var pageData struct {
-		Meta metaInfo
-		DB   sqliteDBinfo
-		Data sqliteRecordSet
+		Meta     metaInfo
+		DB       sqliteDBinfo
+		Data     sqliteRecordSet
+		ColNames []string
 	}
 	pageData.Meta.Title = "Visualise data"
 
@@ -825,6 +826,16 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		requestedTable = tables[0]
 	}
 	pageData.Data.Tablename = requestedTable
+
+	// Retrieve a list of all column names in the specified table
+	var tempStruct sqliteRecordSet
+	tempStruct, err = readSQLiteDB(db, requestedTable, 1)
+	if err != nil {
+		// Some kind of error when reading the database data
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	pageData.ColNames = tempStruct.ColNames
 
 	// TODO: If a full visualisation profile was specified, we should gather the data for it and provide it to the
 	// TODO  render function
