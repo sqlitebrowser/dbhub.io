@@ -27,7 +27,7 @@
         </div>
     </div>
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
-        <div class="col-md-10">
+        <div class="col-md-9">
             <div class="row">
                 <div class="col-md-2">
                     Data
@@ -41,15 +41,15 @@
                 <div class="col-md-2">
                     <label id="viewdiscuss"><a href="">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label id="viewmrs"><a href="">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-1">
                     &nbsp;
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
             <div class="pull-right">
                 <b>Version:</b> {{ meta.Version }} &nbsp;
                 <b>Size:</b> {{ meta.Size / 1024 | number : 0 }} KB
