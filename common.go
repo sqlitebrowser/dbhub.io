@@ -411,8 +411,8 @@ func readSQLiteDBCols(db *sqlite.Conn, dbTable string, ignoreBinary bool, ignore
 		}
 		if addRow == true {
 			dataRows.Records = append(dataRows.Records, row)
+			dataRows.RowCount++
 		}
-		dataRows.RowCount++
 
 		return nil
 	})
