@@ -9,7 +9,6 @@ import (
 
 var regexDBName = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
 var regexPGTable = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
-var regexSQLiteExpr = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ,\(,\),\',\",\%,\:]+$`)
 
 // Custom validation function for SQLite database names
 // At the moment it just allows alphanumeric and ".-_ " chars, though it should probably be extended to cover any
@@ -22,13 +21,6 @@ func checkDBName(fl validator.FieldLevel) bool {
 // At the moment it just allows alphanumeric and ".-_" chars (may need to be expanded out at some point)
 func checkPGTableName(fl validator.FieldLevel) bool {
 	return regexPGTable.MatchString(fl.Field().String())
-}
-
-// Custom validation function for SQLite transformation expression
-// eg this must pass:
-//   printf('%s-%s-%s %s:00', substr(hour, 1, 4), substr(hour, 5, 2), substr(hour, 7, 2), substr(hour, 9, 2))
-func checkSQLiteExpr(fl validator.FieldLevel) bool {
-	return regexSQLiteExpr.MatchString(fl.Field().String())
 }
 
 // Checks a username against the list of reserved ones
