@@ -1628,8 +1628,8 @@ func visData(w http.ResponseWriter, r *http.Request) {
 
 	// WHERE type
 	switch reqWType {
-	case "NONE":
-		// We don't pass along "NONE"
+	case "":
+		// We don't pass along empty values
 	case "LIKE", "=", "!=", "<", "<=", ">", ">=":
 		wType = reqWType
 	default:
@@ -1638,7 +1638,7 @@ func visData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Add ORDER BY clase
+	// TODO: Add ORDER BY clause
 	// TODO: We'll probably need some kind of optional data transformation for columns too
 	// TODO    eg column foo → DATE (type)
 
@@ -1671,8 +1671,8 @@ func visData(w http.ResponseWriter, r *http.Request) {
 	// Generate a predictable cache key for the JSON data
 	var pageCacheKey string
 	if loggedInUser != userName {
-		tempArr := md5.Sum([]byte(userName + "/" + dbName + "/" + requestedTable + xCol + yCol +
-			wCol + wType + wVal))
+		tempArr := md5.Sum([]byte(userName + "/" + dbName + "/" + requestedTable + xCol + yCol + wCol +
+			wType + wVal))
 		pageCacheKey = "visdat-pub-" + hex.EncodeToString(tempArr[:])
 	} else {
 		tempArr := md5.Sum([]byte(loggedInUser + "-" + userName + "/" + dbName + "/" + requestedTable +
@@ -1729,11 +1729,11 @@ func visData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the table data requested by the user
+	maxVals := 2500 // 2500 row maximum for now
 	if xCol != "" && yCol != "" {
-		// 1000 row maximum for now
-		pageData.Data, err = readSQLiteDBCols(db, requestedTable, true, true, 1000, whereClauses, xCol, yCol)
+		pageData.Data, err = readSQLiteDBCols(db, requestedTable, true, true, maxVals, whereClauses, xCol, yCol)
 	} else {
-		pageData.Data, err = readSQLiteDB(db, requestedTable, 1000) // 1000 row maximum for now
+		pageData.Data, err = readSQLiteDB(db, requestedTable, maxVals)
 	}
 	if err != nil {
 		// Some kind of error when reading the database data

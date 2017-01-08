@@ -27,7 +27,7 @@
         </div>
     </div>
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
-        <div class="col-md-10">
+        <div class="col-md-9">
             <div class="row">
                 <div class="col-md-2">
                     <a href="/[[ .Meta.Username ]]/[[ .Meta.Database ]]?table={{ db.Tablename }}">Data</a>
@@ -41,26 +41,27 @@
                 <div class="col-md-2">
                     <label id="viewdiscuss"><a href="">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label id="viewmrs"><a href="">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-1">
                     &nbsp;
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
             <div class="pull-right">
                 <b>Version:</b> {{ meta.Version }} &nbsp;
                 <b>Size:</b> {{ meta.Size / 1024 | number : 0 }} KB
             </div>
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-12">
+    <div class="row" style="padding-bottom: 5px; padding-top: 5px;">
+        <div class="col-md-2">
+            <b>Table:</b>
             <div class="dropdown">
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
-                    <button id="tablebtn" type="button" class="btn">{{ 'Table: ' + db.Tablename }}</button>
+                    <button id="tablebtn" type="button" class="btn">{{ db.Tablename }}</button>
 
                     <button type="button" uib-dropdown-toggle class="btn btn-default">
                         <span class="caret"></span>
@@ -71,31 +72,107 @@
                         </li>
                     </ul>
                 </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <b>X Axis:</b>
+            <div class="dropdown">
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
-                    <button id="xcolbtn" type="button" class="btn">{{ 'X Axis: ' + axis.X }}</button>
+                    <button id="xcolbtn" type="button" class="btn">{{ axis.X }}</button>
 
                     <button type="button" uib-dropdown-toggle class="btn btn-default">
                         <span class="caret"></span>
                     </button>
                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li ng-repeat="row in db.ColNames" role="menuitem" ng-click="changeCols(db.Tablename, row, axis.Y)">
+                        <li ng-repeat="row in column_list.ColNames" role="menuitem" ng-click="changeCols(db.Tablename, row, axis.Y)">
                             <a>{{ row }}</a>
                         </li>
                     </ul>
                 </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <b>Data type:</b>
+            <div class="dropdown">
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
-                    <button id="ycolbtn" type="button" class="btn">{{ 'Y Axis: ' + axis.Y }}</button>
+                    <button id="xtypebtn" type="button" class="btn">{{ data_types.X }}</button>
 
                     <button type="button" uib-dropdown-toggle class="btn btn-default">
                         <span class="caret"></span>
                     </button>
                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li ng-repeat="row in db.ColNames" role="menuitem" ng-click="changeCols(db.Tablename, axis.X, row)">
+                        <li ng-repeat="row in col_types" role="menuitem" ng-click="changeXAxis(row)">
                             <a>{{ row }}</a>
                         </li>
                     </ul>
                 </div>
-                <b>WHERE</b>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <b><a href="https://github.com/d3/d3-time-format#locale_format" target="_blank">Parse Format:</a></b>
+            <div>
+                <input type="text" ng-model="transform.XParse">
+            </div>
+        </div>
+    </div>
+    <div class="row" style="padding-bottom: 5px; padding-top: 5px;">
+        <div class="col-md-2">
+            &nbsp;
+        </div>
+        <div class="col-md-3">
+            <b>Y Axis:</b>
+             <div class="dropdown">
+                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <button id="ycolbtn" type="button" class="btn">{{ axis.Y }}</button>
+
+                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                        <span class="caret"></span>
+                    </button>
+                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                        <li ng-repeat="row in column_list.ColNames" role="menuitem" ng-click="changeCols(db.Tablename, axis.X, row)">
+                            <a>{{ row }}</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <b>&nbsp;</b>
+            <div class="dropdown">
+                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <button id="ytypebtn" type="button" class="btn">{{ data_types.Y }}</button>
+
+                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                        <span class="caret"></span>
+                    </button>
+                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                        <li ng-repeat="row in col_types" role="menuitem" ng-click="changeYAxis(row)">
+                            <a>{{ row }}</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <b>&nbsp;</b>
+            <div>
+                <input type="text" ng-model="transform.YParse">
+            </div>
+        </div>
+    </div>
+    <div class="row" style="padding-bottom: 5px; padding-top: 5px;">
+        <div class="col-md-12">
+            <input type="checkbox" name="wenabled" id="wenabled" ng-click="toggleWhere()">
+            <b>WHERE</b>
+        </div>
+    </div>
+    <div class="row" id="where1" style="display: none;">
+        <div class="col-md-1">
+            &nbsp;
+        </div>
+        <div class="col-md-2">
+            <b>Column:</b>
+            <div class="dropdown">
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                     <button id="wherecol" type="button" class="btn">{{ filter.Col }}</button>
 
@@ -108,8 +185,13 @@
                         </li>
                     </ul>
                 </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <b>Type:</b>
+            <div class="dropdown">
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
-                    <button id="wheretypebtn" type="button" class="btn">{{ 'Type: ' + filter.Type }}</button>
+                    <button id="wheretypebtn" type="button" class="btn">{{ filter.Type }}</button>
 
                     <button type="button" uib-dropdown-toggle class="btn btn-default">
                         <span class="caret"></span>
@@ -120,15 +202,24 @@
                         </li>
                     </ul>
                 </div>
-                <span>
-                    Value: <input type="text" ng-model="filter.Val">
-                    <button type="button" class="btn btn-primary" ng-click="applyWhere()">Apply</button>
-                </span>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <b>Expression:</b>
+            <div>
+                <input type="text" ng-model="filter.Val">
             </div>
         </div>
     </div>
-    <div class="col-md-12">
-        <svg width="1000" height="300"></svg>
+    <div class="row">
+        <div class="col-md-12">
+            <button type="button" class="btn btn-primary" ng-click="applyWhere()">Apply</button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <svg width="1000" height="300"></svg>
+        </div>
     </div>
 </div>
 [[ template "footer" . ]]
@@ -153,7 +244,11 @@
             Version: "[[ .DB.Info.Version ]]",
             MaxRows: "[[ .DB.MaxRows ]]",
             Tables: [[.DB.Info.Tables]]
-        }
+        };
+
+        $scope.column_list = {
+            ColNames: [[.ColNames]]
+        };
 
         $scope.db = {
             Tablename: "[[ .Data.Tablename ]]",
@@ -161,14 +256,27 @@
             ColNames: [[.Data.ColNames]],
             RowCount: [[.Data.RowCount]],
             ColCount: [[.Data.ColCount]]
-        }
+        };
 
+        // Axes definitions
         $scope.axis = {
             X: $scope.db.ColNames[0],
             Y: $scope.db.ColNames[1]
         };
 
-        $scope.col_filters = ["NONE", "LIKE", "=", "!=", "<", "<=", ">", ">="];
+        $scope.col_types = ["DATE", "NUMBER"];
+        $scope.data_types = {
+            X: "DATE",
+            Y: "NUMBER"
+        };
+
+        $scope.transform = {
+            XParse: "",
+            YParse: ""
+        };
+
+        // WHERE clause
+        $scope.col_filters = ["LIKE", "=", "!=", "<", "<=", ">", ">="];
         $scope.filter = {
             Col: $scope.db.ColNames[0],
             Type: "LIKE",
@@ -194,6 +302,11 @@
 
         var margin = {top: 40, right: 40, bottom: 40, left: 60};
 
+        // Key function to identify elements
+        function key(d, i) {
+            return d[0]["Value"];
+        }
+
         $scope.draw = function () {
 
             var circles = svg_data.selectAll('circle').data($scope.db.Records, key);
@@ -202,42 +315,65 @@
                 .exit()
                 .remove();
 
+            // Update X axis format parser
+            var xParseTime = "";
+            if ($scope.transform.XParse != "") {
+                xParseTime = d3.timeParse($scope.transform.XParse);
+            }
+
+
+            var max_x = d3.max($scope.db.Records, function (d) {
+                if (xParseTime != "") {
+                    return xParseTime(d[0]["Value"]);
+                } else {
+                    return new Date(d[0]["Value"]);
+                }
+            });
+
+            var min_x = d3.min($scope.db.Records, function (d) {
+                if (xParseTime != "") {
+                    return xParseTime(d[0]["Value"]);
+                } else {
+                    return new Date(d[0]["Value"]);
+                }
+            });
+
             var x_scale = d3.scaleTime()
             // Determine the start and end dates from the data
                 .domain([
-                    d3.min($scope.db.Records, function (d) {
-                        return new Date(d[0]["Value"]);
-                    }), // Start date
-                    d3.max($scope.db.Records, function (d) {
-                        return new Date(d[0]["Value"]);
-                    })  // End date
+                    min_x, // Start date
+                    max_x  // End date
                 ])
                 .range([margin.left, 1000 - margin.right])
                 .nice();
 
-            // Automatically size the domain range to the data
-            var max_value = d3.max($scope.db.Records, function (d) {
-                return d[1]["Value"];
+            var x_axis = d3.axisBottom(x_scale)
+                .tickFormat(d3.timeFormat('%Y-%m-%d'));
+
+            svg_x_axis
+                .attr("transform", "translate(0, " + (300 - margin.bottom) + ")")
+                .call(x_axis);
+
+            // Automatically size the Y axis scale to the data
+            var max_y = d3.max($scope.db.Records, function (d) {
+                return parseFloat(d[1]["Value"]);
             });
-            var min_value = d3.min($scope.db.Records, function (d) {
-                return d[1]["Value"];
+            var min_y = d3.min($scope.db.Records, function (d) {
+                return parseFloat(d[1]["Value"]);
             });
-            var range = max_value - min_value;
+
+            var range = max_y - min_y;
             var border = 0.2 * range;
-            var new_max = parseFloat(border) + parseFloat(max_value);
-            var new_min = parseFloat(min_value) - parseFloat(border);
+            var new_max = parseFloat(border) + parseFloat(max_y);
+            var new_min = parseFloat(min_y) - parseFloat(border);
+            if (new_min < 0) {
+                new_min = 0;
+            }
 
             var y_scale = d3.scaleLinear()
                 .domain([new_max, new_min])
                 .range([margin.top, 300 - margin.bottom])
                 .nice();
-
-            var x_axis = d3.axisBottom(x_scale)
-                .tickFormat(d3.timeFormat('%Y-%m'));
-
-            svg_x_axis
-                .attr("transform", "translate(0, " + (300 - margin.bottom) + ")")
-                .call(x_axis);
 
             var y_axis = d3.axisLeft(y_scale)
                 .tickFormat(d3.format(".3s"));
@@ -245,11 +381,6 @@
             svg_y_axis
                 .attr("transform", "translate(" + margin.left + ")")
                 .call(y_axis);
-
-            // Key function to identify elements
-            function key(d, i) {
-                return d[0]["Value"];
-            }
 
             var colour = d3.scaleOrdinal(d3.schemeCategory10);
 
@@ -260,7 +391,11 @@
 
                 .attr('r', 1)
                 .attr('cx', function (d) {
-                    return x_scale(new Date(d[0]["Value"]));
+                    if (xParseTime != "") {
+                        return x_scale(xParseTime(d[0]["Value"]));
+                    } else {
+                        return x_scale(new Date(d[0]["Value"]));
+                    }
                 })
                 .attr('cy', function (d) {
                     return y_scale(d[1]["Value"]);
@@ -271,7 +406,6 @@
 
         // Retrieves data for a given table
         $scope.changeTable = function (new_table) {
-
             // Retrieve and display table data
             $http.get("/x/visdata/"
                 + $scope.meta.Username + "/"
@@ -291,7 +425,6 @@
 
         // Change columns being displayed
         $scope.changeCols = function (new_table, x_col, y_col) {
-
             // Change the selected column name in the drop downs
             $scope.axis.X = x_col;
             $scope.axis.Y = y_col;
@@ -299,20 +432,25 @@
 
         // Apply the WHERE clause
         $scope.applyWhere = function() {
-            // Retrieve and display table data
-            $http.get("/x/visdata/"
+            var requestURL = "/x/visdata/"
                 + $scope.meta.Username + "/"
                 + $scope.meta.Database + "?"
                 + "table=" + encodeURIComponent($scope.db.Tablename)
                 + "&xcol=" + encodeURIComponent($scope.axis.X)
-                + "&ycol=" + encodeURIComponent($scope.axis.Y)
-                + "&wherecol=" + encodeURIComponent($scope.filter.Col)
-                + "&wheretype=" + encodeURIComponent($scope.filter.Type)
-                + "&whereval=" + encodeURIComponent($scope.filter.Val))
+                + "&ycol=" + encodeURIComponent($scope.axis.Y);
+
+            // If the WHERE checkbox is active, add the WHERE clause
+            var useWhere = document.getElementById("wenabled");
+            if (useWhere.checked) {
+                requestURL += "&wherecol=" + encodeURIComponent($scope.filter.Col)
+                    + "&wheretype=" + encodeURIComponent($scope.filter.Type)
+                    + "&whereval=" + encodeURIComponent($scope.filter.Val);
+            }
+
+            // Retrieve and display table data
+            $http.get(requestURL)
                 .then(function (response) {
                     $scope.db = response.data;
-
-//                    $scope.filter.Type = filt_type;
 
                     // Redraw the visualisation
                     $scope.draw();
@@ -329,7 +467,27 @@
             $scope.filter.Type = new_type;
         };
 
-        $scope.draw();
+        // Change the X axis data type
+        $scope.changeXAxis = function(new_type) {
+            $scope.data_types.X = new_type;
+        };
+
+        // Change the Y axis data type
+        $scope.changeYAxis = function(new_type) {
+            $scope.data_types.Y = new_type;
+        };
+
+        // Toggle visibility of the WHERE row(s)
+        $scope.toggleWhere = function() {
+            var whereStatus = document.getElementById("where1").style.display;
+            if (whereStatus == "none") {
+                // Show the row
+                document.getElementById("where1").style.display = 'block';
+            } else {
+                // Hide the row
+                document.getElementById("where1").style.display = 'none';
+            }
+        };
     });
 </script>
 </body>
