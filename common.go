@@ -15,7 +15,7 @@ import (
 
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/jackc/pgx"
-	com "github.com/sqlitebrowser/dbhub-common"
+	com "github.com/dbhubio/common"
 )
 
 // Check if the user has access to the requested database

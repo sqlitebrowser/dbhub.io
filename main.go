@@ -24,12 +24,12 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/bradfitz/gomemcache/memcache"
+	com "github.com/dbhubio/common"
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
 	"github.com/jackc/pgx"
 	"github.com/minio/go-homedir"
 	"github.com/minio/minio-go"
-	com "github.com/sqlitebrowser/dbhub-common"
 	"golang.org/x/crypto/bcrypt"
 )
 
