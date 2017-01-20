@@ -29,8 +29,8 @@ import (
 	"github.com/jackc/pgx"
 	"github.com/minio/go-homedir"
 	"github.com/minio/minio-go"
+	com "github.com/sqlitebrowser/dbhub-common"
 	"golang.org/x/crypto/bcrypt"
-	valid "gopkg.in/go-playground/validator.v9"
 )
 
 type ValType int
@@ -64,9 +64,6 @@ var (
 
 	// Our parsed HTML templates
 	tmpl *template.Template
-
-	// For input validation
-	validate *valid.Validate
 )
 
 func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
@@ -366,7 +363,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the username
-	err = validateUser(userName)
+	err = com.ValidateUser(userName)
 	if err != nil {
 		log.Printf("%s: Validation failed for username: %s", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Invalid username")
@@ -459,11 +456,6 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	// Load validation code
-	validate = valid.New()
-	validate.RegisterValidation("dbname", checkDBName)
-	validate.RegisterValidation("pgtable", checkPGTableName)
-
 	// Read server configuration
 	var err error
 	if err = readConfig(); err != nil {
@@ -583,7 +575,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	dbName := pathStrings[2]
 
 	// Validate the user supplied user and database name
-	err := validateUserDB(userName, dbName)
+	err := com.ValidateUserDB(userName, dbName)
 	if err != nil {
 		log.Printf("%s: Validation failed of user or database name. Username: '%v', Database: '%s', Error: %s",
 			pageName, userName, dbName, err)
@@ -610,7 +602,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If a table name was supplied, validate it
 	if dbTable != "" {
-		err = validatePGTable(dbTable)
+		err = com.ValidatePGTable(dbTable)
 		if err != nil {
 			// Validation failed, so don't pass on the table name
 			log.Printf("%s: Validation failed for table name: %s", pageName, err)
@@ -759,7 +751,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the user supplied username and email address
-	err = validateUserEmail(userName, email)
+	err = com.ValidateUserEmail(userName, email)
 	if err != nil {
 		log.Printf("Validation failed of username or email: %s", err)
 		errorPage(w, r, http.StatusBadRequest, "Invalid username or email")
@@ -788,7 +780,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure the username isn't a reserved one
-	err = reservedUsernamesCheck(userName)
+	err = com.ReservedUsernamesCheck(userName)
 	if err != nil {
 		log.Println(err)
 		errorPage(w, r, http.StatusBadRequest, err.Error())
@@ -926,7 +918,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate submitted form data
-	err = validate.Var(maxRows, "required,numeric,min=1,max=500")
+	err = com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
 	if err != nil {
 		log.Printf("%s: Preference data failed validation: %s\n", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing preference data")
@@ -1369,7 +1361,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	defer tempFile.Close()
 
 	// Validate the database name
-	err = validateDB(dbName)
+	err = com.ValidateDB(dbName)
 	if err != nil {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Invalid database name")
@@ -1594,7 +1586,7 @@ func visData(w http.ResponseWriter, r *http.Request) {
 	// Validate column names if present
 	// FIXME: Create a proper validation function for SQLite column names
 	if reqXCol != "" {
-		err = validatePGTable(reqXCol)
+		err = com.ValidatePGTable(reqXCol)
 		if err != nil {
 			log.Printf("Validation failed for SQLite column name: %s", err)
 			return
@@ -1602,7 +1594,7 @@ func visData(w http.ResponseWriter, r *http.Request) {
 		xCol = reqXCol
 	}
 	if reqYCol != "" {
-		err = validatePGTable(reqYCol)
+		err = com.ValidatePGTable(reqYCol)
 		if err != nil {
 			log.Printf("Validation failed for SQLite column name: %s", err)
 			return
@@ -1618,7 +1610,7 @@ func visData(w http.ResponseWriter, r *http.Request) {
 
 	// WHERE column
 	if reqWCol != "" {
-		err = validatePGTable(reqWCol)
+		err = com.ValidatePGTable(reqWCol)
 		if err != nil {
 			log.Printf("Validation failed for SQLite column name: %s", err)
 			return

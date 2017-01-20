@@ -15,6 +15,7 @@ import (
 
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/jackc/pgx"
+	com "github.com/sqlitebrowser/dbhub-common"
 )
 
 // Check if the user has access to the requested database
@@ -108,7 +109,7 @@ func getTable(r *http.Request) (string, error) {
 	// If a table name was supplied, validate it
 	// FIXME: We should probably create a validation function for SQLite table names, not use our one for PG
 	if requestedTable != "" {
-		err := validatePGTable(requestedTable)
+		err := com.ValidatePGTable(requestedTable)
 		if err != nil {
 			log.Printf("Validation failed for table name: %s", err)
 			return "", errors.New("Invalid table name")
@@ -133,7 +134,7 @@ func getUD(ignore_leading int, r *http.Request) (string, string, error) {
 	dbName := pathStrings[2+ignore_leading]
 
 	// Validate the user supplied user and database name
-	err := validateUserDB(userName, dbName)
+	err := com.ValidateUserDB(userName, dbName)
 	if err != nil {
 		log.Printf("Validation failed for user or database name: %s", err)
 		return "", "", errors.New("Invalid user or database name")
