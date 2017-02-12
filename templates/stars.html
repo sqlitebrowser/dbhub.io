@@ -11,12 +11,12 @@
         </div>
         <div class="col-md-8">
             <h2 style="text-align: center;">
-                People who starred <a href="/[[ .Meta.Username ]]">[[ .Meta.Username ]]</a> / <a href="/[[ .Meta.Username ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                People who starred <a href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> / <a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
             </h2>
             <table class="table table-bordered table-striped table-responsive">
                 <tr ng-repeat="row in stars.Stars">
                     <td>
-                        <h4><a href="/{{ row.Username }}">{{ row.Username }}</a></h4>
+                        <h4><a href="/{{ row.Owner }}">{{ row.Owner}}</a></h4>
                         Starred on: {{ row.DateStarred | date : 'd MMMM, y h:mm a' : 'UTC' }}
                     </td>
                 </tr>

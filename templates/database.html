@@ -8,7 +8,7 @@
     <div class="row">
         <div class="col-md-12">
             <h2 id="viewdb" style="margin-top: 10px;">
-                <div class="pull-left"><a href="/[[ .Meta.Username ]]">[[ .Meta.Username ]]</a> / [[ .Meta.Database ]]</div>
+                <div class="pull-left"><a href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> / [[ .Meta.Database ]]</div>
                 <div class="pull-right">
                     <div class="btn-group">
                         <button type="button" class="btn btn-default" ng-bind="'Watchers:'"></button>
@@ -33,7 +33,7 @@
                     Data
                 </div>
                 <div class="col-md-2">
-                    <a href="/vis/[[ .Meta.Username ]]/[[ .Meta.Database ]]?table={{ db.Tablename }}">Visualise</a>
+                    <a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?table={{ db.Tablename }}">Visualise</a>
                 </div>
                 <div class="col-md-2">
                     <a href="">Schedule</a>
@@ -115,8 +115,8 @@
                         Download <span class="caret"></span>
                     </button>
                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li><a href="/x/download/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
-                        <li><a href="/x/downloadcsv/[[ .Meta.Username ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
+                        <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
+                        <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
                     </ul>
                 </div>
             </span>
@@ -168,7 +168,8 @@
         }
     }]);
     app.controller('databaseView', function($scope, $http) {
-        $scope.meta = { Username: "[[ .Meta.Username ]]",
+        $scope.meta = {
+            Owner: "[[ .Meta.Owner ]]",
             Database: "[[ .Meta.Database ]]",
             Watchers: "[[ .DB.Info.Watchers ]]",
             Stars: "[[ .DB.Info.Stars ]]",
@@ -201,13 +202,13 @@
 
         // Retrieves the table data for a given table
         $scope.changeTable = function(newtable) {
-            $http.get("/x/table/[[ .Meta.Username ]]/[[ .Meta.Database ]]?table=" + newtable)
-                .then(function (response) { $scope.db = response.data; })
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
+                newtable).then(function (response) { $scope.db = response.data; })
         };
 
         // Sends the user to the stars page for the database
         $scope.starsPage = function() {
-            window.location = "/stars/[[ .Meta.Username ]]/[[ .Meta.Database ]]"
+            window.location = "/stars/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
         };
 
         // Returns a text string with row count information for the table
@@ -235,7 +236,7 @@
         // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
         $scope.toggleStars = function() {
             if ($scope.meta.Loggedin == "true") {
-                $http.get("/x/star/[[ .Meta.Username ]]/[[ .Meta.Database ]]")
+                $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
                     .then(function (response) {
                         tempval = response.data;
                         if (tempval != "-1") {

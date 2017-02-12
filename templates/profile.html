@@ -25,7 +25,7 @@
             [[ if .PublicDBs ]]
                 <table class="table table-bordered table-striped table-responsive">
                     <tr ng-repeat="row in pubdb.Databases">
-                        <td><h4><a href="/{{ meta.Username + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
+                        <td><h4><a href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
                             <b>Version:</b> {{ row.Version }} &nbsp; <b>Size:</b> {{ row.Size /1024 | number : 0 }} KB &nbsp;
                             <b>Watchers:</b> {{ row.Watchers }} &nbsp; <b>Stars:</b> {{ row.Stars }} &nbsp;
                             <b>Forks:</b> {{ row.Forks }} &nbsp; <b>Discussions:</b> {{ row. Discussions }} &nbsp;
@@ -51,7 +51,7 @@
             [[ if .PrivateDBs ]]
                 <table class="table table-bordered table-striped table-responsive">
                     <tr ng-repeat="row in privdb.Databases">
-                        <td><h4><a href="/{{ meta.Username + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
+                        <td><h4><a href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
                             <b>Version:</b> {{ row.Version }} &nbsp; <b>Size:</b> {{ row.Size /1024 | number : 0 }} KB &nbsp;
                             <b>Watchers:</b> {{ row.Watchers }} &nbsp; <b>Stars:</b> {{ row.Stars }} &nbsp;
                             <b>Forks:</b> {{ row.Forks }} &nbsp; <b>Discussions:</b> {{ row. Discussions }} &nbsp;
@@ -82,8 +82,8 @@
                     <tr ng-repeat="row in stars.Stars">
                         <td>
                             <h4>
-                                <a href="/{{ row.Username }}">{{ row.Username }}</a> /
-                                <a href="/{{ row.Username + '/' + row.Database }}">{{ row.Database }}</a>
+                                <a href="/{{ row.Owner }}">{{ row.Owner }}</a> /
+                                <a href="/{{ row.Owner + '/' + row.DBName }}">{{ row.DBName }}</a>
                             </h4>
                             <b>Date starred:</b> {{ row.DateStarred | date : 'd MMMM, y h:mm a' : 'UTC' }}
                         </td>
@@ -116,7 +116,7 @@
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('profileView', function($scope) {
-        $scope.meta = { Username: "[[ .Meta.Username ]]" }
+        $scope.meta = { Owner: "[[ .Meta.Owner ]]" }
         $scope.pubdb = { Databases: [[ .PublicDBs ]] }
         $scope.privdb = { Databases: [[ .PrivateDBs ]] }
         $scope.stars = { Stars: [[ .Stars ]] }

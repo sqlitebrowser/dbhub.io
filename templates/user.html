@@ -9,7 +9,7 @@
         <div class="col-md-12">
             <h2 id="viewuser" style="margin-top: 10px;">
                 <div class="pull-left">
-                    [[ .Meta.Username ]]'s public databases
+                    [[ .Meta.Owner ]]'s public databases
                 </div>
             </h2>
         </div>
@@ -18,7 +18,7 @@
         <div class="col-md-12">
             <table class="table table-bordered table-striped table-responsive">
                 <tr ng-repeat="row in db.Databases">
-                    <td><h4><a href="/{{ meta.Username + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
+                    <td><h4><a href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
                         <b>Version:</b> {{ row.Version }} &nbsp; <b>Size:</b> {{ row.Size /1024 | number : 0 }} KB &nbsp;
                         <b>Watchers:</b> {{ row.Watchers }} &nbsp; <b>Stars:</b> {{ row.Stars }} &nbsp;
                         <b>Forks:</b> {{ row.Forks }} &nbsp; <b>Discussions:</b> {{ row. Discussions }} &nbsp;
@@ -36,7 +36,7 @@
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('userView', function($scope) {
-        $scope.meta = { Username: "[[ .Meta.Username ]]" };
+        $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
         $scope.db = { Databases: [[ .DBRows ]] };
 
         $scope.uploadForm = function(newtable) {
