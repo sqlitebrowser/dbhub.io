@@ -413,7 +413,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check the password isn't blank
+	// Check the password isn't too short
 	if len(password) < 6 {
 		log.Println("Password must be 6 characters or greater")
 		errorPage(w, r, http.StatusBadRequest, "Password must be 6 characters or greater")
