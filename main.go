@@ -22,7 +22,6 @@ import (
 	com "github.com/dbhubio/common"
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
-	"github.com/jackc/pgx"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -821,7 +820,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the Minio bucket to store the database in
 	bucket, err := com.MinioUserBucket(loggedInUser)
-	if err != nil && err != pgx.ErrNoRows {
+	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
 		return
 	}
