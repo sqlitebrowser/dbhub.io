@@ -12,7 +12,7 @@
                 [[ if .Meta.LoggedInUser ]]
                     <a href="/pref">Preferences</a> | <a href="/[[ .Meta.LoggedInUser ]]">Home</a> | <a href="/logout">Log out</a>
                 [[ else ]]
-                    <a href="/login">Login</a> | <a href="/register">Register</a>
+                    <a ng-click="showLock()">Login / Register</a>
                 [[  end ]]
             </div>
         </div>

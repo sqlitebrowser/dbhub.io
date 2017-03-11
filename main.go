@@ -23,6 +23,7 @@ import (
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
 )
 
 var (
@@ -32,6 +33,83 @@ var (
 	// Our parsed HTML templates
 	tmpl *template.Template
 )
+
+func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
+	// Auth0 login part, mostly copied from https://github.com/auth0-samples/auth0-golang-web-app (MIT License)
+	conf := &oauth2.Config{
+		ClientID:     com.Auth0ClientID(),
+		ClientSecret: com.Auth0ClientSecret(),
+		RedirectURL:  "https://" + com.WebServer() + "/x/callback",
+		Scopes:       []string{"openid", "profile"},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://" + com.Auth0Domain() + "/authorize",
+			TokenURL: "https://" + com.Auth0Domain() + "/oauth/token",
+		},
+	}
+	code := r.URL.Query().Get("code")
+	token, err := conf.Exchange(oauth2.NoContext, code)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve the user info (JSON format)
+	conn := conf.Client(oauth2.NoContext, token)
+	userInfo, err := conn.Get("https://" + com.Auth0Domain() + "/userinfo")
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	raw, err := ioutil.ReadAll(userInfo.Body)
+	defer userInfo.Body.Close()
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Convert the JSON into something usable
+	var profile map[string]interface{}
+	if err = json.Unmarshal(raw, &profile); err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	userName := profile["nickname"].(string)
+	email := profile["email"].(string)
+
+	// Ensure the username isn't a reserved one
+	err = com.ReservedUsernamesCheck(userName)
+	if err != nil {
+		log.Println(err)
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if the username is already in our system
+	exists, err := com.CheckUserExists(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Username check failed")
+		return
+	}
+	if !exists {
+		// If the user doesn't already exist, create an account for them
+		// Generate a random password here (for now).  We may remove the password field itself from the
+		// database at some point, depending on whether we continue to support local database users
+		err = com.AddUser(userName, com.RandomString(32), email)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Something went wrong during user creation")
+			return
+		}
+	}
+
+	// Create session cookie for the user
+	sess := session.NewSessionOptions(&session.SessOptions{
+		CAttrs: map[string]interface{}{"UserName": userName},
+	})
+	session.Add(sess, w)
+
+	// Login completed, so bounce to the user's profile page
+	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
+}
 
 func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Download CSV"
@@ -271,6 +349,7 @@ func main() {
 	http.HandleFunc("/stars/", logReq(starsHandler))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
 	http.HandleFunc("/vis/", logReq(visualisePage))
+	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))

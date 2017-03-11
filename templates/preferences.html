@@ -40,7 +40,13 @@
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('prefView', function($scope) {
-        // Placeholder so the the javascript console doesn't show an error
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+
+        $scope.showLock = function() {
+            lock.show();
+        };
     });
 </script>
 </body>

@@ -19,9 +19,15 @@
 [[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    //    app.controller('errorView', function($scope) {
-    //        $scope.users = { TBD }
-    //    });
+        app.controller('errorView', function($scope) {
+            var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+                redirectUrl: "[[ .Auth0.CallbackURL]]"
+            }});
+
+            $scope.showLock = function() {
+                lock.show();
+            };
+        });
 </script>
 </body>
 </html>

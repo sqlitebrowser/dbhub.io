@@ -19,9 +19,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbNam
 	pageName := "Render database page"
 
 	var pageData struct {
-		Meta com.MetaInfo
-		DB   com.SQLiteDBinfo
-		Data com.SQLiteRecordSet
+		Auth0 com.Auth0Set
+		Data  com.SQLiteRecordSet
+		DB    com.SQLiteDBinfo
+		Meta  com.MetaInfo
 	}
 
 	// Retrieve session data (if any)
@@ -227,6 +228,11 @@ func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbNam
 	pageData.Meta.Server = com.WebServer()
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, dbName)
 
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
 	// Cache the page data
 	err = com.CacheData(pageCacheKey, pageData, com.CacheTime)
 	if err != nil {
@@ -246,8 +252,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbNam
 // General error display page
 func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string) {
 	var pageData struct {
-		Meta    com.MetaInfo
+		Auth0   com.Auth0Set
 		Message string
+		Meta    com.MetaInfo
 	}
 	pageData.Message = msg
 
@@ -257,6 +264,11 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string)
 		loggedInUser := sess.CAttr("UserName")
 		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
 	}
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
 
 	// Render the page
 	w.WriteHeader(httpcode)
@@ -271,8 +283,9 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string)
 func frontPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	var pageData struct {
-		Meta com.MetaInfo
-		List []com.UserInfo
+		Auth0 com.Auth0Set
+		List  []com.UserInfo
+		Meta  com.MetaInfo
 	}
 
 	// Retrieve session data (if any)
@@ -291,6 +304,11 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = `SQLite storage "in the cloud"`
 
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
 	// Render the page
 	t := tmpl.Lookup("rootPage")
 	err = t.Execute(w, pageData)
@@ -301,6 +319,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 
 func loginPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
+		Auth0     com.Auth0Set
 		Meta      com.MetaInfo
 		SourceURL string
 	}
@@ -327,6 +346,11 @@ func loginPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
 	// Render the page
 	t := tmpl.Lookup("loginPage")
 	err := t.Execute(w, pageData)
@@ -338,14 +362,20 @@ func loginPage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Preferences page
 func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	var pageData struct {
-		Meta    com.MetaInfo
+		Auth0   com.Auth0Set
 		MaxRows int
+		Meta    com.MetaInfo
 	}
 	pageData.Meta.Title = "Preferences"
 	pageData.Meta.LoggedInUser = loggedInUser
 
 	// Retrieve the user preference data
 	pageData.MaxRows = com.PrefUserMaxRows(loggedInUser)
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
 
 	// Render the page
 	t := tmpl.Lookup("prefPage")
@@ -357,6 +387,7 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 
 func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	var pageData struct {
+		Auth0      com.Auth0Set
 		Meta       com.MetaInfo
 		PrivateDBs []com.DBInfo
 		PublicDBs  []com.DBInfo
@@ -401,6 +432,11 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
 	// Render the page
 	t := tmpl.Lookup("profilePage")
 	err = t.Execute(w, pageData)
@@ -411,7 +447,8 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 
 func registerPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Meta com.MetaInfo
+		Auth0 com.Auth0Set
+		Meta  com.MetaInfo
 	}
 	pageData.Meta.Title = "Register"
 
@@ -421,6 +458,11 @@ func registerPage(w http.ResponseWriter, r *http.Request) {
 		loggedInUser := sess.CAttr("UserName")
 		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
 	}
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
 
 	// Render the page
 	t := tmpl.Lookup("registerPage")
@@ -432,6 +474,7 @@ func registerPage(w http.ResponseWriter, r *http.Request) {
 
 func starsPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string) {
 	var pageData struct {
+		Auth0 com.Auth0Set
 		Meta  com.MetaInfo
 		Stars []com.DBStarEntry
 	}
@@ -454,6 +497,11 @@ func starsPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName st
 		return
 	}
 
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
 	// Render the page
 	t := tmpl.Lookup("starsPage")
 	err = t.Execute(w, pageData)
@@ -464,10 +512,16 @@ func starsPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName st
 
 func uploadPage(w http.ResponseWriter, r *http.Request, userName string) {
 	var pageData struct {
-		Meta com.MetaInfo
+		Auth0 com.Auth0Set
+		Meta  com.MetaInfo
 	}
 	pageData.Meta.Title = "Upload database"
 	pageData.Meta.LoggedInUser = userName
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
 
 	// Render the page
 	t := tmpl.Lookup("uploadPage")
@@ -480,8 +534,9 @@ func uploadPage(w http.ResponseWriter, r *http.Request, userName string) {
 func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	// Structure to hold page data
 	var pageData struct {
-		Meta   com.MetaInfo
+		Auth0  com.Auth0Set
 		DBRows []com.DBInfo
+		Meta   com.MetaInfo
 	}
 	pageData.Meta.Owner = userName
 	pageData.Meta.Title = userName
@@ -520,6 +575,11 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
 	// Render the page
 	t := tmpl.Lookup("userPage")
 	err = t.Execute(w, pageData)
@@ -531,10 +591,11 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 func visualisePage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	var pageData struct {
-		Meta     com.MetaInfo
-		DB       com.SQLiteDBinfo
-		Data     com.SQLiteRecordSet
+		Auth0    com.Auth0Set
 		ColNames []string
+		Data     com.SQLiteRecordSet
+		DB       com.SQLiteDBinfo
+		Meta     com.MetaInfo
 	}
 	pageData.Meta.Title = "Visualise data"
 
@@ -629,6 +690,11 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
 
 	// Render the page
 	t := tmpl.Lookup("visualisePage")
