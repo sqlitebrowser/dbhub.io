@@ -507,6 +507,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	exists, err := com.CheckUserExists(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Username check failed")
+		session.Remove(sess, w)
 		return
 	}
 	if exists {
@@ -518,11 +519,13 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	exists, err = com.CheckEmailExists(email)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Email check failed")
+		session.Remove(sess, w)
 		return
 	}
 	if exists {
 		errorPage(w, r, http.StatusConflict,
 			"That email address is already associated with an account in our system")
+		session.Remove(sess, w)
 		return
 	}
 
