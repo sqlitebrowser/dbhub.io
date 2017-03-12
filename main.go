@@ -34,6 +34,9 @@ var (
 	tmpl *template.Template
 )
 
+// auth0CallbackHandler is called at the end of a successful Auth0 authentication.  If the user already has an
+// account on our system then they're logged in (eg a session gets created for them).  Otherwise it bounces them to
+// the username selection page.
 func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Auth0 login part, mostly copied from https://github.com/auth0-samples/auth0-golang-web-app (MIT License)
 	conf := &oauth2.Config{
@@ -73,32 +76,29 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	userName := profile["nickname"].(string)
+
+	// Determine the DBHub.io username matching the given Auth0 ID
 	email := profile["email"].(string)
-
-	// Ensure the username isn't a reserved one
-	err = com.ReservedUsernamesCheck(userName)
+	auth0ID := profile["user_id"].(string)
+	userName, err := com.UserNameFromAuth0ID(auth0ID)
 	if err != nil {
-		log.Println(err)
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// Check if the username is already in our system
-	exists, err := com.CheckUserExists(userName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Username check failed")
-		return
-	}
-	if !exists {
-		// If the user doesn't already exist, create an account for them
-		// Generate a random password here (for now).  We may remove the password field itself from the
-		// database at some point, depending on whether we continue to support local database users
-		err = com.AddUser(userName, com.RandomString(32), email)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Something went wrong during user creation")
-			return
-		}
+	// If the user doesn't already exist, we need to create an account for them
+	if userName == "" {
+		// Create a special session cookie, purely for the registration page
+		sess := session.NewSessionOptions(&session.SessOptions{
+			CAttrs: map[string]interface{}{
+				"registrationinprogress": true,
+				"auth0id":                auth0ID,
+				"email":                  email},
+		})
+		session.Add(sess, w)
+
+		// Bounce to the registration page, so the user can select their preferred username
+		http.Redirect(w, r, "/selectusername", http.StatusTemporaryRedirect)
 	}
 
 	// Create session cookie for the user
@@ -346,6 +346,7 @@ func main() {
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))
 	http.HandleFunc("/register", logReq(registerHandler))
+	http.HandleFunc("/selectusername", logReq(selectUsernamePage))
 	http.HandleFunc("/stars/", logReq(starsHandler))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
 	http.HandleFunc("/vis/", logReq(visualisePage))
@@ -453,55 +454,44 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: Add browser side validation of the form data too (using AngularJS?) to save a trip to the server
-	// TODO  and make for a nicer user experience for sign up
+	// Retrieve username selection session data
+	sess := session.Get(r)
+	if sess != nil {
+		validRegSession := false
+		validRegSession = sess.CAttr("registrationinprogress").(bool)
+
+		if validRegSession != true {
+			// For some reason this isn't a valid registration session, so abort
+			errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+			return
+		}
+	}
+
+	// Retrieve the validated registration data
+	auth0ID := sess.CAttr("auth0id").(string)
+	email := sess.CAttr("email").(string)
 
 	// Gather submitted form data (if any)
 	err := r.ParseForm()
 	if err != nil {
-		log.Printf("Error when parsing registration data: %s\n", err)
-		errorPage(w, r, http.StatusBadRequest, "Error when parsing registration data")
+		log.Printf("Error when parsing user creation data: %s\n", err)
+		errorPage(w, r, http.StatusBadRequest, "Error when parsing user creation data")
 		return
 	}
 	userName := r.PostFormValue("username")
-	password := r.PostFormValue("pass")
-	passConfirm := r.PostFormValue("pconfirm")
-	email := r.PostFormValue("email")
-	agree := r.PostFormValue("agree")
 
-	// Check if any (relevant) form data was submitted
-	if userName == "" && password == "" && passConfirm == "" && email == "" && agree == "" {
-		// No, so render the registration page
-		registerPage(w, r)
+	// Ensure username was given
+	if userName == "" {
+		// No, so render the username selection page
+		selectUsernamePage(w, r)
 		return
 	}
 
-	// Validate the user supplied username and email address
-	err = com.ValidateUserEmail(userName, email)
+	// Validate the user supplied username
+	err = com.ValidateUser(userName)
 	if err != nil {
-		log.Printf("Validation failed of username or email: %s", err)
-		errorPage(w, r, http.StatusBadRequest, "Invalid username or email")
-		return
-	}
-
-	// Check the password and confirmation match
-	if len(password) != len(passConfirm) || password != passConfirm {
-		log.Println("Password and confirmation do not match")
-		errorPage(w, r, http.StatusBadRequest, "Password and confirmation do not match")
-		return
-	}
-
-	// Check the password isn't too short
-	if len(password) < 6 {
-		log.Println("Password must be 6 characters or greater")
-		errorPage(w, r, http.StatusBadRequest, "Password must be 6 characters or greater")
-		return
-	}
-
-	// Check the Terms and Conditions was agreed to
-	if agree != "on" {
-		log.Println("Terms and Conditions wasn't agreed to")
-		errorPage(w, r, http.StatusBadRequest, "Terms and Conditions weren't agreed to")
+		log.Printf("Username failed validation: %s", err)
+		errorPage(w, r, http.StatusBadRequest, "Username failed validation")
 		return
 	}
 
@@ -537,16 +527,27 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the user to the system
-	err = com.AddUser(userName, password, email)
+	// NOTE: We generate a random password here (for now).  We may remove the password field itself from the
+	// database at some point, depending on whether we continue to support local database users
+	err = com.AddUser(auth0ID, userName, com.RandomString(32), email)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Something went wrong during user creation")
 		return
 	}
 
-	// TODO: Display a proper success page
-	// TODO: This should probably bounce the user to their logged in profile page
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprint(w, `<html><body>Account created successfully, please login: <a href="/login">Login</a></body></html>`)
+	// Remove the temporary username selection session data
+	session.Remove(sess, w)
+
+	// Create normal session cookie for the user
+	// TODO: This will probably leak a small amount of memory, but it's "good enough" for now while getting things
+	// working
+	sess = session.NewSessionOptions(&session.SessOptions{
+		CAttrs: map[string]interface{}{"UserName": userName},
+	})
+	session.Add(sess, w)
+
+	// User creation completed, so bounce to the user's profile page
+	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
 }
 
 // This handles incoming requests for the preferences page by logged in users

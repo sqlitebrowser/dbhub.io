@@ -445,18 +445,26 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 }
 
-func registerPage(w http.ResponseWriter, r *http.Request) {
+func selectUsernamePage(w http.ResponseWriter, r *http.Request) {
+	// TODO: Add browser side checking of the username to make sure a decent user experience
+
 	var pageData struct {
 		Auth0 com.Auth0Set
 		Meta  com.MetaInfo
 	}
-	pageData.Meta.Title = "Register"
+	pageData.Meta.Title = "Select your username"
 
 	// Retrieve session data (if any)
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser := sess.CAttr("UserName")
-		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+		validRegSession := false
+		validRegSession = sess.CAttr("registrationinprogress").(bool)
+
+		if validRegSession != true {
+			// For some reason this isn't a valid registration session, so abort
+			errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+			return
+		}
 	}
 
 	// Add Auth0 info to the page data
@@ -465,7 +473,7 @@ func registerPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Auth0Domain()
 
 	// Render the page
-	t := tmpl.Lookup("registerPage")
+	t := tmpl.Lookup("selectUsernamePage")
 	err := t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
