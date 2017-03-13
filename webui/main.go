@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -452,19 +453,19 @@ func main() {
 
 	// Static files
 	http.HandleFunc("/images/auth0.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "images/auth0.svg")
+		http.ServeFile(w, r, filepath.Join("webui", "images", "auth0.svg"))
 	}))
 	http.HandleFunc("/images/rackspace.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "images/rackspace.svg")
+		http.ServeFile(w, r, filepath.Join("webui", "images", "rackspace.svg"))
 	}))
 	http.HandleFunc("/images/sqlitebrowser.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "images/sqlitebrowser.svg")
+		http.ServeFile(w, r, filepath.Join("webui", "images", "sqlitebrowser.svg"))
 	}))
 	http.HandleFunc("/favicon.ico", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "favicon.ico")
+		http.ServeFile(w, r, filepath.Join("webui", "favicon.ico"))
 	}))
 	http.HandleFunc("/robots.txt", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "robots.txt")
+		http.ServeFile(w, r, filepath.Join("webui", "robots.txt"))
 	}))
 
 	// Start server
