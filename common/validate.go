@@ -45,9 +45,9 @@ func checkPGTableName(fl valid.FieldLevel) bool {
 
 // Checks a username against the list of reserved ones.
 func ReservedUsernamesCheck(userName string) error {
-	reserved := []string{"about", "admin", "blog", "download", "downloadcsv", "legal", "login", "logout", "mail",
-		"news", "pref", "printer", "public", "reference", "register", "root", "star", "stars", "system",
-		"table", "upload", "uploaddata", "vis"}
+	reserved := []string{"about", "admin", "blog", "dbhub", "download", "downloadcsv", "legal", "login", "logout",
+		"mail", "news", "pref", "printer", "public", "reference", "register", "root", "star", "stars",
+		"system", "table", "upload", "uploaddata", "vis"}
 	for _, word := range reserved {
 		if userName == word {
 			return fmt.Errorf("That username is not available: %s\n", userName)
