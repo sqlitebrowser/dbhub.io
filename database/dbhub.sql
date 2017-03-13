@@ -180,7 +180,8 @@ CREATE TABLE users (
     password_hash text NOT NULL,
     watchers bigint DEFAULT 0,
     minio_bucket text,
-    pref_max_rows integer DEFAULT 10 NOT NULL
+    pref_max_rows integer DEFAULT 10 NOT NULL,
+    auth0id text
 );
 
 
@@ -272,6 +273,14 @@ CREATE INDEX username_idx ON sqlite_databases USING btree (username);
 --
 
 CREATE INDEX users_username_idx ON users USING btree (username);
+
+
+--
+-- Name: users_auth0id_idx; Type: INDEX; Schema: public; Owner: dbhub
+--
+
+CREATE INDEX users_auth0id_idx ON users USING btree (auth0id);
+
 
 
 --
