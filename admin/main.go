@@ -273,7 +273,7 @@ func dbManageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the template file
-	templateFile := filepath.Join("templates", "databases.html")
+	templateFile := filepath.Join("admin", "templates", "databases.html")
 	t, err := template.ParseFiles(templateFile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -432,18 +432,17 @@ func main() {
 	http.HandleFunc("/dbdownload", dbDownloadHandler)
 	http.HandleFunc("/dbmanage", dbManageHandler)
 	http.HandleFunc("/dbupload", dbUploadHandler)
-	http.HandleFunc("/useradd", userAddHandler)
 	http.HandleFunc("/userdel", userDelHandler)
 	http.HandleFunc("/usermod", userModFormHandler)
 	http.HandleFunc("/usermodaction", userModActionHandler)
 
 	// Start server
 	if com.AdminServerHTTPS() {
-		log.Printf("Starting DBHub datagen server on https://%s\n", com.AdminServerAddress())
+		log.Printf("Starting DBHub admin server on https://%s\n", com.AdminServerAddress())
 		log.Fatal(http.ListenAndServeTLS(com.AdminServerAddress(), com.AdminServerCert(),
 			com.AdminServerCertKey(), nil))
 	} else {
-		log.Printf("Starting DataGen datagen server on http://%s\n", com.AdminServerAddress())
+		log.Printf("Starting DataGen admin server on http://%s\n", com.AdminServerAddress())
 		log.Fatal(http.ListenAndServe(com.AdminServerAddress(), nil))
 	}
 }
@@ -451,7 +450,7 @@ func main() {
 // Handler to generate the front page
 func rootHandler(w http.ResponseWriter, _ *http.Request) {
 	// Parse the template file
-	templateFile := filepath.Join("templates", "index.html")
+	templateFile := filepath.Join("admin", "templates", "index.html")
 	t, err := template.ParseFiles(templateFile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -470,74 +469,6 @@ func rootHandler(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-// Handler to add a new DBHub.io user
-func userAddHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "User add page"
-
-	// Extract the form data
-	var err error
-	if err = r.ParseForm(); err != nil {
-		log.Printf("%s: ParseForm() error: %v\n", pageName, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	userName := strings.ToLower(r.PostFormValue("username"))
-	email := r.PostFormValue("email")
-	pass := r.PostFormValue("pword")
-	verify := r.PostFormValue("pverify")
-
-	// Validate the user supplied username and email address
-	err = com.ValidateUserEmail(userName, email)
-	if err != nil {
-		log.Printf("Validation failed of username or email: %s", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Check the password and confirmation match
-	if len(pass) != len(verify) || pass != verify {
-		http.Error(w, "Password and confirmation do not match", http.StatusBadRequest)
-		return
-	}
-
-	// Check the password isn't too short
-	if len(pass) < 6 {
-		http.Error(w, "Password must be 6 characters or greater", http.StatusBadRequest)
-		return
-	}
-
-	// Ensure both username and email address are present
-	if userName == "" || email == "" {
-		http.Error(w, "Username and email address must be present", http.StatusBadRequest)
-		return
-	}
-
-	// Check if the user already exists
-	x, err := com.CheckUserExists(userName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if x == true {
-		// The user already exists
-		http.Error(w, "Not continuing, the user already exists", http.StatusBadRequest)
-		return
-	}
-
-	// Add the user
-	err = com.AddUser(userName, pass, email)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Log the successful user creation
-	log.Printf("%s: User created: %v\n", pageName, userName)
-
-	// User creation succeeded, so bounce back to the front page
-	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // Handler to delete a DBHub.io user
@@ -691,7 +622,7 @@ func userModFormHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the template file
-	templateFile := filepath.Join("templates", "modify_user.html")
+	templateFile := filepath.Join("admin", "templates", "modify_user.html")
 	t, err := template.ParseFiles(templateFile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
