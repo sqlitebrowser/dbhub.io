@@ -1,0 +1,127 @@
+<html>
+<head>
+ <title>DBHub.io</title>
+ <style>
+  table {
+   border-collapse: collapse;
+  }
+
+  th, td {
+   border: 1px solid black;
+   text-align: center;
+   padding: 8px;
+  }
+
+  tr:nth-child(even){background-color: #f2f2f2}
+ </style>
+</head>
+<body>
+<h1>DBHub.io website app v0.01</h1>
+<a href="/">← Back to the front page</a>
+<h2>Databases for {{.Username}} - bucket name: {{ .Bucket }}</h2>
+<h4 style="margin-bottom: 3px">Public</h4>
+<table style="width: 100%">
+ <tr>
+  <th>Folder</th>
+  <th>Name</th>
+  <th>Version</th>
+  <th>Size</th>
+  <th>Date added</th>
+  <th>Last modified</th>
+  <th>Download</th>
+  <th>Delete</th>
+ </tr>
+{{ $uname := .Username}}
+{{range .PubDBs}}
+ <tr>
+  <td>{{.Folder}}</td>
+  <td>{{.Database}}</td>
+  <th>{{.Version}}</th>
+  <th>{{.Size}}</th>
+  <th>{{.DateCreated.Format "2006-Jan-02 15:04:05"}}</th>
+  <th>{{.LastModified.Format "2006-Jan-02 15:04:05"}}</th>
+  <td>
+   <form action="/dbdownload" method="POST">
+    <input type="hidden" name="username" value="{{$uname}}">
+    <input type="hidden" name="dbname" value="{{.Database}}">
+    <input type="hidden" name="version" value="{{.Version}}">
+    <input type="submit" value="↓">
+   </form>
+  </td>
+  <td>
+   <form action="/dbdel" method="POST">
+    <input type="hidden" name="username" value="{{$uname}}">
+    <input type="hidden" name="dbname" value="{{.Database}}">
+    <input type="hidden" name="version" value="{{.Version}}">
+    <input type="submit" value="✘">
+   </form>
+  </td>
+ </tr>
+{{end}}
+</table>
+<h4 style="margin-bottom: 3px">Private</h4>
+<table style="width: 100%">
+ <tr>
+  <th>Folder</th>
+  <th>Name</th>
+  <th>Version</th>
+  <th>Size</th>
+  <th>Date added</th>
+  <th>Last modified</th>
+  <th>Download</th>
+  <th>Delete</th>
+ </tr>
+ {{range .PrivDBs}}
+ <tr>
+  <td>{{.Folder}}</td>
+  <td>{{.Database}}</td>
+  <th>{{.Version}}</th>
+  <th>{{.Size}}</th>
+  <th>{{.DateCreated.Format "2006-Jan-02 15:04:05"}}</th>
+  <th>{{.LastModified.Format "2006-Jan-02 15:04:05"}}</th>
+  <td>
+   <form action="/dbdownload" method="POST">
+    <input type="hidden" name="username" value="{{$uname}}">
+    <input type="hidden" name="folder" value="{{.Folder}}">
+    <input type="hidden" name="dbname" value="{{.Database}}">
+    <input type="hidden" name="version" value="{{.Version}}">
+    <input type="submit" value="↓">
+   </form>
+  </td>
+  <td>
+   <form action="/dbdel" method="POST">
+    <input type="hidden" name="username" value="{{$uname}}">
+    <input type="hidden" name="folder" value="{{.Folder}}">
+    <input type="hidden" name="dbname" value="{{.Database}}">
+    <input type="hidden" name="version" value="{{.Version}}">
+    <input type="submit" value="✘">
+   </form>
+  </td>
+ </tr>
+ {{end}}
+ </table>
+<h3>Upload new database</h3>
+<form action="/dbupload" enctype="multipart/form-data" method="POST">
+<table>
+ <tr>
+  <th>Folder</th>
+  <td><input type="text" name="folder" value="/"></td>
+ </tr>
+ <tr>
+  <th>Public</th>
+  <td>
+   <input type="radio" name="public" value="true" checked>Yes<br />
+   <input type="radio" name="public" value="false">No
+  </td>
+ </tr>
+ <tr>
+  <td colspan="2">
+   <input type="hidden" name="username" value="{{.Username}}">
+   <input type="file" name="file">
+   <input type="submit" value="Upload">
+  </td>
+ </tr>
+</table>
+</form>
+</body>
+</html>

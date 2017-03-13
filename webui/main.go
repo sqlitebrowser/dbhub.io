@@ -413,7 +413,7 @@ func main() {
 		&session.CookieMngrOptions{AllowHTTP: false})
 
 	// Parse our template files
-	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob("templates/*.html"))
+	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob("webui/templates/*.html"))
 
 	// Connect to Minio server
 	err = com.ConnectMinio()
