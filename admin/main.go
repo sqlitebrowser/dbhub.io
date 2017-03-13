@@ -15,11 +15,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	// Our parsed HTML templates
-	tmpl *template.Template
-)
-
 func certDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the username
 	u, err := com.GetU(r)
