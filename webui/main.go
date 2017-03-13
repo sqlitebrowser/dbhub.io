@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
-	com "github.com/dbhubio/common"
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
+	com "github.com/sqlitebrowser/dbhub.io/common"
 	"golang.org/x/oauth2"
 )
 

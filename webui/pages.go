@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strconv"
 
-	com "github.com/dbhubio/common"
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
+	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
 func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbName string, dbTable string) {
