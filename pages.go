@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
-	"strings"
 
 	com "github.com/dbhubio/common"
 	sqlite "github.com/gwenn/gosqlite"
@@ -29,8 +27,13 @@ func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbNam
 	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
-		pageData.Meta.LoggedInUser = loggedInUser
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
 	}
 
 	// Check if the user has access to the requested database
@@ -259,10 +262,16 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string)
 	pageData.Message = msg
 
 	// Retrieve session data (if any)
+	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser := sess.CAttr("UserName")
-		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
 	}
 
 	// Add Auth0 info to the page data
@@ -289,10 +298,16 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
+	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser := sess.CAttr("UserName")
-		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
 	}
 
 	// Retrieve list of users with public databases
@@ -312,48 +327,6 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	// Render the page
 	t := tmpl.Lookup("rootPage")
 	err = t.Execute(w, pageData)
-	if err != nil {
-		log.Printf("Error: %s", err)
-	}
-}
-
-func loginPage(w http.ResponseWriter, r *http.Request) {
-	var pageData struct {
-		Auth0     com.Auth0Set
-		Meta      com.MetaInfo
-		SourceURL string
-	}
-	pageData.Meta.Title = "Login"
-
-	// Retrieve session data (if any)
-	sess := session.Get(r)
-	if sess != nil {
-		loggedInUser := sess.CAttr("UserName")
-		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
-	}
-
-	// If the referrer is a page from our website, pass that to the login page
-	referrer := r.Referer()
-	if referrer != "" {
-		ref, err := url.Parse(referrer)
-		if err != nil {
-			log.Printf("Error when parsing referrer URL for login page: %s\n", err)
-		} else {
-			// localhost:8080 means the server is running on a local (development) box ;)
-			if ref.Host == "localhost:8080" || strings.HasSuffix(ref.Host, "dbhub.io") {
-				pageData.SourceURL = ref.Path
-			}
-		}
-	}
-
-	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
-
-	// Render the page
-	t := tmpl.Lookup("loginPage")
-	err := t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -491,10 +464,16 @@ func starsPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName st
 	pageData.Meta.Database = dbName
 
 	// Retrieve session data (if any)
+	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser := sess.CAttr("UserName")
-		pageData.Meta.LoggedInUser = fmt.Sprintf("%s", loggedInUser)
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
 	}
 
 	// Retrieve list of users who starred the database
@@ -554,13 +533,18 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
-		if loggedInUser == userName {
-			// The logged in user is looking at their own user page
-			profilePage(w, r, loggedInUser)
-			return
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			if loggedInUser == userName {
+				// The logged in user is looking at their own user page
+				profilePage(w, r, loggedInUser)
+				return
+			}
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
 		}
-		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Check if the desired user exists
@@ -620,8 +604,13 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
-		pageData.Meta.LoggedInUser = loggedInUser
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
 	}
 
 	// Check if the user has access to the requested database

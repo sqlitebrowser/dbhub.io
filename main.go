@@ -22,7 +22,6 @@ import (
 	com "github.com/dbhubio/common"
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
-	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
 )
 
@@ -34,9 +33,11 @@ var (
 	tmpl *template.Template
 )
 
-// auth0CallbackHandler is called at the end of a successful Auth0 authentication.  If the user already has an
-// account on our system then they're logged in (eg a session gets created for them).  Otherwise it bounces them to
-// the username selection page.
+// auth0CallbackHandler is called at the end of the Auth0 authentication process, whether successful or not.
+// If the authentication process was successful:
+//  * if the user already has an account on our system then this function creates a login session for them.
+//  * if the user doesn't yet have an account on our system, they're bounced to the username selection page.
+// If the authentication process wasn't successful, an error message is displayed.
 func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Auth0 login part, mostly copied from https://github.com/auth0-samples/auth0-golang-web-app (MIT License)
 	conf := &oauth2.Config{
@@ -52,7 +53,8 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	token, err := conf.Exchange(oauth2.NoContext, code)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		log.Printf("Login failure: %s\n", err.Error())
+		errorPage(w, r, http.StatusInternalServerError, "Login failed")
 		return
 	}
 
@@ -88,6 +90,19 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the user doesn't already exist, we need to create an account for them
 	if userName == "" {
+		// Check if the email address is already in our system
+		exists, err := com.CheckEmailExists(email)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Email check failed")
+			return
+		}
+		if exists {
+			errorPage(w, r, http.StatusConflict,
+				"Can't create new account: Your email address is already associated with a "+
+					"different account in our system.")
+			return
+		}
+
 		// Create a special session cookie, purely for the registration page
 		sess := session.NewSessionOptions(&session.SessOptions{
 			CAttrs: map[string]interface{}{
@@ -97,7 +112,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		session.Add(sess, w)
 
-		// Bounce to the registration page, so the user can select their preferred username
+		// Bounce to a new page, for the user to select their preferred username
 		http.Redirect(w, r, "/selectusername", http.StatusTemporaryRedirect)
 	}
 
@@ -108,6 +123,119 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	session.Add(sess, w)
 
 	// Login completed, so bounce to the user's profile page
+	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
+}
+
+func createUserHandler(w http.ResponseWriter, r *http.Request) {
+	// Make sure this user creation session is valid
+	sess := session.Get(r)
+	if sess == nil {
+		// This isn't a valid username selection session, so abort
+		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+		return
+	}
+
+	validRegSession := false
+	va := sess.CAttr("registrationinprogress")
+	if va == nil {
+		// This isn't a valid username selection session, so abort
+		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+		return
+	}
+	validRegSession = va.(bool)
+
+	if validRegSession != true {
+		// This isn't a valid username selection session, so abort
+		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+		return
+	}
+
+	// Retrieve the registration data
+	var auth0ID, email string
+	au := sess.CAttr("auth0id")
+	if au != nil {
+		auth0ID = au.(string)
+	} else {
+		errorPage(w, r, http.StatusBadRequest, "Invalid user creation id")
+		return
+	}
+	em := sess.CAttr("email")
+	if em != nil {
+		email = em.(string)
+	} else {
+		errorPage(w, r, http.StatusBadRequest, "Invalid user creation email")
+		return
+	}
+
+	// Gather submitted form data (if any)
+	err := r.ParseForm()
+	if err != nil {
+		log.Printf("Error when parsing user creation data: %s\n", err)
+		errorPage(w, r, http.StatusBadRequest, "Error when parsing user creation data")
+		return
+	}
+	userName := r.PostFormValue("username")
+
+	// Ensure username was given
+	if userName == "" {
+		// No, so render the username selection page
+		selectUsernamePage(w, r)
+		return
+	}
+
+	// Validate the user supplied username
+	err = com.ValidateUser(userName)
+	if err != nil {
+		log.Printf("Username failed validation: %s", err)
+		session.Remove(sess, w)
+		errorPage(w, r, http.StatusBadRequest, "Username failed validation")
+		return
+	}
+
+	// Ensure the username isn't a reserved one
+	err = com.ReservedUsernamesCheck(userName)
+	if err != nil {
+		log.Println(err)
+		session.Remove(sess, w)
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if the username is already in our system
+	exists, err := com.CheckUserExists(userName)
+	if err != nil {
+		session.Remove(sess, w)
+		errorPage(w, r, http.StatusInternalServerError, "Username check failed")
+		return
+	}
+	if exists {
+		session.Remove(sess, w)
+		errorPage(w, r, http.StatusConflict, "That username is already taken")
+		return
+	}
+
+	// Add the user to the system
+	// NOTE: We generate a random password here (for now).  We may remove the password field itself from the
+	// database at some point, depending on whether we continue to support local database users
+	err = com.AddUser(auth0ID, userName, com.RandomString(32), email)
+	if err != nil {
+		session.Remove(sess, w)
+		errorPage(w, r, http.StatusInternalServerError, "Something went wrong during user creation")
+		return
+	}
+
+	// Remove the temporary username selection session data
+	session.Remove(sess, w)
+
+	// Create normal session cookie for the user
+	// TODO: This will probably leak a small amount of memory, but it's "good enough" for now while getting things
+	// working
+	sess = session.NewSessionOptions(&session.SessOptions{
+		CAttrs: map[string]interface{}{"UserName": userName},
+	})
+	session.Add(sess, w)
+
+	// User creation completed, so bounce to the user's profile page
 	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
 }
 
@@ -132,7 +260,12 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+		} else {
+			session.Remove(sess, w)
+		}
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
@@ -178,7 +311,12 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+		} else {
+			session.Remove(sess, w)
+		}
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
@@ -214,56 +352,6 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s: '%s/%s' downloaded. %d bytes", pageName, dbOwner, dbName, bytesWritten)
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Login page"
-
-	// TODO: Add browser side validation of the form data too to save a trip to the server
-	// TODO  and make for a nicer user experience for sign up
-
-	// Get the username, password, and referrer
-	userName, password, bounceURL, err := com.GetUPS(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Error when parsing login data")
-		return
-	}
-
-	// Check if the required form data was submitted
-	if userName == "" && password == "" {
-		// No, so render the login page
-		loginPage(w, r)
-		return
-	}
-
-	// Retrieve the password hash for the user, if they exist in the database
-	passHash, err := com.UserPasswordHash(userName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
-		return
-	}
-
-	// Hash the user's password
-	err = bcrypt.CompareHashAndPassword(passHash, []byte(password))
-	if err != nil {
-		log.Printf("%s: Login failure, username/password not correct. User: '%s'\n", pageName, userName)
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprint("Login failed. Username/password not correct"))
-		return
-	}
-
-	// Create session cookie
-	sess := session.NewSessionOptions(&session.SessOptions{
-		CAttrs: map[string]interface{}{"UserName": userName},
-	})
-	session.Add(sess, w)
-
-	if bounceURL == "" || bounceURL == "/register" || bounceURL == "/login" {
-		// Bounce to the user's own page
-		http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
-	} else {
-		// Bounce to the original referring page
-		http.Redirect(w, r, bounceURL, http.StatusTemporaryRedirect)
-	}
-}
-
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Remove session info
 	sess := session.Get(r)
@@ -283,10 +371,15 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 		// Check if user is logged in
 		var loggedInUser string
 		sess := session.Get(r)
-		if sess == nil {
-			loggedInUser = "-"
+		if sess != nil {
+			u := sess.CAttr("UserName")
+			if u != nil {
+				loggedInUser = u.(string)
+			} else {
+				loggedInUser = "-"
+			}
 		} else {
-			loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+			loggedInUser = "-"
 		}
 
 		// Write request details to the request log
@@ -342,10 +435,9 @@ func main() {
 
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
-	http.HandleFunc("/login", logReq(loginHandler))
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))
-	http.HandleFunc("/register", logReq(registerHandler))
+	http.HandleFunc("/register", logReq(createUserHandler))
 	http.HandleFunc("/selectusername", logReq(selectUsernamePage))
 	http.HandleFunc("/stars/", logReq(starsHandler))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
@@ -453,118 +545,27 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	databasePage(w, r, userName, dbName, dbTable)
 }
 
-func registerHandler(w http.ResponseWriter, r *http.Request) {
-	// Retrieve username selection session data
-	sess := session.Get(r)
-	if sess != nil {
-		validRegSession := false
-		validRegSession = sess.CAttr("registrationinprogress").(bool)
-
-		if validRegSession != true {
-			// For some reason this isn't a valid registration session, so abort
-			errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
-			return
-		}
-	}
-
-	// Retrieve the validated registration data
-	auth0ID := sess.CAttr("auth0id").(string)
-	email := sess.CAttr("email").(string)
-
-	// Gather submitted form data (if any)
-	err := r.ParseForm()
-	if err != nil {
-		log.Printf("Error when parsing user creation data: %s\n", err)
-		errorPage(w, r, http.StatusBadRequest, "Error when parsing user creation data")
-		return
-	}
-	userName := r.PostFormValue("username")
-
-	// Ensure username was given
-	if userName == "" {
-		// No, so render the username selection page
-		selectUsernamePage(w, r)
-		return
-	}
-
-	// Validate the user supplied username
-	err = com.ValidateUser(userName)
-	if err != nil {
-		log.Printf("Username failed validation: %s", err)
-		errorPage(w, r, http.StatusBadRequest, "Username failed validation")
-		return
-	}
-
-	// Ensure the username isn't a reserved one
-	err = com.ReservedUsernamesCheck(userName)
-	if err != nil {
-		log.Println(err)
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the username is already in our system
-	exists, err := com.CheckUserExists(userName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Username check failed")
-		session.Remove(sess, w)
-		return
-	}
-	if exists {
-		errorPage(w, r, http.StatusConflict, "That username is already taken")
-		return
-	}
-
-	// Check if the email address is already in our system
-	exists, err = com.CheckEmailExists(email)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Email check failed")
-		session.Remove(sess, w)
-		return
-	}
-	if exists {
-		errorPage(w, r, http.StatusConflict,
-			"That email address is already associated with an account in our system")
-		session.Remove(sess, w)
-		return
-	}
-
-	// Add the user to the system
-	// NOTE: We generate a random password here (for now).  We may remove the password field itself from the
-	// database at some point, depending on whether we continue to support local database users
-	err = com.AddUser(auth0ID, userName, com.RandomString(32), email)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Something went wrong during user creation")
-		return
-	}
-
-	// Remove the temporary username selection session data
-	session.Remove(sess, w)
-
-	// Create normal session cookie for the user
-	// TODO: This will probably leak a small amount of memory, but it's "good enough" for now while getting things
-	// working
-	sess = session.NewSessionOptions(&session.SessOptions{
-		CAttrs: map[string]interface{}{"UserName": userName},
-	})
-	session.Add(sess, w)
-
-	// User creation completed, so bounce to the user's profile page
-	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
-}
-
 // This handles incoming requests for the preferences page by logged in users
 func prefHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Preferences handler"
 
 	// Ensure user is logged in
 	var loggedInUser string
+	validSession := false
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
-	} else {
-		// Bounce to the login page
-		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+	if validSession != true {
+		// Display an error message
+		// TODO: Show the login dialog
+		errorPage(w, r, http.StatusInternalServerError, "Error: Must be logged in to view that page.")
 		return
 	}
 
@@ -620,10 +621,20 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	validSession := false
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
-	} else {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
 		// No logged in username, so nothing to update
 		fmt.Fprint(w, "-1") // -1 tells the front end not to update the displayed star count
 		return
@@ -672,7 +683,12 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+		} else {
+			session.Remove(sess, w)
+		}
 	}
 
 	// Check if the user has access to the requested database
@@ -769,12 +785,22 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function presents the database upload form to logged in users
 func uploadFormHandler(w http.ResponseWriter, r *http.Request) {
-	// Ensure user is logged in
-	var loggedInUser interface{}
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = sess.CAttr("UserName")
-	} else {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
@@ -787,14 +813,25 @@ func uploadFormHandler(w http.ResponseWriter, r *http.Request) {
 func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Upload DB handler"
 
-	// Ensure user is logged in
+	// Retrieve session data (if any)
 	var loggedInUser string
+	validSession := false
 	sess := session.Get(r)
-	if sess == nil {
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
-	loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
 
 	// Prepare the form data
 	r.ParseMultipartForm(32 << 20) // 64MB of ram max
@@ -1037,7 +1074,12 @@ func visData(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	sess := session.Get(r)
 	if sess != nil {
-		loggedInUser = fmt.Sprintf("%s", sess.CAttr("UserName"))
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+		} else {
+			session.Remove(sess, w)
+		}
 	}
 
 	// Check if the user has access to the requested database
