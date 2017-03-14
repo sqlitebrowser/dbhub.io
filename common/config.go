@@ -74,6 +74,26 @@ func DB4SServerCertKey() string {
 	return conf.DB4S.CertificateKey
 }
 
+// Return the Minio server access key.
+func MinioAccessKey() string {
+	return conf.Minio.AccessKey
+}
+
+// Should we connect to the Minio server using HTTPS?
+func MinioHTTPS() bool {
+	return conf.Minio.HTTPS
+}
+
+// Return the Minio server secret.
+func MinioSecret() string {
+	return conf.Minio.Secret
+}
+
+// Return the Minio server string.
+func MinioServer() string {
+	return conf.Minio.Server
+}
+
 // Read the server configuration file.
 func ReadConfig() error {
 	// Reads the server configuration from disk
@@ -182,26 +202,6 @@ func ReadConfig() error {
 
 	// The configuration file seems good
 	return nil
-}
-
-// Return the Minio server access key.
-func MinioAccessKey() string {
-	return conf.Minio.AccessKey
-}
-
-// Should we connect to the Minio server using HTTPS?
-func MinioHTTPS() bool {
-	return conf.Minio.HTTPS
-}
-
-// Return the Minio server secret.
-func MinioSecret() string {
-	return conf.Minio.Secret
-}
-
-// Return the Minio server string.
-func MinioServer() string {
-	return conf.Minio.Server
 }
 
 // Return the path to the certificate used to sign DB4S client certs.
