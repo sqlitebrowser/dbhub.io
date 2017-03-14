@@ -175,7 +175,7 @@ ALTER SEQUENCE sqlite_databases_idnum_seq OWNED BY sqlite_databases.idnum;
 CREATE TABLE users (
     username text NOT NULL,
     date_joined timestamp with time zone DEFAULT timezone('utc'::text, now()),
-    email text NOT NULL,
+    email text,
     client_certificate bytea NOT NULL,
     password_hash text NOT NULL,
     watchers bigint DEFAULT 0,

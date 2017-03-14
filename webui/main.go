@@ -80,9 +80,32 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract the information we need
+	var auth0ID, email string
+	em := profile["email"]
+	if em != nil {
+		email = em.(string)
+	}
+	au := profile["user_id"]
+	if au != nil {
+		auth0ID = au.(string)
+	}
+	if auth0ID == "" {
+		log.Printf("Auth0 callback error: Auth0 ID string was empty. Email: %s\n", email)
+		errorPage(w, r, http.StatusInternalServerError, "Error: Auth0 ID string was empty")
+		return
+	}
+
+	// If the user hasn't verified their email address, tell them to before proceeding
+	verifiedEmail := profile["email_verified"].(bool)
+	if verifiedEmail != true {
+		// TODO: Create a nicer notice page for this, as errorPage() doesn't look friendly
+		errorPage(w, r, http.StatusUnauthorized, "Please check your email.  You need to verify your "+
+			"email address before logging in will work.")
+		return
+	}
+
 	// Determine the DBHub.io username matching the given Auth0 ID
-	email := profile["email"].(string)
-	auth0ID := profile["user_id"].(string)
 	userName, err := com.UserNameFromAuth0ID(auth0ID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -91,19 +114,20 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the user doesn't already exist, we need to create an account for them
 	if userName == "" {
-		// Check if the email address is already in our system
-		exists, err := com.CheckEmailExists(email)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Email check failed")
-			return
+		if email != "" {
+			// Check if the email address is already in our system
+			exists, err := com.CheckEmailExists(email)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, "Email check failed")
+				return
+			}
+			if exists {
+				errorPage(w, r, http.StatusConflict,
+					"Can't create new account: Your email address is already associated "+
+						"with a different account in our system.")
+				return
+			}
 		}
-		if exists {
-			errorPage(w, r, http.StatusConflict,
-				"Can't create new account: Your email address is already associated with a "+
-					"different account in our system.")
-			return
-		}
-
 		// Create a special session cookie, purely for the registration page
 		sess := session.NewSessionOptions(&session.SessOptions{
 			CAttrs: map[string]interface{}{
