@@ -96,9 +96,9 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If the user hasn't verified their email address, tell them to before proceeding
-	verifiedEmail := profile["email_verified"].(bool)
-	if verifiedEmail != true {
+	// If the user has an unverified email address, tell them to verify it before proceeding
+	ve := profile["email_verified"]
+	if ve != nil && ve.(bool) != true {
 		// TODO: Create a nicer notice page for this, as errorPage() doesn't look friendly
 		errorPage(w, r, http.StatusUnauthorized, "Please check your email.  You need to verify your "+
 			"email address before logging in will work.")
