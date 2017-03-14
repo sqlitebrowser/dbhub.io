@@ -16,7 +16,8 @@
     </div>
 
     <div class="row col-md-12" style="margin-bottom: 10px">
-        <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button>
+        <button class="btn btn-success" ng-click="uploadForm()">Upload database</button>
+        <button class="btn btn-primary" ng-click="downloadCert()">Download DB4S certificate</button>
     </div>
 
     <div class="row">
@@ -123,6 +124,10 @@
 
         $scope.uploadForm = function(newtable) {
             window.location = '/upload/'
+        };
+
+        $scope.downloadCert = function() {
+            window.location = '/x/downloadcert'
         };
 
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {

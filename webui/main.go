@@ -147,7 +147,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	})
 	session.Add(sess, w)
 
-	// Login completed, so bounce to the user's profile page
+	// Login completed, so bounce to the users' profile page
 	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
 }
 
@@ -262,6 +262,49 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	// User creation completed, so bounce to the user's profile page
 	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
+}
+
+func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		// No logged in user, so error out
+		errorPage(w, r, http.StatusBadRequest, "Not logged in")
+		return
+	}
+
+	// Retrieve the client certificate from the PG database
+	cert, err := com.ClientCert(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf("Retrieving client cert from "+
+			"database failed for user: %v", loggedInUser))
+		return
+	}
+
+	// Send the client certificate to the user
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s",
+		loggedInUser+".cert.pem"))
+	// Note, don't use "application/x-x509-user-cert", otherwise the browser may try to install it!
+	// Useful reference info: https://pki-tutorial.readthedocs.io/en/latest/mime.html
+	w.Header().Set("Content-Type", "application/x-pem-file")
+	w.Write(cert)
+
+	// Bounce back to the users' profile page
+	http.Redirect(w, r, "/"+loggedInUser, http.StatusTemporaryRedirect)
+	return
 }
 
 func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
@@ -469,6 +512,7 @@ func main() {
 	http.HandleFunc("/vis/", logReq(visualisePage))
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
+	http.HandleFunc("/x/downloadcert", logReq(downloadCertHandler))
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))

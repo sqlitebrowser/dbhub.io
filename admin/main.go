@@ -27,7 +27,6 @@ func certDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the client certificate from the PG database
 	cert, err := com.ClientCert(userName)
 	if err != nil {
-		//log.Printf("%s: Retrieving client cert from database failed: %v\n", pageName, err)
 		http.Error(w, fmt.Sprintf("Retrieving client cert from database failed for user: %v", userName),
 			http.StatusInternalServerError)
 		return
