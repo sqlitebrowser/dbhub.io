@@ -41,7 +41,7 @@ func GenerateClientCert(userName string, daysValid int) (_ []byte, err error) {
 	}
 
 	// Load the certificate used for signing (the intermediate certificate)
-	certFile, err := ioutil.ReadFile(AdminServerIntCert())
+	certFile, err := ioutil.ReadFile(SigningCert())
 	if err != nil {
 		log.Printf("%s: Error opening intermediate certificate file: %v\n", pageName, err)
 		return
@@ -58,7 +58,7 @@ func GenerateClientCert(userName string, daysValid int) (_ []byte, err error) {
 	}
 
 	// Load the private key for the intermediate certificate
-	intKeyFile, err := ioutil.ReadFile(AdminServerIntCertKey())
+	intKeyFile, err := ioutil.ReadFile(SigningCertKey())
 	if err != nil {
 		log.Printf("%s: Error opening intermediate certificate key: %v\n", pageName, err)
 		return

@@ -29,17 +29,16 @@ type TomlConfig struct {
 	DB4S  DB4SInfo
 	Minio MinioInfo
 	Pg    PGInfo
+	Sign  SigningInfo
 	Web   WebInfo
 }
 
 // Config info for the admin server
 type AdminInfo struct {
-	Server           string
-	HTTPS            bool
-	Certificate      string
-	CertificateKey   string `toml:"certificate_key"`
-	IntermediateCert string `toml:"intermediate_cert"`
-	IntermediateKey  string `toml:"intermediate_key"`
+	Server         string
+	HTTPS          bool
+	Certificate    string
+	CertificateKey string `toml:"certificate_key"`
 }
 
 // Auth0 connection parameters
@@ -77,6 +76,12 @@ type PGInfo struct {
 	Username string
 	Password string
 	Database string
+}
+
+// Used for signing DB4S client certificates
+type SigningInfo struct {
+	IntermediateCert string `toml:"intermediate_cert"`
+	IntermediateKey  string `toml:"intermediate_key"`
 }
 
 type WebInfo struct {

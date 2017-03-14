@@ -34,16 +34,6 @@ func AdminServerHTTPS() bool {
 	return conf.Admin.HTTPS
 }
 
-// Return the admin server intermediate certificate path.
-func AdminServerIntCert() string {
-	return conf.Admin.IntermediateCert
-}
-
-// Return the admin server intermediate certificate keypath.
-func AdminServerIntCertKey() string {
-	return conf.Admin.IntermediateKey
-}
-
 // Return the admin server address:port.
 func AdminServerAddress() string {
 	return conf.Admin.Server
@@ -212,6 +202,16 @@ func MinioSecret() string {
 // Return the Minio server string.
 func MinioServer() string {
 	return conf.Minio.Server
+}
+
+// Return the path to the certificate used to sign DB4S client certs.
+func SigningCert() string {
+	return conf.Sign.IntermediateCert
+}
+
+// Return the path to the key for the certificate used to sign DB4S client certs.
+func SigningCertKey() string {
+	return conf.Sign.IntermediateKey
 }
 
 // Return the path to the Web server request log.
