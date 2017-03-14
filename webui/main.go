@@ -301,9 +301,6 @@ func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Useful reference info: https://pki-tutorial.readthedocs.io/en/latest/mime.html
 	w.Header().Set("Content-Type", "application/x-pem-file")
 	w.Write(cert)
-
-	// Bounce back to the users' profile page
-	http.Redirect(w, r, "/"+loggedInUser, http.StatusTemporaryRedirect)
 	return
 }
 
