@@ -668,8 +668,6 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate the user supplied user and database name
 	err := com.ValidateUserDB(userName, dbName)
 	if err != nil {
-		log.Printf("%s: Validation failed of user or database name. Username: '%v', Database: '%s', Error: %s",
-			pageName, userName, dbName, err)
 		errorPage(w, r, http.StatusBadRequest, "Invalid user or database name")
 		return
 	}
