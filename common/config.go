@@ -74,6 +74,11 @@ func DB4SServerCertKey() string {
 	return conf.DB4S.CertificateKey
 }
 
+// Return the port number for the DB4S Server.
+func DB4SServerPort() int {
+	return conf.DB4S.Port
+}
+
 // Return the Minio server access key.
 func MinioAccessKey() string {
 	return conf.Minio.AccessKey

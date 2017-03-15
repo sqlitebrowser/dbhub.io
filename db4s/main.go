@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/pkg/errors"
+	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
 // User details struct used by many functions
@@ -194,14 +194,15 @@ func main() {
 		RootCAs:                  ourCAPool,
 	}
 	newServer := &http.Server{
-		Addr:         com.DB4SServer(),
+		Addr:         com.DB4SServer() + ":" + fmt.Sprint(com.DB4SServerPort()),
 		Handler:      mux,
 		TLSConfig:    newTLSConfig,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 
 	// Start server
-	log.Printf("Starting DB4S end point on https://%s\n", com.DB4SServer())
+	log.Printf("Starting DB4S end point on https://%s\n",
+		com.DB4SServer()+":"+fmt.Sprint(com.DB4SServerPort()))
 	log.Fatal(newServer.ListenAndServeTLS(com.DB4SServerCert(), com.DB4SServerCertKey()))
 }
 

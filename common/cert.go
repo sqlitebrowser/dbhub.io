@@ -21,12 +21,12 @@ func GenerateClientCert(userName string, daysValid int) (_ []byte, err error) {
 	// Use a template approach, similar to:
 	//   https://github.com/driskell/log-courier/blob/master/lc-tlscert/lc-tlscert.go
 	nowTime := time.Now()
-	emailAddress := fmt.Sprintf("%s@db4s.dbhub.io", userName)
+	emailAddress := fmt.Sprintf("%s@%s", userName, DB4SServer())
 	oidEmailAddress := asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 	newCert := x509.Certificate{
 		Subject: pkix.Name{
 			Organization: []string{"DB Browser for SQLite"},
-			CommonName:   "db4s.dbhub.io",
+			CommonName:   DB4SServer(),
 			ExtraNames:   []pkix.AttributeTypeAndValue{{Type: oidEmailAddress, Value: emailAddress}},
 		},
 		BasicConstraintsValid: true,

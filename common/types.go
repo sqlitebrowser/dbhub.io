@@ -55,10 +55,11 @@ type CacheInfo struct {
 
 // Configuration info for the DB4S end point
 type DB4SInfo struct {
-	Server         string
+	CAChain        string `toml:"ca_chain"`
 	Certificate    string
 	CertificateKey string `toml:"certificate_key"`
-	CAChain        string `toml:"ca_chain"`
+	Port           int
+	Server         string
 }
 
 // Minio connection parameters
