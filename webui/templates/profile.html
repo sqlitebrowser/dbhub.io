@@ -15,9 +15,25 @@
         </div>
     </div>
 
-    <div class="row col-md-12" style="margin-bottom: 10px">
-        <button class="btn btn-success" ng-click="uploadForm()">Upload database</button>
-        <button class="btn btn-primary" ng-click="downloadCert()">Download DB4S certificate</button>
+    <div class="row" style="margin-bottom: 10px">
+        <div class="col-md-2">
+            <button class="btn btn-success" ng-click="uploadForm()">Upload database</button>
+        </div>
+        <div class="col-md-10">
+            <div class="dropdown">
+                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <button id="dlcert" type="button" class="btn btn-primary" ng-click="downloadCert()">Download DB4S certificate</button>
+
+                    <button type="button" uib-dropdown-toggle class="btn btn-primary">
+                        <span class="caret"></span>
+                    </button>
+                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                        <li role="menuitem" ng-click="downloadCert()"><a>Download DB4S certificate</a></li>
+                        <li role="menuitem" ng-click="genCert()"><a>Generate DB4S certificate</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row">
@@ -128,6 +144,10 @@
 
         $scope.downloadCert = function() {
             window.location = '/x/downloadcert'
+        };
+
+        $scope.genCert = function() {
+            window.location = '/x/gencert'
         };
 
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
