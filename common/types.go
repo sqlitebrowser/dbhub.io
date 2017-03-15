@@ -86,10 +86,11 @@ type SigningInfo struct {
 }
 
 type WebInfo struct {
-	Server         string
+	BindAddress    string `toml:"bind_address"`
 	Certificate    string
 	CertificateKey string `toml:"certificate_key"`
 	RequestLog     string `toml:"request_log"`
+	ServerName     string `toml:"server_name"`
 }
 
 // End of configuration file types

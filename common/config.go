@@ -219,6 +219,11 @@ func SigningCertKey() string {
 	return conf.Sign.IntermediateKey
 }
 
+// Return the address the server listens on.
+func WebBindAddress() string {
+	return conf.Web.BindAddress
+}
+
 // Return the path to the Web server request log.
 func WebRequestLog() string {
 	return conf.Web.RequestLog
@@ -226,7 +231,7 @@ func WebRequestLog() string {
 
 // Return the name of the Web server (from our configuration file).
 func WebServer() string {
-	return conf.Web.Server
+	return conf.Web.ServerName
 }
 
 // Return the path to the Web server certificate.

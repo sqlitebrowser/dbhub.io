@@ -587,7 +587,7 @@ func main() {
 
 	// Start server
 	log.Printf("DBHub server starting on https://%s\n", com.WebServer())
-	err = http.ListenAndServeTLS(com.WebServer(), com.WebServerCert(), com.WebServerCertKey(), nil)
+	err = http.ListenAndServeTLS(com.WebBindAddress(), com.WebServerCert(), com.WebServerCertKey(), nil)
 
 	// Shut down nicely
 	com.DisconnectPostgreSQL()
