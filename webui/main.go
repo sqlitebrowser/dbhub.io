@@ -81,7 +81,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the information we need
-	var auth0ID, email string
+	var auth0ID, email, nickName string
 	em := profile["email"]
 	if em != nil {
 		email = em.(string)
@@ -94,6 +94,10 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Auth0 callback error: Auth0 ID string was empty. Email: %s\n", email)
 		errorPage(w, r, http.StatusInternalServerError, "Error: Auth0 ID string was empty")
 		return
+	}
+	ni := profile["nickname"]
+	if ni != nil {
+		nickName = ni.(string)
 	}
 
 	// If the user has an unverified email address, tell them to verify it before proceeding
@@ -133,7 +137,8 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 			CAttrs: map[string]interface{}{
 				"registrationinprogress": true,
 				"auth0id":                auth0ID,
-				"email":                  email},
+				"email":                  email,
+				"nickname":               nickName},
 		})
 		session.Add(sess, w)
 
@@ -262,6 +267,42 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	// User creation completed, so bounce to the user's profile page
 	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
+}
+
+// This is called from the username selection page, to check if a name is available.
+func checkNameHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve the potential username from the URL
+	err := r.ParseForm()
+	userName := r.FormValue("name")
+
+	// Validate the user supplied username
+	err = com.ValidateUser(userName)
+	if err != nil {
+		fmt.Fprint(w, "n")
+		return
+	}
+
+	// Ensure the username isn't a reserved one
+	err = com.ReservedUsernamesCheck(userName)
+	if err != nil {
+		fmt.Fprint(w, "n")
+		return
+	}
+
+	// Check if the username is already in our system
+	exists, err := com.CheckUserExists(userName)
+	if err != nil {
+		fmt.Fprint(w, "n")
+		return
+	}
+	if exists {
+		fmt.Fprint(w, "n")
+		return
+	}
+
+	// The username is available
+	fmt.Fprint(w, "y")
+	return
 }
 
 func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
@@ -559,6 +600,7 @@ func main() {
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
 	http.HandleFunc("/vis/", logReq(visualisePage))
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
+	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
 	http.HandleFunc("/x/downloadcert", logReq(downloadCertHandler))
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))

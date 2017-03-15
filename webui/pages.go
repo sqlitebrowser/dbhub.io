@@ -419,11 +419,10 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 }
 
 func selectUsernamePage(w http.ResponseWriter, r *http.Request) {
-	// TODO: Add browser side checking of the username to make sure a decent user experience
-
 	var pageData struct {
 		Auth0 com.Auth0Set
 		Meta  com.MetaInfo
+		Nick  string
 	}
 	pageData.Meta.Title = "Select your username"
 
@@ -444,6 +443,12 @@ func selectUsernamePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
 	pageData.Auth0.ClientID = com.Auth0ClientID()
 	pageData.Auth0.Domain = com.Auth0Domain()
+
+	// If the Auth0 profile included a nickname, we use that to prefill the input field
+	ni := sess.CAttr("nickname")
+	if ni != nil {
+		pageData.Nick = ni.(string)
+	}
 
 	// Render the page
 	t := tmpl.Lookup("selectUsernamePage")

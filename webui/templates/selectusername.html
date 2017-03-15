@@ -1,6 +1,6 @@
 [[ define "selectUsernamePage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="registerView">
+<html ng-app="DBHub" ng-controller="selectusernameView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -12,15 +12,19 @@
         <div class="col-md-6">
             <h2 style="text-align: center;">Select your preferred username</h2>
             <form action="/register" method="post">
-                <table class="table table-bordered table-striped table-responsive">
+                <table class="table table-striped table-responsive">
                     <tr>
-                        <th>Username:</th>
-                        <td><input type="text" name="username"></td>
+                        <th width="25%">Username:</th>
+                        <td width="40%">
+                            <input type="text" value="[[ .Nick ]]" id="username" name="username"/>
+                        </td>
+                        <td width="35%"><span id="availtext" ng-bind-html="checkMsg"></span></td>
                     </tr>
                     <tr>
-                        <td colspan="2">
+                        <td colspan="3">
                             <div style="text-align: center;">
-                                <input type="submit">
+                                <button type="button" class="btn btn-primary" ng-click="checkName()">Check</button>
+                                <input type="submit" class="btn btn-success" value="Continue">
                             </div>
                         </td>
                     </tr>
@@ -35,13 +39,30 @@
 [[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('selectusernameView', function($scope) {
+    app.controller('selectusernameView', function($scope, $http) {
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
 
         $scope.showLock = function() {
             lock.show();
+        };
+
+        $scope.checkMsg = "";
+
+        $scope.checkName = function() {
+            tempName = document.getElementById('username').value;
+            $http.get("/x/checkname?name=" + tempName)
+                .then(function (response) {
+                    tempval = response.data;
+                    if (tempval != "y") {
+                        $scope.checkMsg = '✘ Name not available';
+                        document.getElementById('availtext').style.color = "#FF0000";
+                    } else {
+                        $scope.checkMsg = '✔ Name is available';
+                        document.getElementById('availtext').style.color = "#00B000";
+                    }
+                })
         };
     });
 </script>
