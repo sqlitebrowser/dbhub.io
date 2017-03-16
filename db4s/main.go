@@ -46,11 +46,14 @@ var (
 	// Our self signed Certificate Authority chain
 	ourCAPool *x509.CertPool
 
+	// Address of our server, formatted for display
+	server string
+
 	// The account name of the validated user
 	userAcc string
 )
 
-func generateDefaultList(pageName string, server string) (defaultList []byte, err error) {
+func generateDefaultList(pageName string) (defaultList []byte, err error) {
 	pageName += ":generateDefaultList()"
 
 	// TODO: Decide what a good default/initial list should really contain
@@ -104,7 +107,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		// Check if the request was for the root directory
 		if pathStrings[1] == "" {
 			// Yep, root directory request
-			defaultList, err := generateDefaultList(pageName, "https://"+com.DB4SServer())
+			defaultList, err := generateDefaultList(pageName)
 			if err != nil {
 				fmt.Fprint(w, err)
 				return
@@ -200,9 +203,15 @@ func main() {
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 
+	// Generate the formatted server string
+	if com.DB4SServerPort() == 443 {
+		server = fmt.Sprintf("https://%s", com.DB4SServer())
+	} else {
+		server = fmt.Sprintf("https://%s:%d", com.DB4SServer(), com.DB4SServerPort())
+	}
+
 	// Start server
-	log.Printf("Starting DB4S end point on https://%s\n",
-		com.DB4SServer()+":"+fmt.Sprint(com.DB4SServerPort()))
+	log.Printf("Starting DB4S end point on %s\n", server)
 	log.Fatal(newServer.ListenAndServeTLS(com.DB4SServerCert(), com.DB4SServerCertKey()))
 }
 
@@ -403,28 +412,39 @@ func userDatabaseList(pageName string, user string) (dbList []byte, err error) {
 		LastModified string `json:"last_modified"`
 	}
 
-	// Retrieve the list of public databases for the requested username
-	var rowList []linkRow
-	var rowCount int
-	pubDBs, err := com.UserDBs(user, true)
+	// Retrieve the list of databases for the requested username.  Only include those accessible to the logged
+	// in user (userAcc) though
+	var pubSetting com.ValType
+	if userAcc != user {
+		// The user is requesting someone else's list, so only return public databases
+		pubSetting = com.DB_PUBLIC
+	} else {
+		// The logged in user is requesting their own database list, so give them both public and private
+		pubSetting = com.DB_BOTH
+	}
+
+	// Retrieve the database list
+	pubDBs, err := com.UserDBs(user, pubSetting)
 	if err != nil {
-		//http.Error(w, err.Error(), http.StatusInternalServerError)
 		return nil, err
 	}
 
-	// Add the public databases to the row List
+	// Ready the results for JSON Marshalling
+	var rowList []linkRow
+	var rowCount int
 	var tempRow linkRow
 	for _, j := range pubDBs {
 		tempRow.DBName = j.Database
 		tempRow.Version = j.Version
 		if j.Folder == "/" {
 			tempRow.DBName = j.Database
-			tempRow.URL = "https://" + com.DB4SServer() + "/" + user + "/" + url.PathEscape(j.Database) +
-				"?version=" + fmt.Sprintf("%v", j.Version)
+			tempRow.URL = fmt.Sprintf("%s/%s/%s?version=%v", server, user,
+				url.PathEscape(j.Database), j.Version)
 		} else {
-			tempRow.DBName = strings.TrimPrefix(j.Folder, "/") + "/" + j.Database
-			tempRow.URL = "https://" + com.DB4SServer() + "/" + user + j.Folder + "/" +
-				url.PathEscape(j.Database) + "?version=" + fmt.Sprintf("%v", j.Version)
+			tempRow.DBName = fmt.Sprintf("%s/%s", strings.TrimPrefix(j.Folder, "/"),
+				j.Database)
+			tempRow.URL = fmt.Sprintf("%s/%s%s/%s?version=%v", server, user, j.Folder,
+				url.PathEscape(j.Database), j.Version)
 		}
 		tempRow.Size = j.Size
 		tempRow.LastModified = j.LastModified.Format(time.RFC822)
@@ -432,35 +452,7 @@ func userDatabaseList(pageName string, user string) (dbList []byte, err error) {
 		rowCount += 1
 	}
 
-	// If the user doing the connection is the same as the requested username, get their list of private databases too
-	if userAcc == user {
-		// Get the private databases for the user
-		privDBs, err := com.UserDBs(user, false)
-		if err != nil {
-			//http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, err
-		}
-
-		// Add the private databases to the row list
-		for _, j := range privDBs {
-			tempRow.Version = j.Version
-			if j.Folder == "/" {
-				tempRow.DBName = j.Database
-				tempRow.URL = "https://" + com.DB4SServer() + "/" + user + "/" +
-					url.PathEscape(j.Database) + "?version=" + fmt.Sprintf("%v", j.Version)
-			} else {
-				tempRow.DBName = strings.TrimPrefix(j.Folder, "/") + "/" + j.Database
-				tempRow.URL = "https://" + com.DB4SServer() + "/" + user + j.Folder + "/" +
-					url.PathEscape(j.Database) + "?version=" + fmt.Sprintf("%v", j.Version)
-			}
-			tempRow.Size = j.Size
-			tempRow.LastModified = j.LastModified.Format(time.RFC822)
-			rowList = append(rowList, tempRow)
-			rowCount += 1
-		}
-	}
-
-	// Ready the results for JSON Marshalling
+	// Convert the list to JSON, ready to send
 	if rowCount > 0 {
 		// Use json.MarshalIndent() for nicer looking output
 		dbList, err = json.MarshalIndent(rowList, "", "  ")
