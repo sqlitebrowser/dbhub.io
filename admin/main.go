@@ -246,14 +246,14 @@ func dbManageHandler(w http.ResponseWriter, r *http.Request) {
 	tempRows.Username = userName
 
 	// Gather list of public databases for the user
-	tempRows.PubDBs, err = com.UserDBs(userName, true)
+	tempRows.PubDBs, err = com.UserDBs(userName, com.DB_PUBLIC)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Gather list of private databases for the user
-	tempRows.PrivDBs, err = com.UserDBs(userName, false)
+	tempRows.PrivDBs, err = com.UserDBs(userName, com.DB_PRIVATE)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
