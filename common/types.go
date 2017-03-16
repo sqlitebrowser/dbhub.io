@@ -15,6 +15,12 @@ const (
 	Float
 )
 
+const (
+	DB_BOTH ValType = iota
+	DB_PRIVATE
+	DB_PUBLIC
+)
+
 // Stored cached data in memcache for 1/2 hour by default
 const CacheTime = 1800
 

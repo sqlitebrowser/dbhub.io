@@ -746,41 +746,35 @@ func User(userName string) (user UserDetails, err error) {
 }
 
 // Returns the list of databases for a user.
-func UserDBs(userName string, public bool) (list []DBInfo, err error) {
-	var dbQuery string
-	if public {
+func UserDBs(userName string, public ValType) (list []DBInfo, err error) {
+	// Construct SQL query for retrieving the requested database list
+	dbQuery := `
+	WITH dbs AS (
+		SELECT db.dbname, db.folder, db.date_created, db.last_modified, ver.size, ver.version, ver.public,
+			db.watchers, db.stars, db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+			db.releases, db.contributors, db.description
+		FROM sqlite_databases AS db, database_versions AS ver
+		WHERE db.idnum = ver.db
+			AND db.username = $1`
+	switch public {
+	case DB_PUBLIC:
 		// Only public databases
-		dbQuery = `
-		WITH public_dbs AS (
-			SELECT db.dbname, db.folder, db.date_created, db.last_modified, ver.size, ver.version,
-				db.watchers, db.stars, db.forks, db.discussions, db.pull_requests, db.updates,
-				db.branches, db.releases, db.contributors, db.description
-			FROM sqlite_databases AS db, database_versions AS ver
-			WHERE db.idnum = ver.db
-				AND db.username = $1
-				AND ver.public = true
-			ORDER BY dbname, version DESC
-		), unique_dbs AS (
-			SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
-		)
-		SELECT * FROM unique_dbs ORDER BY last_modified DESC`
-	} else {
+		dbQuery += ` AND ver.public = true`
+	case DB_PRIVATE:
 		// Only private databases
-		dbQuery = `
-		WITH public_dbs AS (
-			SELECT db.dbname, db.folder, db.date_created, db.last_modified, ver.size, ver.version,
-				db.watchers, db.stars, db.forks, db.discussions, db.pull_requests, db.updates,
-				db.branches, db.releases, db.contributors, db.description
-			FROM sqlite_databases AS db, database_versions AS ver
-			WHERE db.idnum = ver.db
-				AND db.username = $1
-				AND ver.public = false
-			ORDER BY dbname, version DESC
-		), unique_dbs AS (
-			SELECT DISTINCT ON (dbname) * FROM public_dbs ORDER BY dbname
-		)
-		SELECT * FROM unique_dbs ORDER BY last_modified DESC`
+		dbQuery += ` AND ver.public = false`
+	case DB_BOTH:
+		// Both public and private, so no need to add a query clause
+	default:
+		// This clause shouldn't ever be reached
+		return nil, fmt.Errorf("Incorrect 'public' value '%v' passed to UserDBs() function.", public)
 	}
+	dbQuery += `
+		ORDER BY dbname, version DESC
+	), unique_dbs AS (
+		SELECT DISTINCT ON (dbname) * FROM dbs ORDER BY dbname
+	)
+	SELECT * FROM unique_dbs ORDER BY last_modified DESC`
 	rows, err := pdb.Query(dbQuery, userName)
 	if err != nil {
 		log.Printf("Getting list of databases for user failed: %v\n", err)
@@ -791,7 +785,7 @@ func UserDBs(userName string, public bool) (list []DBInfo, err error) {
 		var desc pgx.NullString
 		var oneRow DBInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified,
-			&oneRow.Size, &oneRow.Version, &oneRow.Watchers, &oneRow.Stars, &oneRow.Forks,
+			&oneRow.Size, &oneRow.Version, &oneRow.Public, &oneRow.Watchers, &oneRow.Stars, &oneRow.Forks,
 			&oneRow.Discussions, &oneRow.MRs, &oneRow.Updates, &oneRow.Branches, &oneRow.Releases,
 			&oneRow.Contributors, &desc)
 		if err != nil {
