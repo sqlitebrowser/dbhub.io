@@ -68,13 +68,19 @@ func generateDefaultList(pageName string) (defaultList []byte, err error) {
 
 	// Ready the data for JSON Marshalling
 	type linkRow struct {
+		Type         string `json:"type"`
+		Name         string `json:"name"`
 		URL          string `json:"url"`
 		LastModified string `json:"last_modified"`
 	}
 	var linkRows []linkRow
 	var rowCount int
 	for _, j := range userList {
-		newLink := linkRow{URL: server + "/" + j.Username, LastModified: j.LastModified.Format(time.RFC822)}
+		newLink := linkRow{
+			Type: "folder",
+			Name: j.Username,
+			URL: server + "/" + j.Username,
+			LastModified: j.LastModified.Format(time.RFC822)}
 		linkRows = append(linkRows, newLink)
 		rowCount++
 	}
@@ -405,7 +411,8 @@ func userDatabaseList(pageName string, user string) (dbList []byte, err error) {
 
 	// Structure to hold the results, to apply JSON marshalling to
 	type linkRow struct {
-		DBName       string `json:"database_name"`
+		Type       string `json:"type"`
+		Name       string `json:"name"`
 		Version      int    `json:"version"`
 		URL          string `json:"url"`
 		Size         int    `json:"size"`
@@ -434,14 +441,14 @@ func userDatabaseList(pageName string, user string) (dbList []byte, err error) {
 	var rowCount int
 	var tempRow linkRow
 	for _, j := range pubDBs {
-		tempRow.DBName = j.Database
+		tempRow.Type = "database"
 		tempRow.Version = j.Version
 		if j.Folder == "/" {
-			tempRow.DBName = j.Database
+			tempRow.Name = j.Database
 			tempRow.URL = fmt.Sprintf("%s/%s/%s?version=%v", server, user,
 				url.PathEscape(j.Database), j.Version)
 		} else {
-			tempRow.DBName = fmt.Sprintf("%s/%s", strings.TrimPrefix(j.Folder, "/"),
+			tempRow.Name = fmt.Sprintf("%s/%s", strings.TrimPrefix(j.Folder, "/"),
 				j.Database)
 			tempRow.URL = fmt.Sprintf("%s/%s%s/%s?version=%v", server, user, j.Folder,
 				url.PathEscape(j.Database), j.Version)
