@@ -26,7 +26,7 @@ func GenerateClientCert(userName string, daysValid int) (_ []byte, err error) {
 	newCert := x509.Certificate{
 		Subject: pkix.Name{
 			Organization: []string{"DB Browser for SQLite"},
-			CommonName:   DB4SServer(),
+			CommonName:   emailAddress,
 			ExtraNames:   []pkix.AttributeTypeAndValue{{Type: oidEmailAddress, Value: emailAddress}},
 		},
 		BasicConstraintsValid: true,
