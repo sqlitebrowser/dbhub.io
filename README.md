@@ -10,7 +10,7 @@ or run it locally yourself for your own users.
 
 ### Requirements
 
-* [Golang](https://golang.org) - version 1.7 and above are known to work.
+* [Golang](https://golang.org) - version 1.8 and above are known to work.
 * [Memcached](https://memcached.org) - version 1.4.33 and above are known to work.
 * [Minio](https://minio.io) - release 2016-11-26T02:23:47Z and later are known to work.
 * [PostgreSQL](https://www.postgresql.org) - version 9.5 and above are known to work.
