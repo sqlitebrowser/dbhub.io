@@ -1084,7 +1084,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	shaSum := sha256.Sum256(tempBuf.Bytes())
 
 	// Determine the version number for this new database
-	highVer, err := com.HighestDBVersion(loggedInUser, dbName, "/")
+	highVer, err := com.HighestDBVersion(loggedInUser, dbName, "/", loggedInUser)
 	var newVer int
 	if highVer > 0 {
 		// The database already exists

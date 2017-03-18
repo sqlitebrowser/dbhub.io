@@ -351,7 +351,7 @@ func dbUploadHandler(w http.ResponseWriter, r *http.Request) {
 	shaSum := sha256.Sum256(tempBuf.Bytes())
 
 	// Check if the database already exists
-	ver, err := com.HighestDBVersion(userName, dbName, folder)
+	ver, err := com.HighestDBVersion(userName, dbName, folder, userName)
 	if err != nil {
 		// No database with that folder/name exists yet
 		http.Error(w, fmt.Sprintf("Database query failure: %v", err), http.StatusInternalServerError)

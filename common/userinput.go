@@ -255,7 +255,13 @@ func GetUPS(r *http.Request) (string, string, string, error) {
 
 // Return the requested database version number, from form data.
 func GetVersion(r *http.Request) (int, error) {
-	dbVersion, err := strconv.ParseInt(r.FormValue("version"), 10, 0) // This also validates the version input
+	// If no version number was given in the input, return 0
+	v := r.FormValue("version")
+	if v == "" {
+		return 0, nil
+	}
+
+	dbVersion, err := strconv.ParseInt(v, 10, 0) // This also validates the version input
 	if err != nil {
 		log.Printf("Invalid database version number: %v\n", err)
 		return 0, errors.New("Invalid database version number")

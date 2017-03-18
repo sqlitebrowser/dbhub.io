@@ -103,6 +103,8 @@ func generateDefaultList(pageName string) (defaultList []byte, err error) {
 func getHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "GET request handler"
 
+	// TODO: Update this function to handle folder names
+
 	// Split the request URL into path components
 	pathStrings := strings.Split(r.URL.Path, "/")
 
@@ -145,14 +147,28 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Figure out the database version being requested
+	// Use easily understandable variable names
+	dbOwner := pathStrings[1]
+	dbName := pathStrings[2]
+
+	// Extract the requested version number from the form data
 	dbVersion, err := com.GetVersion(r)
 	if err != nil {
-		dbVersion = 1
+		fmt.Fprint(w, err)
+		return
+	}
+
+	// If no version number was given, we need to determine the highest available to the requesting user
+	if dbVersion == 0 {
+		dbVersion, err = com.HighestDBVersion(dbOwner, dbName, "/", userAcc)
+		if err != nil {
+			fmt.Fprint(w, err)
+			return
+		}
 	}
 
 	// A specific database was requested, so send it to the user
-	err = retrieveDatabase(w, pageName, pathStrings[1], pathStrings[2], dbVersion)
+	err = retrieveDatabase(w, pageName, dbOwner, dbName, dbVersion)
 	if err != nil {
 		fmt.Fprintf(w, "%s", err)
 	}
@@ -282,7 +298,7 @@ func putHandler(w http.ResponseWriter, r *http.Request) {
 	shaSum := sha256.Sum256(tempBuf.Bytes())
 
 	// Check if the database already exists
-	ver, err := com.HighestDBVersion(userAcc, targetDB, "/")
+	ver, err := com.HighestDBVersion(userAcc, targetDB, "/", userAcc)
 	if err != nil {
 		// No database with that folder/name exists yet
 		http.Error(w, fmt.Sprintf("Database query failure: %v", err), http.StatusInternalServerError)
@@ -356,7 +372,7 @@ func retrieveDatabase(w http.ResponseWriter, pageName string, user string, datab
 	}()
 
 	// Send the database to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", database))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", url.QueryEscape(database)))
 	w.Header().Set("Content-Type", "application/x-sqlite3")
 	bytesWritten, err := io.Copy(w, userDB)
 	if err != nil {

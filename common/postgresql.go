@@ -381,8 +381,9 @@ func DisconnectPostgreSQL() {
 	pdb.Close()
 }
 
-// Retrieve the highest version number that exists for a database (if any).
-func HighestDBVersion(dbOwner string, dbName string, dbFolder string) (ver int, err error) {
+// Retrieve the highest version number of a database (if any), available to a given user.
+// Use the empty string "" to retrieve the highest available public version.
+func HighestDBVersion(dbOwner string, dbName string, dbFolder string, loggedInUser string) (ver int, err error) {
 	dbQuery := `
 		SELECT version
 		FROM database_versions
@@ -390,7 +391,11 @@ func HighestDBVersion(dbOwner string, dbName string, dbFolder string) (ver int, 
 			FROM sqlite_databases
 			WHERE username = $1
 				AND dbname = $2
-				AND folder = $3)
+				AND folder = $3)`
+	if dbOwner != loggedInUser {
+		dbQuery += ` AND public = true `
+	}
+	dbQuery += `
 		ORDER BY version DESC
 		LIMIT 1`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbName, dbFolder).Scan(&ver)
