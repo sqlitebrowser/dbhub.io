@@ -117,7 +117,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 			// Yep, root directory request
 			defaultList, err := generateDefaultList(pageName)
 			if err != nil {
-				fmt.Fprint(w, err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			fmt.Fprintf(w, "%s", defaultList)
@@ -127,7 +127,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		// The request was for a user directory, so return that list
 		dbList, err := userDatabaseList(pageName, pathStrings[1])
 		if err != nil {
-			fmt.Fprint(w, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		fmt.Fprintf(w, "%s", dbList)
@@ -140,7 +140,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		// The request was for a user directory, so return that list
 		dbList, err := userDatabaseList(pageName, pathStrings[1])
 		if err != nil {
-			fmt.Fprint(w, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		fmt.Fprintf(w, "%s", dbList)
@@ -154,7 +154,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the requested version number from the form data
 	dbVersion, err := com.GetVersion(r)
 	if err != nil {
-		fmt.Fprint(w, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -162,7 +162,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	if dbVersion == 0 {
 		dbVersion, err = com.HighestDBVersion(dbOwner, dbName, "/", userAcc)
 		if err != nil {
-			fmt.Fprint(w, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -170,7 +170,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	// A specific database was requested, so send it to the user
 	err = retrieveDatabase(w, pageName, dbOwner, dbName, dbVersion)
 	if err != nil {
-		fmt.Fprintf(w, "%s", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -256,6 +256,7 @@ func putHandler(w http.ResponseWriter, r *http.Request) {
 	// Get public/private setting for the database
 	public, err := strconv.ParseBool(r.Header.Get("public"))
 	if err != nil {
+		// Public/private value couldn't be parsed, so default to private
 		log.Printf("Error when converting public value to boolean: %v\n", err)
 		public = false
 	}
