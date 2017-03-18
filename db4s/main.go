@@ -391,20 +391,26 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Extract the account name and associated server from the validated client certificate
 	var certServer string
-	for _, a := range r.TLS.PeerCertificates[0].Subject.Names {
-		if a.Type.Equal([]int{1, 2, 840, 113549, 1, 9, 1}) { // Ugh, need to hard code the value like this
-			s := strings.Split(a.Value.(string), "@")
-			userAcc = s[0]
-			certServer = s[1]
-		}
+	cn := r.TLS.PeerCertificates[0].Subject.CommonName
+	if cn == "" {
+		// Common name is empty
+		http.Error(w, "Common name is blank in client certificate", http.StatusBadRequest)
+		return
+	}
+	s := strings.Split(cn, "@")
+	userAcc = s[0]
+	certServer = s[1]
+	if userAcc == "" || certServer == "" {
+		// Missing details in common name field
+		http.Error(w, "Missing information in client certificate", http.StatusBadRequest)
+		return
 	}
 
 	// Verify the running server matches the one in the certificate
-	s := strings.Split(com.DB4SServer(), ":")
-	thisServer := s[0]
-	if thisServer != certServer {
-		http.Error(w, fmt.Sprintf("Server name in certificate '%s' doesn't match server name '%s'\n",
-			certServer, thisServer), http.StatusBadRequest)
+	runningServer := com.DB4SServer()
+	if certServer != runningServer {
+		http.Error(w, fmt.Sprintf("Server name in certificate '%s' doesn't match running server '%s'\n",
+			certServer, runningServer), http.StatusBadRequest)
 		return
 	}
 

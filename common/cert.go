@@ -6,7 +6,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -22,12 +21,10 @@ func GenerateClientCert(userName string, daysValid int) (_ []byte, err error) {
 	//   https://github.com/driskell/log-courier/blob/master/lc-tlscert/lc-tlscert.go
 	nowTime := time.Now()
 	emailAddress := fmt.Sprintf("%s@%s", userName, DB4SServer())
-	oidEmailAddress := asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 	newCert := x509.Certificate{
 		Subject: pkix.Name{
 			Organization: []string{"DB Browser for SQLite"},
 			CommonName:   emailAddress,
-			ExtraNames:   []pkix.AttributeTypeAndValue{{Type: oidEmailAddress, Value: emailAddress}},
 		},
 		BasicConstraintsValid: true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
