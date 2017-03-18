@@ -77,9 +77,9 @@ func generateDefaultList(pageName string) (defaultList []byte, err error) {
 	var rowCount int
 	for _, j := range userList {
 		newLink := linkRow{
-			Type: "folder",
-			Name: j.Username,
-			URL: server + "/" + j.Username,
+			Type:         "folder",
+			Name:         j.Username,
+			URL:          server + "/" + j.Username,
 			LastModified: j.LastModified.Format(time.RFC822)}
 		linkRows = append(linkRows, newLink)
 		rowCount++
