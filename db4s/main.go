@@ -398,6 +398,10 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s := strings.Split(cn, "@")
+	if len(s) < 2 {
+		http.Error(w, "Missing information in client certificate", http.StatusBadRequest)
+		return
+	}
 	userAcc = s[0]
 	certServer = s[1]
 	if userAcc == "" || certServer == "" {
