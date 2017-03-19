@@ -1,0 +1,50 @@
+[[ define "forksPage" ]]
+<!doctype html>
+<html ng-app="DBHub" ng-controller="forksView">
+[[ template "head" . ]]
+<body>
+[[ template "header" . ]]
+<div class="container">
+    <div class="row">
+        <div class="col-md-2">
+            &nbsp;
+        </div>
+        <div class="col-md-8">
+            <h2 style="text-align: center;">
+                Forks of <a href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> / <a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+            </h2>
+            <center><h3>... still being developed ... :)</h3></center>
+            <!--
+            <table class="table table-bordered table-striped table-responsive">
+                <tr ng-repeat="row in forks.Forks">
+                    <td>
+                        <h4><a href="/{{ row.Owner }}">{{ row.Owner}}</a></h4>
+                        Forked on: {{ row.DateForked | date : 'd MMMM, y h:mm a' : 'UTC' }}
+                    </td>
+                </tr>
+            </table>
+            -->
+        </div>
+        <div class="col-md-2">
+            &nbsp;
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+        app.controller('forksView', function($scope) {
+            $scope.forks = { Forks: [[ .Forks ]] }
+
+            var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+                redirectUrl: "[[ .Auth0.CallbackURL]]"
+            }});
+
+            $scope.showLock = function() {
+                lock.show();
+            };
+        });
+</script>
+</body>
+</html>
+[[ end ]]

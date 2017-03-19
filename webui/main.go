@@ -456,7 +456,126 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s: '%s/%s' downloaded. %d bytes", pageName, dbOwner, dbName, bytesWritten)
 }
 
-// Generates a client certificate for the user and gives it to the browser
+// Forks a database for the logged in user.
+func forkDBHandler(w http.ResponseWriter, r *http.Request) {
+
+	// TODO: This function will need updating to support folders
+
+	// Retrieve user and database name
+	dbOwner, dbName, dbVer, err := com.GetODV(2, r) // 2 = Ignore "/x/forkdb/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Make sure a version number was given
+	if dbVer == 0 {
+		errorPage(w, r, http.StatusBadRequest, "No database version number given")
+		return
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		// No logged in username, so nothing to update
+		errorPage(w, r, http.StatusBadRequest, "To fork a database, you need to be logged in")
+		return
+	}
+
+	// Check the user has access to the specific version of the source database requested
+	allowed, err := com.CheckUserDBVAccess(dbOwner, "/", dbName, dbVer, loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		errorPage(w, r, http.StatusBadRequest, "You don't have access to the requested database version")
+		return
+	}
+
+	// Make sure the source and destination owners are different
+	if loggedInUser == dbOwner {
+		errorPage(w, r, http.StatusBadRequest, "Forking your own database in-place doesn't make sense")
+		return
+	}
+
+	// Make sure the user doesn't have a database of the same name already
+	v, err := com.HighestDBVersion(loggedInUser, dbName, "/", loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if v != 0 {
+		// Database of the same name already exists
+		errorPage(w, r, http.StatusBadRequest, "You already have a database of this name")
+		return
+	}
+
+	// Get the Minio bucket and id for the database being forked (the source)
+	sourceBucket, sourceID, err := com.MinioBucketID(dbOwner, dbName, dbVer, loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Get the Minio bucket for the logged in user (the destination)
+	destBucket, err := com.MinioUserBucket(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Copy the Minio object to the destination bucket
+	destMinioID, err := com.MinioObjCopy(sourceBucket, sourceID, destBucket)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Add the forked database info to PostgreSQL
+	newForks, err := com.ForkDatabase(dbOwner, "/", dbName, dbVer, loggedInUser, "/", destMinioID)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// TODO: Update cached watchers/stars/forks value for the page
+	log.Printf("Updated forks count: %d\n", newForks)
+
+	// Log the database fork
+	log.Printf("Database '%s/%s' forked to user '%s'\n", dbOwner, dbName, loggedInUser)
+
+	// Bounce to the page of the forked database
+	http.Redirect(w, r, "/"+loggedInUser+"/"+dbName, http.StatusTemporaryRedirect)
+}
+
+// Present the forks page to the user
+func forksHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve user and database name
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/forks/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Render the forks page
+	forksPage(w, r, dbOwner, "/", dbName)
+}
+
+// Generates a client certificate for the user and gives it to the browser.
 func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -507,6 +626,7 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// Removes the logged in users session information.
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Remove session info
 	sess := session.Get(r)
@@ -520,7 +640,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
-// Wrapper function to log incoming https requests
+// Wrapper function to log incoming https requests.
 func logReq(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Check if user is logged in
@@ -590,6 +710,7 @@ func main() {
 
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
+	http.HandleFunc("/forks/", logReq(forksHandler))
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))
 	http.HandleFunc("/register", logReq(createUserHandler))
@@ -602,6 +723,7 @@ func main() {
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
 	http.HandleFunc("/x/downloadcert", logReq(downloadCertHandler))
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
+	http.HandleFunc("/x/forkdb/", logReq(forkDBHandler))
 	http.HandleFunc("/x/gencert", logReq(generateCertHandler))
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))
@@ -700,7 +822,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	databasePage(w, r, userName, dbName, dbTable)
 }
 
-// This handles incoming requests for the preferences page by logged in users
+// This handles incoming requests for the preferences page by logged in users.
 func prefHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Preferences handler"
 
@@ -765,7 +887,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/"+loggedInUser, http.StatusTemporaryRedirect)
 }
 
-// Handles JSON requests from the front end to toggle a database's star
+// Handles JSON requests from the front end to toggle a database's star.
 func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the user and database name
 	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/star/" at the start of the URL
@@ -811,9 +933,10 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, newStarCount)
 }
 
+// Present the stars page to the user
 func starsHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve user and database name
-	dbOwner, dbName, err := com.GetOD(1, r) // 2 = Ignore "/stars/" at the start of the URL
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/stars/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -823,7 +946,7 @@ func starsHandler(w http.ResponseWriter, r *http.Request) {
 	starsPage(w, r, dbOwner, dbName)
 }
 
-// This passes table row data back to the main UI in JSON format
+// This passes table row data back to the main UI in JSON format.
 func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Table data handler"
 
@@ -938,7 +1061,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", jsonResponse)
 }
 
-// This function presents the database upload form to logged in users
+// This function presents the database upload form to logged in users.
 func uploadFormHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -964,7 +1087,7 @@ func uploadFormHandler(w http.ResponseWriter, r *http.Request) {
 	uploadPage(w, r, fmt.Sprintf("%s", loggedInUser))
 }
 
-// This function processes new database data submitted through the upload form
+// This function processes new database data submitted through the upload form.
 func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Upload DB handler"
 

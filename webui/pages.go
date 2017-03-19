@@ -13,7 +13,7 @@ import (
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
-func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbName string, dbTable string) {
+func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string, dbTable string) {
 	pageName := "Render database page"
 
 	var pageData struct {
@@ -37,7 +37,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbNam
 	}
 
 	// Check if the user has access to the requested database
-	err := com.CheckUserDBAccess(&pageData.DB, loggedInUser, userName, dbName)
+	err := com.CheckUserDBAccess(&pageData.DB, loggedInUser, dbOwner, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -47,11 +47,11 @@ func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbNam
 
 	// Generate a predictable cache key for the whole page data
 	var pageCacheKey string
-	if loggedInUser != userName {
-		tempArr := md5.Sum([]byte(userName + "/" + dbName + "/" + dbTable))
+	if loggedInUser != dbOwner {
+		tempArr := md5.Sum([]byte(dbOwner + "/" + dbName + "/" + dbTable))
 		pageCacheKey = "dwndb-pub-" + hex.EncodeToString(tempArr[:])
 	} else {
-		tempArr := md5.Sum([]byte(loggedInUser + "-" + userName + "/" + dbName + "/" + dbTable))
+		tempArr := md5.Sum([]byte(loggedInUser + "-" + dbOwner + "/" + dbName + "/" + dbTable))
 		pageCacheKey = "dwndb-" + hex.EncodeToString(tempArr[:])
 	}
 
@@ -116,8 +116,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbNam
 		}
 		if tablePresent == false {
 			// The requested table doesn't exist in the database
-			log.Printf("%s: Requested table not present in database. DB: '%s/%s', Table: '%s'\n", pageName,
-				userName, dbName, dbTable)
+			log.Printf("%s: Requested table not present in database. DB: '%s/%s', Table: '%s'\n",
+				pageName, dbOwner, dbName, dbTable)
 			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
 			return
 		}
@@ -226,10 +226,20 @@ func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbNam
 	}
 
 	pageData.Data.Tablename = dbTable
-	pageData.Meta.Owner = userName
+	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = com.WebServer()
-	pageData.Meta.Title = fmt.Sprintf("%s / %s", userName, dbName)
+	pageData.Meta.Title = fmt.Sprintf("%s / %s", dbOwner, dbName)
+
+	// Retrieve the "forked from" information
+	frkOwn, frkFol, frkDB, err := com.ForkedFrom(dbOwner, "/", dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+		return
+	}
+	pageData.Meta.ForkOwner = frkOwn
+	pageData.Meta.ForkFolder = frkFol
+	pageData.Meta.ForkDatabase = frkDB
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
@@ -252,7 +262,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, userName string, dbNam
 	}
 }
 
-// General error display page
+// General error display page.
 func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string) {
 	var pageData struct {
 		Auth0   com.Auth0Set
@@ -288,7 +298,40 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string)
 	}
 }
 
-// Renders the front page of the website
+// Render the page showing forks of the given database
+func forksPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder string, dbName string) {
+	var pageData struct {
+		Auth0 com.Auth0Set
+		Meta  com.MetaInfo
+		Forks []com.DBStarEntry // TODO: Maybe rename DBStarEntry to something a bit more generic, as it's useful for forks too
+	}
+	pageData.Meta.Title = "Forks"
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Render the page
+	t := tmpl.Lookup("forksPage")
+	err := t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+
+}
+
+// Renders the front page of the website.
 func frontPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	var pageData struct {
@@ -332,7 +375,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Renders the user Preferences page
+// Renders the user Preferences page.
 func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	var pageData struct {
 		Auth0   com.Auth0Set
@@ -458,6 +501,7 @@ func selectUsernamePage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Render the stars page.
 func starsPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string) {
 	var pageData struct {
 		Auth0 com.Auth0Set

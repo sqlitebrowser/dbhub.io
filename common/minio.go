@@ -17,6 +17,8 @@ var (
 	minioClient *minio.Client
 )
 
+// Parse the Minio configuration, to ensure it seems workable.
+// Note - this doesn't actually open a connection to the Minio server.
 func ConnectMinio() (err error) {
 	// Connect to the Minio server
 	minioClient, err = minio.New(MinioServer(), MinioAccessKey(), MinioSecret(), MinioHTTPS())
@@ -30,7 +32,7 @@ func ConnectMinio() (err error) {
 	return nil
 }
 
-// Create a bucket in Minio
+// Create a bucket in Minio.
 func CreateMinioBucket(bucket string) error {
 	err := minioClient.MakeBucket(bucket, "us-east-1")
 	if err != nil {
@@ -41,7 +43,7 @@ func CreateMinioBucket(bucket string) error {
 	return nil
 }
 
-// Check if a given Minio bucket exists
+// Check if a given Minio bucket exists.
 func MinioBucketExists(bucket string) (bool, error) {
 	found, err := minioClient.BucketExists(bucket)
 	if err != nil {
@@ -71,7 +73,21 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 	return
 }
 
-// Retrieves a SQLite database from Minio, opens it, returns the connection handle
+func MinioObjCopy(sourceBucket string, sourceID string, destBucket string) (string, error) {
+	// Generate a new name for the destination object
+	destID := RandomString(8) + ".db"
+
+	// Copy the SQLite database to the destination bucket
+	cpCond := minio.CopyConditions{}
+	err := minioClient.CopyObject(destBucket, destID, sourceBucket+"/"+sourceID, cpCond)
+	if err != nil {
+		return "", err
+	}
+
+	return destID, nil
+}
+
+// Retrieves a SQLite database from Minio, opens it, returns the connection handle.
 func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 	// Get a handle from Minio for the database object
 	userDB, err := MinioHandle(bucket, id)
@@ -113,7 +129,7 @@ func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 	return sdb, nil
 }
 
-// Removes a Minio bucket, and all files inside it
+// Removes a Minio bucket, and all files inside it.
 func RemoveMinioBucket(bucket string) error {
 	// Remove the users files
 	doneCh := make(chan struct{})
@@ -153,7 +169,7 @@ func RemoveMinioFile(bucket string, id string) error {
 	return nil
 }
 
-// Store a file in Minio
+// Store a file in Minio.
 func StoreMinioObject(bucket string, id string, reader io.Reader, contentType string) (int, error) {
 	dbSize, err := minioClient.PutObject(bucket, id, reader, contentType)
 	if err != nil {

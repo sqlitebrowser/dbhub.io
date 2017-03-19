@@ -141,7 +141,9 @@ CREATE TABLE sqlite_databases (
     description text,
     readme text,
     idnum integer NOT NULL,
-    minio_bucket text NOT NULL
+    minio_bucket text NOT NULL,
+    root_database integer,
+    forked_from integer
 );
 
 
@@ -215,6 +217,22 @@ ALTER TABLE ONLY database_versions
 
 ALTER TABLE ONLY sqlite_databases
     ADD CONSTRAINT sqlite_databases_idnum_key PRIMARY KEY (idnum);
+
+
+--
+-- Name: sqlite_databases sqlite_databases_root_database_fkey; Type: CONSTRAINT; Schema: public; Owner: dbhub
+--
+
+ALTER TABLE sqlite_databases
+  ADD CONSTRAINT sqlite_databases_root_database_fkey FOREIGN KEY (root_database) REFERENCES sqlite_databases (idnum) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: sqlite_databases sqlite_databases_forked_from_fkey; Type: CONSTRAINT; Schema: public; Owner: dbhub
+--
+
+ALTER TABLE sqlite_databases
+  ADD CONSTRAINT sqlite_databases_forked_from_fkey FOREIGN KEY (forked_from) REFERENCES sqlite_databases (idnum) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

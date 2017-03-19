@@ -78,16 +78,19 @@ func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaS
 	var dbQuery string
 	if dbVer == 1 {
 		dbQuery = `
-			INSERT INTO sqlite_databases (username, folder, dbname, minio_bucket)
-			VALUES ($1, $2, $3, $4)`
+			WITH root_db_value AS (
+				SELECT nextval('sqlite_databases_idnum_seq')
+			)
+			INSERT INTO sqlite_databases (username, folder, dbname, idnum, minio_bucket, root_database)
+			VALUES ($1, $2, $3, (SELECT nextval FROM root_db_value), $4, (SELECT nextval FROM root_db_value))`
 		commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, bucket)
 		if err != nil {
 			log.Printf("Adding database to PostgreSQL failed: %v\n", err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
-			log.Printf("Wrong number of rows affected: %v, user: %s, database: %v\n", numRows, dbOwner,
-				dbName)
+			log.Printf("Wrong number of rows (%v) affected when creating initial sqlite_databases "+
+				"entry for '%s%s/%s'\n", numRows, dbOwner, dbFolder, dbName)
 		}
 	}
 
@@ -221,6 +224,8 @@ func CheckMinioIDAvail(userName string, id string) (bool, error) {
 
 // Check if the user has access to the requested database.
 func CheckUserDBAccess(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbName string) error {
+	// TODO: It would probably be a good idea to add version support to this, for checking access to a specific
+	// TODO  version.
 	var queryCacheKey, dbQuery string
 	if loggedInUser != dbOwner {
 		// * The request is for another users database, so it needs to be a public one *
@@ -288,6 +293,38 @@ func CheckUserDBAccess(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, db
 	}
 
 	return nil
+}
+
+// Check if a user has access to a specific version of a database.
+func CheckUserDBVAccess(dbOwner string, dbFolder string, dbName string, dbVer int, loggedInUser string) (bool, error) {
+	dbQuery := `
+		SELECT version
+		FROM database_versions
+		WHERE db = (
+			SELECT idnum
+			FROM sqlite_databases
+			WHERE username = $1
+				AND folder = $2
+				AND dbname = $3
+			)
+			AND version = $4`
+	if dbOwner != loggedInUser {
+		dbQuery += ` AND public = true `
+	}
+	var numRows int
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, dbVer).Scan(&numRows)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			// The requested database version isn't available to the given user
+			return false, nil
+		}
+		log.Printf("Error when checking user's access to database '%s%s%s'. User: '%s' Error: %v\n",
+			dbOwner, dbFolder, dbName, loggedInUser, err.Error())
+		return false, err
+	}
+
+	// A row was returned, so the requested database IS available to the given user
+	return true, nil
 }
 
 // Check if a username already exists in our system.  Returns true if the username is already taken, false if not.
@@ -379,6 +416,126 @@ func DBStars(dbOwner string, dbName string) (starCount int, err error) {
 // Disconnects the PostgreSQL database connection.
 func DisconnectPostgreSQL() {
 	pdb.Close()
+}
+
+// Fork the PostgreSQL entry for a SQLite database from one user to another
+func ForkDatabase(srcOwner string, srcFolder string, dbName string, srcVer int, dstOwner string,
+	dstFolder string, dstMinioID string) (int, error) {
+
+	// Retrieve the Minio bucket for the owner
+	dstBucket, err := MinioUserBucket(dstOwner)
+	if err != nil {
+		log.Printf("Error looking up Minio bucket for user '%s': %v\n", dstOwner, err.Error())
+		return 0, err
+	}
+
+	// Copy the main database entry
+	dbQuery := `
+		INSERT INTO sqlite_databases (username, folder, dbname, forks, description, readme, minio_bucket, root_database, forked_from)
+		SELECT $1, $2, dbname, forks, description, readme, $3, root_database, idnum
+		FROM sqlite_databases
+		WHERE username = $4
+			AND folder = $5
+			AND dbname = $6`
+	commandTag, err := pdb.Exec(dbQuery, dstOwner, dstFolder, dstBucket, srcOwner, srcFolder, dbName)
+	if err != nil {
+		log.Printf("Forking database '%s%s/%s' version %d entry in PostgreSQL failed: %v\n",
+			srcOwner, srcFolder, dbName, srcVer, err)
+		return 0, err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows affected (%d) when forking main database entry: "+
+			"'%s%s%s' version %d to '%s%s%s'\n", numRows, srcOwner, srcFolder, dbName, srcVer, dstOwner,
+			dstFolder, dbName)
+	}
+
+	// Add a new database version entry
+	dbQuery = `
+		WITH new_db AS (
+			SELECT idnum
+			FROM sqlite_databases
+			WHERE username = $1
+				AND folder = $2
+				AND dbname = $3
+		)
+		INSERT INTO database_versions (db, size, version, sha256, public, minioid)
+		SELECT new_db.idnum, ver.size, 1, ver.sha256, ver.public, $4
+		FROM new_db, database_versions AS ver
+		WHERE db = (
+			SELECT idnum
+			FROM sqlite_databases
+			WHERE username = $5
+				AND folder = $6
+				AND dbname = $3
+			)
+			AND version = $7`
+	commandTag, err = pdb.Exec(dbQuery, dstOwner, dstFolder, dbName, dstMinioID, srcOwner, srcFolder, srcVer)
+	if err != nil {
+		log.Printf("Forking database entry in PostgreSQL failed: %v\n", err)
+		return 0, err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows affected (%d) when forking database version entry: "+
+			"'%s%s%s' version %d to '%s%s%s'\n", numRows, srcOwner, srcFolder, dbName, srcVer, dstOwner,
+			dstFolder, dbName)
+	}
+
+	// Increment the forks count for the root database
+	dbQuery = `
+		UPDATE sqlite_databases
+		SET forks = forks + 1
+		WHERE idnum = (
+			SELECT root_database
+			FROM sqlite_databases
+			WHERE username = $1
+				AND folder = $2
+				AND dbname = $3
+			)
+		RETURNING forks`
+	var newForks int
+	err = pdb.QueryRow(dbQuery, dstOwner, dstFolder, dbName).Scan(&newForks)
+	if err != nil {
+		log.Printf("Updating fork count in PostgreSQL failed: %v\n", err)
+		return 0, err
+	}
+
+	return newForks, nil
+}
+
+// Checks if the given database was forked from another, and if so returns that one's owner, folder and database name
+func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string, forkFol string, forkDB string,
+	err error) {
+	// Check if the database was forked from another
+	var idnum, forkedFrom pgx.NullInt32
+	dbQuery := `
+		SELECT idnum, forked_from
+		FROM sqlite_databases
+		WHERE username = $1
+			AND folder = $2
+			AND dbname = $3`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&idnum, &forkedFrom)
+	if err != nil {
+		log.Printf("Error checking if database was forked from another '%s%s%s'. Error: %v\n", dbOwner,
+			dbFolder, dbName, err)
+		return "", "", "", err
+	}
+	if !forkedFrom.Valid {
+		// The database wasn't forked, so return empty strings
+		return "", "", "", nil
+	}
+
+	// Return the details of the database this one was forked from
+	dbQuery = `
+		SELECT username, folder, dbname
+		FROM sqlite_databases
+		WHERE idnum = $1`
+	err = pdb.QueryRow(dbQuery, forkedFrom).Scan(&forkOwn, &forkFol, &forkDB)
+	if err != nil {
+		log.Printf("Error retrieving forked database information for '%s%s%s'. Error: %v\n", dbOwner,
+			dbFolder, dbName, err)
+		return "", "", "", err
+	}
+	return forkOwn, forkFol, forkDB, nil
 }
 
 // Retrieve the highest version number of a database (if any), available to a given user.

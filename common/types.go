@@ -143,6 +143,9 @@ type MetaInfo struct {
 	Owner        string
 	Database     string
 	LoggedInUser string
+	ForkOwner    string
+	ForkFolder   string
+	ForkDatabase string
 }
 
 type SQLiteDBinfo struct {
