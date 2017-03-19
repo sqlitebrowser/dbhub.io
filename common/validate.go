@@ -8,9 +8,10 @@ import (
 )
 
 var (
-	regexDBName  = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
-	regexFolder  = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,//]+$`)
-	regexPGTable = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+	regexDBName   = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
+	regexFolder   = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,//]+$`)
+	regexPGTable  = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+	regexUsername = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
 	// For input validation
 	Validate *valid.Validate
@@ -22,6 +23,7 @@ func init() {
 	Validate.RegisterValidation("dbname", checkDBName)
 	Validate.RegisterValidation("folder", checkFolder)
 	Validate.RegisterValidation("pgtable", checkPGTableName)
+	Validate.RegisterValidation("username", checkUsername)
 }
 
 // Custom validation function for SQLite database names.
@@ -41,6 +43,12 @@ func checkFolder(fl valid.FieldLevel) bool {
 // At the moment it just allows alphanumeric and ".-_" chars (may need to be expanded out at some point).
 func checkPGTableName(fl valid.FieldLevel) bool {
 	return regexPGTable.MatchString(fl.Field().String())
+}
+
+// Custom validation function for Usernames.
+// At the moment it just allows alphanumeric and ".-_" chars (may need to be expanded out at some point).
+func checkUsername(fl valid.FieldLevel) bool {
+	return regexUsername.MatchString(fl.Field().String())
 }
 
 // Checks a username against the list of reserved ones.
@@ -104,7 +112,7 @@ func ValidatePGTable(table string) error {
 
 // Validate the provided username.
 func ValidateUser(user string) error {
-	err := Validate.Var(user, "required,alphanum,min=3,max=63")
+	err := Validate.Var(user, "required,username,min=2,max=63")
 	if err != nil {
 		return err
 	}
