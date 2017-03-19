@@ -48,9 +48,6 @@ var (
 
 	// Address of our server, formatted for display
 	server string
-
-	// The account name of the validated user
-	userAcc string
 )
 
 func generateDefaultList(pageName string) (defaultList []byte, err error) {
@@ -100,7 +97,7 @@ func generateDefaultList(pageName string) (defaultList []byte, err error) {
 	return defaultList, nil
 }
 
-func getHandler(w http.ResponseWriter, r *http.Request) {
+func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	pageName := "GET request handler"
 
 	// TODO: Update this function to handle folder names
@@ -125,7 +122,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// The request was for a user directory, so return that list
-		dbList, err := userDatabaseList(pageName, pathStrings[1])
+		dbList, err := userDatabaseList(pageName, userAcc, pathStrings[1])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -138,7 +135,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Refactor this and the above identical code.  Doing it this way is non-optimal
 	if pathStrings[2] == "" {
 		// The request was for a user directory, so return that list
-		dbList, err := userDatabaseList(pageName, pathStrings[1])
+		dbList, err := userDatabaseList(pageName, userAcc, pathStrings[1])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -168,7 +165,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// A specific database was requested, so send it to the user
-	err = retrieveDatabase(w, pageName, dbOwner, dbName, dbVersion)
+	err = retrieveDatabase(w, pageName, userAcc, dbOwner, dbName, dbVersion)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -237,7 +234,7 @@ func main() {
 	log.Fatal(newServer.ListenAndServeTLS(com.DB4SServerCert(), com.DB4SServerCertKey()))
 }
 
-func putHandler(w http.ResponseWriter, r *http.Request) {
+func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	pageName := "PUT request handler"
 
 	// Split the request URL into path components
@@ -346,7 +343,7 @@ func putHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, fmt.Sprintf("Database created: %s", r.URL.Path), http.StatusCreated)
 }
 
-func retrieveDatabase(w http.ResponseWriter, pageName string, user string, database string,
+func retrieveDatabase(w http.ResponseWriter, pageName string, userAcc string, user string, database string,
 	version int) (err error) {
 	pageName += ":retrieveDatabase()"
 
@@ -403,7 +400,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing information in client certificate", http.StatusBadRequest)
 		return
 	}
-	userAcc = s[0]
+	userAcc := s[0]
 	certServer = s[1]
 	if userAcc == "" || certServer == "" {
 		// Missing details in common name field
@@ -423,9 +420,9 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	reqType := r.Method
 	switch reqType {
 	case "GET":
-		getHandler(w, r)
+		getHandler(w, r, userAcc)
 	case "PUT":
-		putHandler(w, r)
+		putHandler(w, r, userAcc)
 	default:
 		log.Printf("%s: Unknown request method received from '%v\n", pageName, userAcc)
 		http.Error(w, fmt.Sprintf("Unknown request type: %v\n", reqType), http.StatusBadRequest)
@@ -433,7 +430,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func userDatabaseList(pageName string, user string) (dbList []byte, err error) {
+func userDatabaseList(pageName string, userAcc string, user string) (dbList []byte, err error) {
 	pageName += ":userDatabaseList()"
 
 	// Structure to hold the results, to apply JSON marshalling to
