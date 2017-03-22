@@ -70,6 +70,22 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
 	}
 	if ok {
+		// Retrieve up to date counts of watchers, stars, and forks stats
+		wa, st, fo, err := com.SocialStats(dbOwner, "/", dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+			return
+		}
+		if wa != -1 {
+			pageData.DB.Info.Watchers = wa
+		}
+		if st != -1 {
+			pageData.DB.Info.Stars = st
+		}
+		if fo != -1 {
+			pageData.DB.Info.Forks = fo
+		}
+
 		// Render the page from cache
 		t := tmpl.Lookup("databasePage")
 		err = t.Execute(w, pageData)
@@ -251,8 +267,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	if err != nil {
 		log.Printf("%s: Error when caching page data: %v\n", pageName, err)
 	}
-
-	// TODO: Should we cache the rendered page too?
 
 	// Render the page
 	t := tmpl.Lookup("databasePage")

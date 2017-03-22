@@ -864,6 +864,29 @@ func SetUserEmailPHash(userName string, email string, pHash []byte) error {
 	return nil
 }
 
+// Retrieve the latest social stats for a given database.
+func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int, fo int, err error) {
+
+	// TODO: Implement caching of these stats
+
+	// Retrieve latest star and fork count
+	dbQuery := `
+		SELECT stars, forks
+		FROM sqlite_databases
+		WHERE username = $1
+			AND folder = $2
+			AND dbname = $3`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&st, &fo)
+	if err != nil {
+		log.Printf("Error retrieving star and fork count for '%s%s%s': %v\n", dbOwner, dbFolder,
+			dbName, err)
+		return -1, -1, -1, err
+	}
+
+	// TODO: Implement watchers
+	return 0, st, fo, nil
+}
+
 // Toggle on or off the starring of a database by a user.
 func ToggleDBStar(loggedInUser string, dbOwner string, dbName string) error {
 	// Check if the database is already starred
