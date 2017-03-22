@@ -50,14 +50,12 @@ var (
 	server string
 )
 
-func generateDefaultList(pageName string) (defaultList []byte, err error) {
+func generateDefaultList(pageName string, userAcc string) (defaultList []byte, err error) {
 	pageName += ":generateDefaultList()"
 
-	// TODO: Decide what a good default/initial list should really contain
-
-	// Gather list of DBHub.io users
+	// Generate list of most recently modified (available) databases
 	var userList []com.UserInfo
-	userList, err = com.PublicUserDBs()
+	userList, err = com.DB4SDefaultList(userAcc)
 	if err != nil {
 		// Return an empty set
 		return []byte{'{', '}'}, err
@@ -112,7 +110,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		// Check if the request was for the root directory
 		if pathStrings[1] == "" {
 			// Yep, root directory request
-			defaultList, err := generateDefaultList(pageName)
+			defaultList, err := generateDefaultList(pageName, userAcc)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

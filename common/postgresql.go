@@ -392,6 +392,52 @@ func databaseID(dbOwner string, dbName string) (dbID int, err error) {
 	return
 }
 
+// Return a list of 1) users with public databases, 2) along with the logged in user's most recently modified database,
+// including their private one(s).
+func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
+	dbQuery := `
+		WITH user_db_list AS (
+			SELECT DISTINCT ON (idnum) idnum, last_modified
+			FROM sqlite_databases
+			WHERE username = $1
+		), most_recent_user_db AS (
+			SELECT idnum, last_modified
+			FROM user_db_list
+			ORDER BY last_modified DESC
+			LIMIT 1
+		), public_dbs AS (
+			SELECT DISTINCT ON (ver.db) ver.db, ver.version, ver.last_modified
+			FROM database_versions AS ver
+			WHERE ver.public = true
+			ORDER BY ver.db DESC, ver.version DESC
+		), public_users AS (
+			SELECT DISTINCT ON (db.username) db.username, db.last_modified
+			FROM public_dbs as pub, sqlite_databases AS db, most_recent_user_db AS usr
+			WHERE db.idnum = pub.db OR db.idnum = usr.idnum
+			ORDER BY db.username, db.last_modified DESC
+		)
+		SELECT username, last_modified FROM public_users
+		ORDER BY last_modified DESC`
+	rows, err := pdb.Query(dbQuery, loggedInUser)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return nil, err
+	}
+	defer rows.Close()
+	var list []UserInfo
+	for rows.Next() {
+		var oneRow UserInfo
+		err = rows.Scan(&oneRow.Username, &oneRow.LastModified)
+		if err != nil {
+			log.Printf("Error retrieving database list for user: %v\n", err)
+			return nil, err
+		}
+		list = append(list, oneRow)
+	}
+
+	return list, nil
+}
+
 // Returns the star count for a given database.
 func DBStars(dbOwner string, dbName string) (starCount int, err error) {
 	// Get the ID number of the database
