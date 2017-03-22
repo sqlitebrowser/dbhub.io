@@ -225,14 +225,12 @@ func CheckMinioIDAvail(userName string, id string) (bool, error) {
 
 // Check if the user has access to the requested database.
 func CheckUserDBAccess(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbName string) error {
-	// TODO: It would probably be a good idea to add version support to this, for checking access to a specific
-	// TODO  version.
 	var queryCacheKey, dbQuery string
 	if loggedInUser != dbOwner {
 		// * The request is for another users database, so it needs to be a public one *
 		dbQuery = `
 			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
-				db.stars, db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+				db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
 				db.releases, db.contributors, db.description, db.readme, db.minio_bucket
 			FROM sqlite_databases AS db, database_versions AS ver
 			WHERE db.username = $1
@@ -246,7 +244,7 @@ func CheckUserDBAccess(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, db
 	} else {
 		dbQuery = `
 			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
-				db.stars, db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+				db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
 				db.releases, db.contributors, db.description, db.readme, db.minio_bucket
 			FROM sqlite_databases AS db, database_versions AS ver
 			WHERE db.username = $1
@@ -268,7 +266,7 @@ func CheckUserDBAccess(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, db
 		var Desc, Readme pgx.NullString
 		err := pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&DB.MinioId, &DB.Info.DateCreated,
 			&DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version, &DB.Info.Watchers,
-			&DB.Info.Stars, &DB.Info.Forks, &DB.Info.Discussions, &DB.Info.MRs,
+			&DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
 			&DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors,
 			&Desc, &Readme, &DB.MinioBkt)
 		if err != nil {
@@ -284,6 +282,22 @@ func CheckUserDBAccess(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, db
 			DB.Info.Readme = "No readme"
 		} else {
 			DB.Info.Readme = Readme.String
+		}
+
+		// Retrieve latest fork count
+		dbQuery = `
+			SELECT forks
+			FROM sqlite_databases
+			WHERE idnum = (
+				SELECT root_database
+				FROM sqlite_databases
+				WHERE username = $1
+				AND folder = '/'
+				AND dbname = $2)`
+		err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&DB.Info.Forks)
+		if err != nil {
+			log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbName, err)
+			return err
 		}
 
 		// Cache the database details
@@ -870,16 +884,33 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 
 	// TODO: Implement caching of these stats
 
-	// Retrieve latest star and fork count
+	// Retrieve latest star count
 	dbQuery := `
-		SELECT stars, forks
+		SELECT stars
 		FROM sqlite_databases
 		WHERE username = $1
 			AND folder = $2
 			AND dbname = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&st, &fo)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&st)
 	if err != nil {
-		log.Printf("Error retrieving star and fork count for '%s%s%s': %v\n", dbOwner, dbFolder,
+		log.Printf("Error retrieving star count for '%s%s%s': %v\n", dbOwner, dbFolder,
+			dbName, err)
+		return -1, -1, -1, err
+	}
+
+	// Retrieve latest fork count
+	dbQuery = `
+		SELECT forks
+		FROM sqlite_databases
+		WHERE idnum = (
+			SELECT root_database
+			FROM sqlite_databases
+			WHERE username = $1
+			AND folder = $2
+			AND dbname = $3)`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&fo)
+	if err != nil {
+		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbFolder,
 			dbName, err)
 		return -1, -1, -1, err
 	}
