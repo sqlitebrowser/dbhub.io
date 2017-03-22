@@ -918,7 +918,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Toggle on or off the starring of a database by a user
-	err = com.ToggleDBStar(loggedInUser, dbOwner, dbName)
+	err = com.ToggleDBStar(loggedInUser, dbOwner, "/", dbName)
 	if err != nil {
 		fmt.Fprint(w, "-1") // -1 tells the front end not to update the displayed star count
 		return

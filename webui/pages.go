@@ -17,10 +17,11 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	pageName := "Render database page"
 
 	var pageData struct {
-		Auth0 com.Auth0Set
-		Data  com.SQLiteRecordSet
-		DB    com.SQLiteDBinfo
-		Meta  com.MetaInfo
+		Auth0  com.Auth0Set
+		Data   com.SQLiteRecordSet
+		DB     com.SQLiteDBinfo
+		Meta   com.MetaInfo
+		MyStar bool
 	}
 
 	// Retrieve session data (if any)
@@ -44,6 +45,13 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// * Execution can only get here if the user has access to the requested database *
+
+	// Check if the database was starred by the logged in user
+	myStar, err := com.CheckDBStarred(loggedInUser, dbOwner, "/", dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
 
 	// Generate a predictable cache key for the whole page data
 	var pageCacheKey string
@@ -85,6 +93,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		if fo != -1 {
 			pageData.DB.Info.Forks = fo
 		}
+
+		// Update database star status for the logged in user
+		pageData.MyStar = myStar
 
 		// Render the page from cache
 		t := tmpl.Lookup("databasePage")
@@ -261,6 +272,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
 	pageData.Auth0.ClientID = com.Auth0ClientID()
 	pageData.Auth0.Domain = com.Auth0Domain()
+
+	// Update database star status for the logged in user
+	pageData.MyStar = myStar
 
 	// Cache the page data
 	err = com.CacheData(pageCacheKey, pageData, com.CacheTime)

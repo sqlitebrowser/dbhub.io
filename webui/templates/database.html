@@ -21,11 +21,11 @@
                 </div>
                 <div class="pull-right">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-bind="'Watchers:'" ng-click="toggleWatch()"></button>
+                        <button type="button" class="btn btn-default" ng-bind="watchersText" ng-click="toggleWatch()"></button>
                         <button type="button" class="btn btn-default" ng-bind="meta.Watchers"></button>
                     </div>
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-bind="'Stars:'" ng-click="toggleStars()"></button>
+                        <button type="button" class="btn btn-default" ng-bind="starsText" ng-click="toggleStars()"></button>
                         <button type="button" class="btn btn-default" ng-bind="meta.Stars" ng-click="starsPage()"></button>
                     </div>
                     <div class="btn-group">
@@ -181,6 +181,7 @@
             Database: "[[ .Meta.Database ]]",
             Watchers: "[[ .DB.Info.Watchers ]]",
             Stars: "[[ .DB.Info.Stars ]]",
+            MyStar: "[[  .MyStar ]]",
             Forks: "[[ .DB.Info.Forks ]]",
             Discussions: "[[ .DB.Info.Discussions ]]",
             MRs: "[[ .DB.Info.MRs ]]",
@@ -200,6 +201,19 @@
                 Loggedin: "false",
             [[ end ]]
         }
+
+        $scope.watchersText = "Watchers";
+        $scope.starsText = "Stars";
+
+        // Update star button text to say "Stars" or "Unstar"
+        $scope.updateStarsText = function() {
+            if ($scope.meta.MyStar != "true") {
+                $scope.starsText = "Stars";
+            } else {
+                $scope.starsText = "Unstar";
+            }
+        };
+        $scope.updateStarsText();
 
         $scope.db = { Tablename: "[[ .Data.Tablename ]]",
                       Records: [[ .Data.Records ]],
@@ -272,6 +286,15 @@
                     .then(function (response) {
                         tempval = response.data;
                         if (tempval != "-1") {
+                            // Update star button text
+                            if ($scope.meta.MyStar != "true") {
+                                $scope.meta.MyStar = "true";
+                            } else {
+                                $scope.meta.MyStar = "false";
+                            }
+                            $scope.updateStarsText();
+
+                            // Update displayed star count
                             $scope.meta.Stars = tempval;
                         }
                     })

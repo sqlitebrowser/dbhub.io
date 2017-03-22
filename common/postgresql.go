@@ -137,7 +137,7 @@ func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaS
 }
 
 // Check if a database has been starred by a given user.  The boolean return value is only valid when err is nil.
-func checkDBStarred(loggedInUser string, dbOwner string, dbName string) (bool, error) {
+func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db)
 		FROM database_stars
@@ -146,9 +146,10 @@ func checkDBStarred(loggedInUser string, dbOwner string, dbName string) (bool, e
 			SELECT idnum
 			FROM sqlite_databases
 			WHERE username = $2
-				AND dbname = $3)`
+				AND folder = $3
+				AND dbname = $4)`
 	var starCount int
-	err := pdb.QueryRow(dbQuery, loggedInUser, dbOwner, dbName).Scan(&starCount)
+	err := pdb.QueryRow(dbQuery, loggedInUser, dbOwner, dbFolder, dbName).Scan(&starCount)
 	if err != nil {
 		log.Printf("Error looking up star count for database. User: '%s' DB: '%s/%s'. Error: %v\n",
 			loggedInUser, dbOwner, dbName, err)
@@ -888,9 +889,9 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 }
 
 // Toggle on or off the starring of a database by a user.
-func ToggleDBStar(loggedInUser string, dbOwner string, dbName string) error {
+func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName string) error {
 	// Check if the database is already starred
-	starred, err := checkDBStarred(loggedInUser, dbOwner, dbName)
+	starred, err := CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		return err
 	}
