@@ -331,7 +331,7 @@ func forksPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder 
 	var pageData struct {
 		Auth0 com.Auth0Set
 		Meta  com.MetaInfo
-		Forks []com.DBStarEntry // TODO: Maybe rename DBStarEntry to something a bit more generic, as it's useful for forks too
+		Forks []com.DBEntry
 	}
 	pageData.Meta.Title = "Forks"
 	pageData.Meta.Owner = dbOwner
@@ -435,7 +435,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		Meta       com.MetaInfo
 		PrivateDBs []com.DBInfo
 		PublicDBs  []com.DBInfo
-		Stars      []com.DBStarEntry
+		Stars      []com.DBEntry
 	}
 	pageData.Meta.Owner = userName
 	pageData.Meta.Title = userName
@@ -534,7 +534,7 @@ func starsPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName st
 	var pageData struct {
 		Auth0 com.Auth0Set
 		Meta  com.MetaInfo
-		Stars []com.DBStarEntry
+		Stars []com.DBEntry
 	}
 	pageData.Meta.Title = "Stars"
 	pageData.Meta.Owner = dbOwner

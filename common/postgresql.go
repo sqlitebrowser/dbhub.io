@@ -1150,7 +1150,7 @@ func UserPasswordHash(userName string) ([]byte, error) {
 }
 
 // Returns the list of databases starred by a user.
-func UserStarredDBs(userName string) (list []DBStarEntry, err error) {
+func UserStarredDBs(userName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH stars AS (
 			SELECT db, date_starred
@@ -1168,7 +1168,7 @@ func UserStarredDBs(userName string) (list []DBStarEntry, err error) {
 	}
 	defer rows3.Close()
 	for rows3.Next() {
-		var oneRow DBStarEntry
+		var oneRow DBEntry
 		err = rows3.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.DateStarred)
 		if err != nil {
 			log.Printf("Error retrieving stars list for user: %v\n", err)
@@ -1181,7 +1181,7 @@ func UserStarredDBs(userName string) (list []DBStarEntry, err error) {
 }
 
 // Returns the list of users who starred a database.
-func UsersStarredDB(dbOwner string, dbName string) (list []DBStarEntry, err error) {
+func UsersStarredDB(dbOwner string, dbName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH star_users AS (
 			SELECT DISTINCT ON (username) username, date_starred
@@ -1204,7 +1204,7 @@ func UsersStarredDB(dbOwner string, dbName string) (list []DBStarEntry, err erro
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var oneRow DBStarEntry
+		var oneRow DBEntry
 		err = rows.Scan(&oneRow.Owner, &oneRow.DateStarred)
 		if err != nil {
 			log.Printf("Error retrieving list of stars for %s/%s: %v\n", dbOwner, dbName, err)

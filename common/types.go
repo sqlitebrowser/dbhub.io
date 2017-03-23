@@ -114,6 +114,13 @@ type DataValue struct {
 	Value interface{}
 }
 type DataRow []DataValue
+
+type DBEntry struct {
+	Owner       string
+	DBName      string
+	DateStarred time.Time
+}
+
 type DBInfo struct {
 	Database     string
 	Tables       []string
@@ -183,10 +190,4 @@ type UserDetails struct {
 	DateJoined time.Time
 	ClientCert []byte
 	PHash      []byte
-}
-
-type DBStarEntry struct {
-	Owner       string
-	DBName      string
-	DateStarred time.Time
 }
