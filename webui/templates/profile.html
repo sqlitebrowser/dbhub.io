@@ -102,7 +102,7 @@
                                 <a href="/{{ row.Owner }}">{{ row.Owner }}</a> /
                                 <a href="/{{ row.Owner + '/' + row.DBName }}">{{ row.DBName }}</a>
                             </h4>
-                            <b>Date starred:</b> {{ row.DateStarred | date : 'd MMMM, y h:mm a' : 'UTC' }}
+                            <b>Date starred:</b> {{ row.DateEntry | date : 'd MMMM, y h:mm a' : 'UTC' }}
                         </td>
                     </tr>
                 </table>

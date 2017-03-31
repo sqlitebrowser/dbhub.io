@@ -443,7 +443,7 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 
 	// Retrieve the list of databases for the requested username.  Only include those accessible to the logged
 	// in user (userAcc) though
-	var pubSetting com.ValType
+	var pubSetting com.AccessType
 	if userAcc != user {
 		// The user is requesting someone else's list, so only return public databases
 		pubSetting = com.DB_PUBLIC

@@ -546,14 +546,13 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the forked database info to PostgreSQL
-	newForks, err := com.ForkDatabase(dbOwner, "/", dbName, dbVer, loggedInUser, "/", destMinioID)
+	_, err = com.ForkDatabase(dbOwner, "/", dbName, dbVer, loggedInUser, "/", destMinioID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// TODO: Update cached watchers/stars/forks value for the page
-	log.Printf("Updated forks count: %d\n", newForks)
 
 	// Log the database fork
 	log.Printf("Database '%s/%s' forked to user '%s'\n", dbOwner, dbName, loggedInUser)

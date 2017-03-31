@@ -13,19 +13,29 @@
             <h2 style="text-align: center;">
                 Forks of <a href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> / <a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
             </h2>
-            <center><h3>... still being developed ... :)</h3></center>
-            <!--
-            <table class="table table-bordered table-striped table-responsive">
+        </div>
+        <div class="col-md-2">
+            &nbsp;
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3">
+            &nbsp;
+        </div>
+        <div class="col-md-6">
+            <table class="table" style="border-style: none;">
                 <tr ng-repeat="row in forks.Forks">
-                    <td>
-                        <h4><a href="/{{ row.Owner }}">{{ row.Owner}}</a></h4>
-                        Forked on: {{ row.DateForked | date : 'd MMMM, y h:mm a' : 'UTC' }}
+                    <td style="border-style: none;">&nbsp;</td>
+                    <td style="border-style: none;">&nbsp;</td>
+                    <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
+                        <span ng-bind-html="rowIcons(row)"></span>
+                        <a href="/{{ row.Owner }}">{{ row.Owner }}</a> {{ row.Folder }}
+                        <a href="/{{ row.Owner }}{{ row.Folder }}{{ row.DBName }}">{{ row.DBName }}</a>
                     </td>
                 </tr>
             </table>
-            -->
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3">
             &nbsp;
         </div>
     </div>
@@ -33,17 +43,44 @@
 [[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-        app.controller('forksView', function($scope) {
-            $scope.forks = { Forks: [[ .Forks ]] }
+    app.controller('forksView', function($scope) {
+        $scope.forks = { Forks: [[ .Forks ]] }
 
-            var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
-                redirectUrl: "[[ .Auth0.CallbackURL]]"
-            }});
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
 
-            $scope.showLock = function() {
-                lock.show();
-            };
-        });
+        $scope.showLock = function() {
+            lock.show();
+        };
+
+        // Display the appropriate fork icons for a database row
+        $scope.rowIcons = function(rowData) {
+            var returnList = "";
+            rowData.IconList.forEach(function(item, index, array) {
+                switch (item) {
+                    case 0:
+                        returnList += "&nbsp; "; // Space
+                        break;
+                    case 1:
+                        returnList += "🜷"; // Root
+                        break;
+                    case 2:
+                        returnList += "┃ "; // Stem
+                        break;
+                    case 3:
+                        returnList += "┣ "; // Branch
+                        break;
+                    case 4:
+                        returnList += "┗"; // End
+                        break;
+                    default:
+                        returnList += "?"; // Unknown.  This shouldn't happen. ;)
+                }
+            });
+            return returnList;
+        }
+    });
 </script>
 </body>
 </html>

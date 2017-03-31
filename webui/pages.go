@@ -331,7 +331,7 @@ func forksPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder 
 	var pageData struct {
 		Auth0 com.Auth0Set
 		Meta  com.MetaInfo
-		Forks []com.DBEntry
+		Forks []com.ForkEntry
 	}
 	pageData.Meta.Title = "Forks"
 	pageData.Meta.Owner = dbOwner
@@ -350,9 +350,24 @@ func forksPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder 
 		}
 	}
 
+	// Retrieve list of forks for the database
+	var err error
+	pageData.Forks, err = com.ForkTree(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError,
+			fmt.Sprintf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder,
+				dbName, err.Error()))
+		return
+	}
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
 	// Render the page
 	t := tmpl.Lookup("forksPage")
-	err := t.Execute(w, pageData)
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -501,13 +516,22 @@ func selectUsernamePage(w http.ResponseWriter, r *http.Request) {
 	sess := session.Get(r)
 	if sess != nil {
 		validRegSession := false
-		validRegSession = sess.CAttr("registrationinprogress").(bool)
-
-		if validRegSession != true {
-			// For some reason this isn't a valid registration session, so abort
+		va := sess.CAttr("registrationinprogress")
+		if va == nil {
+			// This isn't a valid username selection session, so abort
 			errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
 			return
 		}
+		validRegSession = va.(bool)
+
+		if validRegSession != true {
+			// For some reason this isn't a valid username selection session, so abort
+			errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+			return
+		}
+	} else {
+		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+		return
 	}
 
 	// Add Auth0 info to the page data

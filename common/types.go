@@ -4,6 +4,24 @@ import (
 	"time"
 )
 
+type AccessType int
+
+const (
+	DB_BOTH AccessType = iota
+	DB_PRIVATE
+	DB_PUBLIC
+)
+
+type ForkType int
+
+const (
+	SPACE ForkType = iota
+	ROOT
+	STEM
+	BRANCH
+	END
+)
+
 type ValType int
 
 const (
@@ -13,12 +31,6 @@ const (
 	Text
 	Integer
 	Float
-)
-
-const (
-	DB_BOTH ValType = iota
-	DB_PRIVATE
-	DB_PUBLIC
 )
 
 // Stored cached data in memcache for 1/2 hour by default
@@ -116,9 +128,10 @@ type DataValue struct {
 type DataRow []DataValue
 
 type DBEntry struct {
-	Owner       string
-	DBName      string
-	DateStarred time.Time
+	Owner     string
+	Folder    string
+	DBName    string
+	DateEntry time.Time
 }
 
 type DBInfo struct {
@@ -141,6 +154,16 @@ type DBInfo struct {
 	Size         int
 	Version      int
 	Folder       string
+}
+
+type ForkEntry struct {
+	Owner      string
+	Folder     string
+	DBName     string
+	ID         int
+	IconList   []ForkType
+	ForkedFrom int
+	Processed  bool
 }
 
 type MetaInfo struct {

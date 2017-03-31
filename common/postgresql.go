@@ -599,6 +599,124 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 	return forkOwn, forkFol, forkDB, nil
 }
 
+// Return the complete fork tree for a given database
+func ForkTree(dbOwner string, dbFolder string, dbName string) (outputList []ForkEntry, err error) {
+	dbQuery := `
+		SELECT username, folder, dbname, idnum, forked_from
+		FROM sqlite_databases
+		WHERE root_database = (
+				SELECT root_database
+				FROM sqlite_databases
+				WHERE username = $1
+					AND folder = $2
+					AND dbname = $3
+				)
+		ORDER BY forked_from NULLS FIRST`
+	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return nil, err
+	}
+	defer rows.Close()
+	var dbList []ForkEntry
+	for rows.Next() {
+		var frk pgx.NullInt32
+		var oneRow ForkEntry
+		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.ID, &frk)
+		if err != nil {
+			log.Printf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+				err)
+			return nil, err
+		}
+		if frk.Valid {
+			oneRow.ForkedFrom = int(frk.Int32)
+		}
+		dbList = append(dbList, oneRow)
+	}
+
+	// Safety checks
+	numResults := len(dbList)
+	if numResults == 0 {
+		return nil, errors.New("Empty list returned instead of fork tree.  This shouldn't happen")
+	}
+	if dbList[0].ForkedFrom != 0 {
+		// The first entry has a non-zero forked_from field, indicating it's not the root entry.  That
+		// shouldn't happen, so return an error.
+		return nil, errors.New("Incorrect root entry data in retrieved database list")
+	}
+
+	// * Process the root entry *
+
+	var iconDepth int
+	var forkTrail []int
+
+	// Set the root database ID
+	rootID := dbList[0].ID
+
+	// Set the icon list for display in the browser
+	dbList[0].IconList = append(dbList[1].IconList, ROOT)
+
+	// Append this completed database line to the output list
+	outputList = append(outputList, dbList[0])
+
+	// Append the root database ID to the fork trail
+	forkTrail = append(forkTrail, rootID)
+
+	// Mark the root database entry as processed
+	dbList[0].Processed = true
+
+	// Increment the icon depth
+	iconDepth = 1
+
+	// * Sort the remaining entries for correct display *
+	numUnprocessedEntries := numResults - 1
+	for numUnprocessedEntries > 0 {
+		var forkFound bool
+		outputList, forkTrail, forkFound = nextChild(&dbList, &outputList, &forkTrail, iconDepth)
+		if forkFound {
+			numUnprocessedEntries--
+			iconDepth++
+
+			// Add stems and branches to the output icon list
+			numOutput := len(outputList)
+
+			myID := outputList[numOutput-1].ID
+			myForkedFrom := outputList[numOutput-1].ForkedFrom
+
+			// Scan through the earlier output list for any sibling entries
+			var siblingFound bool
+			for i := numOutput; i > 0 && siblingFound == false; i-- {
+				thisID := outputList[i-1].ID
+				thisForkedFrom := outputList[i-1].ForkedFrom
+
+				if thisForkedFrom == myForkedFrom && thisID != myID {
+					// Sibling entry found
+					siblingFound = true
+					sibling := outputList[i-1]
+
+					// Change the last sibling icon to a branch icon
+					sibling.IconList[iconDepth-1] = BRANCH
+
+					// Change appropriate spaces to stems in the output icon list
+					for l := numOutput - 1; l > i; l-- {
+						thisEntry := outputList[l-1]
+						if thisEntry.IconList[iconDepth-1] == SPACE {
+							thisEntry.IconList[iconDepth-1] = STEM
+						}
+					}
+				}
+			}
+		} else {
+			// No child was found, so remove an entry from the fork trail then continue looping
+			forkTrail = forkTrail[:len(forkTrail)-1]
+
+			iconDepth--
+		}
+	}
+
+	return outputList, nil
+}
+
 // Retrieve the highest version number of a database (if any), available to a given user.
 // Use the empty string "" to retrieve the highest available public version.
 func HighestDBVersion(dbOwner string, dbName string, dbFolder string, loggedInUser string) (ver int, err error) {
@@ -1009,12 +1127,12 @@ func User(userName string) (user UserDetails, err error) {
 }
 
 // Returns the list of databases for a user.
-func UserDBs(userName string, public ValType) (list []DBInfo, err error) {
+func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	// Construct SQL query for retrieving the requested database list
 	dbQuery := `
 	WITH dbs AS (
 		SELECT db.dbname, db.folder, db.date_created, db.last_modified, ver.size, ver.version, ver.public,
-			db.watchers, db.stars, db.forks, db.discussions, db.pull_requests, db.updates, db.branches,
+			db.watchers, db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
 			db.releases, db.contributors, db.description
 		FROM sqlite_databases AS db, database_versions AS ver
 		WHERE db.idnum = ver.db
@@ -1048,7 +1166,7 @@ func UserDBs(userName string, public ValType) (list []DBInfo, err error) {
 		var desc pgx.NullString
 		var oneRow DBInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified,
-			&oneRow.Size, &oneRow.Version, &oneRow.Public, &oneRow.Watchers, &oneRow.Stars, &oneRow.Forks,
+			&oneRow.Size, &oneRow.Version, &oneRow.Public, &oneRow.Watchers, &oneRow.Stars,
 			&oneRow.Discussions, &oneRow.MRs, &oneRow.Updates, &oneRow.Branches, &oneRow.Releases,
 			&oneRow.Contributors, &desc)
 		if err != nil {
@@ -1061,6 +1179,26 @@ func UserDBs(userName string, public ValType) (list []DBInfo, err error) {
 			oneRow.Description = fmt.Sprintf(": %s", desc.String)
 		}
 		list = append(list, oneRow)
+	}
+
+	// Get fork count for each of the databases
+	for i, j := range list {
+		// Retrieve latest fork count
+		dbQuery = `
+		SELECT forks
+		FROM sqlite_databases
+		WHERE idnum = (
+			SELECT root_database
+			FROM sqlite_databases
+			WHERE username = $1
+			AND folder = $2
+			AND dbname = $3)`
+		err = pdb.QueryRow(dbQuery, userName, j.Folder, j.Database).Scan(&list[i].Forks)
+		if err != nil {
+			log.Printf("Error retrieving fork count for '%s%s%s': %v\n", userName, j.Folder,
+				j.Database, err)
+			return nil, err
+		}
 	}
 
 	return list, nil
@@ -1161,15 +1299,15 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 		FROM sqlite_databases AS dbs, stars
 		WHERE dbs.idnum = stars.db
 		ORDER BY date_starred DESC`
-	rows3, err := pdb.Query(dbQuery, userName)
+	rows, err := pdb.Query(dbQuery, userName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
 	}
-	defer rows3.Close()
-	for rows3.Next() {
+	defer rows.Close()
+	for rows.Next() {
 		var oneRow DBEntry
-		err = rows3.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.DateStarred)
+		err = rows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.DateEntry)
 		if err != nil {
 			log.Printf("Error retrieving stars list for user: %v\n", err)
 			return nil, err
@@ -1205,7 +1343,7 @@ func UsersStarredDB(dbOwner string, dbName string) (list []DBEntry, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var oneRow DBEntry
-		err = rows.Scan(&oneRow.Owner, &oneRow.DateStarred)
+		err = rows.Scan(&oneRow.Owner, &oneRow.DateEntry)
 		if err != nil {
 			log.Printf("Error retrieving list of stars for %s/%s: %v\n", dbOwner, dbName, err)
 			return nil, err
