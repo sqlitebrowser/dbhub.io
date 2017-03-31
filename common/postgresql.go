@@ -654,7 +654,7 @@ func ForkTree(dbOwner string, dbFolder string, dbName string) (outputList []Fork
 	rootID := dbList[0].ID
 
 	// Set the icon list for display in the browser
-	dbList[0].IconList = append(dbList[1].IconList, ROOT)
+	dbList[0].IconList = append(dbList[0].IconList, ROOT)
 
 	// Append this completed database line to the output list
 	outputList = append(outputList, dbList[0])
