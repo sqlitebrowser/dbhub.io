@@ -270,7 +270,6 @@ func CheckUserDBAccess(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, db
 			&DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors,
 			&Desc, &Readme, &DB.MinioBkt)
 		if err != nil {
-			log.Printf("Requested database '%s/%s' not found or not available for user\n", dbOwner, dbName)
 			return errors.New("The requested database doesn't exist")
 		}
 		if !Desc.Valid {
