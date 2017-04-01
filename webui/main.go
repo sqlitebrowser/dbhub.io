@@ -716,7 +716,8 @@ func main() {
 	http.HandleFunc("/selectusername", logReq(selectUsernamePage))
 	http.HandleFunc("/stars/", logReq(starsHandler))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
-	http.HandleFunc("/vis/", logReq(visualisePage))
+	// Deprecated for now.  Will come back to this.
+	// http.HandleFunc("/vis/", logReq(visualisePage))
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
