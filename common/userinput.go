@@ -128,7 +128,12 @@ func GetPub(r *http.Request) (bool, error) {
 		log.Printf("Error when parsing form data: %s\n", err)
 		return false, err
 	}
-	pub, err := strconv.ParseBool(r.PostFormValue("public"))
+	val := r.PostFormValue("public")
+	if val == "" {
+		// No public/private variable found
+		return false, errors.New("No public/private value present")
+	}
+	pub, err := strconv.ParseBool(val)
 	if err != nil {
 		log.Printf("Error when converting public value to boolean: %v\n", err)
 		return false, err
