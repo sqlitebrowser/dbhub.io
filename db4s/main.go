@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -244,16 +245,23 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 			r.URL.Path), http.StatusBadRequest)
 		return
 	}
-
 	targetUser := pathStrings[1]
 	targetDB := pathStrings[2]
 
 	// Get public/private setting for the database
-	public, err := strconv.ParseBool(r.Header.Get("public"))
-	if err != nil {
-		// Public/private value couldn't be parsed, so default to private
-		log.Printf("Error when converting public value to boolean: %v\n", err)
+	var err error
+	var public bool
+	val := r.Header.Get("public")
+	if val == "" {
+		// No public/private variable found, so default to private
 		public = false
+	} else {
+		public, err = strconv.ParseBool(val)
+		if err != nil {
+			// Public/private value couldn't be parsed, so default to private
+			log.Printf("Error when converting public value to boolean: %v\n", err)
+			public = false
+		}
 	}
 
 	// Validate the database name
@@ -273,9 +281,6 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		return
 	}
 
-	// TODO: Check the uploaded file is a SQLite database.  Code for doing this is already in
-	// TODO  dbhub-application:uploadDataHandler()
-
 	// Copy the file into a local buffer
 	var tempBuf bytes.Buffer
 	nBytes, err := io.Copy(&tempBuf, r.Body)
@@ -287,6 +292,33 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 	if nBytes == 0 {
 		http.Error(w, "File size is 0 bytes", http.StatusInternalServerError)
+		return
+	}
+
+	// Write the temporary file locally, so we can sanity check it
+	tempDB, err := ioutil.TempFile("", "dbhub-upload-")
+	if err != nil {
+		log.Printf("%s: Error creating temporary file. User: %s, Database: %s, Filename: %s, "+
+			"Error: %v\n", pageName, userAcc, targetDB, tempDB.Name(), err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+	_, err = tempDB.Write(tempBuf.Bytes())
+	if err != nil {
+		log.Printf("%s: Error when writing the uploaded db to a temp file. User: %s, Database: %s"+
+			"Error: %v\n", pageName, userAcc, targetDB, err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+	tempDBName := tempDB.Name()
+
+	// Delete the temporary file when this function finishes
+	defer os.Remove(tempDBName)
+
+	// Sanity check the uploaded database
+	err = com.SanityCheck(tempDBName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
