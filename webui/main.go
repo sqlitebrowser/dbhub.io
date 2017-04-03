@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"golang.org/x/oauth2"
@@ -1181,25 +1180,10 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Delete the temporary file when this function finishes
 	defer os.Remove(tempDBName)
 
-	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
-	sqliteDB, err := sqlite.Open(tempDBName, sqlite.OpenReadOnly)
+	// Sanity check the uploaded database
+	err = com.SanityCheck(tempDBName)
 	if err != nil {
-		log.Printf("Couldn't open database when sanity checking upload: %s", err)
-		errorPage(w, r, http.StatusInternalServerError, "Internal error")
-		return
-	}
-	defer sqliteDB.Close()
-	tables, err := sqliteDB.Tables("")
-	if err != nil {
-		log.Printf("Error retrieving table names when sanity checking upload: %s", err)
-		errorPage(w, r, http.StatusInternalServerError,
-			"Error when sanity checking file.  Possibly encrypted or not a database?")
-		return
-	}
-	if len(tables) == 0 {
-		// No table names were returned, so abort
-		log.Printf("The attemped upload for '%s' failed, as it doesn't seem to have any tables.", dbName)
-		errorPage(w, r, http.StatusInternalServerError, "Database has no tables?")
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
