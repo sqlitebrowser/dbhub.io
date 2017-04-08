@@ -5,8 +5,14 @@
 An early stage (in development) "Cloud" for SQLite databases, with special
 integration for [DB Browser for SQLite](http://sqlitebrowser.org).
 
-You can either use our running version at [DBHub.io](https://dbhub.io),
-or run it locally yourself for your own users.
+You can try out our development server at [https://dev1.dbhub.io](https://dev1.dbhub.io),
+or run it locally for your own users.
+
+**Note** - Don't store important data on the dev1 server.  It gets wiped now and again,
+when we're experimenting with things.
+
+When the core code is more fully featured (June/July 2017 target), we'll start putting
+"production" servers online for people to store their data.
 
 ### Requirements
 
