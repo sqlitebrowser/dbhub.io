@@ -155,6 +155,15 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		dbTable = pageData.DB.Info.Tables[0]
 	}
 
+	// Validate the table name, just to be careful
+	err = com.ValidatePGTable(dbTable)
+	if err != nil {
+		// Validation failed, so don't pass on the table name
+		log.Printf("%s: Validation failed for table name: %s", pageName, err)
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for table name")
+		return
+	}
+
 	// Retrieve (up to) x rows from the selected database
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
