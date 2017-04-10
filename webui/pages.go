@@ -158,7 +158,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	// Retrieve (up to) x rows from the selected database
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
-	stmt, err := db.Prepare("SELECT * FROM "+dbTable+" LIMIT ?", pageData.DB.MaxRows)
+	stmt, err := db.Prepare(`SELECT * FROM "`+dbTable+`" LIMIT ?`, pageData.DB.MaxRows)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\v", err)
 		errorPage(w, r, http.StatusInternalServerError, "Internal error")
@@ -244,7 +244,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	defer stmt.Finalize()
 
 	// Count the total number of rows in the selected table
-	dbQuery := "SELECT count(*) FROM " + dbTable
+	dbQuery := `SELECT count(*) FROM "` + dbTable + `"`
 	err = db.OneValue(dbQuery, &pageData.Data.RowCount)
 	if err != nil {
 		log.Printf("%s: Error occurred when counting total table rows: %s\n", pageName, err)

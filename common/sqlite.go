@@ -12,7 +12,7 @@ import (
 
 // Returns the number of rows in a SQLite table
 func GetSQLiteRowCount(db *sqlite.Conn, dbTable string) (int, error) {
-	dbQuery := "SELECT count(*) FROM " + dbTable
+	dbQuery := `SELECT count(*) FROM "` + dbTable + `"`
 	var rowCount int
 	err := db.OneValue(dbQuery, &rowCount)
 	if err != nil {
@@ -47,7 +47,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 		}
 		colString += fmt.Sprintf("%s", d)
 	}
-	dbQuery := fmt.Sprintf("SELECT %s FROM %s", colString, dbTable)
+	dbQuery := fmt.Sprintf(`SELECT %s FROM "%s"`, colString, dbTable)
 
 	// If filters were given, add them
 	var filterVals []interface{}
@@ -75,7 +75,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 		stmt, err = sdb.Prepare(dbQuery)
 	}
 	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\v", err)
+		log.Printf("Error when preparing statement for database: %s\n", err)
 		return dataRows, errors.New("Error when reading data from the SQLite database")
 	}
 
@@ -163,7 +163,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error when retrieving select data from database: %s\v", err)
+		log.Printf("Error when retrieving select data from database: %s\n", err)
 		return dataRows, errors.New("Error when reading data from the SQLite database")
 	}
 	defer stmt.Finalize()
@@ -175,9 +175,9 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 // need to be merged with the above function at some point.
 func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 	// Retrieve all of the data from the selected database table
-	stmt, err := sdb.Prepare("SELECT * FROM " + dbTable)
+	stmt, err := sdb.Prepare(`SELECT * FROM "` + dbTable + `"`)
 	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\v", err)
+		log.Printf("Error when preparing statement for database: %s\n", err)
 		return nil, err
 	}
 
@@ -244,7 +244,7 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error when reading data from database: %s\v", err)
+		log.Printf("Error when reading data from database: %s\n", err)
 		return nil, err
 	}
 	defer stmt.Finalize()
