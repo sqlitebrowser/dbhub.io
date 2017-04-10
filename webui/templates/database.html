@@ -137,7 +137,7 @@
                     <th ng-repeat="header in db.ColNames">{{ header }}</th>
                 </tr>
                 <tr ng-repeat="row in db.Records">
-                    <td ng-repeat="val in row"><span ng-bind-html="val.Value | fixSpaces"></span></td>
+                    <td ng-repeat="val in row" dir="auto"><span ng-bind-html="val.Value | fixSpaces"></span></td>
                 </tr>
                 <tr>
                     <td colspan="{{ db.ColCount }}" style="text-align: center;">
