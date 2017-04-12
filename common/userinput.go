@@ -268,7 +268,6 @@ func GetVersion(r *http.Request) (int, error) {
 
 	dbVersion, err := strconv.ParseInt(v, 10, 0) // This also validates the version input
 	if err != nil {
-		log.Printf("Invalid database version number: %v\n", err)
 		return 0, errors.New("Invalid database version number")
 	}
 	return int(dbVersion), nil
