@@ -22,6 +22,30 @@ const (
 	END
 )
 
+type LicenseType int
+
+const (
+	// From http://opendefinition.org/licenses/
+	CC0 LicenseType = iota
+	PDDL
+	CCBY
+	ODCBY
+	CCBYSA
+	ODbL
+	CCA
+	CCSA
+	DLDEBY
+	DLDE0
+	DSL
+	FAL
+	GNUFDL
+	MIROSL
+	OGLC
+	OGLUK
+	NONE
+	OTHER
+)
+
 type ValType int
 
 const (
@@ -154,6 +178,8 @@ type DBInfo struct {
 	Size         int
 	Version      int
 	Folder       string
+	License      LicenseType
+	DefaultTable string
 }
 
 type ForkEntry struct {

@@ -148,7 +148,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	dbName := pathStrings[2]
 
 	// Extract the requested version number from the form data
-	dbVersion, err := com.GetVersion(r)
+	dbVersion, err := com.GetFormVersion(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

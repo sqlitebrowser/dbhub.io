@@ -10,8 +10,19 @@ import (
 	"strings"
 )
 
+// Extracts a database name from form data
+func GetFormDatabase(r *http.Request) (string, error) {
+	dbName := r.PostFormValue("dbname")
+	err := ValidateDB(dbName)
+	if err != nil {
+		log.Printf("Validation failed for database name: %s", err)
+		return "", errors.New("Invalid database name")
+	}
+	return dbName, nil
+}
+
 // Returns the folder name (if any) present in the form data
-func GetF(r *http.Request) (string, error) {
+func GetFormFolder(r *http.Request) (string, error) {
 	// Gather submitted form data (if any)
 	err := r.ParseForm()
 	if err != nil {
@@ -33,6 +44,132 @@ func GetF(r *http.Request) (string, error) {
 	}
 
 	return folder, nil
+}
+
+// Return the username, database, and version (if any) present in the form data.
+func GetFormUDV(r *http.Request) (string, string, int, error) {
+	// Extract the username
+	userName, err := GetFormUsername(r)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	// Extract the database name
+	dbName, err := GetFormDatabase(r)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	// Extract the version number
+	dbVersion, err := GetFormVersion(r)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	return userName, dbName, dbVersion, nil
+}
+
+// Return the username, folder, and database name (if any) present in the form data.
+func GetFormUFD(r *http.Request) (string, string, string, error) {
+	// Extract the username
+	userName, err := GetFormUsername(r)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Extract the folder
+	dbFolder, err := GetFormFolder(r)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Extract the database name
+	dbName, err := GetFormDatabase(r)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return userName, dbFolder, dbName, nil
+}
+
+// Return the username, password, and source URL from the form data.
+func GetFormUPS(r *http.Request) (string, string, string, error) {
+	// Get username
+	userName, err := GetFormUsername(r)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Get password and Source URL
+	password := r.PostFormValue("pass")
+	sourceURL := r.PostFormValue("sourceurl")
+
+	// If no username/password was given, return
+	if userName == "" && password == "" {
+		return "", "", "", err
+	}
+
+	// Check the password isn't blank
+	if len(password) < 1 {
+		log.Print("Password missing")
+		return "", "", "", err
+	}
+
+	// Validate the source referrer (if present)
+	var bounceURL string
+	if sourceURL != "" {
+		ref, err := url.Parse(sourceURL)
+		if err != nil {
+			log.Printf("Error when parsing referrer URL for login form: %s\n", err)
+		} else {
+			// Only use the referrer path if no hostname is set (eg check if someone is screwing around)
+			if ref.Host == "" {
+				bounceURL = ref.Path
+			}
+		}
+	}
+
+	return userName, password, bounceURL, nil
+}
+
+// Return the username (if any) present in the form data.
+func GetFormUsername(r *http.Request) (string, error) {
+	// Gather submitted form data (if any)
+	err := r.ParseForm()
+	if err != nil {
+		log.Printf("Error when parsing form data: %s\n", err)
+		return "", err
+	}
+	userName := r.PostFormValue("username")
+
+	// If no username given, return
+	if userName == "" {
+		return "", nil
+	}
+
+	// Validate the username
+	err = ValidateUser(userName)
+	if err != nil {
+		log.Printf("Validation failed for username: %s", err)
+		return "", err
+	}
+
+	return userName, nil
+}
+
+// Return the requested database version number, from form data.
+func GetFormVersion(r *http.Request) (int, error) {
+	// If no version number was given in the input, return 0
+	v := r.FormValue("version")
+	if v == "" {
+		return 0, nil
+	}
+
+	dbVersion, err := strconv.ParseInt(v, 10, 0) // This also validates the version input
+	if err != nil {
+		return 0, errors.New("Invalid database version number")
+	}
+	return int(dbVersion), nil
 }
 
 // Returns the requested database owner and database name.
@@ -92,7 +229,7 @@ func GetODTV(ignore_leading int, r *http.Request) (string, string, string, int, 
 	}
 
 	// Extract the version number
-	dbVersion, err := GetVersion(r)
+	dbVersion, err := GetFormVersion(r)
 	if err != nil {
 		return "", "", "", 0, err
 	}
@@ -110,7 +247,7 @@ func GetODV(ignore_leading int, r *http.Request) (string, string, int, error) {
 	}
 
 	// Extract the version number
-	dbVersion, err := GetVersion(r)
+	dbVersion, err := GetFormVersion(r)
 	if err != nil {
 		return "", "", 0, err
 	}
@@ -159,116 +296,4 @@ func GetTable(r *http.Request) (string, error) {
 
 	// Everything seems ok
 	return requestedTable, nil
-}
-
-// Return the username (if any) present in the form data.
-func GetU(r *http.Request) (string, error) {
-	// Gather submitted form data (if any)
-	err := r.ParseForm()
-	if err != nil {
-		log.Printf("Error when parsing form data: %s\n", err)
-		return "", err
-	}
-	userName := r.PostFormValue("username")
-
-	// If no username given, return
-	if userName == "" {
-		return "", nil
-	}
-
-	// Validate the username
-	err = ValidateUser(userName)
-	if err != nil {
-		log.Printf("Validation failed for username: %s", err)
-		return "", err
-	}
-
-	return userName, nil
-}
-
-// Return the username, database, and version (if any) present in the form data.
-func GetUDV(r *http.Request) (string, string, int, error) {
-	// Extract the username
-	userName, err := GetU(r)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	// Extract the database name
-	dbName := r.PostFormValue("dbname")
-	err = ValidateDB(dbName)
-	if err != nil {
-		log.Printf("Validation failed for database name: %s", err)
-		return "", "", 0, errors.New("Invalid database name")
-	}
-
-	// Extract the version number
-	dbVersion, err := GetVersion(r)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	return userName, dbName, dbVersion, nil
-}
-
-// Return the username, password, and source URL from the form data.
-func GetUPS(r *http.Request) (string, string, string, error) {
-	// Get username
-	userName, err := GetU(r)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	// Get password and Source URL
-	password := r.PostFormValue("pass")
-	sourceURL := r.PostFormValue("sourceurl")
-
-	// If no username/password was given, return
-	if userName == "" && password == "" {
-		return "", "", "", err
-	}
-
-	// Check the password isn't blank
-	if len(password) < 1 {
-		log.Print("Password missing")
-		return "", "", "", err
-	}
-
-	// Validate the username
-	err = ValidateUser(userName)
-	if err != nil {
-		log.Printf("Validation failed for username: %s", err)
-		return "", "", "", err
-	}
-
-	// Validate the source referrer (if present)
-	var bounceURL string
-	if sourceURL != "" {
-		ref, err := url.Parse(sourceURL)
-		if err != nil {
-			log.Printf("Error when parsing referrer URL for login form: %s\n", err)
-		} else {
-			// Only use the referrer path if no hostname is set (eg check if someone is screwing around)
-			if ref.Host == "" {
-				bounceURL = ref.Path
-			}
-		}
-	}
-
-	return userName, password, bounceURL, nil
-}
-
-// Return the requested database version number, from form data.
-func GetVersion(r *http.Request) (int, error) {
-	// If no version number was given in the input, return 0
-	v := r.FormValue("version")
-	if v == "" {
-		return 0, nil
-	}
-
-	dbVersion, err := strconv.ParseInt(v, 10, 0) // This also validates the version input
-	if err != nil {
-		return 0, errors.New("Invalid database version number")
-	}
-	return int(dbVersion), nil
 }

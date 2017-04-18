@@ -1,7 +1,6 @@
 package common
 
 import (
-	"crypto/md5"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -223,92 +222,6 @@ func CheckMinioIDAvail(userName string, id string) (bool, error) {
 	return false, nil
 }
 
-// Check if the user has access to the requested database.
-func CheckUserDBAccess(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbName string) error {
-	var queryCacheKey, dbQuery string
-	if loggedInUser != dbOwner {
-		// * The request is for another users database, so it needs to be a public one *
-		dbQuery = `
-			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
-				db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
-				db.releases, db.contributors, db.description, db.readme, db.minio_bucket
-			FROM sqlite_databases AS db, database_versions AS ver
-			WHERE db.username = $1
-				AND db.dbname = $2
-				AND db.idnum = ver.db
-				AND ver.public = true
-			ORDER BY version DESC
-			LIMIT 1`
-		tempArr := md5.Sum([]byte(fmt.Sprintf(dbQuery, dbOwner, dbName)))
-		queryCacheKey = "pub/" + hex.EncodeToString(tempArr[:])
-	} else {
-		dbQuery = `
-			SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
-				db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
-				db.releases, db.contributors, db.description, db.readme, db.minio_bucket
-			FROM sqlite_databases AS db, database_versions AS ver
-			WHERE db.username = $1
-				AND db.dbname = $2
-				AND db.idnum = ver.db
-			ORDER BY version DESC
-			LIMIT 1`
-		tempArr := md5.Sum([]byte(fmt.Sprintf(dbQuery, dbOwner, dbName)))
-		queryCacheKey = loggedInUser + "/" + hex.EncodeToString(tempArr[:])
-	}
-
-	// Use a cached version of the query response if it exists
-	ok, err := GetCachedData(queryCacheKey, &DB)
-	if err != nil {
-		log.Printf("Error retrieving data from cache: %v\n", err)
-	}
-	if !ok {
-		// Retrieve the requested database details
-		var Desc, Readme pgx.NullString
-		err := pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&DB.MinioId, &DB.Info.DateCreated,
-			&DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version, &DB.Info.Watchers,
-			&DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
-			&DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors,
-			&Desc, &Readme, &DB.MinioBkt)
-		if err != nil {
-			return errors.New("The requested database doesn't exist")
-		}
-		if !Desc.Valid {
-			DB.Info.Description = "No description"
-		} else {
-			DB.Info.Description = Desc.String
-		}
-		if !Readme.Valid {
-			DB.Info.Readme = "No readme"
-		} else {
-			DB.Info.Readme = Readme.String
-		}
-
-		// Retrieve latest fork count
-		dbQuery = `
-			SELECT forks
-			FROM sqlite_databases
-			WHERE idnum = (
-				SELECT root_database
-				FROM sqlite_databases
-				WHERE username = $1
-				AND folder = '/'
-				AND dbname = $2)`
-		err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&DB.Info.Forks)
-		if err != nil {
-			log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbName, err)
-			return err
-		}
-
-		// Cache the database details
-		err = CacheData(queryCacheKey, DB, 120)
-		if err != nil {
-			log.Printf("Error when caching page data: %v\n", err)
-		}
-	}
-
-	return nil
-}
-
 // Check if a user has access to a specific version of a database.
 func CheckUserDBVAccess(dbOwner string, dbFolder string, dbName string, dbVer int, loggedInUser string) (bool, error) {
 	dbQuery := `
@@ -452,6 +365,103 @@ func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 	return list, nil
 }
 
+// Retrieve the details for a specific database
+func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder string, dbName string, dbVersion int) error {
+	dbQuery := `
+		SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
+			db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
+			db.releases, db.contributors, db.description, db.readme, db.minio_bucket
+		FROM sqlite_databases AS db, database_versions AS ver
+		WHERE db.username = $1
+			AND db.folder = $2
+			AND db.dbname = $3
+			AND db.idnum = ver.db`
+	if loggedInUser != dbOwner {
+		// * The request is for another users database, so it needs to be a public one *
+		dbQuery += `
+			AND ver.public = true`
+	}
+	if dbVersion == 0 {
+		// No specific database version was requested, so use the highest available
+		dbQuery += `
+			ORDER BY version DESC
+			LIMIT 1`
+	} else {
+		dbQuery += `
+			AND ver.version = $4`
+	}
+
+	// Generate a predictable cache key
+	cacheKey := CacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, dbVersion, 0)
+
+	// Use a cached version of the query response if it exists
+	ok, err := GetCachedData(cacheKey, &DB)
+	if err != nil {
+		log.Printf("Error retrieving data from cache: %v\n", err)
+	}
+	if ok {
+		// Data was in cache, so we use that
+		return nil
+	}
+
+	// Retrieve the requested database details
+	var Desc, Readme pgx.NullString
+	if dbVersion == 0 {
+		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DB.MinioId, &DB.Info.DateCreated,
+			&DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version, &DB.Info.Watchers,
+			&DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
+			&DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors,
+			&Desc, &Readme, &DB.MinioBkt)
+	} else {
+		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, dbVersion).Scan(&DB.MinioId,
+			&DB.Info.DateCreated, &DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version,
+			&DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
+			&DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors,
+			&Desc, &Readme, &DB.MinioBkt)
+	}
+	if err != nil {
+		return errors.New("The requested database doesn't exist")
+	}
+	if !Desc.Valid {
+		DB.Info.Description = "No description"
+	} else {
+		DB.Info.Description = Desc.String
+	}
+	if !Readme.Valid {
+		DB.Info.Readme = "No readme"
+	} else {
+		DB.Info.Readme = Readme.String
+	}
+
+	// Fill out the fields we already have data
+	DB.Info.Database = dbName
+	DB.Info.Folder = dbFolder
+
+	// Retrieve latest fork count
+	dbQuery = `
+		SELECT forks
+		FROM sqlite_databases
+		WHERE idnum = (
+			SELECT root_database
+			FROM sqlite_databases
+			WHERE username = $1
+			AND folder = $2
+			AND dbname = $3)`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DB.Info.Forks)
+	if err != nil {
+		log.Printf("Error retrieving fork count for '%s%s': %v\n", dbOwner, dbName, err)
+		return err
+	}
+
+	// Cache the database details
+	err = CacheData(cacheKey, DB, 120)
+	if err != nil {
+		log.Printf("Error when caching page data: %v\n", err)
+	}
+
+	return nil
+}
+
 // Returns the star count for a given database.
 func DBStars(dbOwner string, dbName string) (starCount int, err error) {
 	// Get the ID number of the database
@@ -471,6 +481,52 @@ func DBStars(dbOwner string, dbName string) (starCount int, err error) {
 		return -1, err
 	}
 	return starCount, nil
+}
+
+// Returns the list of all database versions available to the requesting user
+func DBVersions(loggedInUser string, dbOwner string, dbFolder string, dbName string) ([]int, error) {
+	dbQuery := `
+		SELECT version
+		FROM database_versions
+		WHERE db = (
+			SELECT idnum
+			FROM sqlite_databases
+			WHERE username = $1
+				AND folder = $2
+				AND dbname = $3
+			)`
+	if loggedInUser != dbOwner {
+		// The request is for another users database, so only return public versions
+		dbQuery += `
+			AND public is true`
+	}
+	dbQuery += `
+		ORDER BY version DESC`
+	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return nil, err
+	}
+	defer rows.Close()
+	var verList []int
+	for rows.Next() {
+		var ver int
+		err = rows.Scan(&ver)
+		if err != nil {
+			log.Printf("Error retrieving version list for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+				err)
+			return nil, err
+		}
+		verList = append(verList, ver)
+	}
+
+	// Safety checks
+	numResults := len(verList)
+	if numResults == 0 {
+		return nil, errors.New("Empty list returned instead of version list.  This shouldn't happen")
+	}
+
+	return verList, nil
 }
 
 // Disconnects the PostgreSQL database connection.
@@ -916,6 +972,83 @@ func RemoveDBVersion(dbOwner string, folder string, dbName string, dbVersion int
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong # of rows (%v) affected when removing main database entry for '%s' / '%s' / '%s'\n",
 			numRows, dbOwner, folder, dbName)
+	}
+
+	return nil
+}
+
+// Rename a SQLite daatabase.
+func RenameDatabase(userName string, dbFolder string, dbName string, newName string) error {
+	// Save the database settings
+	SQLQuery := `
+		UPDATE sqlite_databases
+		SET dbname = $4
+		WHERE username = $1
+			AND folder = $2
+			AND dbname = $3`
+	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, newName)
+	if err != nil {
+		log.Printf("Renaming database '%s%s%s' failed: %v\n", userName, dbFolder,
+			dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when renaming '%s%s%s' to '%s%s%s'\n",
+			numRows, userName, dbFolder, dbName, userName, dbFolder, newName)
+		log.Printf(errMsg)
+		return errors.New(errMsg)
+	}
+
+	// Log the rename
+	log.Printf("Database renamed from '%s%s%s' to '%s%s%s'\n", userName, dbFolder, dbName, userName,
+		dbFolder, newName)
+
+	return nil
+}
+
+// Saves updated database settings to PostgreSQL.
+func SaveDBSettings(userName string, dbFolder string, dbName string, descrip string, readme string) error {
+	// Check for values which should be NULL
+	var nullableDescrip, nullableReadme pgx.NullString
+	if descrip == "" {
+		nullableDescrip.Valid = false
+	} else {
+		nullableDescrip.String = descrip
+		nullableDescrip.Valid = true
+	}
+	if readme == "" {
+		nullableReadme.Valid = false
+	} else {
+		nullableReadme.String = readme
+		nullableReadme.Valid = true
+	}
+
+	// Save the database settings
+	SQLQuery := `
+		UPDATE sqlite_databases
+		SET description = $4, readme = $5
+		WHERE username = $1
+			AND folder = $2
+			AND dbname = $3`
+	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullableDescrip, nullableReadme)
+	if err != nil {
+		log.Printf("Updating description for database '%s%s%s' failed: %v\n", userName, dbFolder,
+			dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when updating description for '%s%s%s'\n",
+			numRows, userName, dbFolder, dbName)
+		log.Printf(errMsg)
+		return errors.New(errMsg)
+	}
+
+	// Invalidate the old memcached entry for the database
+	err = InvalidateCacheEntry(userName, userName, dbFolder, dbName, 0) // 0 indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return err
 	}
 
 	return nil

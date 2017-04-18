@@ -551,7 +551,13 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Update cached watchers/stars/forks value for the page
+	// Invalidate the old memcached entry for the database
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, "/", dbName, 0) // 0 indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
 
 	// Log the database fork
 	log.Printf("Database '%s/%s' forked to user '%s'\n", dbOwner, dbName, loggedInUser)
@@ -713,10 +719,9 @@ func main() {
 	http.HandleFunc("/pref", logReq(prefHandler))
 	http.HandleFunc("/register", logReq(createUserHandler))
 	http.HandleFunc("/selectusername", logReq(selectUsernamePage))
+	http.HandleFunc("/settings/", logReq(settingsPage))
 	http.HandleFunc("/stars/", logReq(starsHandler))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
-	// Deprecated for now.  Will come back to this.
-	// http.HandleFunc("/vis/", logReq(visualisePage))
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
@@ -724,6 +729,7 @@ func main() {
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
 	http.HandleFunc("/x/forkdb/", logReq(forkDBHandler))
 	http.HandleFunc("/x/gencert", logReq(generateCertHandler))
+	http.HandleFunc("/x/savesettings", logReq(saveSettingsHandler))
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))
 	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
@@ -800,6 +806,13 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 	// * A specific database was requested *
 
+	// Check if a version number was also requested
+	dbVersion, err := com.GetFormVersion(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Invalid database version number")
+		return
+	}
+
 	// Check if a table name was also requested
 	err = r.ParseForm()
 	if err != nil {
@@ -818,7 +831,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Add support for folders and sub-folders in request paths
-	databasePage(w, r, userName, dbName, dbTable)
+	databasePage(w, r, userName, dbName, dbVersion, dbTable)
 }
 
 // This handles incoming requests for the preferences page by logged in users.
@@ -840,8 +853,8 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if validSession != true {
 		// Display an error message
-		// TODO: Show the login dialog
-		errorPage(w, r, http.StatusInternalServerError, "Error: Must be logged in to view that page.")
+		// TODO: Show the login dialog (also for the settings page)
+		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
 		return
 	}
 
@@ -923,6 +936,14 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Invalidate the old memcached entry for the database
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, "/", dbName, 0) // 0 indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
 	// Return the updated star count
 	newStarCount, err := com.DBStars(dbOwner, dbName)
 	if err != nil {
@@ -930,6 +951,85 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, newStarCount)
+}
+
+// Handler for the Database Settings page
+func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Further relevant settings
+	// TODO  License, default display table, and public/private setting
+
+	// Extract the username, folder, and (current) database name form variables
+	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	userName := strings.ToLower(u)
+
+	// Default to the root folder if none was given
+	if dbFolder == "" {
+		dbFolder = "/"
+	}
+
+	// Make sure a username was given
+	if len(userName) == 0 || userName == "" {
+		// No username supplied
+		errorPage(w, r, http.StatusBadRequest, "No username supplied!")
+		return
+	}
+
+	// Extract the form variables
+	descrip := r.PostFormValue("descrip")
+	newName := r.PostFormValue("newname")
+	readme := r.PostFormValue("readme")
+
+	// If set, validate the new database name
+	if newName != dbName {
+		err := com.ValidateDB(newName)
+		if err != nil {
+			log.Printf("Validation failed for new database name '%s': %s", newName, err)
+			errorPage(w, r, http.StatusBadRequest, "New database name failed validation")
+			return
+		}
+	}
+
+	// Ensure the description is 80 chars or less
+	if len(descrip) > 80 {
+		errorPage(w, r, http.StatusBadRequest, "Description line needs to be 80 characters or less")
+		return
+	}
+
+	// If the database doesn't have a description, don't save the placeholder text as one
+	if descrip == "No description" {
+		descrip = ""
+	}
+
+	// Same thing, but for the README
+	if readme == "No readme" {
+		readme = ""
+	}
+
+	// Save settings
+	err = com.SaveDBSettings(userName, dbFolder, dbName, descrip, readme)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// If the new database name is different from the old one, perform the rename
+	// Note - It's useful to do this *after* the SaveDBSettings() call, so the cache invalidation code at the
+	// end of that function gets run and we don't have to repeat it here
+	// TODO: We'll probably need to add support for renaming folders somehow too
+	if newName != "" && newName != dbName {
+		err = com.RenameDatabase(userName, dbFolder, dbName, newName)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+
+	// Settings saved, so bounce back to the database page
+	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", userName, dbFolder, newName), http.StatusTemporaryRedirect)
 }
 
 // Present the stars page to the user

@@ -52,7 +52,14 @@
                 <div class="col-md-3">
                     <label id="viewmrs"><a href="">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                        <label id="settings"><a href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]">Settings</a></label>
+                    [[ else ]]
+                        &nbsp;
+                    [[ end ]]
+                </div>
+                <div class="col-md-1">
                     &nbsp;
                 </div>
             </div>
@@ -155,7 +162,7 @@
                     <td class="page-header"><h4>README</h4></td>
                 </tr>
                 <tr>
-                    <td id="viewreadme" ng-bind="meta.Readme"></td>
+                    <td id="viewreadme" ng-bind-html="meta.Readme"></td>
                 </tr>
             </table>
         </div>

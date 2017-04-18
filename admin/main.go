@@ -17,7 +17,7 @@ import (
 
 func certDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the username
-	u, err := com.GetU(r)
+	u, err := com.GetFormUsername(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -45,7 +45,7 @@ func certGenerateHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Client cert generate"
 
 	// Extract the username
-	u, err := com.GetU(r)
+	u, err := com.GetFormUsername(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -78,7 +78,7 @@ func certUploadHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Client cert upload"
 
 	// Extract the username
-	u, err := com.GetU(r)
+	u, err := com.GetFormUsername(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -120,7 +120,7 @@ func certUploadHandler(w http.ResponseWriter, r *http.Request) {
 
 func dbDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the form data
-	dbOwner, dbName, dbVersion, err := com.GetUDV(r)
+	dbOwner, dbName, dbVersion, err := com.GetFormUDV(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -161,7 +161,7 @@ func dbDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Download DB"
 
 	// Extract the form data
-	dbOwner, dbName, dbVersion, err := com.GetUDV(r)
+	dbOwner, dbName, dbVersion, err := com.GetFormUDV(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -206,7 +206,7 @@ func dbDownloadHandler(w http.ResponseWriter, r *http.Request) {
 // Handler to manage uploaded databases
 func dbManageHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the username
-	u, err := com.GetU(r)
+	u, err := com.GetFormUsername(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -287,13 +287,13 @@ func dbUploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Extract the form data
 	r.ParseMultipartForm(32 << 20) // 64MB of ram max
-	u, err := com.GetU(r)
+	u, err := com.GetFormUsername(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	userName := strings.ToLower(u)
-	folder, err := com.GetF(r)
+	folder, err := com.GetFormFolder(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -470,7 +470,7 @@ func userDelHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "User delete page"
 
 	// Extract the username
-	u, err := com.GetU(r)
+	u, err := com.GetFormUsername(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -592,7 +592,7 @@ func userModActionHandler(w http.ResponseWriter, r *http.Request) {
 // Handler which generates a form to modify a DBHub.io user
 func userModFormHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the username
-	u, err := com.GetU(r)
+	u, err := com.GetFormUsername(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
