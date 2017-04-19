@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/icza/session"
+	"github.com/rhinoman/go-commonmark"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"golang.org/x/oauth2"
 )
@@ -729,6 +730,7 @@ func main() {
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
 	http.HandleFunc("/x/forkdb/", logReq(forkDBHandler))
 	http.HandleFunc("/x/gencert", logReq(generateCertHandler))
+	http.HandleFunc("/x/markdownpreview/", logReq(markdownPreview))
 	http.HandleFunc("/x/savesettings", logReq(saveSettingsHandler))
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))
@@ -832,6 +834,16 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Add support for folders and sub-folders in request paths
 	databasePage(w, r, userName, dbName, dbVersion, dbTable)
+}
+
+// Returns HTML rendered content from a given markdown string, for the settings page README preview tab.
+func markdownPreview(w http.ResponseWriter, r *http.Request) {
+	// Extract the markdown text form value
+	mkDown := r.PostFormValue("mkdown")
+
+	// Send the rendered version back to the caller
+	renderedText := commonmark.Md2Html(mkDown, commonmark.CMARK_OPT_DEFAULT)
+	fmt.Fprint(w, renderedText)
 }
 
 // This handles incoming requests for the preferences page by logged in users.
