@@ -38,20 +38,6 @@ func CacheData(cacheKey string, cacheData interface{}, cacheSeconds int32) error
 	return nil
 }
 
-// Generate a predictable cache key
-func CacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, dbVersion int, rows int) string {
-	var cacheString string
-	if loggedInUser == dbOwner {
-		cacheString = fmt.Sprintf("%s/%s/%s/%s/%d/%d", prefix, dbOwner, dbFolder, dbName, dbVersion, rows)
-	} else {
-		// Requests for other users databases are cached separately from users own database requests
-		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%d/%d", prefix, dbOwner, dbFolder, dbName, dbVersion, rows)
-	}
-
-	tempArr := md5.Sum([]byte(cacheString))
-	return hex.EncodeToString(tempArr[:])
-}
-
 func ConnectCache() error {
 	// Connect to memcached server
 	memCache = memcache.New(conf.Cache.Server)
@@ -110,21 +96,10 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 		versionList = append(versionList, dbVersion)
 	}
 
-	// Work out how many rows of data would be displayed for the user (the download page cache key depends on this)
-	// TODO: We might need to cache SQLite table data separately, as using the user max rows value as part of the
-	// TODO  cache key generation seems like it will leave old entries around when the user changes the value
-	var maxRows int
-	if loggedInUser != dbOwner {
-		maxRows = PrefUserMaxRows(loggedInUser)
-	} else {
-		// Not logged in, so default to 10 rows
-		maxRows = 10
-	}
-
-	// Loop around, invalidating the entries
+	// Loop around, invalidating the now outdated entries
 	for _, ver := range versionList {
 		// Invalidate the meta info
-		cacheKey := CacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, ver, 0)
+		cacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, ver)
 		err := memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
@@ -134,7 +109,7 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 		}
 
 		// Invalidate the download page data, for private database versions
-		cacheKey = CacheKey("dwndb", dbOwner, dbOwner, dbFolder, dbName, ver, maxRows)
+		cacheKey = MetadataCacheKey("dwndb-meta", dbOwner, dbOwner, dbFolder, dbName, ver)
 		err = memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
@@ -144,7 +119,7 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 		}
 
 		// Invalidate the download page data for public database versions
-		cacheKey = CacheKey("dwndb", "", dbOwner, dbFolder, dbName, ver, maxRows)
+		cacheKey = MetadataCacheKey("dwndb-meta", "", dbOwner, dbFolder, dbName, ver)
 		err = memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
@@ -155,4 +130,34 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 	}
 
 	return nil
+}
+
+// Generate a predictable cache key for metadata information
+func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, dbVersion int) string {
+	var cacheString string
+	if loggedInUser == dbOwner {
+		cacheString = fmt.Sprintf("%s/%s/%s/%s/%d", prefix, dbOwner, dbFolder, dbName, dbVersion)
+	} else {
+		// Requests for other users databases are cached separately from users own database requests
+		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%d", prefix, dbOwner, dbFolder, dbName, dbVersion)
+	}
+
+	tempArr := md5.Sum([]byte(cacheString))
+	return hex.EncodeToString(tempArr[:])
+}
+
+// Generate a predictable cache key for SQLite row data
+func TableRowsCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, dbVersion int, dbTable string, rows int) string {
+	var cacheString string
+	if loggedInUser == dbOwner {
+		cacheString = fmt.Sprintf("%s/%s/%s/%s/%d/%s/%d", prefix, dbOwner, dbFolder, dbName, dbVersion,
+			dbTable, rows)
+	} else {
+		// Requests for other users databases are cached separately from users own database requests
+		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%d/%s/%d", prefix, dbOwner, dbFolder, dbName,
+			dbVersion, dbTable, rows)
+	}
+
+	tempArr := md5.Sum([]byte(cacheString))
+	return hex.EncodeToString(tempArr[:])
 }

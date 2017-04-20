@@ -391,11 +391,12 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 			AND ver.version = $4`
 	}
 
-	// Generate a predictable cache key
-	cacheKey := CacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, dbVersion, 0)
+	// Generate a predictable cache key for this functions' metadata.  Probably not sharable with other functions
+	// cached metadata
+	mdataCacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, dbVersion)
 
 	// Use a cached version of the query response if it exists
-	ok, err := GetCachedData(cacheKey, &DB)
+	ok, err := GetCachedData(mdataCacheKey, &DB)
 	if err != nil {
 		log.Printf("Error retrieving data from cache: %v\n", err)
 	}
@@ -454,7 +455,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	}
 
 	// Cache the database details
-	err = CacheData(cacheKey, DB, 120)
+	err = CacheData(mdataCacheKey, DB, 120)
 	if err != nil {
 		log.Printf("Error when caching page data: %v\n", err)
 	}

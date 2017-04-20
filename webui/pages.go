@@ -59,23 +59,36 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		pageData.DB.MaxRows = 10
 	}
 
-	// Generate a predictable cache key for the whole page data
-	pageCacheKey := com.CacheKey("dwndb", loggedInUser, dbOwner, "/", dbName, dbVersion,
-		pageData.DB.MaxRows)
+	// Generate predictable cache keys for the metadata and sqlite table rows
+	mdataCacheKey := com.MetadataCacheKey("dwndb-meta", loggedInUser, dbOwner, "/", dbName,
+		dbVersion)
+	rowCacheKey := com.TableRowsCacheKey("dwndb-rows", loggedInUser, dbOwner, "/", dbName,
+		dbVersion, dbTable, pageData.DB.MaxRows)
 
 	// If a cached version of the page data exists, use it
-	ok, err := com.GetCachedData(pageCacheKey, &pageData)
+	ok, err := com.GetCachedData(mdataCacheKey, &pageData)
 	if err != nil {
 		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
 	}
 	if ok {
-		// Render the page from cache
-		t := tmpl.Lookup("databasePage")
-		err = t.Execute(w, pageData)
+		// Grab the cached table data as well
+		ok, err := com.GetCachedData(rowCacheKey, &pageData.Data)
 		if err != nil {
-			log.Printf("Error: %s", err)
+			log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
 		}
-		return
+
+		// Render the page (using the caches)
+		if ok {
+			t := tmpl.Lookup("databasePage")
+			err = t.Execute(w, pageData)
+			if err != nil {
+				log.Printf("Error: %s", err)
+			}
+			return
+		}
+
+		// Note - If the row data wasn't found in cache, we fall through and continue on with the rest of this
+		//        function which grabs it (and caches it for future use)
 	}
 
 	// Get a handle from Minio for the database object
@@ -135,18 +148,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		return
 	}
 
-	// Read the data from the database
-	pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, pageData.DB.MaxRows)
-	if err != nil {
-		// Some kind of error when reading the database data
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Close the SQLite database
-	defer sdb.Close()
-
-	pageData.Data.Tablename = dbTable
+	// Fill out various metadata fields
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = com.WebServer()
@@ -173,8 +175,34 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	// Render the README as markdown / CommonMark
 	pageData.DB.Info.Readme = commonmark.Md2Html(pageData.DB.Info.Readme, commonmark.CMARK_OPT_DEFAULT)
 
-	// Cache the page data
-	err = com.CacheData(pageCacheKey, pageData, com.CacheTime)
+	// Cache the page metadata
+	err = com.CacheData(mdataCacheKey, pageData, com.CacheTime)
+	if err != nil {
+		log.Printf("%s: Error when caching page data: %v\n", pageName, err)
+	}
+
+	// Grab the cached table data if it's available
+	ok, err = com.GetCachedData(rowCacheKey, &pageData.Data)
+	if err != nil {
+		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
+	}
+
+	// If the row data wasn't in cache, read it from the database
+	if !ok {
+		pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, pageData.DB.MaxRows)
+		if err != nil {
+			// Some kind of error when reading the database data
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		pageData.Data.Tablename = dbTable
+	}
+
+	// Close the SQLite database
+	defer sdb.Close()
+
+	// Cache the table row data
+	err = com.CacheData(rowCacheKey, pageData.Data, com.CacheTime)
 	if err != nil {
 		log.Printf("%s: Error when caching page data: %v\n", pageName, err)
 	}
