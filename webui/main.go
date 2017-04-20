@@ -1154,6 +1154,9 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Close the SQLite database
+	defer sdb.Close()
+
 	// Format the output
 	var jsonResponse []byte
 	if dataRows.RowCount > 0 {

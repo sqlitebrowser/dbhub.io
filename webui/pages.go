@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
-	sqlite "github.com/gwenn/gosqlite"
 	"github.com/icza/session"
 	"github.com/rhinoman/go-commonmark"
 	com "github.com/sqlitebrowser/dbhub.io/common"
@@ -81,15 +79,14 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Get a handle from Minio for the database object
-	db, err := com.OpenMinioObject(pageData.DB.MinioBkt, pageData.DB.MinioId)
+	sdb, err := com.OpenMinioObject(pageData.DB.MinioBkt, pageData.DB.MinioId)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer db.Close()
 
 	// Retrieve the list of tables in the database
-	tables, err := db.Tables("")
+	tables, err := sdb.Tables("")
 	if err != nil {
 		log.Printf("Error retrieving table names: %s", err)
 		// TODO: Add proper error handing here.  Maybe display the page, but show the error where
@@ -138,102 +135,16 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		return
 	}
 
-	// Retrieve (up to) x rows from the selected database
-	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
-	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
-	stmt, err := db.Prepare(`SELECT * FROM "`+dbTable+`" LIMIT ?`, pageData.DB.MaxRows)
+	// Read the data from the database
+	pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, pageData.DB.MaxRows)
 	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\v", err)
-		errorPage(w, r, http.StatusInternalServerError, "Internal error")
+		// Some kind of error when reading the database data
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Retrieve the field names
-	pageData.Data.ColNames = stmt.ColumnNames()
-	pageData.Data.ColCount = len(pageData.Data.ColNames)
-
-	// Process each row
-	fieldCount := -1
-	err = stmt.Select(func(s *sqlite.Stmt) error {
-
-		// Get the number of fields in the result
-		if fieldCount == -1 {
-			fieldCount = stmt.DataCount()
-		}
-
-		// Retrieve the data for each row
-		var row []com.DataValue
-		for i := 0; i < fieldCount; i++ {
-			// Retrieve the data type for the field
-			fieldType := stmt.ColumnType(i)
-
-			isNull := false
-			switch fieldType {
-			case sqlite.Integer:
-				var val int
-				val, isNull, err = s.ScanInt(i)
-				if err != nil {
-					log.Printf("Something went wrong with ScanInt(): %v\n", err)
-					break
-				}
-				if !isNull {
-					stringVal := fmt.Sprintf("%d", val)
-					row = append(row, com.DataValue{Name: pageData.Data.ColNames[i],
-						Type: com.Integer, Value: stringVal})
-				}
-			case sqlite.Float:
-				var val float64
-				val, isNull, err = s.ScanDouble(i)
-				if err != nil {
-					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
-					break
-				}
-				if !isNull {
-					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
-					row = append(row, com.DataValue{Name: pageData.Data.ColNames[i],
-						Type: com.Float, Value: stringVal})
-				}
-			case sqlite.Text:
-				var val string
-				val, isNull = s.ScanText(i)
-				if !isNull {
-					row = append(row, com.DataValue{Name: pageData.Data.ColNames[i],
-						Type: com.Text, Value: val})
-				}
-			case sqlite.Blob:
-				_, isNull = s.ScanBlob(i)
-				if !isNull {
-					row = append(row, com.DataValue{Name: pageData.Data.ColNames[i],
-						Type: com.Binary, Value: "<i>BINARY DATA</i>"})
-				}
-			case sqlite.Null:
-				isNull = true
-			}
-			if isNull {
-				row = append(row, com.DataValue{Name: pageData.Data.ColNames[i], Type: com.Null,
-					Value: "<i>NULL</i>"})
-			}
-		}
-		pageData.Data.Records = append(pageData.Data.Records, row)
-
-		return nil
-	})
-	if err != nil {
-		log.Printf("Error when retrieving select data from database: %s\v", err)
-		errorPage(w, r, http.StatusInternalServerError,
-			fmt.Sprintf("Error reading data from '%s'.  Possibly malformed?", dbName))
-		return
-	}
-	defer stmt.Finalize()
-
-	// Count the total number of rows in the selected table
-	dbQuery := `SELECT count(*) FROM "` + dbTable + `"`
-	err = db.OneValue(dbQuery, &pageData.Data.RowCount)
-	if err != nil {
-		log.Printf("%s: Error occurred when counting total table rows: %s\n", pageName, err)
-		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-		return
-	}
+	// Close the SQLite database
+	defer sdb.Close()
 
 	pageData.Data.Tablename = dbTable
 	pageData.Meta.Owner = dbOwner
