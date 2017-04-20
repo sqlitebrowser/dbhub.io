@@ -3,6 +3,7 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,7 +16,7 @@ func GetFormDatabase(r *http.Request) (string, error) {
 	dbName := r.PostFormValue("dbname")
 	err := ValidateDB(dbName)
 	if err != nil {
-		log.Printf("Validation failed for database name: %s", err)
+		log.Printf("Validation failed for database name '%s': %s", dbName, err)
 		return "", errors.New("Invalid database name")
 	}
 	return dbName, nil
@@ -39,7 +40,7 @@ func GetFormFolder(r *http.Request) (string, error) {
 	// Validate the username
 	err = ValidateFolder(folder)
 	if err != nil {
-		log.Printf("Validation failed for folder: %s", err)
+		log.Printf("Validation failed for folder: '%s': %s", folder, err)
 		return "", err
 	}
 
@@ -167,7 +168,7 @@ func GetFormVersion(r *http.Request) (int, error) {
 
 	dbVersion, err := strconv.ParseInt(v, 10, 0) // This also validates the version input
 	if err != nil {
-		return 0, errors.New("Invalid database version number")
+		return 0, errors.New(fmt.Sprintf("Invalid database version number: '%v'", v))
 	}
 	return int(dbVersion), nil
 }
@@ -188,7 +189,8 @@ func GetOD(ignore_leading int, r *http.Request) (string, string, error) {
 	// Validate the user supplied owner and database name
 	err := ValidateUserDB(dbOwner, dbName)
 	if err != nil {
-		log.Printf("Validation failed for owner or database name: %s", err)
+		log.Printf("Validation failed for owner or database name. Owner '%s', DB name '%s': %s",
+			dbOwner, dbName, err)
 		return "", "", errors.New("Invalid owner or database name")
 	}
 
@@ -289,7 +291,7 @@ func GetTable(r *http.Request) (string, error) {
 	if requestedTable != "" {
 		err := ValidatePGTable(requestedTable)
 		if err != nil {
-			log.Printf("Validation failed for table name: %s", err)
+			log.Printf("Validation failed for table name: '%s': %s", requestedTable, err)
 			return "", errors.New("Invalid table name")
 		}
 	}

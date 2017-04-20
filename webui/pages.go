@@ -130,7 +130,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	err = com.ValidatePGTable(dbTable)
 	if err != nil {
 		// Validation failed, so don't pass on the table name
-		log.Printf("%s: Validation failed for table name: %s", pageName, err)
+		log.Printf("%s: Validation failed for table name: '%s': %s", pageName, dbTable, err)
 		errorPage(w, r, http.StatusBadRequest, "Validation failed for table name")
 		return
 	}
