@@ -138,7 +138,12 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	err = com.ValidatePGTable(dbTable)
 	if err != nil {
 		// Validation failed, so don't pass on the table name
-		log.Printf("%s: Validation failed for table name: '%s': %s", pageName, dbTable, err)
+
+		// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
+		// bot picking up AngluarJS in a string and doing a request with it
+		if dbTable != "{{ db.Tablename }}" {
+			log.Printf("%s: Validation failed for table name: '%s': %s", pageName, dbTable, err)
+		}
 		errorPage(w, r, http.StatusBadRequest, "Validation failed for table name")
 		return
 	}

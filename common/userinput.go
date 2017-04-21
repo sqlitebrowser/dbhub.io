@@ -291,7 +291,11 @@ func GetTable(r *http.Request) (string, error) {
 	if requestedTable != "" {
 		err := ValidatePGTable(requestedTable)
 		if err != nil {
-			log.Printf("Validation failed for table name: '%s': %s", requestedTable, err)
+			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
+			// bot picking up AngluarJS in a string and doing a request with it
+			if requestedTable != "{{ db.Tablename }}" {
+				log.Printf("Validation failed for table name: '%s': %s", requestedTable, err)
+			}
 			return "", errors.New("Invalid table name")
 		}
 	}
