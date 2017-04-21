@@ -88,7 +88,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		}
 
 		// Note - If the row data wasn't found in cache, we fall through and continue on with the rest of this
-		//        function which grabs it (and caches it for future use)
+		//        function, which grabs it and caches it for future use
 	}
 
 	// Get a handle from Minio for the database object
