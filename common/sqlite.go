@@ -168,6 +168,14 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 	}
 	defer stmt.Finalize()
 
+	// Count the total number of rows in the selected table
+	dbQuery = `SELECT count(*) FROM "` + dbTable + `"`
+	err = sdb.OneValue(dbQuery, &dataRows.RowCount)
+	if err != nil {
+		log.Printf("Error occurred when counting total rows for table '%s'.  Error: %s\n", dbTable, err)
+		return dataRows, err
+	}
+
 	return dataRows, nil
 }
 
