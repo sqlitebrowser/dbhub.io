@@ -51,6 +51,11 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		return
 	}
 
+	// If a specific table wasn't requested, use the user specified default (if present)
+	if dbTable == "" {
+		dbTable = pageData.DB.Info.DefaultTable
+	}
+
 	// Determine the number of rows to display
 	if loggedInUser != "" {
 		pageData.DB.MaxRows = com.PrefUserMaxRows(loggedInUser)
@@ -99,19 +104,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Retrieve the list of tables in the database
-	tables, err := sdb.Tables("")
+	tables, err := com.Tables(sdb, dbName)
 	if err != nil {
-		log.Printf("Error retrieving table names: %s", err)
-		// TODO: Add proper error handing here.  Maybe display the page, but show the error where
-		// TODO  the table data would otherwise be?
-		errorPage(w, r, http.StatusInternalServerError,
-			fmt.Sprintf("Error reading from '%s'.  Possibly encrypted or not a database?", dbName))
-		return
-	}
-	if len(tables) == 0 {
-		// No table names were returned, so abort
-		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
-		errorPage(w, r, http.StatusInternalServerError, "Database has no tables?")
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	pageData.DB.Info.Tables = tables
@@ -539,9 +534,37 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the Minio bucket and ID for the given database
+	bkt, id, err := com.MinioBucketID(dbOwner, dbName, dbVersion, loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError,
+			"Could not retrieve internal information for the requested database")
+		return
+	}
+
+	// Get a handle from Minio for the database object
+	sdb, err := com.OpenMinioObject(bkt, id)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve the list of tables in the database
+	pageData.DB.Info.Tables, err = com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, "/", dbName))
+	defer sdb.Close()
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	// Fill out the metadata
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
+
+	// If the default table is blank, use the first one from the table list
+	if pageData.DB.Info.DefaultTable == "" {
+		pageData.DB.Info.DefaultTable = pageData.DB.Info.Tables[0]
+	}
 
 	// TODO: Hook up the real license choices
 	pageData.DB.Info.License = com.OTHER

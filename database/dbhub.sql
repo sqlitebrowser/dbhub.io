@@ -143,7 +143,8 @@ CREATE TABLE sqlite_databases (
     idnum integer NOT NULL,
     minio_bucket text NOT NULL,
     root_database integer,
-    forked_from integer
+    forked_from integer,
+    default_table text
 );
 
 

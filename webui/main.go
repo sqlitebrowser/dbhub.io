@@ -968,7 +968,27 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 // Handler for the Database Settings page
 func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Further relevant settings
-	// TODO  License, default display table, and public/private setting
+	// TODO  License, and public/private setting
+
+	// Ensure user is logged in
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+	if validSession != true {
+		// Display an error message
+		// TODO: Show the login dialog (also for the preferences page)
+		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
+		return
+	}
 
 	// Extract the username, folder, and (current) database name form variables
 	u, dbFolder, dbName, err := com.GetFormUFD(r)
@@ -990,10 +1010,18 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract the version number
+	dbVersion, err := com.GetFormVersion(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "No database version supplied!")
+		return
+	}
+
 	// Extract the form variables
 	descrip := r.PostFormValue("descrip")
 	newName := r.PostFormValue("newname")
 	readme := r.PostFormValue("readme")
+	defTable := r.PostFormValue("defaulttable")
 
 	// If set, validate the new database name
 	if newName != dbName {
@@ -1011,6 +1039,56 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate the name of the default table
+	err = com.ValidatePGTable(defTable)
+	if err != nil {
+		// Validation failed
+		log.Printf("Validation failed for name of default table '%s': %s", defTable, err)
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for name of default table")
+		return
+	}
+
+	// Get the Minio bucket and ID for the given database
+	bkt, id, err := com.MinioBucketID(userName, dbName, dbVersion, loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError,
+			"Could not retrieve internal information for the requested database")
+		return
+	}
+
+	// Get a handle from Minio for the database object
+	sdb, err := com.OpenMinioObject(bkt, id)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve the list of tables in the database
+	tables, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", userName, dbFolder, dbName))
+	defer sdb.Close()
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// If a specific table was requested, check that it's present
+	if defTable != "" {
+		// Check the requested table is present
+		tablePresent := false
+		for _, tbl := range tables {
+			if tbl == defTable {
+				tablePresent = true
+			}
+		}
+		if tablePresent == false {
+			// The requested table doesn't exist in the database
+			log.Printf("Requested table '%s' not present in database '%s%s%s' version %d\n",
+				defTable, userName, dbFolder, dbName, dbVersion)
+			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
+			return
+		}
+	}
+
 	// If the database doesn't have a description, don't save the placeholder text as one
 	if descrip == "No description" {
 		descrip = ""
@@ -1022,7 +1100,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save settings
-	err = com.SaveDBSettings(userName, dbFolder, dbName, descrip, readme)
+	err = com.SaveDBSettings(userName, dbFolder, dbName, descrip, readme, defTable)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return

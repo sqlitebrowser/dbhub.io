@@ -10,13 +10,13 @@ import (
 	sqlite "github.com/gwenn/gosqlite"
 )
 
-// Returns the number of rows in a SQLite table
-func GetSQLiteRowCount(db *sqlite.Conn, dbTable string) (int, error) {
+// Returns the number of rows in a SQLite table.
+func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 	dbQuery := `SELECT count(*) FROM "` + dbTable + `"`
 	var rowCount int
-	err := db.OneValue(dbQuery, &rowCount)
+	err := sdb.OneValue(dbQuery, &rowCount)
 	if err != nil {
-		log.Printf("Error occurred when counting total table rows: %s\n", err)
+		log.Printf("Error occurred when counting total rows for table '%s'.  Error: %s\n", dbTable, err)
 		return 0, errors.New("Database query failure")
 	}
 	return rowCount, nil
@@ -168,13 +168,12 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 	}
 	defer stmt.Finalize()
 
-	// Count the total number of rows in the selected table
-	dbQuery = `SELECT count(*) FROM "` + dbTable + `"`
-	err = sdb.OneValue(dbQuery, &dataRows.RowCount)
+	// Add count of total rows to returned data
+	tmpCount, err := GetSQLiteRowCount(sdb, dbTable)
 	if err != nil {
-		log.Printf("Error occurred when counting total rows for table '%s'.  Error: %s\n", dbTable, err)
 		return dataRows, err
 	}
+	dataRows.RowCount = tmpCount
 
 	return dataRows, nil
 }
@@ -261,7 +260,7 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 	return resultSet, nil
 }
 
-// Performs basic sanity checks of an uploaded database
+// Performs basic sanity checks of an uploaded database.
 func SanityCheck(fileName string) error {
 	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
 	sqliteDB, err := sqlite.Open(fileName, sqlite.OpenReadOnly)
@@ -281,4 +280,21 @@ func SanityCheck(fileName string) error {
 		return errors.New("Database has no tables?")
 	}
 	return nil
+}
+
+// Returns the list of tables in the SQLite database.
+func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
+	// Retrieve the list of tables in the database
+	tables, err := sdb.Tables("")
+	if err != nil {
+		log.Printf("Error retrieving table names: %s", err)
+		return nil, err
+	}
+	if len(tables) == 0 {
+		// No table names were returned, so abort
+		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
+		return nil, err
+	}
+
+	return tables, nil
 }

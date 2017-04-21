@@ -368,9 +368,9 @@ func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 // Retrieve the details for a specific database
 func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder string, dbName string, dbVersion int) error {
 	dbQuery := `
-		SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers,
-			db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
-			db.releases, db.contributors, db.description, db.readme, db.minio_bucket
+		SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
+			db.discussions, db.pull_requests, db.updates, db.branches, db.releases, db.contributors,
+			db.description, db.readme, db.minio_bucket, db.default_table
 		FROM sqlite_databases AS db, database_versions AS ver
 		WHERE db.username = $1
 			AND db.folder = $2
@@ -406,19 +406,18 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	}
 
 	// Retrieve the requested database details
-	var Desc, Readme pgx.NullString
+	var Desc, Readme, defTable pgx.NullString
 	if dbVersion == 0 {
 		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DB.MinioId, &DB.Info.DateCreated,
-			&DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version, &DB.Info.Watchers,
-			&DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
-			&DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors,
-			&Desc, &Readme, &DB.MinioBkt)
+			&DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version, &DB.Info.Watchers, &DB.Info.Stars,
+			&DB.Info.Discussions, &DB.Info.MRs, &DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases,
+			&DB.Info.Contributors, &Desc, &Readme, &DB.MinioBkt, &defTable)
 	} else {
 		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, dbVersion).Scan(&DB.MinioId,
 			&DB.Info.DateCreated, &DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version,
-			&DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
-			&DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors,
-			&Desc, &Readme, &DB.MinioBkt)
+			&DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs, &DB.Info.Updates,
+			&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &Desc, &Readme, &DB.MinioBkt,
+			&defTable)
 	}
 	if err != nil {
 		return errors.New("The requested database doesn't exist")
@@ -432,6 +431,11 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		DB.Info.Readme = "No readme"
 	} else {
 		DB.Info.Readme = Readme.String
+	}
+	if !defTable.Valid {
+		DB.Info.DefaultTable = ""
+	} else {
+		DB.Info.DefaultTable = defTable.String
 	}
 
 	// Fill out the fields we already have data
@@ -1008,7 +1012,7 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 }
 
 // Saves updated database settings to PostgreSQL.
-func SaveDBSettings(userName string, dbFolder string, dbName string, descrip string, readme string) error {
+func SaveDBSettings(userName string, dbFolder string, dbName string, descrip string, readme string, defTable string) error {
 	// Check for values which should be NULL
 	var nullableDescrip, nullableReadme pgx.NullString
 	if descrip == "" {
@@ -1027,11 +1031,11 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, descrip str
 	// Save the database settings
 	SQLQuery := `
 		UPDATE sqlite_databases
-		SET description = $4, readme = $5
+		SET description = $4, readme = $5, default_table = $6
 		WHERE username = $1
 			AND folder = $2
 			AND dbname = $3`
-	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullableDescrip, nullableReadme)
+	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullableDescrip, nullableReadme, defTable)
 	if err != nil {
 		log.Printf("Updating description for database '%s%s%s' failed: %v\n", userName, dbFolder,
 			dbName, err)
