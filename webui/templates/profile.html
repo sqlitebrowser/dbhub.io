@@ -44,8 +44,10 @@
                     <tr ng-repeat="row in pubdb.Databases">
                         <td><h4><a href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
                             <b>Version:</b> {{ row.Version }} &nbsp; <b>Size:</b> {{ row.Size /1024 | number : 0 }} KB &nbsp;
-                            <b>Watchers:</b> {{ row.Watchers }} &nbsp; <b>Stars:</b> {{ row.Stars }} &nbsp;
-                            <b>Forks:</b> {{ row.Forks }} &nbsp; <b>Discussions:</b> {{ row. Discussions }} &nbsp;
+                            <b>Watchers:</b> {{ row.Watchers }} &nbsp;
+                            <b>Stars:</b> <a href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
+                            <b>Forks:</b> <a href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
+                            <b>Discussions:</b> {{ row. Discussions }} &nbsp;
                             <b>MRs:</b> {{ row.MRs }} &nbsp; <b>Updates:</b> {{ row.Updates }} &nbsp;
                             <b>Branches:</b> {{ row.Branches }} &nbsp; <b>Releases:</b> {{ row.Releases }} &nbsp;
                             <b>Contributors:</b> {{ row.Contributors }}<br />
@@ -70,8 +72,10 @@
                     <tr ng-repeat="row in privdb.Databases">
                         <td><h4><a href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
                             <b>Version:</b> {{ row.Version }} &nbsp; <b>Size:</b> {{ row.Size /1024 | number : 0 }} KB &nbsp;
-                            <b>Watchers:</b> {{ row.Watchers }} &nbsp; <b>Stars:</b> {{ row.Stars }} &nbsp;
-                            <b>Forks:</b> {{ row.Forks }} &nbsp; <b>Discussions:</b> {{ row. Discussions }} &nbsp;
+                            <b>Watchers:</b> {{ row.Watchers }} &nbsp;
+                            <b>Stars:</b> <a href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
+                            <b>Forks:</b> <a href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
+                            <b>Discussions:</b> {{ row. Discussions }} &nbsp;
                             <b>MRs:</b> {{ row.MRs }} &nbsp; <b>Updates:</b> {{ row.Updates }} &nbsp;
                             <b>Branches:</b> {{ row.Branches }} &nbsp; <b>Releases:</b> {{ row.Releases }} &nbsp;
                             <b>Contributors:</b> {{ row.Contributors }}<br />
