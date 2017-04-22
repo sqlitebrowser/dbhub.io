@@ -189,6 +189,11 @@ func GetOD(ignore_leading int, r *http.Request) (string, string, error) {
 	// Validate the user supplied owner and database name
 	err := ValidateUserDB(dbOwner, dbName)
 	if err != nil {
+		// Don't bother logging the fairly common case of a bot using an AngularJS phrase in a request
+		if dbOwner == "{{ meta.Owner + '" && dbName == "' + row.Database }}" {
+			return "", "", errors.New("Invalid owner or database name")
+		}
+
 		log.Printf("Validation failed for owner or database name. Owner '%s', DB name '%s': %s",
 			dbOwner, dbName, err)
 		return "", "", errors.New("Invalid owner or database name")
@@ -291,8 +296,8 @@ func GetTable(r *http.Request) (string, error) {
 	if requestedTable != "" {
 		err := ValidatePGTable(requestedTable)
 		if err != nil {
-			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
-			// bot picking up AngluarJS in a string and doing a request with it
+			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a
+			// search bot picking up the AngularJS string then doing a request with it
 			if requestedTable != "{{ db.Tablename }}" {
 				log.Printf("Validation failed for table name: '%s': %s", requestedTable, err)
 			}
