@@ -73,6 +73,7 @@
                 </div>
                 <br />
                 <div style="text-align: center;">
+                    <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelSettings()">
                     <input type="submit" class="btn btn-primary" value="Save">
                 </div>
 
@@ -279,6 +280,11 @@
                 data: $httpParamSerializerJQLike({"mkdown": readmeText}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.markDownPreview = response.data; });
+        };
+
+        // Handler for the cancel button.  Just bounces back to the database page
+        $scope.cancelSettings = function() {
+            window.location = "/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
         };
     });
 </script>
