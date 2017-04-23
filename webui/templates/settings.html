@@ -273,6 +273,12 @@
             // Retrieve latest markdown text from the textarea
             var readmeText = document.getElementById("readme").value;
 
+            // Check for the placeholder string
+            if (readmeText == "No full description") {
+                $scope.markDownPreview = "";
+                return;
+            }
+
             // Call the server, asking for a rendered version of the markdown
             $http({
                 method: "POST",

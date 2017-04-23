@@ -1089,13 +1089,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// If the database doesn't have a description, don't save the placeholder text as one
+	// If the database doesn't have a 1-liner description, don't save the placeholder text as one
 	if descrip == "No description" {
 		descrip = ""
 	}
 
-	// Same thing, but for the README
-	if readme == "No readme" {
+	// Same thing, but for the full length description
+	if readme == "No full description" {
 		readme = ""
 	}
 

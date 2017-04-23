@@ -428,7 +428,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		DB.Info.Description = Desc.String
 	}
 	if !Readme.Valid {
-		DB.Info.Readme = "No readme"
+		DB.Info.Readme = "No full description"
 	} else {
 		DB.Info.Readme = Readme.String
 	}
