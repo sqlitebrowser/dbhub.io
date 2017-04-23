@@ -23,9 +23,10 @@ When the core code is more fully featured (June/July 2017 target), we'll start p
 
 ### Subdirectories
 
-* [admin](admin/) - Internal only (not public facing) webUI for admin tasks
-* [common](common/) - Library of functions used by the DBHub.io components
-* [database](database/) - PostgreSQL database schema
+* [admin](admin/) - Internal only (not public facing) webUI for admin tasks.
+* [api](api/) - Future home for the API end point code.  Not yet created. ;)
+* [common](common/) - Library of functions used by the DBHub.io components.
+* [database](database/) - PostgreSQL database schema.
 * [db4s](db4s/) - REST server which [DB Browser for SQLite](http://sqlitebrowser.org)
-  connects to with File → Remote
-* [webui](webui/) - The main public facing webUI
+  connects to with File → Remote.
+* [webui](webui/) - The main public facing webUI.
