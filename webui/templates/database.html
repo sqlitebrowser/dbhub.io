@@ -493,7 +493,7 @@
             // Display down arrow only when needed
             var pageRow = Number($scope.pageOffset) + Number($scope.meta.MaxRows);
             var totalRows = Number($scope.db.RowCount);
-            if (pageRow <= totalRows) {
+            if (pageRow < totalRows) {
                 bottomArrow.style.visibility = "visible";
                 downArrow.style.visibility = "visible";
             } else {
