@@ -150,9 +150,11 @@
                 </tr>
                 <tr>
                     <td colspan="{{ db.ColCount }}" style="text-align: center;">
-                        <span id="tblup" style="font-size: x-large;"><a href="" ng-click="pageBack()">▲</a></span>
-                        <span ng-bind-html="totalRowCount()"></span>
-                        <span id="tbldown" style="font-size: x-large;"><a href="" ng-click="pageForward()">▼</a></span>
+                        <span id="tbltop" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" ng-click="goToTop()">⏫</a></span>
+                        <span id="tblup" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" ng-click="pageBack()">▲</a></span>
+                        <span style="vertical-align: middle;" ng-bind-html="totalRowCount()"></span>
+                        <span id="tbldown" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" ng-click="pageForward()">▼</a></span>
+                        <span id="tblbottom" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" ng-click="goToBottom()">⏬</a></span>
                     </td>
                 </tr>
 
@@ -270,8 +272,57 @@
             window.location = "/forks/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
         };
 
-        // Refreshes the table data, moving backwards one page
+        // Moves the table view forward, so the last row is visible
         $scope.pageOffset = 0;
+        $scope.goToBottom = function() {
+            // Don't page down if we're at the end
+            var lastPage = Number($scope.db.RowCount) - Number($scope.meta.MaxRows);
+            if ($scope.pageOffset >= lastPage)
+            {
+                return;
+            }
+
+            var newOffset = Number($scope.db.RowCount) - Number($scope.meta.MaxRows);
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
+                $scope.db.Tablename+"&sort="+$scope.sortColumn+"&dir="+$scope.sortDirection+"&offset="+newOffset).then(
+                function (response) {
+                    // Retrieve the new table data range
+                    $scope.db = response.data;
+
+                    // Update the displayed range information
+                    $scope.pageOffset = Number(newOffset);
+
+                    // Update the displayed arrows
+                    $scope.updateTableArrows();
+                }
+            )
+        };
+
+        // Moves the table view back to the top row
+        $scope.goToTop = function() {
+            // Don't do anything if we're already at the start
+            if ($scope.pageOffset <= 1) {
+                return;
+            }
+
+            // Retrieve the updated page data
+            var newOffset = 0;
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
+                $scope.db.Tablename+"&sort="+$scope.sortColumn+"&dir="+$scope.sortDirection+"&offset="+newOffset).then(
+                function (response) {
+                    // Retrieve the new table data range
+                    $scope.db = response.data;
+
+                    // Update the displayed range information
+                    $scope.pageOffset = Number(newOffset);
+
+                    // Update the displayed arrows
+                    $scope.updateTableArrows();
+                }
+            )
+        };
+
+        // Refreshes the table data, moving backwards one page
         $scope.pageBack = function() {
             // Don't page up if we're at the start
             if ($scope.pageOffset <= 1) {
@@ -425,13 +476,17 @@
 
         // Updates the shown/hidden state of the table arrows
         $scope.updateTableArrows = function() {
+            var bottomArrow = document.getElementById("tblbottom");
             var downArrow = document.getElementById("tbldown");
+            var topArrow = document.getElementById("tbltop");
             var upArrow = document.getElementById("tblup");
 
             // Display up arrow only when needed
             if ($scope.pageOffset > 0) {
+                topArrow.style.visibility = "visible";
                 upArrow.style.visibility = "visible";
             } else {
+                topArrow.style.visibility = "hidden";
                 upArrow.style.visibility = "hidden";
             }
 
@@ -439,8 +494,10 @@
             var pageRow = Number($scope.pageOffset) + Number($scope.meta.MaxRows);
             var totalRows = Number($scope.db.RowCount);
             if (pageRow <= totalRows) {
+                bottomArrow.style.visibility = "visible";
                 downArrow.style.visibility = "visible";
             } else {
+                bottomArrow.style.visibility = "hidden";
                 downArrow.style.visibility = "hidden";
             }
         };
