@@ -1313,18 +1313,11 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Format the output
-	var jsonResponse []byte
-	if dataRows.RowCount > 0 {
-		// Use json.MarshalIndent() for nicer looking output
-		jsonResponse, err = json.MarshalIndent(dataRows, "", " ")
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	} else {
-		// Return an empty set indicator, instead of "null"
-		jsonResponse = []byte{'{', ']'}
+	// Format the output.  Use json.MarshalIndent() for nicer looking output
+	jsonResponse, err := json.MarshalIndent(dataRows, "", " ")
+	if err != nil {
+		log.Println(err)
+		return
 	}
 
 	//w.Header().Set("Access-Control-Allow-Origin", "*")
