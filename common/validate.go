@@ -8,10 +8,11 @@ import (
 )
 
 var (
-	regexDBName   = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
-	regexFolder   = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,//]+$`)
-	regexPGTable  = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
-	regexUsername = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+	regexDBName    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
+	regexFieldName = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+	regexFolder    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,//]+$`)
+	regexPGTable   = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+	regexUsername  = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
 	// For input validation
 	Validate *valid.Validate
@@ -21,6 +22,7 @@ func init() {
 	// Load validation code
 	Validate = valid.New()
 	Validate.RegisterValidation("dbname", checkDBName)
+	Validate.RegisterValidation("fieldname", checkFieldName)
 	Validate.RegisterValidation("folder", checkFolder)
 	Validate.RegisterValidation("pgtable", checkPGTableName)
 	Validate.RegisterValidation("username", checkUsername)
@@ -31,6 +33,13 @@ func init() {
 // valid file name
 func checkDBName(fl valid.FieldLevel) bool {
 	return regexDBName.MatchString(fl.Field().String())
+}
+
+// Custom validation function for SQLite field names
+// At the moment it just allows alphanumeric and ".-_" chars, though it should probably be extended to cover all valid
+// SQLite field name characters
+func checkFieldName(fl valid.FieldLevel) bool {
+	return regexFieldName.MatchString(fl.Field().String())
 }
 
 // Custom validation function for folder names.
@@ -60,6 +69,16 @@ func ReservedUsernamesCheck(userName string) error {
 		if userName == word {
 			return fmt.Errorf("That username is not available: %s\n", userName)
 		}
+	}
+
+	return nil
+}
+
+// Validate the SQLite field name
+func ValidateFieldName(fieldName string) error {
+	err := Validate.Var(fieldName, "required,fieldname,min=1,max=63") // 63 char limit seems reasonable
+	if err != nil {
+		return err
 	}
 
 	return nil

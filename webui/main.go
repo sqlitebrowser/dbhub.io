@@ -1146,6 +1146,29 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract sort column, sort direction, and offset variables if present
+	sortCol := r.FormValue("sort")
+	sortDir := r.FormValue("dir")
+	offsetStr := r.FormValue("offset")
+	var offset int
+	if offsetStr == "" {
+		offset = 0
+	} else {
+		offset, err = strconv.Atoi(offsetStr)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+
+	// If a sort direction was provided, validate it
+	if sortDir != "" {
+		if sortDir != "ASC" && sortDir != "DESC" {
+			errorPage(w, r, http.StatusBadRequest, "Invalid sort direction")
+			return
+		}
+	}
+
 	// Retrieve session data (if any)
 	var loggedInUser string
 	sess := session.Get(r)
@@ -1217,8 +1240,37 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		requestedTable = tables[0]
 	}
 
+	// If a sort column was requested, verify it exists
+	if sortCol != "" {
+		// Validate the sort column text, as we use it in string smashing SQL queries so need to be even more
+		// careful than usual
+		err = com.ValidateFieldName(sortCol)
+		if err != nil {
+			log.Printf("Validation failed on requested sort field name '%v': %v\n", sortCol, err.Error())
+			errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
+			return
+		}
+
+		colList, err := sdb.Columns("", requestedTable)
+		if err != nil {
+			log.Printf("Error when reading column names for table '%s': %v\n", requestedTable, err.Error())
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			return
+		}
+		colExists := false
+		for _, j := range colList {
+			if j.Name == sortCol {
+				colExists = true
+			}
+		}
+		if colExists == false {
+			// The requested sort column doesn't exist, so we fall back to no sorting
+			sortCol = ""
+		}
+	}
+
 	// Read the data from the database
-	dataRows, err := com.ReadSQLiteDB(sdb, requestedTable, maxRows)
+	dataRows, err := com.ReadSQLiteDB(sdb, requestedTable, maxRows, sortCol, sortDir, offset)
 	if err != nil {
 		// Some kind of error when reading the database data
 		errorPage(w, r, http.StatusBadRequest, err.Error())

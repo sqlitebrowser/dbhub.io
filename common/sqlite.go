@@ -23,13 +23,13 @@ func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 }
 
 // Reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then read all rows.
-func ReadSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int) (SQLiteRecordSet, error) {
-	return ReadSQLiteDBCols(db, dbTable, false, false, maxRows, nil, "*")
+func ReadSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int, sortCol string, sortDir string, offset int) (SQLiteRecordSet, error) {
+	return ReadSQLiteDBCols(db, dbTable, false, false, maxRows, sortCol, sortDir, offset)
 }
 
 // Reads up to maxRows # of rows from a SQLite database.  Only returns the requested columns.
 func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignoreNull bool, maxRows int,
-	filters []WhereClause, cols ...string) (SQLiteRecordSet, error) {
+	sortCol string, sortDir string, offset int) (SQLiteRecordSet, error) {
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
 	var dataRows SQLiteRecordSet
@@ -40,40 +40,34 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 	dataRows.Tablename = dbTable
 
 	// Construct the main SQL query
-	var colString string
-	for i, d := range cols {
-		if i != 0 {
-			colString += ", "
-		}
-		colString += fmt.Sprintf("%s", d)
-	}
-	dbQuery := fmt.Sprintf(`SELECT %s FROM "%s"`, colString, dbTable)
+	dbQuery := sqlite.Mprintf(`SELECT * FROM "%w"`, dbTable)
 
-	// If filters were given, add them
-	var filterVals []interface{}
-	if filters != nil {
-		for i, d := range filters {
-			if i != 0 {
-				dbQuery += " AND "
-			}
-			dbQuery = fmt.Sprintf("%s WHERE %s %s ?", dbQuery, d.Column, d.Type)
-			filterVals = append(filterVals, d.Value)
-		}
+	// If a sort column was given, include it
+	if sortCol != "" {
+		dbQuery += ` ORDER BY "%w"`
+		dbQuery = sqlite.Mprintf(dbQuery, sortCol)
+	}
+
+	// If a sort direction was given, include it
+	switch sortDir {
+	case "ASC":
+		dbQuery += " ASC"
+	case "DESC":
+		dbQuery += " DESC"
 	}
 
 	// If a row limit was given, add it
 	if maxRows >= 0 {
-
 		dbQuery = fmt.Sprintf("%s LIMIT %d", dbQuery, maxRows)
 	}
 
-	// Use parameter binding for the WHERE clause values
-	if filters != nil {
-		// Use parameter binding for the user supplied WHERE expression (safety!)
-		stmt, err = sdb.Prepare(dbQuery, filterVals...)
-	} else {
-		stmt, err = sdb.Prepare(dbQuery)
+	// If an offset was given, add it
+	if offset >= 0 {
+		dbQuery = fmt.Sprintf("%s OFFSET %d", dbQuery, offset)
 	}
+
+	// Use the sort column as needed
+	stmt, err = sdb.Prepare(dbQuery)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\n", err)
 		return dataRows, errors.New("Error when reading data from the SQLite database")

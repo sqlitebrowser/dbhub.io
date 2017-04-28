@@ -189,7 +189,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 
 	// If the row data wasn't in cache, read it from the database
 	if !ok {
-		pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, pageData.DB.MaxRows)
+		pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, pageData.DB.MaxRows, "", "", 0)
 		if err != nil {
 			// Some kind of error when reading the database data
 			errorPage(w, r, http.StatusBadRequest, err.Error())
