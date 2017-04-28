@@ -1161,6 +1161,19 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Sanity check the sort column name
+	if sortCol != "" {
+		// Validate the sort column text, as we use it in string smashing SQL queries so need to be even more
+		// careful than usual
+		err = com.ValidateFieldName(sortCol)
+		if err != nil {
+			log.Printf("Validation failed on requested sort field name '%v': %v\n", sortCol,
+				err.Error())
+			errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
+			return
+		}
+	}
+
 	// If a sort direction was provided, validate it
 	if sortDir != "" {
 		if sortDir != "ASC" && sortDir != "DESC" {
@@ -1191,7 +1204,8 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	// Sanity check
 	if id == "" {
 		// The requested database wasn't found
-		log.Printf("%s: Requested database not found. Owner: '%s' Database: '%s'", pageName, dbOwner, dbName)
+		log.Printf("%s: Requested database not found. Owner: '%s' Database: '%s'", pageName, dbOwner,
+			dbName)
 		return
 	}
 
@@ -1205,87 +1219,99 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		maxRows = 10
 	}
 
-	// Open the Minio database
-	sdb, err := com.OpenMinioObject(bucket, id)
+	// If the data is available from memcached, use that instead of reading from the SQLite database itself
+	dataCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, offset),
+		loggedInUser, dbOwner, "/", dbName, dbVersion, requestedTable, maxRows)
 
-	// Retrieve the list of tables in the database
-	tables, err := sdb.Tables("")
+	// If a cached version of the page data exists, use it
+	var dataRows com.SQLiteRecordSet
+	ok, err := com.GetCachedData(dataCacheKey, &dataRows)
 	if err != nil {
-		log.Printf("Error retrieving table names: %s", err)
-		return
+		log.Printf("%s: Error retrieving table data from cache: %v\n", pageName, err)
 	}
-	if len(tables) == 0 {
-		// No table names were returned, so abort
-		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
-		return
-	}
+	if !ok {
+		// * Data wasn't in cache, so we gather it from the SQLite database *
 
-	// If a specific table was requested, check it exists
-	if requestedTable != "" {
-		tablePresent := false
-		for _, tableName := range tables {
-			if requestedTable == tableName {
-				tablePresent = true
+		// Open the Minio database
+		sdb, err := com.OpenMinioObject(bucket, id)
+
+		// Retrieve the list of tables in the database
+		tables, err := sdb.Tables("")
+		if err != nil {
+			log.Printf("Error retrieving table names: %s", err)
+			return
+		}
+		if len(tables) == 0 {
+			// No table names were returned, so abort
+			log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
+			return
+		}
+
+		// If a specific table was requested, check it exists
+		if requestedTable != "" {
+			tablePresent := false
+			for _, tableName := range tables {
+				if requestedTable == tableName {
+					tablePresent = true
+				}
+			}
+			if tablePresent == false {
+				// The requested table doesn't exist
+				errorPage(w, r, http.StatusBadRequest, "Requested table does not exist")
+				return
 			}
 		}
-		if tablePresent == false {
-			// The requested table doesn't exist
-			errorPage(w, r, http.StatusBadRequest, "Requested table does not exist")
-			return
-		}
-	}
 
-	// If no specific table was requested, use the first one
-	if requestedTable == "" {
-		requestedTable = tables[0]
-	}
-
-	// If a sort column was requested, verify it exists
-	if sortCol != "" {
-		// Validate the sort column text, as we use it in string smashing SQL queries so need to be even more
-		// careful than usual
-		err = com.ValidateFieldName(sortCol)
-		if err != nil {
-			log.Printf("Validation failed on requested sort field name '%v': %v\n", sortCol, err.Error())
-			errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
-			return
+		// If no specific table was requested, use the first one
+		if requestedTable == "" {
+			requestedTable = tables[0]
 		}
 
-		colList, err := sdb.Columns("", requestedTable)
-		if err != nil {
-			log.Printf("Error when reading column names for table '%s': %v\n", requestedTable, err.Error())
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-			return
-		}
-		colExists := false
-		for _, j := range colList {
-			if j.Name == sortCol {
-				colExists = true
+		// If a sort column was requested, verify it exists
+		if sortCol != "" {
+			colList, err := sdb.Columns("", requestedTable)
+			if err != nil {
+				log.Printf("Error when reading column names for table '%s': %v\n", requestedTable,
+					err.Error())
+				errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+				return
+			}
+			colExists := false
+			for _, j := range colList {
+				if j.Name == sortCol {
+					colExists = true
+				}
+			}
+			if colExists == false {
+				// The requested sort column doesn't exist, so we fall back to no sorting
+				sortCol = ""
 			}
 		}
-		if colExists == false {
-			// The requested sort column doesn't exist, so we fall back to no sorting
-			sortCol = ""
+
+		// Read the data from the database
+		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, maxRows, sortCol, sortDir, offset)
+		if err != nil {
+			// Some kind of error when reading the database data
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// Count the total number of rows in the requested table
+		dataRows.TotalRows, err = com.GetSQLiteRowCount(sdb, requestedTable)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Close the SQLite database
+		defer sdb.Close()
+
+		// Cache the data in memcache
+		err = com.CacheData(dataCacheKey, dataRows, com.CacheTime)
+		if err != nil {
+			log.Printf("%s: Error when caching table data: %v\n", pageName, err)
 		}
 	}
-
-	// Read the data from the database
-	dataRows, err := com.ReadSQLiteDB(sdb, requestedTable, maxRows, sortCol, sortDir, offset)
-	if err != nil {
-		// Some kind of error when reading the database data
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Count the total number of rows in the requested table
-	dataRows.TotalRows, err = com.GetSQLiteRowCount(sdb, requestedTable)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Close the SQLite database
-	defer sdb.Close()
 
 	// Format the output
 	var jsonResponse []byte
