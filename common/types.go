@@ -57,8 +57,8 @@ const (
 	Float
 )
 
-// Stored cached data in memcache for 1/2 hour by default
-const CacheTime = 1800
+// Stored cached data in memcache for 1 full day (as a first guess, which will probably need training)
+const CacheTime = 86400
 
 // ************************
 // Configuration file types
