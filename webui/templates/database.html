@@ -236,7 +236,17 @@
         // Retrieves the table data for a given table
         $scope.changeTable = function(newtable) {
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
-                newtable).then(function (response) { $scope.db = response.data; })
+                newtable).then(
+                    function (response) {
+                        // Update table data
+                        $scope.db = response.data;
+
+                        // Reset sort and pagination data
+                        $scope.pageOffset = 0;
+                        $scope.sortColumn = $scope.db.ColNames[0];
+                        $scope.sortDirection = "ASC";
+                    }
+                )
         };
 
         // Fork the database
@@ -281,7 +291,7 @@
 
             // Retrieve the updated page data
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
-                $scope.db.Tablename+"&offset="+newOffset).then(
+                $scope.db.Tablename+"&sort="+$scope.sortColumn+"&dir="+$scope.sortDirection+"&offset="+newOffset).then(
                     function (response) {
                         // Retrieve the new table data range
                         $scope.db = response.data;
@@ -306,7 +316,7 @@
 
             var newOffset = Number($scope.pageOffset) + Number($scope.meta.MaxRows);
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
-                $scope.db.Tablename+"&offset="+newOffset).then(
+                $scope.db.Tablename+"&sort="+$scope.sortColumn+"&dir="+$scope.sortDirection+"&offset="+newOffset).then(
                     function (response) {
                         // Retrieve the new table data range
                         $scope.db = response.data;
@@ -321,7 +331,7 @@
         };
 
         // Updates displayed table data, using new sort order
-        $scope.sortColumn = "";
+        $scope.sortColumn = $scope.db.ColNames[0];
         $scope.sortDirection = "ASC";
         $scope.sortOrder = function(newSortCol) {
 
@@ -346,7 +356,7 @@
 
             // Retrieve updated table data
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
-                $scope.db.Tablename+"&sort="+newSortCol+"&dir="+$scope.sortDirection).then(
+                $scope.db.Tablename+"&sort="+newSortCol+"&dir="+$scope.sortDirection+"&offset="+$scope.pageOffset).then(
                 function (response) { $scope.db = response.data; });
 
             // Add a direction arrow (▲/▼) to the new sort column heading, showing the sort direction
