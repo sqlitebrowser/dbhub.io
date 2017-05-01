@@ -57,11 +57,14 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Determine the number of rows to display
+	var tempMaxRows int
 	if loggedInUser != "" {
-		pageData.DB.MaxRows = com.PrefUserMaxRows(loggedInUser)
+		tempMaxRows = com.PrefUserMaxRows(loggedInUser)
+		pageData.DB.MaxRows = tempMaxRows
 	} else {
 		// Not logged in, so default to 10 rows
-		pageData.DB.MaxRows = 10
+		tempMaxRows = 10
+		pageData.DB.MaxRows = tempMaxRows
 	}
 
 	// Generate predictable cache keys for the metadata and sqlite table rows
@@ -81,6 +84,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		if err != nil {
 			log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
 		}
+
+		// Restore the correct MaxRow value
+		pageData.DB.MaxRows = tempMaxRows
 
 		// Render the page (using the caches)
 		if ok {
