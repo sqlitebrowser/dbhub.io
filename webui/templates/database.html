@@ -125,6 +125,9 @@
         </div>
         <div class="col-md-5">
             <span class="pull-right">
+                [[ if .Meta.LoggedInUser ]]
+                    <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button>
+                [[ end ]]
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                     <button type="button" class="btn btn-success" uib-dropdown-toggle>
                         Download <span class="caret"></span>
@@ -502,6 +505,11 @@
             }
         };
         $scope.updateTableArrows();
+
+        // Switch to the upload database page
+        $scope.uploadForm = function() {
+            window.location = '/upload/'
+        };
 
         // Auth0 authentication
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
