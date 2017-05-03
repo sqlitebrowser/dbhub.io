@@ -1501,6 +1501,14 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s: Username: %v, database '%v' uploaded as '%v', bytes: %v\n", pageName, loggedInUser, dbName,
 		minioID, dbSize)
 
+	// Invalidate any memcached entries for the previous highest version # of the database
+	err = com.InvalidateCacheEntry(loggedInUser, loggedInUser, folder, dbName, 0) // 0 indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for any previous database versions
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
 	// Database upload succeeded.  Tell the user then bounce back to their profile page
 	fmt.Fprintf(w, `
 	<html><head><script type="text/javascript"><!--
