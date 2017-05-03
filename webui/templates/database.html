@@ -145,7 +145,7 @@
             <table class="table table-bordered table-striped table-responsive">
                 <tr>
                     <th ng-repeat="header in db.ColNames" width="{{ 100 / db.ColCount }}%">
-                        <a href="" ng-click="sortOrder(header)"><span id="col{{ header }}">{{ header }}</span></a>
+                        <a href="" style="text-decoration: none;" ng-click="sortOrder(header)"><span id="col{{ header }}">{{ header }}</span></a>
                     </th>
                 </tr>
                 <tr ng-repeat="row in db.Records">
