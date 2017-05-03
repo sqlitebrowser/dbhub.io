@@ -62,8 +62,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		tempMaxRows = com.PrefUserMaxRows(loggedInUser)
 		pageData.DB.MaxRows = tempMaxRows
 	} else {
-		// Not logged in, so default to 10 rows
-		tempMaxRows = 10
+		// Not logged in, so use the default number of rows
+		tempMaxRows = com.DefaultNumDisplayRows
 		pageData.DB.MaxRows = tempMaxRows
 	}
 

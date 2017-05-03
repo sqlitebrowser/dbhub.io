@@ -877,7 +877,7 @@ func PrefUserMaxRows(loggedInUser string) int {
 	err := pdb.QueryRow(dbQuery, loggedInUser).Scan(&maxRows)
 	if err != nil {
 		log.Printf("Error retrieving user '%s' preference data: %v\n", loggedInUser, err)
-		return 10 // Use the default value
+		return DefaultNumDisplayRows // Use the default value
 	}
 
 	return maxRows

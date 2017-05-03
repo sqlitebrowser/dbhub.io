@@ -60,6 +60,9 @@ const (
 // Stored cached data in memcache for 1 full day (as a first guess, which will probably need training)
 const CacheTime = 86400
 
+// Number of rows to display by default on the database page
+const DefaultNumDisplayRows = 25
+
 // ************************
 // Configuration file types
 

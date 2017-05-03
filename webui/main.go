@@ -1216,7 +1216,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		maxRows = com.PrefUserMaxRows(loggedInUser)
 	} else {
 		// Not logged in, so default to 10 rows
-		maxRows = 10
+		maxRows = com.DefaultNumDisplayRows
 	}
 
 	// If the data is available from memcached, use that instead of reading from the SQLite database itself
