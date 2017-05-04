@@ -88,6 +88,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		// Restore the correct MaxRow value
 		pageData.DB.MaxRows = tempMaxRows
 
+		// Restore the correct username
+		pageData.Meta.LoggedInUser = loggedInUser
+
 		// Render the page (using the caches)
 		if ok {
 			t := tmpl.Lookup("databasePage")
