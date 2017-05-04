@@ -125,9 +125,7 @@
         </div>
         <div class="col-md-5">
             <span class="pull-right">
-                [[ if .Meta.LoggedInUser ]]
-                    <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button>
-                [[ end ]]
+                <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button>
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                     <button type="button" class="btn btn-success" uib-dropdown-toggle>
                         Download <span class="caret"></span>
@@ -508,7 +506,12 @@
 
         // Switch to the upload database page
         $scope.uploadForm = function() {
-            window.location = '/upload/'
+            if ($scope.meta.Loggedin != "true") {
+                // User needs to be logged in
+                lock.show();
+            } else {
+                window.location = '/upload/';
+            }
         };
 
         // Auth0 authentication
