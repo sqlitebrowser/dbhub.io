@@ -63,6 +63,9 @@ const CacheTime = 86400
 // Number of rows to display by default on the database page
 const DefaultNumDisplayRows = 25
 
+// Number of connections to PostgreSQL to use
+const PGConnections = 5
+
 // ************************
 // Configuration file types
 

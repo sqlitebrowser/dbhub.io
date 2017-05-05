@@ -5,14 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/jackc/pgx"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	// PostgreSQL connection handle
-	pdb *pgx.Conn
+	// PostgreSQL connection pool handle
+	pdb *pgx.ConnPool
 )
 
 // Add a user to the system.
@@ -290,9 +291,10 @@ func ClientCert(userName string) ([]byte, error) {
 	return cert, nil
 }
 
-// Creates our initial connection to the PostgreSQL server.
+// Creates a connection pool to the PostgreSQL server.
 func ConnectPostgreSQL() (err error) {
-	pdb, err = pgx.Connect(*pgConfig)
+	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, PGConnections, nil, 2 * time.Second}
+	pdb, err = pgx.NewConnPool(pgPoolConfig)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Couldn't connect to PostgreSQL server: %v\n", err))
 	}
