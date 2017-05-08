@@ -143,7 +143,7 @@
             <table class="table table-bordered table-striped table-responsive">
                 <tr>
                     <th ng-repeat="header in db.ColNames" width="{{ 100 / db.ColCount }}%">
-                        <a href="" style="text-decoration: none;" ng-click="sortOrder(header)"><span id="col{{ header }}">{{ header }}</span></a>
+                        <a href="" style="text-decoration: none;" ng-click="sortOrder(header)"><span id="col{{ header }}" ng-bind="addArrow(header)"></span></a>
                     </th>
                 </tr>
                 <tr ng-repeat="row in db.Records">
@@ -181,6 +181,8 @@
 [[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+
+    // Simple filter to ensure '&nbsp;' is shown as a non-breaking space
     app.filter("fixSpaces", ['$sce', '$sanitize', function($sce, $sanitize) {
         return function(htmlCode) {
             if (htmlCode == "") {
@@ -189,7 +191,9 @@
             return $sanitize(htmlCode);
         }
     }]);
+
     app.controller('databaseView', function($scope, $http) {
+        // Pre-filled database metadata
         $scope.meta = {
             Owner: "[[ .Meta.Owner ]]",
             Database: "[[ .Meta.Database ]]",
@@ -216,28 +220,32 @@
             [[ end ]]
         }
 
-        $scope.watchersText = "Watchers";
-        $scope.starsText = "Stars";
+        // Pre-filled table row data
+        $scope.db = { Tablename: "[[ .Data.Tablename ]]",
+            Records: [[ .Data.Records ]],
+            ColNames: [[ .Data.ColNames ]],
+            RowCount: [[ .Data.RowCount ]],
+            ColCount: [[ .Data.ColCount ]],
+            SortCol:  [[ .Data.SortCol ]],
+            SortDir:  [[ .Data.SortDir ]],
+            Offset:   [[ .Data.Offset ]],
+        }
 
-        // Update star button text to say "Stars" or "Unstar"
-        $scope.updateStarsText = function() {
-            if ($scope.meta.MyStar != "true") {
-                $scope.starsText = "Stars";
+        $scope.starsText = "Stars";
+        $scope.watchersText = "Watchers";
+
+        // Add an appropriate direction arrow (▲/▼) to a column heading
+        $scope.addArrow = function(header) {
+            if (header == $scope.db.SortCol) {
+                if ($scope.db.SortDir == "ASC") {
+                    return header + " ▲";
+                }  else {
+                    return header + " ▼";
+                }
             } else {
-                $scope.starsText = "Unstar";
+                return header;
             }
         };
-        $scope.updateStarsText();
-
-        $scope.db = { Tablename: "[[ .Data.Tablename ]]",
-                      Records: [[ .Data.Records ]],
-                      ColNames: [[ .Data.ColNames ]],
-                      RowCount: [[ .Data.RowCount ]],
-                      ColCount: [[ .Data.ColCount ]],
-                      SortCol:  [[ .Data.SortCol ]],
-                      SortDir:  [[ .Data.SortDir ]],
-                      Offset:   [[ .Data.Offset ]],
-        }
 
         // Retrieves the table data for a given table
         $scope.changeTable = function(newtable) {
@@ -479,6 +487,16 @@
 
             // TODO: Write the rest of the watch toggling code
         };
+
+        // Update star button text to say "Stars" or "Unstar"
+        $scope.updateStarsText = function() {
+            if ($scope.meta.MyStar != "true") {
+                $scope.starsText = "Stars";
+            } else {
+                $scope.starsText = "Unstar";
+            }
+        };
+        $scope.updateStarsText();
 
         // Updates the shown/hidden state of the table arrows
         $scope.updateTableArrows = function() {
