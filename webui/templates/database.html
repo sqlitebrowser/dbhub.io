@@ -248,6 +248,9 @@
                         $scope.pageOffset = 0;
                         $scope.sortColumn = $scope.db.ColNames[0];
                         $scope.sortDirection = "ASC";
+
+                        // Show or hide pagination buttons
+                        $scope.updateTableArrows();
                     }
                 )
         };
