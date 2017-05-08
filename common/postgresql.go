@@ -64,8 +64,6 @@ func AddUser(auth0ID string, userName string, password string, email string) err
 		return err
 	}
 
-	// TODO: Send a confirmation email, with verification link
-
 	// Log the user registration
 	log.Printf("User registered: '%s' Email: '%s'\n", userName, email)
 
