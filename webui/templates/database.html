@@ -234,6 +234,9 @@
                       ColNames: [[ .Data.ColNames ]],
                       RowCount: [[ .Data.RowCount ]],
                       ColCount: [[ .Data.ColCount ]],
+                      SortCol:  [[ .Data.SortCol ]],
+                      SortDir:  [[ .Data.SortDir ]],
+                      Offset:   [[ .Data.Offset ]],
         }
 
         // Retrieves the table data for a given table
@@ -244,10 +247,10 @@
                         // Update table data
                         $scope.db = response.data;
 
-                        // Reset sort and pagination data
-                        $scope.pageOffset = 0;
-                        $scope.sortColumn = $scope.db.ColNames[0];
-                        $scope.sortDirection = "ASC";
+                        // Set a default sort direction if none present
+                        if ($scope.db.SortDir == "") {
+                            $scope.db.SortDir = "ASC";
+                        }
 
                         // Show or hide pagination buttons
                         $scope.updateTableArrows();
@@ -277,24 +280,23 @@
         };
 
         // Moves the table view forward, so the last row is visible
-        $scope.pageOffset = 0;
         $scope.goToBottom = function() {
             // Don't page down if we're at the end
             var lastPage = Number($scope.db.RowCount) - Number($scope.meta.MaxRows);
-            if ($scope.pageOffset >= lastPage)
+            if ($scope.db.Offset >= lastPage)
             {
                 return;
             }
 
             var newOffset = Number($scope.db.RowCount) - Number($scope.meta.MaxRows);
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
-                $scope.db.Tablename+"&sort="+$scope.sortColumn+"&dir="+$scope.sortDirection+"&offset="+newOffset).then(
+                $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
                 function (response) {
                     // Retrieve the new table data range
                     $scope.db = response.data;
 
                     // Update the displayed range information
-                    $scope.pageOffset = Number(newOffset);
+                    $scope.db.Offset = Number(newOffset);
 
                     // Update the displayed arrows
                     $scope.updateTableArrows();
@@ -305,20 +307,20 @@
         // Moves the table view back to the top row
         $scope.goToTop = function() {
             // Don't do anything if we're already at the start
-            if ($scope.pageOffset <= 1) {
+            if ($scope.db.Offset <= 1) {
                 return;
             }
 
             // Retrieve the updated page data
             var newOffset = 0;
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
-                $scope.db.Tablename+"&sort="+$scope.sortColumn+"&dir="+$scope.sortDirection+"&offset="+newOffset).then(
+                $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
                 function (response) {
                     // Retrieve the new table data range
                     $scope.db = response.data;
 
                     // Update the displayed range information
-                    $scope.pageOffset = Number(newOffset);
+                    $scope.db.Offset = Number(newOffset);
 
                     // Update the displayed arrows
                     $scope.updateTableArrows();
@@ -329,30 +331,30 @@
         // Refreshes the table data, moving backwards one page
         $scope.pageBack = function() {
             // Don't page up if we're at the start
-            if ($scope.pageOffset <= 1) {
+            if ($scope.db.Offset <= 1) {
                 return;
             }
 
             // If we're not quite at the start, but less than 1 page (aka MaxRows) from it, then paging up should
             // just move us to the start
             var newOffset = 0;
-            if ($scope.pageOffset > 0 && $scope.pageOffset < $scope.meta.MaxRows) {
+            if ($scope.db.Offset > 0 && $scope.db.Offset < $scope.meta.MaxRows) {
                 // Move to the top
                 newOffset = 0;
             } else {
                 // Move up a full page
-                newOffset = Number($scope.pageOffset) - Number($scope.meta.MaxRows);
+                newOffset = Number($scope.db.Offset) - Number($scope.meta.MaxRows);
             }
 
             // Retrieve the updated page data
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
-                $scope.db.Tablename+"&sort="+$scope.sortColumn+"&dir="+$scope.sortDirection+"&offset="+newOffset).then(
+                $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
                     function (response) {
                         // Retrieve the new table data range
                         $scope.db = response.data;
 
                         // Update the displayed range information
-                        $scope.pageOffset = Number(newOffset);
+                        $scope.db.Offset = Number(newOffset);
 
                         // Update the displayed arrows
                         $scope.updateTableArrows();
@@ -364,20 +366,20 @@
         $scope.pageForward = function() {
             // Don't page down if we're at the end
             var lastPage = Number($scope.db.RowCount) - Number($scope.meta.MaxRows);
-            if ($scope.pageOffset >= lastPage)
+            if ($scope.db.Offset >= lastPage)
             {
                 return;
             }
 
-            var newOffset = Number($scope.pageOffset) + Number($scope.meta.MaxRows);
+            var newOffset = Number($scope.db.Offset) + Number($scope.meta.MaxRows);
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
-                $scope.db.Tablename+"&sort="+$scope.sortColumn+"&dir="+$scope.sortDirection+"&offset="+newOffset).then(
+                $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
                     function (response) {
                         // Retrieve the new table data range
                         $scope.db = response.data;
 
                         // Update the displayed range information
-                        $scope.pageOffset = Number(newOffset);
+                        $scope.db.Offset = Number(newOffset);
 
                         // Update the displayed arrows
                         $scope.updateTableArrows();
@@ -386,37 +388,37 @@
         };
 
         // Updates displayed table data, using new sort order
-        $scope.sortColumn = $scope.db.ColNames[0];
-        $scope.sortDirection = "ASC";
+        if ($scope.db.SortDir == "") {
+            $scope.db.SortDir = "ASC";
+        }
         $scope.sortOrder = function(newSortCol) {
-
             // If the existing sort column has been clicked again, we reverse the sort direction
-            if (newSortCol == $scope.sortColumn) {
-                if ($scope.sortDirection == "ASC") {
-                    $scope.sortDirection = "DESC";
+            if (newSortCol == $scope.db.SortCol) {
+                if ($scope.db.SortDir == "ASC") {
+                    $scope.db.SortDir = "DESC";
                 } else {
-                    $scope.sortDirection = "ASC";
+                    $scope.db.SortDir = "ASC";
                 }
             } else {
                 // We're changing sort column, so remove the direction arrow from the present sort column header
-                if ($scope.sortColumn != "") {
-                    var presentHeader = document.getElementById("col" + $scope.sortColumn);
-                    presentHeader.textContent = $scope.sortColumn;
+                if ($scope.db.SortCol != "") {
+                    var presentHeader = document.getElementById("col" + $scope.db.SortCol);
+                    presentHeader.textContent = $scope.db.SortCol;
                 }
 
                 // Use the clicked on heading as the new sort column
-                $scope.sortColumn = newSortCol;
-                $scope.sortDirection = "ASC";
+                $scope.db.SortCol = newSortCol;
+                $scope.db.SortDir = "ASC";
             }
 
             // Retrieve updated table data
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
-                $scope.db.Tablename+"&sort="+newSortCol+"&dir="+$scope.sortDirection+"&offset="+$scope.pageOffset).then(
+                $scope.db.Tablename+"&sort="+newSortCol+"&dir="+$scope.db.SortDir+"&offset="+$scope.db.Offset).then(
                 function (response) { $scope.db = response.data; });
 
             // Add a direction arrow (▲/▼) to the new sort column heading, showing the sort direction
             var newHeader = document.getElementById("col" + newSortCol);
-            if ($scope.sortDirection == "ASC") {
+            if ($scope.db.SortDir == "ASC") {
                 newHeader.textContent = newSortCol + " ▲";
             } else {
                 newHeader.textContent = newSortCol + " ▼";
@@ -430,8 +432,8 @@
 
         // Returns a text string with row count information for the table
         $scope.totalRowCount = function() {
-            var start = $scope.pageOffset;
-            var end = Number($scope.pageOffset) + Number($scope.meta.MaxRows);
+            var start = $scope.db.Offset;
+            var end = Number($scope.db.Offset) + Number($scope.meta.MaxRows);
             var total = $scope.db.RowCount;
 
             // Update the end value if it's pointing past the last row
@@ -486,7 +488,7 @@
             var upArrow = document.getElementById("tblup");
 
             // Display up arrow only when needed
-            if ($scope.pageOffset > 0) {
+            if ($scope.db.Offset > 0) {
                 topArrow.style.visibility = "visible";
                 upArrow.style.visibility = "visible";
             } else {
@@ -495,7 +497,7 @@
             }
 
             // Display down arrow only when needed
-            var pageRow = Number($scope.pageOffset) + Number($scope.meta.MaxRows);
+            var pageRow = Number($scope.db.Offset) + Number($scope.meta.MaxRows);
             var totalRows = Number($scope.db.RowCount);
             if (pageRow < totalRows) {
                 bottomArrow.style.visibility = "visible";

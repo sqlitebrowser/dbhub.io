@@ -832,8 +832,49 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Extract sort column, sort direction, and offset variables if present
+	sortCol := r.FormValue("sort")
+	sortDir := r.FormValue("dir")
+	offsetStr := r.FormValue("offset")
+	var rowOffset int
+	if offsetStr == "" {
+		rowOffset = 0
+	} else {
+		rowOffset, err = strconv.Atoi(offsetStr)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// Ensure the row offset isn't negative
+		if rowOffset < 0 {
+			rowOffset = 0
+		}
+	}
+
+	// Sanity check the sort column name
+	if sortCol != "" {
+		// Validate the sort column text, as we use it in string smashing SQL queries so need to be even more
+		// careful than usual
+		err = com.ValidateFieldName(sortCol)
+		if err != nil {
+			log.Printf("Validation failed on requested sort field name '%v': %v\n", sortCol,
+				err.Error())
+			errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
+			return
+		}
+	}
+
+	// If a sort direction was provided, validate it
+	if sortDir != "" {
+		if sortDir != "ASC" && sortDir != "DESC" {
+			errorPage(w, r, http.StatusBadRequest, "Invalid sort direction")
+			return
+		}
+	}
+
 	// TODO: Add support for folders and sub-folders in request paths
-	databasePage(w, r, userName, dbName, dbVersion, dbTable)
+	databasePage(w, r, userName, dbName, dbVersion, dbTable, sortCol, sortDir, rowOffset)
 }
 
 // Returns HTML rendered content from a given markdown string, for the settings page README preview tab.
@@ -1150,14 +1191,19 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	sortCol := r.FormValue("sort")
 	sortDir := r.FormValue("dir")
 	offsetStr := r.FormValue("offset")
-	var offset int
+	var rowOffset int
 	if offsetStr == "" {
-		offset = 0
+		rowOffset = 0
 	} else {
-		offset, err = strconv.Atoi(offsetStr)
+		rowOffset, err = strconv.Atoi(offsetStr)
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
+		}
+
+		// Ensure the row offset isn't negative
+		if rowOffset < 0 {
+			rowOffset = 0
 		}
 	}
 
@@ -1220,7 +1266,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If the data is available from memcached, use that instead of reading from the SQLite database itself
-	dataCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, offset),
+	dataCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
 		loggedInUser, dbOwner, "/", dbName, dbVersion, requestedTable, maxRows)
 
 	// If a cached version of the page data exists, use it
@@ -1289,7 +1335,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Read the data from the database
-		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, maxRows, sortCol, sortDir, offset)
+		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, maxRows, sortCol, sortDir, rowOffset)
 		if err != nil {
 			// Some kind of error when reading the database data
 			errorPage(w, r, http.StatusBadRequest, err.Error())

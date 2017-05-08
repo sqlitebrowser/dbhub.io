@@ -10,7 +10,7 @@ import (
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
-func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string, dbVersion int, dbTable string) {
+func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string, dbVersion int, dbTable string, sortCol string, sortDir string, rowOffset int) {
 	pageName := "Render database page"
 
 	var pageData struct {
@@ -70,8 +70,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	// Generate predictable cache keys for the metadata and sqlite table rows
 	mdataCacheKey := com.MetadataCacheKey("dwndb-meta", loggedInUser, dbOwner, "/", dbName,
 		dbVersion)
-	rowCacheKey := com.TableRowsCacheKey("dwndb-rows", loggedInUser, dbOwner, "/", dbName,
-		dbVersion, dbTable, pageData.DB.MaxRows)
+	rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
+		loggedInUser, dbOwner, "/", dbName, dbVersion, dbTable, pageData.DB.MaxRows)
 
 	// If a cached version of the page data exists, use it
 	ok, err := com.GetCachedData(mdataCacheKey, &pageData)
@@ -143,6 +143,27 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		dbTable = pageData.DB.Info.Tables[0]
 	}
 
+	// If a sort column was requested, verify it exists
+	if sortCol != "" {
+		colList, err := sdb.Columns("", dbTable)
+		if err != nil {
+			log.Printf("Error when reading column names for table '%s': %v\n", dbTable,
+				err.Error())
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			return
+		}
+		colExists := false
+		for _, j := range colList {
+			if j.Name == sortCol {
+				colExists = true
+			}
+		}
+		if colExists == false {
+			// The requested sort column doesn't exist, so we fall back to no sorting
+			sortCol = ""
+		}
+	}
+
 	// Validate the table name, just to be careful
 	err = com.ValidatePGTable(dbTable)
 	if err != nil {
@@ -198,7 +219,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 
 	// If the row data wasn't in cache, read it from the database
 	if !ok {
-		pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, pageData.DB.MaxRows, "", "", 0)
+		pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, pageData.DB.MaxRows, sortCol, sortDir, rowOffset)
 		if err != nil {
 			// Some kind of error when reading the database data
 			errorPage(w, r, http.StatusBadRequest, err.Error())

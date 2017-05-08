@@ -224,6 +224,9 @@ type SQLiteRecordSet struct {
 	RowCount  int
 	TotalRows int
 	Records   []DataRow
+	SortCol   string
+	SortDir   string
+	Offset    int
 }
 
 type WhereClause struct {

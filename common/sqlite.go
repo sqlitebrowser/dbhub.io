@@ -23,13 +23,13 @@ func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 }
 
 // Reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then read all rows.
-func ReadSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int, sortCol string, sortDir string, offset int) (SQLiteRecordSet, error) {
-	return ReadSQLiteDBCols(db, dbTable, false, false, maxRows, sortCol, sortDir, offset)
+func ReadSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int, sortCol string, sortDir string, rowOffset int) (SQLiteRecordSet, error) {
+	return ReadSQLiteDBCols(db, dbTable, false, false, maxRows, sortCol, sortDir, rowOffset)
 }
 
 // Reads up to maxRows # of rows from a SQLite database.  Only returns the requested columns.
 func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignoreNull bool, maxRows int,
-	sortCol string, sortDir string, offset int) (SQLiteRecordSet, error) {
+	sortCol string, sortDir string, rowOffset int) (SQLiteRecordSet, error) {
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
 	var dataRows SQLiteRecordSet
@@ -62,8 +62,8 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 	}
 
 	// If an offset was given, add it
-	if offset >= 0 {
-		dbQuery = fmt.Sprintf("%s OFFSET %d", dbQuery, offset)
+	if rowOffset >= 0 {
+		dbQuery = fmt.Sprintf("%s OFFSET %d", dbQuery, rowOffset)
 	}
 
 	// Use the sort column as needed
@@ -168,6 +168,11 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 		return dataRows, err
 	}
 	dataRows.RowCount = tmpCount
+
+	// Fill out the sort column, direction, and row offset
+	dataRows.SortCol = sortCol
+	dataRows.SortDir = sortDir
+	dataRows.Offset = rowOffset
 
 	return dataRows, nil
 }
