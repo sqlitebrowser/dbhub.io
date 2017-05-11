@@ -715,6 +715,7 @@ func main() {
 
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
+	http.HandleFunc("/about", logReq(aboutPage))
 	http.HandleFunc("/forks/", logReq(forksHandler))
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))

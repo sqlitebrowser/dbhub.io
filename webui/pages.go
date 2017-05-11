@@ -10,6 +10,41 @@ import (
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
+// Renders the "About Us" page.
+func aboutPage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		Auth0  com.Auth0Set
+		Meta   com.MetaInfo
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	pageData.Meta.Title = "What is DBHub.io?"
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
+	// Render the page
+	t := tmpl.Lookup("aboutPage")
+	err := t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string, dbVersion int, dbTable string, sortCol string, sortDir string, rowOffset int) {
 	pageName := "Render database page"
 
