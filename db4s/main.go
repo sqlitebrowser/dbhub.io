@@ -460,6 +460,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// Returns the list of database available to the user
 func userDatabaseList(pageName string, userAcc string, user string) (dbList []byte, err error) {
 	pageName += ":userDatabaseList()"
 
@@ -470,6 +471,7 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 		Version      int    `json:"version"`
 		URL          string `json:"url"`
 		Size         int    `json:"size"`
+		SHA256       string `json:"sha256"`
 		LastModified string `json:"last_modified"`
 	}
 
@@ -508,6 +510,7 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 				url.PathEscape(j.Database), j.Version)
 		}
 		tempRow.Size = j.Size
+		tempRow.SHA256 = j.SHA256
 		tempRow.LastModified = j.LastModified.Format(time.RFC822)
 		rowList = append(rowList, tempRow)
 		rowCount += 1

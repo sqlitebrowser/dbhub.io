@@ -180,6 +180,7 @@ type DBInfo struct {
 	Public       bool
 	Readme       string
 	Releases     int
+	SHA256       string
 	Size         int
 	Stars        int
 	Tables       []string

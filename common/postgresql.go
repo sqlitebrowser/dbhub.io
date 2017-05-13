@@ -1269,7 +1269,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	dbQuery := `
 	WITH dbs AS (
 		SELECT db.dbname, db.folder, db.date_created, db.last_modified, ver.size, ver.version, ver.public,
-			db.watchers, db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
+			ver.sha256, db.watchers, db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
 			db.releases, db.contributors, db.description
 		FROM sqlite_databases AS db, database_versions AS ver
 		WHERE db.idnum = ver.db
@@ -1303,7 +1303,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		var desc pgx.NullString
 		var oneRow DBInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified,
-			&oneRow.Size, &oneRow.Version, &oneRow.Public, &oneRow.Watchers, &oneRow.Stars,
+			&oneRow.Size, &oneRow.Version, &oneRow.Public, &oneRow.SHA256, &oneRow.Watchers, &oneRow.Stars,
 			&oneRow.Discussions, &oneRow.MRs, &oneRow.Updates, &oneRow.Branches, &oneRow.Releases,
 			&oneRow.Contributors, &desc)
 		if err != nil {
