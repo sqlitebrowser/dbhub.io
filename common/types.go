@@ -83,10 +83,10 @@ type TomlConfig struct {
 
 // Config info for the admin server
 type AdminInfo struct {
-	Server         string
-	HTTPS          bool
 	Certificate    string
 	CertificateKey string `toml:"certificate_key"`
+	HTTPS          bool
+	Server         string
 }
 
 // Auth0 connection parameters
@@ -112,19 +112,19 @@ type DB4SInfo struct {
 
 // Minio connection parameters
 type MinioInfo struct {
-	Server    string
 	AccessKey string `toml:"access_key"`
-	Secret    string
 	HTTPS     bool
+	Secret    string
+	Server    string
 }
 
 // PostgreSQL connection parameters
 type PGInfo struct {
-	Server   string
-	Port     int
-	Username string
-	Password string
 	Database string
+	Port     int
+	Password string
+	Server   string
+	Username string
 }
 
 // Used for signing DB4S client certificates
@@ -158,56 +158,56 @@ type DataValue struct {
 type DataRow []DataValue
 
 type DBEntry struct {
-	Owner     string
 	Folder    string
-	DBName    string
 	DateEntry time.Time
+	DBName    string
+	Owner     string
 }
 
 type DBInfo struct {
-	Database     string
-	Tables       []string
-	Watchers     int
-	Stars        int
-	Forks        int
-	Discussions  int
-	MRs          int
-	Description  string
-	Updates      int
 	Branches     int
-	Releases     int
 	Contributors int
-	Readme       string
+	Database     string
 	DateCreated  time.Time
-	LastModified time.Time
-	Public       bool
-	Size         int
-	Version      int
-	Folder       string
-	License      LicenseType
 	DefaultTable string
+	Description  string
+	Discussions  int
+	Folder       string
+	Forks        int
+	LastModified time.Time
+	License      LicenseType
+	MRs          int
+	Public       bool
+	Readme       string
+	Releases     int
+	Size         int
+	Stars        int
+	Tables       []string
+	Updates      int
+	Version      int
+	Watchers     int
 }
 
 type ForkEntry struct {
-	Owner      string
-	Folder     string
 	DBName     string
-	ID         int
-	IconList   []ForkType
+	Folder     string
 	ForkedFrom int
+	IconList   []ForkType
+	ID         int
+	Owner      string
 	Processed  bool
 }
 
 type MetaInfo struct {
+	Database     string
+	ForkDatabase string
+	ForkFolder   string
+	ForkOwner    string
+	LoggedInUser string
+	Owner        string
 	Protocol     string
 	Server       string
 	Title        string
-	Owner        string
-	Database     string
-	LoggedInUser string
-	ForkOwner    string
-	ForkFolder   string
-	ForkDatabase string
 }
 
 type SQLiteDBinfo struct {
@@ -218,15 +218,15 @@ type SQLiteDBinfo struct {
 }
 
 type SQLiteRecordSet struct {
-	Tablename string
-	ColNames  []string
 	ColCount  int
-	RowCount  int
-	TotalRows int
+	ColNames  []string
+	Offset    int
 	Records   []DataRow
+	RowCount  int
 	SortCol   string
 	SortDir   string
-	Offset    int
+	Tablename string
+	TotalRows int
 }
 
 type WhereClause struct {
@@ -236,16 +236,16 @@ type WhereClause struct {
 }
 
 type UserInfo struct {
-	Username     string
 	LastModified time.Time
+	Username     string
 }
 
 type UserDetails struct {
-	Username   string
+	ClientCert []byte
+	DateJoined time.Time
 	Email      string
 	Password   string
-	PVerify    string
-	DateJoined time.Time
-	ClientCert []byte
 	PHash      []byte
+	PVerify    string
+	Username   string
 }
