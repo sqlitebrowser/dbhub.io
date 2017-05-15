@@ -472,6 +472,7 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 		URL          string `json:"url"`
 		Size         int    `json:"size"`
 		SHA256       string `json:"sha256"`
+		Public       bool   `json:"public"`
 		LastModified string `json:"last_modified"`
 	}
 
@@ -512,6 +513,7 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 		tempRow.Size = j.Size
 		tempRow.SHA256 = j.SHA256
 		tempRow.LastModified = j.LastModified.Format(time.RFC822)
+		tempRow.Public = j.Public
 		rowList = append(rowList, tempRow)
 		rowCount += 1
 	}

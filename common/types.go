@@ -197,6 +197,7 @@ type ForkEntry struct {
 	ID         int
 	Owner      string
 	Processed  bool
+	Public     bool
 }
 
 type MetaInfo struct {

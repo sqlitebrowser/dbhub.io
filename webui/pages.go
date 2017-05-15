@@ -13,8 +13,8 @@ import (
 // Renders the "About Us" page.
 func aboutPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Auth0  com.Auth0Set
-		Meta   com.MetaInfo
+		Auth0 com.Auth0Set
+		Meta  com.MetaInfo
 	}
 
 	// Retrieve session data (if any)

@@ -89,7 +89,6 @@ CREATE TABLE database_versions (
     size bigint NOT NULL,
     version integer NOT NULL,
     sha256 text NOT NULL,
-    public boolean NOT NULL,
     minioid text NOT NULL,
     date_created timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     last_modified timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -127,6 +126,7 @@ CREATE TABLE sqlite_databases (
     username text NOT NULL,
     folder text NOT NULL,
     dbname text NOT NULL,
+    public boolean NOT NULL,
     date_created timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     last_modified timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     watchers bigint DEFAULT 0 NOT NULL,

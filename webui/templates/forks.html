@@ -30,7 +30,7 @@
                     <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
                         <span ng-bind-html="rowIcons(row)"></span>
                         <a href="/{{ row.Owner }}">{{ row.Owner }}</a> {{ row.Folder }}
-                        <a href="/{{ row.Owner }}{{ row.Folder }}{{ row.DBName }}">{{ row.DBName }}</a>
+                        <span ng-bind-html="rowURL(row)"></span>
                     </td>
                 </tr>
             </table>
@@ -76,7 +76,16 @@
                 }
             });
             return returnList;
-        }
+        };
+
+        // Display public URLs as clickable links
+        $scope.rowURL = function(row) {
+            if (row.Public === true) {
+                return '<a href="/'+ row.Owner + row.Folder + row.DBName + '">' + row.DBName + '</a>';
+            } else {
+                return "private database";
+            }
+        };
     });
 </script>
 </body>

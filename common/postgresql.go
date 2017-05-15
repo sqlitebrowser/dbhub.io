@@ -79,9 +79,9 @@ func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaS
 			WITH root_db_value AS (
 				SELECT nextval('sqlite_databases_idnum_seq')
 			)
-			INSERT INTO sqlite_databases (username, folder, dbname, idnum, minio_bucket, root_database)
-			VALUES ($1, $2, $3, (SELECT nextval FROM root_db_value), $4, (SELECT nextval FROM root_db_value))`
-		commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, bucket)
+			INSERT INTO sqlite_databases (username, folder, dbname, public, idnum, minio_bucket, root_database)
+			VALUES ($1, $2, $3, $4, (SELECT nextval FROM root_db_value), $5, (SELECT nextval FROM root_db_value))`
+		commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, public, bucket)
 		if err != nil {
 			log.Printf("Adding database to PostgreSQL failed: %v\n", err)
 			return err
@@ -99,10 +99,9 @@ func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaS
 			FROM sqlite_databases
 			WHERE username = $1
 				AND dbname = $2)
-		INSERT INTO database_versions (db, size, version, sha256, public, minioid)
-		SELECT idnum, $3, $4, $5, $6, $7 FROM databaseid`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, dbSize, dbVer, hex.EncodeToString(shaSum[:]),
-		public, id)
+		INSERT INTO database_versions (db, size, version, sha256, minioid)
+		SELECT idnum, $3, $4, $5, $6 FROM databaseid`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, dbSize, dbVer, hex.EncodeToString(shaSum[:]), id)
 	if err != nil {
 		log.Printf("Adding version info to PostgreSQL failed: %v\n", err)
 		return err
@@ -168,7 +167,7 @@ func CheckEmailExists(email string) (bool, error) {
 	// Check if the email address is already in our system
 	dbQuery := `
 		SELECT count(username)
-		FROM public.users
+		FROM users
 		WHERE email = $1`
 	var emailCount int
 	err := pdb.QueryRow(dbQuery, email).Scan(&emailCount)
@@ -231,12 +230,13 @@ func CheckUserDBVAccess(dbOwner string, dbFolder string, dbName string, dbVer in
 			FROM sqlite_databases
 			WHERE username = $1
 				AND folder = $2
-				AND dbname = $3
-			)
-			AND version = $4`
+				AND dbname = $3`
 	if dbOwner != loggedInUser {
 		dbQuery += ` AND public = true `
 	}
+	dbQuery += `
+			)
+			AND version = $4`
 	var numRows int
 	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, dbVer).Scan(&numRows)
 	if err != nil {
@@ -258,7 +258,7 @@ func CheckUserDBVAccess(dbOwner string, dbFolder string, dbName string, dbVer in
 func CheckUserExists(userName string) (bool, error) {
 	dbQuery := `
 		SELECT count(username)
-		FROM public.users
+		FROM users
 		WHERE username = $1`
 	var userCount int
 	err := pdb.QueryRow(dbQuery, userName).Scan(&userCount)
@@ -333,14 +333,14 @@ func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 			ORDER BY last_modified DESC
 			LIMIT 1
 		), public_dbs AS (
-			SELECT DISTINCT ON (ver.db) ver.db, ver.version, ver.last_modified
-			FROM database_versions AS ver
-			WHERE ver.public = true
-			ORDER BY ver.db DESC, ver.version DESC
+			SELECT idnum, last_modified
+			FROM sqlite_databases
+			WHERE public = true
+			ORDER BY last_modified DESC
 		), public_users AS (
 			SELECT DISTINCT ON (db.username) db.username, db.last_modified
 			FROM public_dbs as pub, sqlite_databases AS db, most_recent_user_db AS usr
-			WHERE db.idnum = pub.db OR db.idnum = usr.idnum
+			WHERE db.idnum = pub.idnum OR db.idnum = usr.idnum
 			ORDER BY db.username, db.last_modified DESC
 		)
 		SELECT username, last_modified FROM public_users
@@ -379,7 +379,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	if loggedInUser != dbOwner {
 		// * The request is for another users database, so it needs to be a public one *
 		dbQuery += `
-			AND ver.public = true`
+			AND db.public = true`
 	}
 	if dbVersion == 0 {
 		// No specific database version was requested, so use the highest available
@@ -443,6 +443,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	DB.Info.Folder = dbFolder
 
 	// Retrieve latest fork count
+	// TODO: This can probably be folded into the above SQL query as a subselect, as a minor optimisation
 	dbQuery = `
 		SELECT forks
 		FROM sqlite_databases
@@ -498,14 +499,14 @@ func DBVersions(loggedInUser string, dbOwner string, dbFolder string, dbName str
 			FROM sqlite_databases
 			WHERE username = $1
 				AND folder = $2
-				AND dbname = $3
-			)`
+				AND dbname = $3`
 	if loggedInUser != dbOwner {
 		// The request is for another users database, so only return public versions
 		dbQuery += `
-			AND public is true`
+				AND public is true`
 	}
 	dbQuery += `
+			)
 		ORDER BY version DESC`
 	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -552,8 +553,8 @@ func ForkDatabase(srcOwner string, srcFolder string, dbName string, srcVer int, 
 
 	// Copy the main database entry
 	dbQuery := `
-		INSERT INTO sqlite_databases (username, folder, dbname, forks, description, readme, minio_bucket, root_database, forked_from)
-		SELECT $1, $2, dbname, forks, description, readme, $3, root_database, idnum
+		INSERT INTO sqlite_databases (username, folder, dbname, public, forks, description, readme, minio_bucket, root_database, forked_from)
+		SELECT $1, $2, dbname, public, forks, description, readme, $3, root_database, idnum
 		FROM sqlite_databases
 		WHERE username = $4
 			AND folder = $5
@@ -579,8 +580,8 @@ func ForkDatabase(srcOwner string, srcFolder string, dbName string, srcVer int, 
 				AND folder = $2
 				AND dbname = $3
 		)
-		INSERT INTO database_versions (db, size, version, sha256, public, minioid)
-		SELECT new_db.idnum, ver.size, 1, ver.sha256, ver.public, $4
+		INSERT INTO database_versions (db, size, version, sha256, minioid)
+		SELECT new_db.idnum, ver.size, 1, ver.sha256, $4
 		FROM new_db, database_versions AS ver
 		WHERE db = (
 			SELECT idnum
@@ -662,7 +663,7 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 // Return the complete fork tree for a given database
 func ForkTree(dbOwner string, dbFolder string, dbName string) (outputList []ForkEntry, err error) {
 	dbQuery := `
-		SELECT username, folder, dbname, idnum, forked_from
+		SELECT username, folder, dbname, public, idnum, forked_from
 		FROM sqlite_databases
 		WHERE root_database = (
 				SELECT root_database
@@ -682,7 +683,7 @@ func ForkTree(dbOwner string, dbFolder string, dbName string) (outputList []Fork
 	for rows.Next() {
 		var frk pgx.NullInt32
 		var oneRow ForkEntry
-		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.ID, &frk)
+		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk)
 		if err != nil {
 			log.Printf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
 				err)
@@ -715,6 +716,11 @@ func ForkTree(dbOwner string, dbFolder string, dbName string) (outputList []Fork
 
 	// Set the icon list for display in the browser
 	dbList[0].IconList = append(dbList[0].IconList, ROOT)
+
+	// If the root database is no longer public, then use placeholder details instead
+	if !dbList[0].Public {
+		dbList[0].DBName = "private database"
+	}
 
 	// Append this completed database line to the output list
 	outputList = append(outputList, dbList[0])
@@ -783,15 +789,18 @@ func HighestDBVersion(dbOwner string, dbName string, dbFolder string, loggedInUs
 	dbQuery := `
 		SELECT version
 		FROM database_versions
-		WHERE db = (SELECT idnum
+		WHERE db = (
+			SELECT idnum
 			FROM sqlite_databases
 			WHERE username = $1
 				AND dbname = $2
-				AND folder = $3)`
+				AND folder = $3`
 	if dbOwner != loggedInUser {
-		dbQuery += ` AND public = true `
+		dbQuery += `
+				AND public = true`
 	}
 	dbQuery += `
+			)
 		ORDER BY version DESC
 		LIMIT 1`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbName, dbFolder).Scan(&ver)
@@ -842,7 +851,7 @@ func MinioBucketID(dbOwner string, dbName string, dbVersion int, loggedInUser st
 				AND db.username = $1
 				AND db.dbname = $2
 				AND ver.version = $3
-				AND ver.public = true`
+				AND db.public = true`
 	} else {
 		dbQuery = `
 			SELECT db.minio_bucket, ver.minioid
@@ -887,17 +896,13 @@ func PrefUserMaxRows(loggedInUser string) int {
 func PublicUserDBs() ([]UserInfo, error) {
 	dbQuery := `
 		WITH public_dbs AS (
-			SELECT DISTINCT ON (ver.db) ver.db, ver.version, ver.last_modified
-			FROM database_versions AS ver
-			WHERE ver.public = true
-			ORDER BY ver.db DESC, ver.version DESC
-		), public_users AS (
-			SELECT DISTINCT ON (db.username) db.username, pub.db, pub.version, pub.last_modified
-			FROM public_dbs as pub, sqlite_databases AS db
-			WHERE db.idnum = pub.db
-			ORDER BY db.username, last_modified DESC
+			SELECT DISTINCT ON (username) username, last_modified
+			FROM sqlite_databases
+			WHERE public = true
+			ORDER BY username, last_modified DESC
 		)
-		SELECT username, last_modified FROM public_users
+		SELECT username, last_modified
+		FROM public_dbs
 		ORDER BY last_modified DESC`
 	rows, err := pdb.Query(dbQuery)
 	if err != nil {
@@ -1268,7 +1273,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	// Construct SQL query for retrieving the requested database list
 	dbQuery := `
 	WITH dbs AS (
-		SELECT db.dbname, db.folder, db.date_created, db.last_modified, ver.size, ver.version, ver.public,
+		SELECT db.dbname, db.folder, db.date_created, db.last_modified, ver.size, ver.version, db.public,
 			ver.sha256, db.watchers, db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
 			db.releases, db.contributors, db.description
 		FROM sqlite_databases AS db, database_versions AS ver
@@ -1277,10 +1282,10 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	switch public {
 	case DB_PUBLIC:
 		// Only public databases
-		dbQuery += ` AND ver.public = true`
+		dbQuery += ` AND db.public = true`
 	case DB_PRIVATE:
 		// Only private databases
-		dbQuery += ` AND ver.public = false`
+		dbQuery += ` AND db.public = false`
 	case DB_BOTH:
 		// Both public and private, so no need to add a query clause
 	default:

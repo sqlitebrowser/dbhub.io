@@ -32,6 +32,11 @@ func nextChild(rawListPtr *[]ForkEntry, outputListPtr *[]ForkEntry, forkTrailPtr
 				}
 				rawList[j].IconList = append(rawList[j].IconList, END)
 
+				// If the database is no longer public, then use placeholder details instead
+				if !rawList[j].Public {
+					rawList[j].DBName = "private database"
+				}
+
 				// Add this database to the output list
 				outputList = append(outputList, rawList[j])
 
