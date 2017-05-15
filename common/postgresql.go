@@ -370,7 +370,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	dbQuery := `
 		SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
 			db.discussions, db.pull_requests, db.updates, db.branches, db.releases, db.contributors,
-			db.description, db.readme, db.minio_bucket, db.default_table
+			db.description, db.readme, db.minio_bucket, db.default_table, db.public
 		FROM sqlite_databases AS db, database_versions AS ver
 		WHERE db.username = $1
 			AND db.folder = $2
@@ -411,13 +411,13 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DB.MinioId, &DB.Info.DateCreated,
 			&DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version, &DB.Info.Watchers, &DB.Info.Stars,
 			&DB.Info.Discussions, &DB.Info.MRs, &DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases,
-			&DB.Info.Contributors, &Desc, &Readme, &DB.MinioBkt, &defTable)
+			&DB.Info.Contributors, &Desc, &Readme, &DB.MinioBkt, &defTable, &DB.Info.Public)
 	} else {
 		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, dbVersion).Scan(&DB.MinioId,
 			&DB.Info.DateCreated, &DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version,
 			&DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs, &DB.Info.Updates,
 			&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &Desc, &Readme, &DB.MinioBkt,
-			&defTable)
+			&defTable, &DB.Info.Public)
 	}
 	if err != nil {
 		return errors.New("The requested database doesn't exist")
@@ -438,7 +438,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		DB.Info.DefaultTable = defTable.String
 	}
 
-	// Fill out the fields we already have data
+	// Fill out the fields we already have data for
 	DB.Info.Database = dbName
 	DB.Info.Folder = dbFolder
 
@@ -1017,7 +1017,7 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 }
 
 // Saves updated database settings to PostgreSQL.
-func SaveDBSettings(userName string, dbFolder string, dbName string, descrip string, readme string, defTable string) error {
+func SaveDBSettings(userName string, dbFolder string, dbName string, descrip string, readme string, defTable string, public bool) error {
 	// Check for values which should be NULL
 	var nullableDescrip, nullableReadme pgx.NullString
 	if descrip == "" {
@@ -1036,11 +1036,11 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, descrip str
 	// Save the database settings
 	SQLQuery := `
 		UPDATE sqlite_databases
-		SET description = $4, readme = $5, default_table = $6
+		SET description = $4, readme = $5, default_table = $6, public = $7
 		WHERE username = $1
 			AND folder = $2
 			AND dbname = $3`
-	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullableDescrip, nullableReadme, defTable)
+	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullableDescrip, nullableReadme, defTable, public)
 	if err != nil {
 		log.Printf("Updating description for database '%s%s%s' failed: %v\n", userName, dbFolder,
 			dbName, err)

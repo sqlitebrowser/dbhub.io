@@ -1009,8 +1009,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 
 // Handler for the Database Settings page
 func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: Further relevant settings
-	// TODO  License, and public/private setting
+	// TODO: License
 
 	// Ensure user is logged in
 	var loggedInUser string
@@ -1064,6 +1063,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	newName := r.PostFormValue("newname")
 	readme := r.PostFormValue("readme")
 	defTable := r.PostFormValue("defaulttable")
+	formPublic := r.PostFormValue("public")
 
 	// If set, validate the new database name
 	if newName != dbName {
@@ -1088,6 +1088,15 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Validation failed for name of default table '%s': %s", defTable, err)
 		errorPage(w, r, http.StatusBadRequest, "Validation failed for name of default table")
 		return
+	}
+
+	// Validate the public/private form variable
+	public := false
+	if formPublic == "public" {
+		public = true
+	} else {
+		// Default to private, just to be careful
+		public = false
 	}
 
 	// Get the Minio bucket and ID for the given database
@@ -1142,7 +1151,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save settings
-	err = com.SaveDBSettings(userName, dbFolder, dbName, descrip, readme, defTable)
+	err = com.SaveDBSettings(userName, dbFolder, dbName, descrip, readme, defTable, public)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return

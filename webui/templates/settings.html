@@ -18,15 +18,15 @@
             <div class="col-md-8">
                 <table class="table table-bordered table-striped table-responsive">
                     <tr>
-                        <th>Name</th>
+                        <th style="vertical-align: middle;">Name</th>
                         <td><input type="text" name="newname" size="80" value="{{ meta.Database }}"></td>
                     </tr>
                     <tr>
-                        <th>One line description</th>
+                        <th style="vertical-align: middle;">One line description</th>
                         <td><input type="text" name="descrip" size="80" maxlength="80" value="{{ meta.Description }}"></td>
                     </tr>
                     <tr>
-                        <th>Default table</th>
+                        <th style="vertical-align: middle;">Default table</th>
                         <td>
                             <div class="dropdown">
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
@@ -42,6 +42,16 @@
                                     </ul>
                                 </div>
                             </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="vertical-align: middle;">Public?</th>
+                        <td>
+                            <div class="btn-group">
+                                <label class="btn btn-default" ng-model="radioPublic" uib-btn-radio="'public'">Public</label>
+                                <label class="btn btn-default" ng-model="radioPublic" uib-btn-radio="'private'">Private</label>
+                            </div>
+                            &nbsp; Database will be <b><span ng-bind-html="radioPublic"></span></b>
                         </td>
                     </tr>
                 </table>
@@ -81,6 +91,7 @@
                 <input type="hidden" name="folder" value="[[ .DB.Info.Folder ]]">
                 <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
                 <input type="hidden" name="version" value="[[ .DB.Info.Version ]]">
+                <input type="hidden" name="public" value="{{ radioPublic }}">
                 <input type="hidden" name="defaulttable" id="defaulttable">
             </div>
             <div class="col-md-2">
@@ -187,7 +198,7 @@
             Tables: [[ .DB.Info.Tables ]],
         };
 
-        // Do initial setup of default table value sent with form data
+        // Do initial setup of default table values sent with form data
         document.getElementById("defaulttable").value = "[[ .DB.Info.DefaultTable ]]";
 
         // Convert the license field number to human readable format
@@ -249,6 +260,11 @@
             break;
         }
 
+        // Handler for the cancel button.  Just bounces back to the database page
+        $scope.cancelSettings = function() {
+            window.location = "/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+        };
+
         // Update name of default table in the dropdown selector
         $scope.changeTable = function(newtable) {
             // Update displayed value
@@ -288,10 +304,13 @@
             }).then(function (response) { $scope.markDownPreview = response.data; });
         };
 
-        // Handler for the cancel button.  Just bounces back to the database page
-        $scope.cancelSettings = function() {
-            window.location = "/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
-        };
+        // Set the public radio buttons state when the page first loads
+        $scope.radioPublic = "";
+        if ("[[ .DB.Info.Public ]]" === "true") {
+            $scope.radioPublic = "public";
+        } else {
+            $scope.radioPublic = "private";
+        }
     });
 </script>
 </body>

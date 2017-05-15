@@ -41,7 +41,7 @@
         </div>
     </div>
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
-        <div class="col-md-9">
+        <div class="col-md-8">
             <div class="row">
                 <div class="col-md-2">
                     Data
@@ -64,8 +64,9 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="pull-right">
+                <b>Visibility:</b> {{ meta.Public }} &nbsp;
                 <b>Version:</b> {{ meta.Version }} &nbsp;
                 <b>Size:</b> {{ meta.Size / 1024 | number : 0 }} KB
             </div>
@@ -197,6 +198,7 @@
         $scope.meta = {
             Owner: "[[ .Meta.Owner ]]",
             Database: "[[ .Meta.Database ]]",
+            Public: "",
             Watchers: "[[ .DB.Info.Watchers ]]",
             Stars: "[[ .DB.Info.Stars ]]",
             MyStar: "[[  .MyStar ]]",
@@ -218,6 +220,13 @@
             [[ else ]]
                 Loggedin: "false",
             [[ end ]]
+        }
+
+        // Set the displayed public/private value
+        if ("[[ .DB.Info.Public ]]" == "true") {
+            $scope.meta.Public = "Public";
+        } else {
+            $scope.meta.Public = "Private";
         }
 
         // Pre-filled table row data
