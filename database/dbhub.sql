@@ -126,7 +126,7 @@ CREATE TABLE sqlite_databases (
     username text NOT NULL,
     folder text NOT NULL,
     dbname text NOT NULL,
-    public boolean NOT NULL,
+    public boolean NOT NULL DEFAULT false,
     date_created timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     last_modified timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     watchers bigint DEFAULT 0 NOT NULL,
