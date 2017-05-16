@@ -342,7 +342,7 @@ func forksPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder 
 
 	// Retrieve list of forks for the database
 	var err error
-	pageData.Forks, err = com.ForkTree(dbOwner, dbFolder, dbName)
+	pageData.Forks, err = com.ForkTree(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError,
 			fmt.Sprintf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder,

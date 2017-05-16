@@ -82,6 +82,9 @@
         $scope.rowURL = function(row) {
             if (row.Public === true) {
                 return '<a href="/'+ row.Owner + row.Folder + row.DBName + '">' + row.DBName + '</a>';
+            } else if (row.Owner == "[[ .Meta.LoggedInUser ]]") {
+                // The logged in user should see their own private databases. Make sure it's not mistaken as public though.
+                return '<a href="/'+ row.Owner + row.Folder + row.DBName + '">' + row.DBName + '</a> (private database)';
             } else {
                 return "private database";
             }

@@ -7,7 +7,7 @@ import (
 )
 
 // Look for the next child fork in a fork tree
-func nextChild(rawListPtr *[]ForkEntry, outputListPtr *[]ForkEntry, forkTrailPtr *[]int, iconDepth int) ([]ForkEntry, []int, bool) {
+func nextChild(loggedInUser string, rawListPtr *[]ForkEntry, outputListPtr *[]ForkEntry, forkTrailPtr *[]int, iconDepth int) ([]ForkEntry, []int, bool) {
 	// TODO: This approach feels half arsed.  Maybe redo it as a recursive function instead?
 
 	// Resolve the pointers
@@ -33,7 +33,7 @@ func nextChild(rawListPtr *[]ForkEntry, outputListPtr *[]ForkEntry, forkTrailPtr
 				rawList[j].IconList = append(rawList[j].IconList, END)
 
 				// If the database is no longer public, then use placeholder details instead
-				if !rawList[j].Public {
+				if !rawList[j].Public && loggedInUser != rawList[j].Owner {
 					rawList[j].DBName = "private database"
 				}
 

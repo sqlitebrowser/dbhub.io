@@ -661,7 +661,7 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 }
 
 // Return the complete fork tree for a given database
-func ForkTree(dbOwner string, dbFolder string, dbName string) (outputList []ForkEntry, err error) {
+func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName string) (outputList []ForkEntry, err error) {
 	dbQuery := `
 		SELECT username, folder, dbname, public, idnum, forked_from
 		FROM sqlite_databases
@@ -738,7 +738,7 @@ func ForkTree(dbOwner string, dbFolder string, dbName string) (outputList []Fork
 	numUnprocessedEntries := numResults - 1
 	for numUnprocessedEntries > 0 {
 		var forkFound bool
-		outputList, forkTrail, forkFound = nextChild(&dbList, &outputList, &forkTrail, iconDepth)
+		outputList, forkTrail, forkFound = nextChild(loggedInUser, &dbList, &outputList, &forkTrail, iconDepth)
 		if forkFound {
 			numUnprocessedEntries--
 			iconDepth++
