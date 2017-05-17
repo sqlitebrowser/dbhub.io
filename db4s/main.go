@@ -359,7 +359,8 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Add the new database details to the PG database
-	err = com.AddDatabase(userAcc, "/", targetDB, ver, shaSum[:], dbSize, public, bucket, minioID)
+	err = com.AddDatabase(userAcc, "/", targetDB, ver, shaSum[:], dbSize, public, bucket, minioID, "", "")
+	// TODO: Should we add support for setting the 1-liner and full description via DB4S too?
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Adding database to PostgreSQL failed: %v\n", err),
 			http.StatusInternalServerError)
