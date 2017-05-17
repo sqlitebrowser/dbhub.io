@@ -12,6 +12,14 @@
             </h2>
         </div>
     </div>
+    <div class="row" style="margin-bottom: 10px">
+        <div class="col-md-2">
+            <button class="btn btn-success" ng-click="uploadForm()">Upload database</button>
+        </div>
+        <div class="col-md-10">
+            &nbsp;
+        </div>
+    </div>
     <div class="row">
         <div class="col-md-12">
             <table class="table table-bordered table-striped table-responsive">
@@ -30,12 +38,23 @@
     app.controller('rootView', function($scope) {
         $scope.users = { List: [[ .List ]] }
 
+        // Auth0 pieces
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
 
         $scope.showLock = function() {
             lock.show();
+        };
+
+        // Switch to the upload database page
+        $scope.uploadForm = function() {
+            if ("[[ .Meta.LoggedInUser ]]" != "true") {
+                // User needs to be logged in
+                lock.show();
+            } else {
+                window.location = '/upload/';
+            }
         };
     });
 </script>
