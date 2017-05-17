@@ -1444,6 +1444,16 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract the other form variables
+	descrip := r.PostFormValue("descrip")
+	readme := r.PostFormValue("readme")
+
+	// Ensure the description is 80 chars or less
+	if len(descrip) > 80 {
+		errorPage(w, r, http.StatusBadRequest, "Description line needs to be 80 characters or less")
+		return
+	}
+
 	// TODO: Add support for folders and subfolders
 	folder := "/"
 
@@ -1544,7 +1554,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the database file details to PostgreSQL
-	err = com.AddDatabase(loggedInUser, folder, dbName, newVer, shaSum[:], dbSize, public, bucket, minioID)
+	err = com.AddDatabase(loggedInUser, folder, dbName, newVer, shaSum[:], dbSize, public, bucket, minioID, descrip, readme)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Adding database details to PostgreSQL failed")
 		return
@@ -1562,14 +1572,6 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Database upload succeeded.  Tell the user then bounce back to their profile page
-	fmt.Fprintf(w, `
-	<html><head><script type="text/javascript"><!--
-		function delayer(){
-			window.location = "/%s"
-		}//-->
-	</script></head>
-	<body onLoad="setTimeout('delayer()', 5000)">
-	<body>Upload succeeded<br /><br /><a href="/%s">Continuing to profile page...</a></body></html>`,
-		loggedInUser, loggedInUser)
+	// Database upload succeeded.  Bounce the user to the page for their new database
+	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, "/", dbName), http.StatusTemporaryRedirect)
 }

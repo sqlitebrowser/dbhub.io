@@ -71,7 +71,22 @@ func AddUser(auth0ID string, userName string, password string, email string) err
 }
 
 // Add a new SQLite database for a user.
-func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaSum []byte, dbSize int, public bool, bucket string, id string) error {
+func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaSum []byte, dbSize int, public bool, bucket string, id string, descrip string, readme string) error {
+	// Check for values which should be NULL
+	var nullableDescrip, nullableReadme pgx.NullString
+	if descrip == "" {
+		nullableDescrip.Valid = false
+	} else {
+		nullableDescrip.String = descrip
+		nullableDescrip.Valid = true
+	}
+	if readme == "" {
+		nullableReadme.Valid = false
+	} else {
+		nullableReadme.String = readme
+		nullableReadme.Valid = true
+	}
+
 	// If it's a new database, add its details to the main PG sqlite_databases table
 	var dbQuery string
 	if dbVer == 1 {
@@ -79,9 +94,10 @@ func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaS
 			WITH root_db_value AS (
 				SELECT nextval('sqlite_databases_idnum_seq')
 			)
-			INSERT INTO sqlite_databases (username, folder, dbname, public, idnum, minio_bucket, root_database)
-			VALUES ($1, $2, $3, $4, (SELECT nextval FROM root_db_value), $5, (SELECT nextval FROM root_db_value))`
-		commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, public, bucket)
+			INSERT INTO sqlite_databases (username, folder, dbname, public, idnum, minio_bucket, root_database, description, readme)
+			VALUES ($1, $2, $3, $4, (SELECT nextval FROM root_db_value), $5, (SELECT nextval FROM root_db_value), $6, $7)`
+		commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, public, bucket, nullableDescrip,
+			nullableReadme)
 		if err != nil {
 			log.Printf("Adding database to PostgreSQL failed: %v\n", err)
 			return err
