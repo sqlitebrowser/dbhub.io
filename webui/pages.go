@@ -361,7 +361,6 @@ func forksPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder 
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
-
 }
 
 // Renders the front page of the website.

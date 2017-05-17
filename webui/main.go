@@ -1063,7 +1063,14 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	newName := r.PostFormValue("newname")
 	readme := r.PostFormValue("readme")
 	defTable := r.PostFormValue("defaulttable")
-	formPublic := r.PostFormValue("public")
+
+	// Grab and validate the supplied "public" form field
+	public, err := com.GetPub(r)
+	if err != nil {
+		log.Printf("Error when converting public value to boolean: %v\n", err)
+		errorPage(w, r, http.StatusBadRequest, "Public value incorrect")
+		return
+	}
 
 	// If set, validate the new database name
 	if newName != dbName {
@@ -1088,15 +1095,6 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Validation failed for name of default table '%s': %s", defTable, err)
 		errorPage(w, r, http.StatusBadRequest, "Validation failed for name of default table")
 		return
-	}
-
-	// Validate the public/private form variable
-	public := false
-	if formPublic == "public" {
-		public = true
-	} else {
-		// Default to private, just to be careful
-		public = false
 	}
 
 	// Get the Minio bucket and ID for the given database
@@ -1439,8 +1437,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Grab and validate the supplied "public" form field
-	userPublic := r.PostFormValue("public")
-	public, err := strconv.ParseBool(userPublic)
+	public, err := com.GetPub(r)
 	if err != nil {
 		log.Printf("%s: Error when converting public value to boolean: %v\n", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Public value incorrect")

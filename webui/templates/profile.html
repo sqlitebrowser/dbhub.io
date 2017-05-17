@@ -137,10 +137,10 @@
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('profileView', function($scope) {
-        $scope.meta = { Owner: "[[ .Meta.Owner ]]" }
-        $scope.pubdb = { Databases: [[ .PublicDBs ]] }
-        $scope.privdb = { Databases: [[ .PrivateDBs ]] }
-        $scope.stars = { Stars: [[ .Stars ]] }
+        $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
+        $scope.pubdb = { Databases: [[ .PublicDBs ]] };
+        $scope.privdb = { Databases: [[ .PrivateDBs ]] };
+        $scope.stars = { Stars: [[ .Stars ]] };
 
         $scope.uploadForm = function() {
             window.location = '/upload/'

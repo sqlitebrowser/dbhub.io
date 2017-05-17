@@ -48,10 +48,10 @@
                         <th style="vertical-align: middle;">Public?</th>
                         <td>
                             <div class="btn-group">
-                                <label class="btn btn-default" ng-model="radioPublic" ng-click="publicClick('public')" uib-btn-radio="'public'">Public</label>
-                                <label class="btn btn-default" ng-model="radioPublic" ng-click="publicClick('private')" uib-btn-radio="'private'">Private</label>
+                                <label class="btn btn-default" ng-model="radioPublic" ng-click="publicClick('true')" uib-btn-radio="'true'">Public</label>
+                                <label class="btn btn-default" ng-model="radioPublic" ng-click="publicClick('false')" uib-btn-radio="'false'">Private</label>
                             </div>
-                            &nbsp; Database will be <b><span ng-bind-html="radioPublic"></span></b>. {{ publicDesc }}
+                            <span ng-bind-html="publicDesc"></span>
                         </td>
                     </tr>
                 </table>
@@ -133,19 +133,6 @@
                                 </div>
                             </div>
                             <textarea name="licenseother" cols="40" rows="5">License text if not one of the above</textarea>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Public/private</th>
-                        <td>
-                            <div class="btn-group" data-toggle="buttons">
-                                <label class="btn btn-default active">
-                                    <input type="radio" name="public" id="public1" autocomplete="off" checked> Public
-                                </label>
-                                <label class="btn btn-default">
-                                    <input type="radio" name="public" id="public2" autocomplete="off"> Private
-                                </label>
-                            </div>
                         </td>
                     </tr>
                 </table>
@@ -290,7 +277,7 @@
             var readmeText = document.getElementById("readme").value;
 
             // Check for the placeholder string
-            if (readmeText == "No full description") {
+            if (readmeText === "No full description") {
                 $scope.markDownPreview = "";
                 return;
             }
@@ -308,18 +295,18 @@
         $scope.publicDesc = "";
         $scope.radioPublic = "";
         if ("[[ .DB.Info.Public ]]" === "true") {
-            $scope.publicDesc = "Everyone has read access to it.";
-            $scope.radioPublic = "public";
+            $scope.publicDesc = "&nbsp; Database will be <b>public</b>. Everyone has read access to it.";
+            $scope.radioPublic = "true";
         } else {
-            $scope.publicDesc = "Only you have access to it.";
-            $scope.radioPublic = "private";
+            $scope.publicDesc = "&nbsp; Database will be <b>private</b>. Only you have access to it.";
+            $scope.radioPublic = "false";
         }
 
         $scope.publicClick = function(newValue) {
-            if (newValue === "public") {
-                $scope.publicDesc = "Everyone has read access to it.";
+            if (newValue === "true") {
+                $scope.publicDesc = "&nbsp; Database will be <b>public</b>. Everyone has read access to it.";
             } else {
-                $scope.publicDesc = "Only you have access to it.";
+                $scope.publicDesc = "&nbsp; Database will be <b>private</b>. Only you have access to it.";
             }
         }
     });
