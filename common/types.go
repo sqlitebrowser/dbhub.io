@@ -57,8 +57,8 @@ const (
 	Float
 )
 
-// Stored cached data in memcache for 1 full day (as a first guess, which will probably need training)
-const CacheTime = 86400
+// Store cached data in memcache for 30 days days (as a first guess, which will probably need tuning)
+const CacheTime = 2592000
 
 // Number of rows to display by default on the database page
 const DefaultNumDisplayRows = 25
