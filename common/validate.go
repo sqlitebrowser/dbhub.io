@@ -9,7 +9,7 @@ import (
 
 var (
 	regexDBName    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
-	regexFieldName = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/,\(,\,\ )]+$`)
+	regexFieldName = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\,\ )]+$`)
 	regexFolder    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
 	regexPGTable   = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
 	regexUsername  = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
@@ -36,7 +36,7 @@ func checkDBName(fl valid.FieldLevel) bool {
 }
 
 // Custom validation function for SQLite field names
-// At the moment it just allows alphanumeric and ".-_/() " chars, though it should probably be extended to cover all valid
+// At the moment it just allows alphanumeric and "^.-_/() " chars, though it should probably be extended to cover all valid
 // SQLite field name characters
 func checkFieldName(fl valid.FieldLevel) bool {
 	return regexFieldName.MatchString(fl.Field().String())
