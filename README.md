@@ -30,3 +30,17 @@ When the core code is more fully featured (June/July 2017 target), we'll start p
 * [db4s](db4s/) - REST server which [DB Browser for SQLite](http://sqlitebrowser.org)
   connects to with File → Remote.
 * [webui](webui/) - The main public facing webUI.
+
+## Related mailing lists
+
+### Announcements
+
+A low volume announcements only mailing list:
+
+* https://lists.sqlitebrowser.org/mailman/listinfo/dbhub-announce
+
+### Developers
+
+For development related discussion about DB4S and DBHub.io:
+
+* https://lists.sqlitebrowser.org/mailman/listinfo/db4s-dev
