@@ -1,34 +1,4 @@
 --
--- PostgreSQL database cluster dump
---
-
-SET default_transaction_read_only = off;
-
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-
---
--- Roles
---
-
-CREATE ROLE dbhub;
-ALTER ROLE dbhub WITH SUPERUSER INHERIT CREATEROLE CREATEDB LOGIN NOREPLICATION NOBYPASSRLS PASSWORD 'md509be10e4087f5617d49b9d1fe3184a84';
-
-
---
--- Database creation
---
-
-CREATE DATABASE dbhub WITH TEMPLATE = template0 OWNER = dbhub;
-REVOKE CONNECT,TEMPORARY ON DATABASE template1 FROM PUBLIC;
-GRANT CONNECT ON DATABASE template1 TO PUBLIC;
-
-
-\connect dbhub
-
-SET default_transaction_read_only = off;
-
---
 -- PostgreSQL database dump
 --
 
@@ -75,8 +45,6 @@ CREATE TABLE database_stars (
 );
 
 
-ALTER TABLE database_stars OWNER TO dbhub;
-
 SET default_with_oids = false;
 
 --
@@ -95,8 +63,6 @@ CREATE TABLE database_versions (
 );
 
 
-ALTER TABLE database_versions OWNER TO dbhub;
-
 --
 -- Name: database_versions_idnum_seq; Type: SEQUENCE; Schema: public; Owner: dbhub
 --
@@ -108,8 +74,6 @@ CREATE SEQUENCE database_versions_idnum_seq
     NO MAXVALUE
     CACHE 1;
 
-
-ALTER TABLE database_versions_idnum_seq OWNER TO dbhub;
 
 --
 -- Name: database_versions_idnum_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: dbhub
@@ -148,8 +112,6 @@ CREATE TABLE sqlite_databases (
 );
 
 
-ALTER TABLE sqlite_databases OWNER TO dbhub;
-
 --
 -- Name: sqlite_databases_idnum_seq; Type: SEQUENCE; Schema: public; Owner: dbhub
 --
@@ -161,8 +123,6 @@ CREATE SEQUENCE sqlite_databases_idnum_seq
     NO MAXVALUE
     CACHE 1;
 
-
-ALTER TABLE sqlite_databases_idnum_seq OWNER TO dbhub;
 
 --
 -- Name: sqlite_databases_idnum_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: dbhub
@@ -187,8 +147,6 @@ CREATE TABLE users (
     auth0id text
 );
 
-
-ALTER TABLE users OWNER TO dbhub;
 
 --
 -- Name: database_versions idnum; Type: DEFAULT; Schema: public; Owner: dbhub
