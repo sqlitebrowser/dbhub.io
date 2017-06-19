@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -120,7 +121,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 			// Check if the email address is already in our system
 			exists, err := com.CheckEmailExists(email)
 			if err != nil {
-				errorPage(w, r, http.StatusInternalServerError, "Email check failed")
+				errorPage(w, r, http.StatusInternalServerError, "Email check failed.  Can't continue.")
 				return
 			}
 			if exists {
@@ -154,6 +155,98 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
 }
 
+func createBranchHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract and validate the form variables
+	dbOwner, dbName, commit, err := com.GetFormUDC(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
+		return
+	}
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect branch name")
+		return
+	}
+	branchDesc := r.PostFormValue("branchdesc") // Optional
+
+	// Check if the requested database exists
+	dbFolder := "/"
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Make sure the database owner matches the logged in user
+	if loggedInUser != dbOwner {
+		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
+		return
+	}
+
+	// Read the branch heads list from the database
+	branches, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Make sure the branch name doesn't already exist
+	_, ok := branches[branchName]
+	if ok {
+		errorPage(w, r, http.StatusConflict, "A branch of that name already exists!")
+		return
+	}
+
+	// Create the branch
+	newBranch := com.BranchEntry{
+		Commit:      commit,
+		Description: branchDesc,
+	}
+	branches[branchName] = newBranch
+	err = com.StoreBranches(dbOwner, dbFolder, dbName, branches)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Invalidate the memcache data for the database, so the new branch count gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Bounce to the branches page
+	http.Redirect(w, r, fmt.Sprintf("/branches/%s%s%s", loggedInUser, dbFolder, dbName),
+		http.StatusTemporaryRedirect)
+}
+
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Make sure this user creation session is valid
 	sess := session.Get(r)
@@ -162,7 +255,6 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
 		return
 	}
-
 	validRegSession := false
 	va := sess.CAttr("registrationinprogress")
 	if va == nil {
@@ -171,7 +263,6 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	validRegSession = va.(bool)
-
 	if validRegSession != true {
 		// This isn't a valid username selection session, so abort
 		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
@@ -179,7 +270,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the registration data
-	var auth0ID, email string
+	var auth0ID, email, displayName string
 	au := sess.CAttr("auth0id")
 	if au != nil {
 		auth0ID = au.(string)
@@ -207,7 +298,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure username was given
 	if userName == "" {
 		// No, so render the username selection page
-		selectUsernamePage(w, r)
+		selectUserNamePage(w, r)
 		return
 	}
 
@@ -245,7 +336,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Add the user to the system
 	// NOTE: We generate a random password here (for now).  We may remove the password field itself from the
 	// database at some point, depending on whether we continue to support local database users
-	err = com.AddUser(auth0ID, userName, com.RandomString(32), email)
+	err = com.AddUser(auth0ID, userName, com.RandomString(32), email, displayName)
 	if err != nil {
 		session.Remove(sess, w)
 		errorPage(w, r, http.StatusInternalServerError, "Something went wrong during user creation")
@@ -256,8 +347,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	session.Remove(sess, w)
 
 	// Create normal session cookie for the user
-	// TODO: This will probably leak a small amount of memory, but it's "good enough" for now while getting things
-	// working
+	// TODO: This may leak a small amount of memory, but it's "good enough" for now while getting things working
 	sess = session.NewSessionOptions(&session.SessOptions{
 		CAttrs: map[string]interface{}{"UserName": userName},
 	})
@@ -303,6 +393,116 @@ func checkNameHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// This function deletes a branch.
+func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Delete Branch handler"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract the required form variables
+	branchName := r.PostFormValue("branchName")
+	dbFolder := r.PostFormValue("dbFolder")
+	dbName := r.PostFormValue("dbName")
+	dbOwner := r.PostFormValue("dbOwner")
+
+	// If any of the required values were empty, indicate failure
+	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO: Validate the variables
+
+	// Validate the database name
+	err := com.ValidateDB(dbName)
+	if err != nil {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
+	if dbOwner != loggedInUser {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Load the existing branchHeads for the database
+	branches, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the given branch exists
+	_, ok := branches[branchName]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the branch being deleted isn't the default one
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if defBranch == branchName {
+		w.WriteHeader(http.StatusConflict)
+		return
+	}
+
+	// Delete the branch
+	delete(branches, branchName)
+	err = com.StoreBranches(dbOwner, dbFolder, dbName, branches)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Invalidate the memcache data for the database, so the new branch count gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Update succeeded
+	w.WriteHeader(http.StatusOK)
+}
+
+// Sends the X509 DB4S certificate to the user
 func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -346,17 +546,19 @@ func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
 func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Download CSV"
 
-	// Extract the username, database, table, and version requested
-	dbOwner, dbName, dbTable, dbVersion, err := com.GetODTV(2, r) // 2 = Ignore "/x/download/" at the start of the URL
+	// Extract the username, database, table, and commit ID requested
+	// NOTE - The commit ID is optional.  Without it, we just pick the latest commit from the (for now) default branch
+	// TODO: Add support for passing in a specific branch, to get the latest commit for that instead
+	dbOwner, dbName, dbTable, commitID, err := com.GetODTC(2, r) // 2 = Ignore "/x/download/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Abort if no table name was given
+	// Abort if the table name was missing
 	if dbTable == "" {
-		log.Printf("%s: No table name given\n", pageName)
-		errorPage(w, r, http.StatusBadRequest, "No table name given")
+		log.Printf("%s: Missing table name\n", pageName)
+		errorPage(w, r, http.StatusBadRequest, "Missing table name")
 		return
 	}
 
@@ -373,22 +575,27 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
-	bucket, id, err := com.MinioBucketID(dbOwner, dbName, int(dbVersion), loggedInUser)
+	bucket, id, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(bucket, id)
+	sdb, tempFile, err := com.OpenMinioObject(bucket, id)
 	if err != nil {
-		log.Printf("%s: Error retrieving DB from Minio: %v\n", pageName, err)
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 
 	// Read the table data from the database object
 	resultSet, err := com.ReadSQLiteDBCSV(sdb, dbTable)
+
+	// Close the SQLite database and delete the temp file
+	defer func() {
+		sdb.Close()
+		os.Remove(tempFile)
+	}()
 
 	// Convert resultSet into CSV and send to the user
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", url.QueryEscape(dbTable)))
@@ -405,7 +612,9 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Download Handler"
 
-	dbOwner, dbName, dbVersion, err := com.GetODV(2, r) // 2 = Ignore "/x/download/" at the start of the URL
+	// NOTE - The commit ID is optional.  Without it, we just pick the latest commit from the (for now) default branch
+	// TODO: Add support for passing in a specific branch, to get the latest commit for that instead
+	dbOwner, dbName, commitID, err := com.GetODC(2, r) // 2 = Ignore "/x/download/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -424,7 +633,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
-	bucket, id, err := com.MinioBucketID(dbOwner, dbName, dbVersion, loggedInUser)
+	bucket, id, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -462,14 +671,14 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: This function will need updating to support folders
 
 	// Retrieve user and database name
-	dbOwner, dbName, dbVer, err := com.GetODV(2, r) // 2 = Ignore "/x/forkdb/" at the start of the URL
+	dbOwner, dbName, commitID, err := com.GetODC(2, r) // 2 = Ignore "/x/forkdb/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Make sure a version number was given
-	if dbVer == 0 {
+	if commitID == "" {
 		errorPage(w, r, http.StatusBadRequest, "No database version number given")
 		return
 	}
@@ -496,7 +705,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the user has access to the specific version of the source database requested
-	allowed, err := com.CheckUserDBVAccess(dbOwner, "/", dbName, dbVer, loggedInUser)
+	allowed, err := com.CheckUserDBAccess(dbOwner, "/", dbName, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -513,47 +722,26 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the user doesn't have a database of the same name already
-	v, err := com.HighestDBVersion(loggedInUser, dbName, "/", loggedInUser)
+	exists, err := com.CheckDBExists(loggedInUser, "/", dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if v != 0 {
+	if exists {
 		// Database of the same name already exists
 		errorPage(w, r, http.StatusBadRequest, "You already have a database of this name")
 		return
 	}
 
-	// Get the Minio bucket and id for the database being forked (the source)
-	sourceBucket, sourceID, err := com.MinioBucketID(dbOwner, dbName, dbVer, loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Get the Minio bucket for the logged in user (the destination)
-	destBucket, err := com.MinioUserBucket(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Copy the Minio object to the destination bucket
-	destMinioID, err := com.MinioObjCopy(sourceBucket, sourceID, destBucket)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Add the forked database info to PostgreSQL
-	_, err = com.ForkDatabase(dbOwner, "/", dbName, dbVer, loggedInUser, "/", destMinioID)
+	_, err = com.ForkDatabase(dbOwner, "/", dbName, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Invalidate the old memcached entry for the database
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, "/", dbName, 0) // 0 indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, "/", dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -716,16 +904,21 @@ func main() {
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
 	http.HandleFunc("/about", logReq(aboutPage))
+	http.HandleFunc("/branches/", logReq(branchesPage))
+	http.HandleFunc("/commits/", logReq(commitsPage))
+	http.HandleFunc("/createbranch/", logReq(createBranchPage))
 	http.HandleFunc("/forks/", logReq(forksHandler))
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))
 	http.HandleFunc("/register", logReq(createUserHandler))
-	http.HandleFunc("/selectusername", logReq(selectUsernamePage))
+	http.HandleFunc("/selectusername", logReq(selectUserNamePage))
 	http.HandleFunc("/settings/", logReq(settingsPage))
-	http.HandleFunc("/stars/", logReq(starsHandler))
+	http.HandleFunc("/stars/", logReq(starsPage))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
+	http.HandleFunc("/x/createbranch", logReq(createBranchHandler))
+	http.HandleFunc("/x/deletebranch/", logReq(deleteBranchHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
 	http.HandleFunc("/x/downloadcert", logReq(downloadCertHandler))
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
@@ -733,8 +926,10 @@ func main() {
 	http.HandleFunc("/x/gencert", logReq(generateCertHandler))
 	http.HandleFunc("/x/markdownpreview/", logReq(markdownPreview))
 	http.HandleFunc("/x/savesettings", logReq(saveSettingsHandler))
+	http.HandleFunc("/x/setdefaultbranch/", logReq(setDefaultBranchHandler))
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))
+	http.HandleFunc("/x/updatebranch/", logReq(updateBranchHandler))
 	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
 
 	// Static files
@@ -810,7 +1005,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	// * A specific database was requested *
 
 	// Check if a version number was also requested
-	dbVersion, err := com.GetFormVersion(r)
+	commitID, err := com.GetFormCommit(r)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Invalid database version number")
 		return
@@ -875,7 +1070,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Add support for folders and sub-folders in request paths
-	databasePage(w, r, userName, dbName, dbVersion, dbTable, sortCol, sortDir, rowOffset)
+	databasePage(w, r, userName, dbName, commitID, dbTable, sortCol, sortDir, rowOffset)
 }
 
 // Returns HTML rendered content from a given markdown string, for the settings page README preview tab.
@@ -913,13 +1108,9 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Gather submitted form data (if any)
-	err := r.ParseForm()
-	if err != nil {
-		log.Printf("%s: Error when parsing preference data: %s\n", pageName, err)
-		errorPage(w, r, http.StatusBadRequest, "Error when parsing preference data")
-		return
-	}
 	maxRows := r.PostFormValue("maxrows")
+	displayName := r.PostFormValue("fullname")
+	email := r.PostFormValue("email")
 
 	// If no form data was submitted, display the preferences page form
 	if maxRows == "" {
@@ -927,23 +1118,64 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate submitted form data
-	err = com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
-	if err != nil {
-		log.Printf("%s: Preference data failed validation: %s\n", pageName, err)
-		errorPage(w, r, http.StatusBadRequest, "Error when parsing preference data")
+	// Basic sanity check
+	if displayName == "" {
+		errorPage(w, r, http.StatusBadRequest, "Full name can't be blank!")
+		return
+	}
+	if email == "" {
+		errorPage(w, r, http.StatusBadRequest, "Email address can't be blank!")
 		return
 	}
 
+	// Validate submitted form data
+	err := com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
+	if err != nil {
+		log.Printf("%s: Maximum rows value failed validation: %s\n", pageName, err)
+		errorPage(w, r, http.StatusBadRequest, "Error when parsing maximum rows preference value")
+		return
+	}
 	maxRowsNum, err := strconv.Atoi(maxRows)
 	if err != nil {
 		log.Printf("%s: Error converting string '%v' to integer: %s\n", pageName, maxRows, err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing preference data")
 		return
 	}
+	err = com.Validate.Var(displayName, "required,displayname,min=1,max=80")
+	if err != nil {
+		log.Printf("%s: Display name value failed validation: %s\n", pageName, err)
+		errorPage(w, r, http.StatusBadRequest, "Error when parsing full name value")
+		return
+	}
+	err = com.Validate.Var(email, "required,email")
+	if err != nil {
+		// Check for the special case of username@server, which may fail standard email validation checks
+		// eg username@localhost, won't validate as an email address, but should be accepted anyway
+		serverName := strings.Split(com.WebServer(), ":")
+		em := fmt.Sprintf("%s@%s", loggedInUser, serverName[0])
+		if email != em {
+			log.Printf("%s: Email value failed validation: %s\n", pageName, err)
+			errorPage(w, r, http.StatusBadRequest, "Error when parsing email value")
+			return
+		}
+	}
+
+	// Make sure the email address isn't already assigned to a different user
+	a, err := com.GetUsernameFromEmail(email)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Error when checking email address")
+		return
+	}
+	if a != "" && a != loggedInUser {
+		errorPage(w, r, http.StatusBadRequest, "That email address is already associated with a different user")
+		return
+	}
+
+	// TODO: Store previous email addresses in a database table that associates them with the username.  This will be
+	// TODO  needed so looking an old email finds the correct username, such as looking through historical commit data
 
 	// Update the preference data in the database
-	err = com.SetPrefUserMaxRows(loggedInUser, maxRowsNum)
+	err = com.SetPrefUserMaxRows(loggedInUser, maxRowsNum, displayName, email)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when updating preferences")
 		return
@@ -953,9 +1185,273 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/"+loggedInUser, http.StatusTemporaryRedirect)
 }
 
+// Handler for the Database Settings page
+func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Licence
+
+	// Ensure user is logged in
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+	if validSession != true {
+		// Display an error message
+		// TODO: Show the login dialog (also for the preferences page)
+		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
+		return
+	}
+
+	// Extract the username, folder, and (current) database name form variables
+	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	dbOwner := strings.ToLower(u)
+
+	// Default to the root folder if none was given
+	if dbFolder == "" {
+		dbFolder = "/"
+	}
+
+	// Make sure a username was given
+	if len(dbOwner) == 0 || dbOwner == "" {
+		// No username supplied
+		errorPage(w, r, http.StatusBadRequest, "No username supplied!")
+		return
+	}
+
+	// Make sure the database owner matches the logged in user
+	if loggedInUser != dbOwner {
+		errorPage(w, r, http.StatusBadRequest, "You can only change settings for your own databases.")
+		return
+	}
+
+	// Extract the form variables
+	oneLineDesc := r.PostFormValue("onelinedesc")
+	newName := r.PostFormValue("newname")
+	fullDesc := r.PostFormValue("fulldesc")
+	defTable := r.PostFormValue("defaulttable") // TODO: Update the default table to be "per branch"
+
+	// Grab and validate the supplied "public" form field
+	public, err := com.GetPub(r)
+	if err != nil {
+		log.Printf("Error when converting public value to boolean: %v\n", err)
+		errorPage(w, r, http.StatusBadRequest, "Public value incorrect")
+		return
+	}
+
+	// If set, validate the new database name
+	if newName != dbName {
+		err := com.ValidateDB(newName)
+		if err != nil {
+			log.Printf("Validation failed for new database name '%s': %s", newName, err)
+			errorPage(w, r, http.StatusBadRequest, "New database name failed validation")
+			return
+		}
+	}
+
+	// Ensure the description is 80 chars or less
+	if len(oneLineDesc) > 80 {
+		errorPage(w, r, http.StatusBadRequest, "Description line needs to be 80 characters or less")
+		return
+	}
+
+	// Validate the name of the default table
+	err = com.ValidatePGTable(defTable)
+	if err != nil {
+		// Validation failed
+		log.Printf("Validation failed for name of default table '%s': %s", defTable, err)
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for name of default table")
+		return
+	}
+
+	// Retrieve the SHA256 for the database file
+	var db com.SQLiteDBinfo
+	err = com.DBDetails(&db, loggedInUser, dbOwner, dbFolder, dbName, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	dbSHA := db.Info.DBEntry.Sha256
+
+	// Get a handle from Minio for the database object
+	bkt := dbSHA[:com.MinioFolderChars]
+	id := dbSHA[com.MinioFolderChars:]
+	sdb, tempFile, err := com.OpenMinioObject(bkt, id)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Close the SQLite database and delete the temp file
+	defer func() {
+		sdb.Close()
+		os.Remove(tempFile)
+	}()
+
+	// Retrieve the list of tables in the database
+	// TODO: Update this to handle having a default table "per branch".  Even though it would mean looping here, it
+	// TODO  seems like the only way to be flexible and accurate enough for our purposes
+	tables, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+	defer sdb.Close()
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// If a specific table was requested, check that it's present
+	if defTable != "" {
+		// Check the requested table is present
+		tablePresent := false
+		for _, tbl := range tables {
+			if tbl == defTable {
+				tablePresent = true
+			}
+		}
+		if tablePresent == false {
+			// The requested table doesn't exist in the database
+			log.Printf("Requested table '%s' not present in database '%s%s%s'\n",
+				defTable, dbOwner, dbFolder, dbName)
+			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
+			return
+		}
+	}
+
+	// If the database doesn't have a 1-liner description, don't save the placeholder text as one
+	if oneLineDesc == "No description" {
+		oneLineDesc = ""
+	}
+
+	// Same thing, but for the full length description
+	if fullDesc == "No full description" {
+		fullDesc = ""
+	}
+
+	// Save settings
+	err = com.SaveDBSettings(dbOwner, dbFolder, dbName, oneLineDesc, fullDesc, defTable, public)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// If the new database name is different from the old one, perform the rename
+	// Note - It's useful to do this *after* the SaveDBSettings() call, so the cache invalidation code at the
+	// end of that function gets run and we don't have to repeat it here
+	// TODO: We'll probably need to add support for renaming folders somehow too
+	if newName != "" && newName != dbName {
+		err = com.RenameDatabase(dbOwner, dbFolder, dbName, newName)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+
+	// Settings saved, so bounce back to the database page
+	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", dbOwner, dbFolder, newName), http.StatusTemporaryRedirect)
+}
+
+// This function sets a branch as the default for a given database.
+func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Set default branch handler"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract the required form variables
+	branchName := r.PostFormValue("branchName")
+	dbFolder := r.PostFormValue("dbFolder")
+	dbName := r.PostFormValue("dbName")
+	dbOwner := r.PostFormValue("dbOwner")
+
+	// If any of the required values were empty, indicate failure
+	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO: Validate the variables
+
+	// Validate the database name
+	err := com.ValidateDB(dbName)
+	if err != nil {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
+	if dbOwner != loggedInUser {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Load the existing branchHeads for the database
+	branches, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the given branch exists
+	_, ok := branches[branchName]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Set the default branch
+	err = com.StoreDefaultBranchName(dbOwner, dbFolder, dbName, branchName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Update succeeded
+	w.WriteHeader(http.StatusOK)
+}
+
 // Handles JSON requests from the front end to toggle a database's star.
 func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the user and database name
+	// TODO: Add folder support
 	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/star/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
@@ -991,7 +1487,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate the old memcached entry for the database
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, "/", dbName, 0) // 0 indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, "/", dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -999,7 +1495,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the updated star count
-	newStarCount, err := com.DBStars(dbOwner, dbName)
+	newStarCount, err := com.DBStars(dbOwner, "/", dbName)
 	if err != nil {
 		fmt.Fprint(w, "-1") // -1 tells the front end not to update the displayed star count
 		return
@@ -1007,189 +1503,13 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, newStarCount)
 }
 
-// Handler for the Database Settings page
-func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: License
-
-	// Ensure user is logged in
-	var loggedInUser string
-	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
-	}
-	if validSession != true {
-		// Display an error message
-		// TODO: Show the login dialog (also for the preferences page)
-		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
-		return
-	}
-
-	// Extract the username, folder, and (current) database name form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-	userName := strings.ToLower(u)
-
-	// Default to the root folder if none was given
-	if dbFolder == "" {
-		dbFolder = "/"
-	}
-
-	// Make sure a username was given
-	if len(userName) == 0 || userName == "" {
-		// No username supplied
-		errorPage(w, r, http.StatusBadRequest, "No username supplied!")
-		return
-	}
-
-	// Extract the version number
-	dbVersion, err := com.GetFormVersion(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "No database version supplied!")
-		return
-	}
-
-	// Extract the form variables
-	descrip := r.PostFormValue("descrip")
-	newName := r.PostFormValue("newname")
-	readme := r.PostFormValue("readme")
-	defTable := r.PostFormValue("defaulttable")
-
-	// Grab and validate the supplied "public" form field
-	public, err := com.GetPub(r)
-	if err != nil {
-		log.Printf("Error when converting public value to boolean: %v\n", err)
-		errorPage(w, r, http.StatusBadRequest, "Public value incorrect")
-		return
-	}
-
-	// If set, validate the new database name
-	if newName != dbName {
-		err := com.ValidateDB(newName)
-		if err != nil {
-			log.Printf("Validation failed for new database name '%s': %s", newName, err)
-			errorPage(w, r, http.StatusBadRequest, "New database name failed validation")
-			return
-		}
-	}
-
-	// Ensure the description is 80 chars or less
-	if len(descrip) > 80 {
-		errorPage(w, r, http.StatusBadRequest, "Description line needs to be 80 characters or less")
-		return
-	}
-
-	// Validate the name of the default table
-	err = com.ValidatePGTable(defTable)
-	if err != nil {
-		// Validation failed
-		log.Printf("Validation failed for name of default table '%s': %s", defTable, err)
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for name of default table")
-		return
-	}
-
-	// Get the Minio bucket and ID for the given database
-	bkt, id, err := com.MinioBucketID(userName, dbName, dbVersion, loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError,
-			"Could not retrieve internal information for the requested database")
-		return
-	}
-
-	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(bkt, id)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Retrieve the list of tables in the database
-	tables, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", userName, dbFolder, dbName))
-	defer sdb.Close()
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// If a specific table was requested, check that it's present
-	if defTable != "" {
-		// Check the requested table is present
-		tablePresent := false
-		for _, tbl := range tables {
-			if tbl == defTable {
-				tablePresent = true
-			}
-		}
-		if tablePresent == false {
-			// The requested table doesn't exist in the database
-			log.Printf("Requested table '%s' not present in database '%s%s%s' version %d\n",
-				defTable, userName, dbFolder, dbName, dbVersion)
-			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
-			return
-		}
-	}
-
-	// If the database doesn't have a 1-liner description, don't save the placeholder text as one
-	if descrip == "No description" {
-		descrip = ""
-	}
-
-	// Same thing, but for the full length description
-	if readme == "No full description" {
-		readme = ""
-	}
-
-	// Save settings
-	err = com.SaveDBSettings(userName, dbFolder, dbName, descrip, readme, defTable, public)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// If the new database name is different from the old one, perform the rename
-	// Note - It's useful to do this *after* the SaveDBSettings() call, so the cache invalidation code at the
-	// end of that function gets run and we don't have to repeat it here
-	// TODO: We'll probably need to add support for renaming folders somehow too
-	if newName != "" && newName != dbName {
-		err = com.RenameDatabase(userName, dbFolder, dbName, newName)
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-	}
-
-	// Settings saved, so bounce back to the database page
-	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", userName, dbFolder, newName), http.StatusTemporaryRedirect)
-}
-
-// Present the stars page to the user
-func starsHandler(w http.ResponseWriter, r *http.Request) {
-	// Retrieve user and database name
-	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/stars/" at the start of the URL
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Render the stars page
-	starsPage(w, r, dbOwner, dbName)
-}
-
 // This passes table row data back to the main UI in JSON format.
 func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Table data handler"
 
 	// Retrieve user, database, and table name
-	dbOwner, dbName, requestedTable, dbVersion, err := com.GetODTV(2, r) // 1 = Ignore "/x/table/" at the start of the URL
+	// TODO: Add folder support
+	dbOwner, dbName, requestedTable, commitID, err := com.GetODTC(2, r) // 1 = Ignore "/x/table/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -1249,7 +1569,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database
-	bucket, id, err := com.MinioBucketID(dbOwner, dbName, dbVersion, loggedInUser)
+	bucket, id, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1275,7 +1595,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the data is available from memcached, use that instead of reading from the SQLite database itself
 	dataCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-		loggedInUser, dbOwner, "/", dbName, dbVersion, requestedTable, maxRows)
+		loggedInUser, dbOwner, "/", dbName, commitID, requestedTable, maxRows)
 
 	// If a cached version of the page data exists, use it
 	var dataRows com.SQLiteRecordSet
@@ -1287,7 +1607,17 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		// * Data wasn't in cache, so we gather it from the SQLite database *
 
 		// Open the Minio database
-		sdb, err := com.OpenMinioObject(bucket, id)
+		sdb, tempFile, err := com.OpenMinioObject(bucket, id)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Close the SQLite database and delete the temp file
+		defer func() {
+			sdb.Close()
+			os.Remove(tempFile)
+		}()
 
 		// Retrieve the list of tables in the database
 		tables, err := sdb.Tables("")
@@ -1357,9 +1687,6 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Close the SQLite database
-		defer sdb.Close()
-
 		// Cache the data in memcache
 		err = com.CacheData(dataCacheKey, dataRows, com.CacheTime)
 		if err != nil {
@@ -1376,6 +1703,102 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 	//w.Header().Set("Access-Control-Allow-Origin", "*")
 	fmt.Fprintf(w, "%s", jsonResponse)
+}
+
+// This function processes branch rename and description updates.
+func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Update Branch handler"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract the required form variables
+	branchName := r.PostFormValue("branchName")
+	dbFolder := r.PostFormValue("dbFolder")
+	dbName := r.PostFormValue("dbName")
+	dbOwner := r.PostFormValue("dbOwner")
+	newDesc := r.PostFormValue("newDesc")
+	newName := r.PostFormValue("newName")
+
+	// If any of the required values were empty, indicate failure
+	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newDesc == "" || newName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO: Validate the variables
+
+	// Validate the database name
+	err := com.ValidateDB(dbName)
+	if err != nil {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
+	if dbOwner != loggedInUser {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Load the existing branchHeads for the database
+	branches, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the given branch exists
+	oldInfo, ok := branches[branchName]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Update the branch info
+	delete(branches, branchName)
+	branches[newName] = com.BranchEntry{
+		Commit:      oldInfo.Commit,
+		Description: newDesc,
+	}
+	err = com.StoreBranches(dbOwner, dbFolder, dbName, branches)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Update succeeded
+	w.WriteHeader(http.StatusOK)
 }
 
 // This function presents the database upload form to logged in users.
@@ -1397,6 +1820,18 @@ func uploadFormHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure we have a valid logged in user
 	if validSession != true {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Ensure the user has set their display name and email address
+	displayName, email, err := com.GetUserDetails(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving user details")
+		return
+	}
+	if displayName == "" || email == "" {
+		errorPage(w, r, http.StatusBadRequest,
+			"You need to set your full name and email address in Preferences first")
 		return
 	}
 
@@ -1445,17 +1880,28 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the other form variables
-	descrip := r.PostFormValue("descrip")
-	readme := r.PostFormValue("readme")
+	commitMsg := r.PostFormValue("commitmsg")
 
-	// Ensure the description is 80 chars or less
-	if len(descrip) > 80 {
-		errorPage(w, r, http.StatusBadRequest, "Description line needs to be 80 characters or less")
+	// TODO: Validate the commit message
+
+	// TODO: Add (optional) source URL field to the upload form
+	// TODO: Add (optional) branch name field to the upload form
+	branchName, err := com.GetFormBranch(r) // Optional
+	if err != nil {
+		log.Printf("%s: Error when validating branch name '%s': %v\n", pageName, branchName, err)
+		errorPage(w, r, http.StatusBadRequest, "Branch name value failed validation")
 		return
 	}
 
-	// TODO: Add support for folders and subfolders
-	folder := "/"
+	// Ensure the one line description is 1024 chars or less.  1024 chars is probably a reasonable first guess as to a
+	// useful limit
+	if len(commitMsg) > 80 {
+		errorPage(w, r, http.StatusBadRequest, "Commit message needs to be 1024 characters or less")
+		return
+	}
+
+	// TODO: Add support for folders and sub-folders
+	dbFolder := "/"
 
 	tempFile, handler, err := r.FormFile("database")
 	if err != nil {
@@ -1475,8 +1921,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the temporary file locally, so we can try opening it with SQLite to verify it's ok
-	var tempBuf bytes.Buffer
-	bytesWritten, err := io.Copy(&tempBuf, tempFile)
+	var buf bytes.Buffer
+	bytesWritten, err := io.Copy(&buf, tempFile)
 	if err != nil {
 		log.Printf("%s: Error: %v\n", pageName, err)
 		errorPage(w, r, http.StatusInternalServerError, "Internal error")
@@ -1495,7 +1941,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, "Internal error")
 		return
 	}
-	_, err = tempDB.Write(tempBuf.Bytes())
+	_, err = tempDB.Write(buf.Bytes())
 	if err != nil {
 		log.Printf("%s: Error when writing the uploaded db to a temp file. User: %s, Database: %s"+
 			"Error: %v\n", pageName, loggedInUser, dbName, err)
@@ -1515,59 +1961,155 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate sha256 of the uploaded file
-	shaSum := sha256.Sum256(tempBuf.Bytes())
+	s := sha256.Sum256(buf.Bytes())
+	sha := hex.EncodeToString(s[:])
 
-	// Determine the version number for this new database
-	highVer, err := com.HighestDBVersion(loggedInUser, dbName, "/", loggedInUser)
-	var newVer int
-	if highVer > 0 {
-		// The database already exists
-		newVer = highVer + 1
-	} else {
-		newVer = 1
-	}
-
-	// Retrieve the Minio bucket to store the database in
-	bucket, err := com.MinioUserBucket(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+	// Check if the database already exists in the system
+	needDefaultBranchCreated := false
+	var branches map[string]com.BranchEntry
+	exists, err := com.CheckDBExists(loggedInUser, dbFolder, dbName)
+	if err != err {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	// Generate filename to store the database as
-	var minioID string
-	for okID := false; okID == false; {
-		// Check if the randomly generated filename is available, just in caes
-		minioID = com.RandomString(8) + ".db"
-		okID, err = com.CheckMinioIDAvail(loggedInUser, minioID)
+	if exists {
+		// Load the existing branchHeads for the database
+		branches, err = com.GetBranches(loggedInUser, dbFolder, dbName)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		// If no branch name was given, use the default for the database
+		if branchName == "" {
+			branchName, err = com.GetDefaultBranchName(loggedInUser, dbFolder, dbName)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
+	} else {
+		// No existing branches, so this will be the first
+		branches = make(map[string]com.BranchEntry)
+
+		// Set the default branch name for the database
+		if branchName == "" {
+			branchName = "master"
+		}
+		needDefaultBranchCreated = true
 	}
 
-	// Store the database file in Minio
-	dbSize, err := com.StoreMinioObject(bucket, minioID, &tempBuf, handler.Header["Content-Type"][0])
+	// Create a dbTree entry for the individual database file
+	var e com.DBTreeEntry
+	e.EntryType = com.DATABASE
+	e.Name = dbName
+	e.Sha256 = sha
+	e.Last_Modified = time.Now()
+	// TODO: Check if there's a way to pass the last modified timestamp through a standard file upload control.  If
+	// TODO  not, then it might only be possible through dio cli and similar
+	//e.Last_Modified, err = time.Parse(time.RFC3339, modTime)
+	//if err != nil {
+	//	log.Println(err.Error())
+	//	w.WriteHeader(http.StatusInternalServerError)
+	//	return
+	//}
+	e.Size = buf.Len()
+	// TODO: Add the licence support pieces, so the licence info can be included at upload time
+	//if lName == "" {
+	//	// No licence was specified by the client, so check if the database is already in the system and
+	//	// already has one.  If so, we use that.
+	//	if exists {
+	//		headBranch, ok := branches[branchName]
+	//		if !ok {
+	//			w.WriteHeader(http.StatusBadRequest)
+	//			return
+	//		}
+	//		headCommit, err := getCommit(dbName, headBranch.Commit)
+	//		if err != nil {
+	//			w.WriteHeader(http.StatusInternalServerError)
+	//			return
+	//
+	//		}
+	//		if headCommit.Tree.Entries[0].Licence != "" {
+	//			// The previous commit for the database had a licence, so we use that for this commit
+	//			// too
+	//			e.Licence = headCommit.Tree.Entries[0].Licence
+	//		}
+	//	}
+	//} else {
+	//	// A licence was specified by the client, so use that
+	//	e.Licence, err = getLicenceSha256(lName)
+	//	if err != nil {
+	//		w.WriteHeader(http.StatusInternalServerError)
+	//		return
+	//	}
+	//}
+
+	// Create a dbTree structure for the database entry
+	var t com.DBTree
+	t.Entries = append(t.Entries, e)
+	t.ID = com.CreateDBTreeID(t.Entries)
+
+	// Retrieve the display name and email address for the user
+	dn, em, err := com.GetUserDetails(loggedInUser)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Storing database file failed")
+		errorPage(w, r, http.StatusInternalServerError, "Error retrieving user details")
 		return
 	}
 
-	// Add the database file details to PostgreSQL
-	err = com.AddDatabase(loggedInUser, folder, dbName, newVer, shaSum[:], dbSize, public, bucket, minioID, descrip, readme)
+	// If either the display name or email address is empty, tell the user we need them first
+	if dn == "" || em == "" {
+		errorPage(w, r, http.StatusInternalServerError,
+			"You need to set your full name and email address in Preferences first")
+		return
+	}
+
+	// Construct a commit structure pointing to the tree
+	var c com.CommitEntry
+	c.AuthorName = dn
+	c.AuthorEmail = em
+	c.Message = commitMsg
+	c.Timestamp = time.Now()
+	c.Tree = t
+
+	// If the database already exists, use the head commit for the appropriate branch as the parent for our new
+	// uploads' commit
+	if exists {
+		b, ok := branches[branchName]
+		if !ok {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		c.Parent = b.Commit
+	}
+
+	// Update the branch with the commit for this new database upload
+	c.ID = com.CreateCommitID(c)
+	b := branches[branchName]
+	b.Commit = c.ID
+	branches[branchName] = b
+	err = com.StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, buf.Bytes(), sha, "", "", needDefaultBranchCreated, branchName)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Adding database details to PostgreSQL failed")
+		errorPage(w, r, http.StatusInternalServerError, "Error storing database")
+		return
+	}
+
+	// Invalidate the memcached entry for the database (only really useful if we're updating an existing database)
+	err = com.InvalidateCacheEntry(loggedInUser, loggedInUser, "/", dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
 		return
 	}
 
 	// Log the successful database upload
-	log.Printf("%s: Username: %v, database '%v' uploaded as '%v', bytes: %v\n", pageName, loggedInUser, dbName,
-		minioID, dbSize)
+	log.Printf("%s: Username: %v, database '%v' uploaded as '%v/%v', bytes: %v\n", pageName, loggedInUser, dbName,
+		sha[:com.MinioFolderChars], sha[com.MinioFolderChars:], bytesWritten)
 
 	// Invalidate any memcached entries for the previous highest version # of the database
-	err = com.InvalidateCacheEntry(loggedInUser, loggedInUser, folder, dbName, 0) // 0 indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, loggedInUser, dbFolder, dbName, c.ID) // And empty string indicates "for all commits"
 	if err != nil {
-		// Something went wrong when invalidating memcached entries for any previous database versions
+		// Something went wrong when invalidating memcached entries for any previous database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
 		return
 	}

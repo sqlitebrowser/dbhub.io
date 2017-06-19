@@ -1,0 +1,192 @@
+[[ define "branchesPage" ]]
+<!doctype html>
+<html ng-app="DBHub" ng-controller="branchesView">
+[[ template "head" . ]]
+<body>
+<style>
+    .blackLink {
+        color: black;
+    }
+</style>
+[[ template "header" . ]]
+<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 style="text-align: center;">
+                Branches for
+                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
+                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+            </h2>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
+                <div style="text-align: center; padding-bottom: 10px;">
+                    <i>Default branch: {{ meta.DefBranch }}</i>
+                </div>
+            [[ end ]]
+            <table class="table table-bordered table-striped table-responsive">
+                <tr>
+                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                    <th width="280px">Actions</th>
+                    [[ end ]]
+                    <th>Branch</th><th>Description</th>
+                </tr>
+                <tr ng-repeat="row in meta.Branches">
+                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                        <td style="border-style: none;">
+                            <button class="btn btn-primary" ng-click="updateBranch(row.name)">Update</button>
+                            <button ng-if="row.name != meta.DefBranch" class="btn btn-primary" ng-click="setDefaultBranch(row.name)">Set Default</button>
+                            <button ng-if="row.name != meta.DefBranch" class="btn btn-primary" ng-click="deleteBranch(row.name)">Delete</button>
+                            <span ng-if="row.name == meta.DefBranch" style="vertical-align: middle;">
+                                &nbsp; &nbsp; &nbsp; <i>Default branch</i>
+                            </span>
+                        </td>
+                    [[ end ]]
+                    <td style="border-style: none;">
+                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            <input type="text" name="{{ row.name }}_name" id="{{ row.name }}_name" size="20" maxlength="20" value="{{ row.name }}">
+                        [[ else ]]
+                            {{ row.name }}
+                        [[ end ]]
+                    </td>
+                    <td style="border-style: none;">
+                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            <input type="text" name="{{ row.name }}_desc" id="{{ row.name }}_desc" size="70" maxlength="80" value="{{ row.description }}"> &nbsp; &nbsp;
+                            <span name="{{ row.name }}_msg" id="{{ row.name }}_msg"></span>
+                        [[ else ]]
+                            {{ row.description }}
+                        [[ end ]]
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('branchesView', function($scope, $http, $httpParamSerializerJQLike) {
+        $scope.meta = {
+            DefBranch: "[[ .DefaultBranch ]]",
+        };
+
+        // Reorder the branches with the default branch first, then the remainder alphabetically
+        $scope.unsortedBranches = [[ .Branches ]];
+        var numBranches = $scope.unsortedBranches.length;
+
+        // Create the list of branch names, for sorting into alphabetical order
+        var nameList = [];
+        for (var i = 0; i < numBranches; i++) {
+            // Skip the default branch, as we don't want it in the sorted list
+            if ($scope.unsortedBranches[i].name !== $scope.meta.DefBranch) {
+                nameList.push($scope.unsortedBranches[i].name);
+            }
+        }
+
+        // Sort the branch names alphabetically
+        var sortedNames = nameList.sort();
+
+        // Add the default branch as the first entry to a list of sorted branches.  Put the rest into an array for
+        // easy retrieval in the next step
+        $scope.meta.Branches = [];
+        var remainingBranches = {};
+        for (i = 0; i < numBranches; i++) {
+            if ($scope.unsortedBranches[i].name === $scope.meta.DefBranch) {
+                $scope.meta.Branches.push($scope.unsortedBranches[i]);
+            } else {
+                remainingBranches[$scope.unsortedBranches[i].name] = $scope.unsortedBranches[i];
+            }
+        }
+
+        // Add the remaining branch entries to the list, in sorted order
+        for (i = 0; i < sortedNames.length; i++) {
+            var nm = sortedNames[i];
+            $scope.meta.Branches.push(remainingBranches[nm]);
+        }
+
+        // Delete the branch
+        $scope.deleteBranch = function(branchName) {
+            $http({
+                method: "POST",
+                url: "/x/deletebranch/",
+                data: $httpParamSerializerJQLike({
+                        "branchName": branchName,
+                        "dbFolder": "/",
+                        "dbName": [[ .Meta.Database ]],
+                        "dbOwner": [[ .Meta.Owner ]]
+                    }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // If successful, reload the page
+                var status = response.status;
+                if (status == 200) {
+                    window.location = '/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+                }
+            });
+        };
+
+        // Set the default branch
+        $scope.setDefaultBranch = function(branchName) {
+            $http({
+                method: "POST",
+                url: "/x/setdefaultbranch/",
+                data: $httpParamSerializerJQLike({
+                        "branchName": branchName,
+                        "dbFolder": "/",
+                        "dbName": [[ .Meta.Database ]],
+                        "dbOwner": [[ .Meta.Owner ]]
+                    }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // If successful, reload the page
+                var status = response.status;
+                if (status == 200) {
+                    window.location = '/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+                }
+            });
+        };
+
+        // Send the update details to the server
+        $scope.updateBranch = function(branchName){
+            var descID = document.getElementById(branchName + "_desc");
+            var msgID = document.getElementById(branchName + "_msg");
+            var nameID = document.getElementById(branchName + "_name");
+            var newDesc = descID.value;
+            var newName = nameID.value;
+            $http({
+                method: "POST",
+                url: "/x/updatebranch/",
+                data: $httpParamSerializerJQLike({
+                        "branchName": branchName,
+                        "dbFolder": "/",
+                        "dbName": [[ .Meta.Database ]],
+                        "dbOwner": [[ .Meta.Owner ]],
+                        "newDesc": newDesc,
+                        "newName": newName
+                    }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // Upon return, indicate success or failure
+                var status = response.status;
+                if (status == 200) {
+                    msgID.textContent = "Updated";
+                } else {
+                    msgID.textContent = "Failed";
+                }
+            });
+        };
+
+        // Auth0
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+        $scope.showLock = function() {
+            lock.show();
+        };
+    });
+</script>
+</body>
+</html>
+[[ end ]]

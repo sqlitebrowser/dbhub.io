@@ -11,6 +11,34 @@ import (
 	"strings"
 )
 
+// Return the requested branch name, from get or post data.
+func GetFormBranch(r *http.Request) (string, error) {
+	// If no branch was given in the input, returns an empty string
+	c := r.FormValue("branch")
+	if c == "" {
+		return "", nil
+	}
+	err := Validate.Var(c, "alphanum,min=1,max=32") // 32 seems a reasonable first guess.
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Invalid branch name: '%v'", c))
+	}
+	return c, nil
+}
+
+// Return the requested database commit, from form data.
+func GetFormCommit(r *http.Request) (string, error) {
+	// If no commit was given in the input, returns an empty string
+	c := r.FormValue("commit")
+	if c == "" {
+		return "", nil
+	}
+	err := Validate.Var(c, "hexadecimal,min=1,max=64")
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Invalid database commit: '%v'", c))
+	}
+	return c, nil
+}
+
 // Extracts a database name from form data
 func GetFormDatabase(r *http.Request) (string, error) {
 	dbName := r.PostFormValue("dbname")
@@ -47,27 +75,27 @@ func GetFormFolder(r *http.Request) (string, error) {
 	return folder, nil
 }
 
-// Return the username, database, and version (if any) present in the form data.
-func GetFormUDV(r *http.Request) (string, string, int, error) {
+// Return the username, database, and commit (if any) present in the form data.
+func GetFormUDC(r *http.Request) (string, string, string, error) {
 	// Extract the username
 	userName, err := GetFormUsername(r)
 	if err != nil {
-		return "", "", 0, err
+		return "", "", "", err
 	}
 
 	// Extract the database name
 	dbName, err := GetFormDatabase(r)
 	if err != nil {
-		return "", "", 0, err
+		return "", "", "", err
 	}
 
-	// Extract the version number
-	dbVersion, err := GetFormVersion(r)
+	// Extract the commit string
+	commitID, err := GetFormCommit(r)
 	if err != nil {
-		return "", "", 0, err
+		return "", "", "", err
 	}
 
-	return userName, dbName, dbVersion, nil
+	return userName, dbName, commitID, nil
 }
 
 // Return the username, folder, and database name (if any) present in the form data.
@@ -158,21 +186,6 @@ func GetFormUsername(r *http.Request) (string, error) {
 	return userName, nil
 }
 
-// Return the requested database version number, from form data.
-func GetFormVersion(r *http.Request) (int, error) {
-	// If no version number was given in the input, return 0
-	v := r.FormValue("version")
-	if v == "" {
-		return 0, nil
-	}
-
-	dbVersion, err := strconv.ParseInt(v, 10, 0) // This also validates the version input
-	if err != nil {
-		return 0, errors.New(fmt.Sprintf("Invalid database version number: '%v'", v))
-	}
-	return int(dbVersion), nil
-}
-
 // Returns the requested database owner and database name.
 func GetOD(ignore_leading int, r *http.Request) (string, string, error) {
 	// Split the request URL into path components
@@ -203,6 +216,24 @@ func GetOD(ignore_leading int, r *http.Request) (string, string, error) {
 	return dbOwner, dbName, nil
 }
 
+// Returns the requested database owner, database name, and commit revision.
+func GetODC(ignore_leading int, r *http.Request) (string, string, string, error) {
+	// Grab owner and database name
+	dbOwner, dbName, err := GetOD(ignore_leading, r)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Extract the commit revision
+	commitID, err := GetFormCommit(r)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Everything seems ok
+	return dbOwner, dbName, commitID, nil
+}
+
 // Returns the requested database owner, database name, and table name.
 func GetODT(ignore_leading int, r *http.Request) (string, string, string, error) {
 	// Grab owner and database name
@@ -221,46 +252,28 @@ func GetODT(ignore_leading int, r *http.Request) (string, string, string, error)
 	return dbOwner, dbName, requestedTable, nil
 }
 
-// Returns the requested database owner, database name, table name, and version number.
-func GetODTV(ignore_leading int, r *http.Request) (string, string, string, int, error) {
+// Returns the requested database owner, database name, table name, and commit string.
+func GetODTC(ignore_leading int, r *http.Request) (string, string, string, string, error) {
 	// Grab owner and database name
 	dbOwner, dbName, err := GetOD(ignore_leading, r)
 	if err != nil {
-		return "", "", "", 0, err
+		return "", "", "", "", err
 	}
 
 	// If a specific table was requested, get that info too
 	requestedTable, err := GetTable(r)
 	if err != nil {
-		return "", "", "", 0, err
+		return "", "", "", "", err
 	}
 
-	// Extract the version number
-	dbVersion, err := GetFormVersion(r)
+	// Extract the commit string
+	commitID, err := GetFormCommit(r)
 	if err != nil {
-		return "", "", "", 0, err
+		return "", "", "", "", err
 	}
 
 	// Everything seems ok
-	return dbOwner, dbName, requestedTable, dbVersion, nil
-}
-
-// Returns the requested database owner, database name, and database version.
-func GetODV(ignore_leading int, r *http.Request) (string, string, int, error) {
-	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignore_leading, r)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	// Extract the version number
-	dbVersion, err := GetFormVersion(r)
-	if err != nil {
-		return "", "", 0, err
-	}
-
-	// Everything seems ok
-	return dbOwner, dbName, dbVersion, nil
+	return dbOwner, dbName, requestedTable, commitID, nil
 }
 
 // Returns the requested "public" variable, if present in the form data.

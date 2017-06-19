@@ -16,19 +16,21 @@ When the core code is more fully featured (June/July 2017 target), we'll start p
 
 ### Requirements
 
-* [Golang](https://golang.org) - version 1.8 and above are known to work.
+* [Golang](https://golang.org) - version 1.8 or above is required.
 * [Memcached](https://memcached.org) - version 1.4.33 and above are known to work.
 * [Minio](https://minio.io) - release 2016-11-26T02:23:47Z and later are known to work.
-* [PostgreSQL](https://www.postgresql.org) - version 9.5 and above are known to work.
+* [PostgreSQL](https://www.postgresql.org) - version 9.6 or above is required.
 
 ### Subdirectories
 
-* [admin](admin/) - Internal only (not public facing) webUI for admin tasks.
-* [api](api/) - Future home for the API end point code.  Not yet created. ;)
+* [api](api/) - (not yet created) Future home for our JSON API server.
 * [common](common/) - Library of functions used by the DBHub.io components.
 * [database](database/) - PostgreSQL database schema.
+* [default_licences](default_licences/) - Useful Open Source licences suitable for databases.
 * [db4s](db4s/) - REST server which [DB Browser for SQLite](http://sqlitebrowser.org)
   connects to with File → Remote.
+* [dio](dio/) - (not yet created) Future home for `dio`, our command line interface (cli) for
+  interacting with DBHub.io.
 * [webui](webui/) - The main public facing webUI.
 
 ## Related mailing lists

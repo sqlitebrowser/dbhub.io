@@ -43,12 +43,12 @@
                 <table class="table table-bordered table-striped table-responsive">
                     <tr ng-repeat="row in pubdb.Databases">
                         <td><h4><a href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.Description }}</h4>
-                            <b>Version:</b> {{ row.Version }} &nbsp; <b>Size:</b> {{ row.Size /1024 | number : 0 }} KB &nbsp;
+                            <b>Commit:</b> {{ row.Commit }} &nbsp; <b>Size:</b> {{ row.Size /1024 | number : 0 }} KB &nbsp;
                             <b>Watchers:</b> {{ row.Watchers }} &nbsp;
                             <b>Stars:</b> <a href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
                             <b>Forks:</b> <a href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
                             <b>Discussions:</b> {{ row. Discussions }} &nbsp;
-                            <b>MRs:</b> {{ row.MRs }} &nbsp; <b>Updates:</b> {{ row.Updates }} &nbsp;
+                            <b>MRs:</b> {{ row.MRs }} &nbsp; <b>Commits:</b> {{ row.Commits }} &nbsp;
                             <b>Branches:</b> {{ row.Branches }} &nbsp; <b>Releases:</b> {{ row.Releases }} &nbsp;
                             <b>Contributors:</b> {{ row.Contributors }}<br />
                             <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' : 'UTC' }}
@@ -76,7 +76,7 @@
                             <b>Stars:</b> <a href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
                             <b>Forks:</b> <a href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
                             <b>Discussions:</b> {{ row. Discussions }} &nbsp;
-                            <b>MRs:</b> {{ row.MRs }} &nbsp; <b>Updates:</b> {{ row.Updates }} &nbsp;
+                            <b>MRs:</b> {{ row.MRs }} &nbsp; <b>Commits:</b> {{ row.Commits }} &nbsp;
                             <b>Branches:</b> {{ row.Branches }} &nbsp; <b>Releases:</b> {{ row.Releases }} &nbsp;
                             <b>Contributors:</b> {{ row.Contributors }}<br />
                             <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' : 'UTC' }}

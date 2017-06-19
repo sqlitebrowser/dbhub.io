@@ -8,11 +8,12 @@ import (
 )
 
 var (
-	regexDBName    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
-	regexFieldName = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\,\ )]+$`)
-	regexFolder    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
-	regexPGTable   = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
-	regexUsername  = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+	regexDBName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
+	regexDisplayName = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\ ]+$`)
+	regexFieldName   = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\,\ )]+$`)
+	regexFolder      = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
+	regexPGTable     = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
+	regexUsername    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
 	// For input validation
 	Validate *valid.Validate
@@ -22,6 +23,7 @@ func init() {
 	// Load validation code
 	Validate = valid.New()
 	Validate.RegisterValidation("dbname", checkDBName)
+	Validate.RegisterValidation("displayname", checkDisplayName)
 	Validate.RegisterValidation("fieldname", checkFieldName)
 	Validate.RegisterValidation("folder", checkFolder)
 	Validate.RegisterValidation("pgtable", checkPGTableName)
@@ -33,6 +35,12 @@ func init() {
 // valid file name
 func checkDBName(fl valid.FieldLevel) bool {
 	return regexDBName.MatchString(fl.Field().String())
+}
+
+// Custom validation function for display names.
+// At the moment it just allows alpha and ".,- " chars
+func checkDisplayName(fl valid.FieldLevel) bool {
+	return regexDisplayName.MatchString(fl.Field().String())
 }
 
 // Custom validation function for SQLite field names

@@ -63,6 +63,12 @@ const CacheTime = 2592000
 // Number of rows to display by default on the database page
 const DefaultNumDisplayRows = 25
 
+// The number of leading characters of a files' sha256 used as the Minio folder name
+// eg: When set to 6, then "34f4255a737156147fbd0a44323a895d18ade79d4db521564d1b0dbb8764cbbc"
+//        -> Minio folder: "34f425"
+//        -> Minio filename: "5a737156147fbd0a44323a895d18ade79d4db521564d1b0dbb8764cbbc"
+const MinioFolderChars = 6
+
 // Number of connections to PostgreSQL to use
 const PGConnections = 5
 
@@ -150,6 +156,23 @@ type Auth0Set struct {
 	Domain      string
 }
 
+type BranchEntry struct {
+	Commit      string `json:"commit"`
+	Description string `json:"description"`
+}
+
+type CommitEntry struct {
+	AuthorEmail    string    `json:"author_email"`
+	AuthorName     string    `json:"author_name"`
+	CommitterEmail string    `json:"committer_email"`
+	CommitterName  string    `json:"committer_name"`
+	ID             string    `json:"id"`
+	Message        string    `json:"message"`
+	Parent         string    `json:"parent"`
+	Timestamp      time.Time `json:"timestamp"`
+	Tree           DBTree    `json:"tree"`
+}
+
 type DataValue struct {
 	Name  string
 	Type  ValType
@@ -164,28 +187,50 @@ type DBEntry struct {
 	Owner     string
 }
 
+type DBTreeEntryType string
+
+const (
+	TREE     DBTreeEntryType = "tree"
+	DATABASE                 = "db"
+	LICENCE                  = "licence"
+)
+
+type DBTree struct {
+	ID      string        `json:"id"`
+	Entries []DBTreeEntry `json:"entries"`
+}
+type DBTreeEntry struct {
+	EntryType     DBTreeEntryType `json:"entry_type"`
+	Last_Modified time.Time       `json:"last_modified"`
+	Licence       string          `json:"licence"`
+	Name          string          `json:"name"`
+	Sha256        string          `json:"sha256"`
+	Size          int             `json:"size"`
+}
+
 type DBInfo struct {
 	Branches     int
+	Commits      int
+	CommitID     string
 	Contributors int
 	Database     string
 	DateCreated  time.Time
+	DBEntry      DBTreeEntry
 	DefaultTable string
-	Description  string
 	Discussions  int
 	Folder       string
 	Forks        int
+	FullDesc     string
 	LastModified time.Time
 	License      LicenseType
 	MRs          int
+	OneLineDesc  string
 	Public       bool
-	Readme       string
 	Releases     int
 	SHA256       string
 	Size         int
 	Stars        int
 	Tables       []string
-	Updates      int
-	Version      int
 	Watchers     int
 }
 

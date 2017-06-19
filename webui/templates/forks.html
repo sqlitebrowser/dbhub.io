@@ -3,6 +3,16 @@
 <html ng-app="DBHub" ng-controller="forksView">
 [[ template "head" . ]]
 <body>
+<style>
+    .blackLink {
+        color: black;
+    }
+
+    .blackLink:hover {
+        color: #23527c;
+        text-decoration: underline;
+    }
+</style>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
@@ -11,7 +21,9 @@
         </div>
         <div class="col-md-10">
             <h2 style="text-align: center;">
-                Forks of <a href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> / <a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                Forks of
+                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
+                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
             </h2>
         </div>
         <div class="col-md-1">

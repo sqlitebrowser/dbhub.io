@@ -79,27 +79,27 @@ func GetCachedData(cacheKey string, cacheData interface{}) (bool, error) {
 }
 
 // Invalidate memcache data for a database version or versions
-func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, dbName string, dbVersion int) error {
+func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) error {
 
-	// If dbVersion is 0, that means "for all versions".  Otherwise, just invalidate the data for the requested one
-	var versionList []int
-	if dbVersion == 0 {
+	// If commitID is "", that means "for all versions".  Otherwise, just invalidate the data for the requested one
+	var commitList []string
+	if commitID == "" {
 		// Get the list of all versions for the given database
 		var err error
-		versionList, err = DBVersions(loggedInUser, dbOwner, dbFolder, dbName)
-		versionList = append(versionList, 0) // Need to clear "0" version entries too
+		commitList, err = DBVersions(loggedInUser, dbOwner, dbFolder, dbName) // Get the full commit list
+		commitList = append(commitList, "")                                   // Add "" on the end, to indicate all entries
 		if err != nil {
 			return err
 		}
 	} else {
-		// Only one version needs invalidation
-		versionList = append(versionList, dbVersion)
+		// Only one cached commit needs invalidation
+		commitList = append(commitList, commitID)
 	}
 
 	// Loop around, invalidating the now outdated entries
-	for _, ver := range versionList {
+	for _, c := range commitList {
 		// Invalidate the meta info
-		cacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, ver)
+		cacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, c)
 		err := memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
@@ -109,7 +109,7 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 		}
 
 		// Invalidate the download page data, for private database versions
-		cacheKey = MetadataCacheKey("dwndb-meta", dbOwner, dbOwner, dbFolder, dbName, ver)
+		cacheKey = MetadataCacheKey("dwndb-meta", dbOwner, dbOwner, dbFolder, dbName, c)
 		err = memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
@@ -119,7 +119,7 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 		}
 
 		// Invalidate the download page data for public database versions
-		cacheKey = MetadataCacheKey("dwndb-meta", "", dbOwner, dbFolder, dbName, ver)
+		cacheKey = MetadataCacheKey("dwndb-meta", "", dbOwner, dbFolder, dbName, c)
 		err = memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
@@ -128,36 +128,33 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 			}
 		}
 	}
-
 	return nil
 }
 
 // Generate a predictable cache key for metadata information
-func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, dbVersion int) string {
+func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) string {
 	var cacheString string
 	if loggedInUser == dbOwner {
-		cacheString = fmt.Sprintf("%s/%s/%s/%s/%d", prefix, dbOwner, dbFolder, dbName, dbVersion)
+		cacheString = fmt.Sprintf("%s/%s/%s/%s/%s", prefix, dbOwner, dbFolder, dbName, commitID)
 	} else {
 		// Requests for other users databases are cached separately from users own database requests
-		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%d", prefix, dbOwner, dbFolder, dbName, dbVersion)
+		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%s", prefix, dbOwner, dbFolder, dbName, commitID)
 	}
-
 	tempArr := md5.Sum([]byte(cacheString))
 	return hex.EncodeToString(tempArr[:])
 }
 
 // Generate a predictable cache key for SQLite row data
-func TableRowsCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, dbVersion int, dbTable string, rows int) string {
+func TableRowsCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string, dbTable string, rows int) string {
 	var cacheString string
 	if loggedInUser == dbOwner {
-		cacheString = fmt.Sprintf("%s/%s/%s/%s/%d/%s/%d", prefix, dbOwner, dbFolder, dbName, dbVersion,
+		cacheString = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d", prefix, dbOwner, dbFolder, dbName, commitID,
 			dbTable, rows)
 	} else {
 		// Requests for other users databases are cached separately from users own database requests
-		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%d/%s/%d", prefix, dbOwner, dbFolder, dbName,
-			dbVersion, dbTable, rows)
+		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%s/%s/%d", prefix, dbOwner, dbFolder, dbName,
+			commitID, dbTable, rows)
 	}
-
 	tempArr := md5.Sum([]byte(cacheString))
 	return hex.EncodeToString(tempArr[:])
 }

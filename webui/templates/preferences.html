@@ -11,7 +11,21 @@
         </div>
         <div class="col-md-6">
             <h2 style="text-align: center;">Preferences</h2>
+            <h3 style="text-align: center;">Used when uploading databases</h3>
             <form action="/pref" method="post">
+                <table class="table table-bordered table-striped table-responsive">
+                    <tr>
+                        <th width="25%">Full Name</th>
+                        <td><input type="text" name="fullname" size="40" value="{{ FullName }}" placeholder="{{ NamePlaceholder }}" maxlength="80"></td>
+                    </tr>
+                    <tr>
+                        <th>Email address</th>
+                        <td><input type="text" name="email" size="40" value="{{ EmailAddr }}" placeholder="{{ EmailPlaceholder }}" maxlength="80"><br />
+                            <i>If you don't want to use your real email address, use
+                                "[[ .Meta.LoggedInUser ]]@[[ .Meta.Server ]]".</i></td>
+                    </tr>
+                </table>
+                <h3 style="text-align: center;">Display options</h3>
                 <table class="table table-bordered table-striped table-responsive">
                     <tr>
                         <th>Maximum number of rows to display</th>
@@ -40,6 +54,26 @@
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('prefView', function($scope) {
+
+        // If the supplied display name is blank, we set a placeholder value instead
+        $scope.FullName = "";
+        $scope.NamePlaceholder = "";
+        if ("[[ .DisplayName ]]" == "") {
+            $scope.NamePlaceholder = "Jane Doe";
+        } else {
+            $scope.FullName = "[[ .DisplayName ]]";
+        }
+
+        // Same thing, but for email address
+        $scope.EmailAddr = "";
+        $scope.EmailPlaceholder = "";
+        if ("[[ .Email ]]" == "") {
+            $scope.EmailPlaceholder = "[[ .Meta.LoggedInUser ]]@[[ .Meta.Server ]]";
+        } else {
+            $scope.EmailAddr = "[[ .Email ]]";
+        }
+
+        // Auth0
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});

@@ -99,7 +99,8 @@ CREATE TABLE sqlite_databases (
     source_url text,
     commit_list jsonb NOT NULL,
     branch_heads jsonb,
-    tags jsonb
+    tags jsonb,
+    default_branch text NOT NULL
 );
 
 
@@ -248,7 +249,7 @@ ALTER TABLE ONLY database_licences
 --
 
 ALTER TABLE ONLY database_stars
-    ADD CONSTRAINT database_stars_pkey PRIMARY KEY (db_id);
+    ADD CONSTRAINT database_stars_pkey PRIMARY KEY (db_id, user_id);
 
 
 --

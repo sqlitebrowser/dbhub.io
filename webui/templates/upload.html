@@ -6,13 +6,14 @@
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
-        <div class="col-md-2">
+        <div class="col-md-1">
             &nbsp;
         </div>
-        <div class="col-md-8">
+        <div class="col-md-10">
             <h2 style="text-align: center;">Upload a database</h2>
-
-            <h4 style="text-align: center;">Required information</h4>
+            <h4 style="text-align: center;">
+                The public/private setting is ignored when uploading new versions to an existing database.<br />
+                To change it, visit the "Settings" page for the database after uploading.</h4>
             <form action="/x/uploaddata/" enctype="multipart/form-data" method="POST">
                 <table class="table table-bordered table-striped table-responsive">
                     <tr>
@@ -30,34 +31,14 @@
                         </td>
                     </tr>
                     <tr>
-                        <td colspan="2">
-                            <div style="text-align: center;">
-                                <input type="hidden" name="public" value="{{ radioPublic }}">
-                                <input type="submit" class="btn btn-success" value="Upload">
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-
-                <div style="text-align: center;"><span style="font-size: 18px; font-weight: 500;">Optional information</span> - <i>Only used when uploading to a new database</i></div>
-                <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 5px">
-                    <tr>
-                        <td style="vertical-align: middle;"><b>1 liner description</b></td>
-                        <td style="vertical-align: middle;"><input type="text" name="descrip" size="80" maxlength="80" placeholder="A short description for this database"></td>
-                    </tr>
-                </table>
-                <table class="table table-bordered table-striped table-responsive">
-                    <tr>
+                        <td style="vertical-align: middle;">
+                            <b>Commit Message</b><br /><br />
+                            <i>Markdown (<a href="http://commonmark.org">CommonMark</a> format) is supported</i></td>
                         <td>
-                            <div style="margin-bottom: 10px">
-                                <span style="font-weight: 700">Full length description</span>
-                                &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
-                                <i>Markdown (<a href="http://commonmark.org">CommonMark</a> format) is supported</i>
-                            </div>
                             <div>
                                 <uib-tabset active="active">
                                     <uib-tab index="0" heading="Edit">
-                                        <textarea id="readme" name="readme" cols="102" rows="18" style="margin-top: 2px;" placeholder="You can include a full description of the database here too (if desired)"></textarea>
+                                        <textarea id="commitmsg" name="commitmsg" cols="102" rows="18" style="margin-top: 2px;" placeholder="A description for this specific upload"></textarea>
                                     </uib-tab>
                                     <uib-tab index="1" heading="Preview" select="getMarkdown()">
                                         <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
@@ -66,11 +47,19 @@
                             </div>
                         </td>
                     </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div style="text-align: center;">
+                                <input type="hidden" name="public" value="{{ radioPublic }}">
+                                <input type="submit" class="btn btn-success" value="Upload">
+                            </div>
+                        </td>
+                    </tr>
                 </table>
             </form>
             <br />
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1">
             &nbsp;
         </div>
     </div>
@@ -89,23 +78,17 @@
             lock.show();
         };
 
-        // Get rendered markdown from the server, for display in the README preview tab
+        // Get rendered markdown from the server, for display in the Commit Message preview tab
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
-            // Retrieve latest markdown text from the textarea
-            var readmeText = document.getElementById("readme").value;
-
-            // Check for the placeholder string
-            if (readmeText === "No full description") {
-                $scope.markDownPreview = "";
-                return;
-            }
+            // Retrieve latest markdown text from the text area
+            var txt = document.getElementById("commitmsg").value;
 
             // Call the server, asking for a rendered version of the markdown
             $http({
                 method: "POST",
                 url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": readmeText}),
+                data: $httpParamSerializerJQLike({"mkdown": txt}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.markDownPreview = response.data; });
         };

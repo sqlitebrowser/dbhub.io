@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx"
@@ -17,7 +18,7 @@ var (
 )
 
 // Add a user to the system.
-func AddUser(auth0ID string, userName string, password string, email string) error {
+func AddUser(auth0ID string, userName string, password string, email string, displayName string) error {
 	// Hash the user's password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -32,7 +33,6 @@ func AddUser(auth0ID string, userName string, password string, email string) err
 		bucket = RandomString(16) + ".bkt"
 		newBucket, err = MinioBucketExists(bucket) // Drops out of the loop when the name hasn't been used yet
 		if err != nil {
-			log.Printf("Error when checking if Minio bucket already exists: %v\n", err)
 			return err
 		}
 	}
@@ -44,11 +44,20 @@ func AddUser(auth0ID string, userName string, password string, email string) err
 		return err
 	}
 
+	// If the displayName variable is an empty string, we insert a NULL instead
+	var dn pgx.NullString
+	if displayName == "" {
+		dn.Valid = false
+	} else {
+		dn.String = displayName
+		dn.Valid = true
+	}
+
 	// Add the new user to the database
 	insertQuery := `
-		INSERT INTO users (auth0id, username, email, password_hash, client_certificate, minio_bucket)
+		INSERT INTO users (auth0_id, user_name, email, password_hash, client_cert, display_name)
 		VALUES ($1, $2, $3, $4, $5, $6)`
-	commandTag, err := pdb.Exec(insertQuery, auth0ID, userName, email, hash, cert, bucket)
+	commandTag, err := pdb.Exec(insertQuery, auth0ID, userName, email, hash, cert, dn)
 	if err != nil {
 		log.Printf("Adding user to database failed: %v\n", err)
 		return err
@@ -94,7 +103,7 @@ func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaS
 			WITH root_db_value AS (
 				SELECT nextval('sqlite_databases_idnum_seq')
 			)
-			INSERT INTO sqlite_databases (username, folder, dbname, public, idnum, minio_bucket, root_database, description, readme)
+			INSERT INTO sqlite_databases (user_id, folder, dbname, public, db_id, root_database, description, readme)
 			VALUES ($1, $2, $3, $4, (SELECT nextval FROM root_db_value), $5, (SELECT nextval FROM root_db_value), $6, $7)`
 		commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, public, bucket, nullableDescrip,
 			nullableReadme)
@@ -111,12 +120,13 @@ func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaS
 	// Add the database to database_versions
 	dbQuery = `
 		WITH databaseid AS (
-			SELECT idnum
+			SELECT db_id
 			FROM sqlite_databases
-			WHERE username = $1
+			WHERE user_id = $1
 				AND dbname = $2)
 		INSERT INTO database_versions (db, size, version, sha256, minioid)
-		SELECT idnum, $3, $4, $5, $6 FROM databaseid`
+		SELECT idnum, $3, $4, $5, $6
+		FROM databaseid`
 	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, dbSize, dbVer, hex.EncodeToString(shaSum[:]), id)
 	if err != nil {
 		log.Printf("Adding version info to PostgreSQL failed: %v\n", err)
@@ -149,18 +159,52 @@ func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaS
 	return nil
 }
 
+// Check if a database exists
+// If an error occurred, the true/false value should be ignored, as only the error value is valid.
+func CheckDBExists(dbOwner string, dbFolder string, dbName string) (bool, error) {
+	dbQuery := `
+		SELECT count(db_id)
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	var DBCount int
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DBCount)
+	if err != nil {
+		log.Printf("Checking if a database exists failed: %v\n", err)
+		return true, err
+	}
+	if DBCount == 0 {
+		// Database isn't in our system
+		return false, nil
+	}
+
+	// Database exists
+	return true, nil
+}
+
 // Check if a database has been starred by a given user.  The boolean return value is only valid when err is nil.
 func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
 	dbQuery := `
-		SELECT count(db)
+		SELECT count(db_id)
 		FROM database_stars
-		WHERE database_stars.username = $1
-		AND database_stars.db = (
-			SELECT idnum
+		WHERE database_stars.user_id = (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1)
+		AND database_stars.db_id = (
+			SELECT db_id
 			FROM sqlite_databases
-			WHERE username = $2
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $2)
 				AND folder = $3
-				AND dbname = $4)`
+				AND db_name = $4)`
 	var starCount int
 	err := pdb.QueryRow(dbQuery, loggedInUser, dbOwner, dbFolder, dbName).Scan(&starCount)
 	if err != nil {
@@ -182,7 +226,7 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 func CheckEmailExists(email string) (bool, error) {
 	// Check if the email address is already in our system
 	dbQuery := `
-		SELECT count(username)
+		SELECT count(user_name)
 		FROM users
 		WHERE email = $1`
 	var emailCount int
@@ -236,25 +280,24 @@ func CheckMinioIDAvail(userName string, id string) (bool, error) {
 	return false, nil
 }
 
-// Check if a user has access to a specific version of a database.
-func CheckUserDBVAccess(dbOwner string, dbFolder string, dbName string, dbVer int, loggedInUser string) (bool, error) {
+// Check if a user has access to a database.
+// Returns true if it's accessible to them, false if not.  If err returns as non-nil, the true/false value isn't valid.
+func CheckUserDBAccess(dbOwner string, dbFolder string, dbName string, loggedInUser string) (bool, error) {
 	dbQuery := `
-		SELECT version
-		FROM database_versions
-		WHERE db = (
-			SELECT idnum
-			FROM sqlite_databases
-			WHERE username = $1
-				AND folder = $2
-				AND dbname = $3`
+		SELECT count(*)
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
 	if dbOwner != loggedInUser {
 		dbQuery += ` AND public = true `
 	}
-	dbQuery += `
-			)
-			AND version = $4`
 	var numRows int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, dbVer).Scan(&numRows)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&numRows)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			// The requested database version isn't available to the given user
@@ -273,9 +316,9 @@ func CheckUserDBVAccess(dbOwner string, dbFolder string, dbName string, dbVer in
 // If an error occurred, the true/false value should be ignored, and only the error return code used.
 func CheckUserExists(userName string) (bool, error) {
 	dbQuery := `
-		SELECT count(username)
+		SELECT count(user_id)
 		FROM users
-		WHERE username = $1`
+		WHERE user_name = $1`
 	var userCount int
 	err := pdb.QueryRow(dbQuery, userName).Scan(&userCount)
 	if err != nil {
@@ -294,9 +337,9 @@ func CheckUserExists(userName string) (bool, error) {
 func ClientCert(userName string) ([]byte, error) {
 	var cert []byte
 	err := pdb.QueryRow(`
-		SELECT client_certificate
+		SELECT client_cert
 		FROM users
-		WHERE username = $1`, userName).Scan(&cert)
+		WHERE user_name = $1`, userName).Scan(&cert)
 	if err != nil {
 		log.Printf("Retrieving client cert for '%s' from database failed: %v\n", userName, err)
 		return nil, err
@@ -320,14 +363,18 @@ func ConnectPostgreSQL() (err error) {
 }
 
 // Returns the ID number for a given user's database.
-func databaseID(dbOwner string, dbName string) (dbID int, err error) {
+func databaseID(dbOwner string, dbFolder string, dbName string) (dbID int, err error) {
 	// Retrieve the database id
 	dbQuery := `
-		SELECT idnum
+		SELECT db_id
 		FROM sqlite_databases
-		WHERE username = $1
-			AND dbname = $2`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&dbID)
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1)
+			AND folder = $2
+			AND db_name = $3`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID)
 	if err != nil {
 		log.Printf("Error looking up database id. Owner: '%s', Database: '%s'. Error: %v\n", dbOwner, dbName,
 			err)
@@ -339,27 +386,33 @@ func databaseID(dbOwner string, dbName string) (dbID int, err error) {
 // including their private one(s).
 func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 	dbQuery := `
-		WITH user_db_list AS (
-			SELECT DISTINCT ON (idnum) idnum, last_modified
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		), user_db_list AS (
+			SELECT DISTINCT ON (db_id) db_id, last_modified
 			FROM sqlite_databases
-			WHERE username = $1
+			WHERE user_id = u.user_id
 		), most_recent_user_db AS (
-			SELECT idnum, last_modified
+			SELECT db_idm, last_modified
 			FROM user_db_list
 			ORDER BY last_modified DESC
 			LIMIT 1
 		), public_dbs AS (
-			SELECT idnum, last_modified
+			SELECT db_id, last_modified
 			FROM sqlite_databases
 			WHERE public = true
 			ORDER BY last_modified DESC
 		), public_users AS (
-			SELECT DISTINCT ON (db.username) db.username, db.last_modified
+			SELECT DISTINCT ON (db.user_id) db.user_id, db.last_modified
 			FROM public_dbs as pub, sqlite_databases AS db, most_recent_user_db AS usr
-			WHERE db.idnum = pub.idnum OR db.idnum = usr.idnum
-			ORDER BY db.username, db.last_modified DESC
+			WHERE db.db_id = pub.db_id OR db.db_id = usr.db_id
+			ORDER BY db.user_id, db.last_modified DESC
 		)
-		SELECT username, last_modified FROM public_users
+		SELECT user_name, pu.last_modified
+		FROM public_users AS pu, users
+		WHERE users.user_name = pu.user_id
 		ORDER BY last_modified DESC`
 	rows, err := pdb.Query(dbQuery, loggedInUser)
 	if err != nil {
@@ -382,34 +435,40 @@ func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 }
 
 // Retrieve the details for a specific database
-func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder string, dbName string, dbVersion int) error {
+func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) error {
+	// If no commit ID was supplied, we retrieve the latest commit one from the default branch
+	var err error
+	if commitID == "" {
+		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Retrieve the database details
 	dbQuery := `
-		SELECT ver.minioid, db.date_created, db.last_modified, ver.size, ver.version, db.watchers, db.stars,
-			db.discussions, db.pull_requests, db.updates, db.branches, db.releases, db.contributors,
-			db.description, db.readme, db.minio_bucket, db.default_table, db.public
-		FROM sqlite_databases AS db, database_versions AS ver
-		WHERE db.username = $1
+		SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
+			db.commits, $4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
+			db.branches, db.releases, db.contributors, db.one_line_description, db.full_description,
+			db.default_table, db.public
+		FROM sqlite_databases AS db
+		WHERE db.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
 			AND db.folder = $2
-			AND db.dbname = $3
-			AND db.idnum = ver.db`
+			AND db.db_name = $3`
+
+	// If the request is for another users database, ensure we only look up public ones
 	if loggedInUser != dbOwner {
-		// * The request is for another users database, so it needs to be a public one *
 		dbQuery += `
 			AND db.public = true`
-	}
-	if dbVersion == 0 {
-		// No specific database version was requested, so use the highest available
-		dbQuery += `
-			ORDER BY version DESC
-			LIMIT 1`
-	} else {
-		dbQuery += `
-			AND ver.version = $4`
 	}
 
 	// Generate a predictable cache key for this functions' metadata.  Probably not sharable with other functions
 	// cached metadata
-	mdataCacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, dbVersion)
+	mdataCacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, commitID)
 
 	// Use a cached version of the query response if it exists
 	ok, err := GetCachedData(mdataCacheKey, &DB)
@@ -422,56 +481,57 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	}
 
 	// Retrieve the requested database details
-	var Desc, Readme, defTable pgx.NullString
-	if dbVersion == 0 {
-		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DB.MinioId, &DB.Info.DateCreated,
-			&DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version, &DB.Info.Watchers, &DB.Info.Stars,
-			&DB.Info.Discussions, &DB.Info.MRs, &DB.Info.Updates, &DB.Info.Branches, &DB.Info.Releases,
-			&DB.Info.Contributors, &Desc, &Readme, &DB.MinioBkt, &defTable, &DB.Info.Public)
-	} else {
-		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, dbVersion).Scan(&DB.MinioId,
-			&DB.Info.DateCreated, &DB.Info.LastModified, &DB.Info.Size, &DB.Info.Version,
-			&DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs, &DB.Info.Updates,
-			&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &Desc, &Readme, &DB.MinioBkt,
-			&defTable, &DB.Info.Public)
-	}
+	var oneLineDesc, fullDesc, defTable pgx.NullString
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
+		&DB.Info.LastModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
+		&DB.Info.Commits, &DB.Info.CommitID,
+		&DB.Info.DBEntry,
+		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
+		&DB.Info.Public)
+
 	if err != nil {
+		log.Printf("Error when retrieving database details: %v\n", err.Error())
 		return errors.New("The requested database doesn't exist")
 	}
-	if !Desc.Valid {
-		DB.Info.Description = "No description"
+	if !oneLineDesc.Valid {
+		DB.Info.OneLineDesc = "No description"
 	} else {
-		DB.Info.Description = Desc.String
+		DB.Info.OneLineDesc = oneLineDesc.String
 	}
-	if !Readme.Valid {
-		DB.Info.Readme = "No full description"
+	if !fullDesc.Valid {
+		DB.Info.FullDesc = "No full description"
 	} else {
-		DB.Info.Readme = Readme.String
+		DB.Info.FullDesc = fullDesc.String
 	}
 	if !defTable.Valid {
 		DB.Info.DefaultTable = ""
 	} else {
 		DB.Info.DefaultTable = defTable.String
 	}
+	// Remove the " marks on the start and end of the commit id
+	DB.Info.CommitID = strings.Trim(DB.Info.CommitID, "\"")
 
 	// Fill out the fields we already have data for
 	DB.Info.Database = dbName
 	DB.Info.Folder = dbFolder
 
 	// Retrieve latest fork count
-	// TODO: This can probably be folded into the above SQL query as a subselect, as a minor optimisation
+	// TODO: This can probably be folded into the above SQL query as a sub-select, as a minor optimisation
 	dbQuery = `
 		SELECT forks
 		FROM sqlite_databases
-		WHERE idnum = (
+		WHERE db_id = (
 			SELECT root_database
 			FROM sqlite_databases
-			WHERE username = $1
+			WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1)
 			AND folder = $2
-			AND dbname = $3)`
+			AND db_name = $3)`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DB.Info.Forks)
 	if err != nil {
-		log.Printf("Error retrieving fork count for '%s%s': %v\n", dbOwner, dbName, err)
+		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
 		return err
 	}
 
@@ -485,9 +545,9 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 }
 
 // Returns the star count for a given database.
-func DBStars(dbOwner string, dbName string) (starCount int, err error) {
+func DBStars(dbOwner string, dbFolder string, dbName string) (starCount int, err error) {
 	// Get the ID number of the database
-	dbID, err := databaseID(dbOwner, dbName)
+	dbID, err := databaseID(dbOwner, dbFolder, dbName)
 	if err != nil {
 		return -1, err
 	}
@@ -496,7 +556,7 @@ func DBStars(dbOwner string, dbName string) (starCount int, err error) {
 	dbQuery := `
 		SELECT stars
 		FROM sqlite_databases
-		WHERE idnum = $1`
+		WHERE db_id = $1`
 	err = pdb.QueryRow(dbQuery, dbID).Scan(&starCount)
 	if err != nil {
 		log.Printf("Error looking up star count for database '%s/%s'. Error: %v\n", dbOwner, dbName, err)
@@ -506,49 +566,70 @@ func DBStars(dbOwner string, dbName string) (starCount int, err error) {
 }
 
 // Returns the list of all database versions available to the requesting user
-func DBVersions(loggedInUser string, dbOwner string, dbFolder string, dbName string) ([]int, error) {
+func DBVersions(loggedInUser string, dbOwner string, dbFolder string, dbName string) ([]string, error) {
 	dbQuery := `
-		SELECT version
-		FROM database_versions
-		WHERE db = (
-			SELECT idnum
-			FROM sqlite_databases
-			WHERE username = $1
+		SELECT jsonb_object_keys(commit_list) AS commits
+		FROM sqlite_databases
+		WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1)
 				AND folder = $2
-				AND dbname = $3`
+				AND db_name = $3`
 	if loggedInUser != dbOwner {
 		// The request is for another users database, so only return public versions
 		dbQuery += `
 				AND public is true`
 	}
 	dbQuery += `
-			)
-		ORDER BY version DESC`
+		ORDER BY commits DESC`
 	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
 	}
 	defer rows.Close()
-	var verList []int
+	var l []string
 	for rows.Next() {
-		var ver int
-		err = rows.Scan(&ver)
+		var i string
+		err = rows.Scan(&i)
 		if err != nil {
-			log.Printf("Error retrieving version list for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+			log.Printf("Error retrieving commit list for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
 				err)
 			return nil, err
 		}
-		verList = append(verList, ver)
+		l = append(l, i)
 	}
 
 	// Safety checks
-	numResults := len(verList)
+	numResults := len(l)
 	if numResults == 0 {
-		return nil, errors.New("Empty list returned instead of version list.  This shouldn't happen")
+		return nil, errors.New("Empty list returned instead of commit list.  This shouldn't happen")
 	}
 
-	return verList, nil
+	return l, nil
+}
+
+// Retrieve the default commit ID for specific database
+func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, error) {
+	// If no commit ID was supplied, we retrieve the latest commit one from the default branch
+	dbQuery := `
+		SELECT branch_heads->default_branch->'commit' AS commit_id
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+					FROM users
+					WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	var commitID string
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&commitID)
+	if err != nil {
+		log.Printf("Error when retrieving head commit ID of default branch: %v\n", err.Error())
+		return "", errors.New("Internal error when looking up database details")
+	}
+	return commitID, nil
 }
 
 // Disconnects the PostgreSQL database connection.
@@ -557,86 +638,62 @@ func DisconnectPostgreSQL() {
 }
 
 // Fork the PostgreSQL entry for a SQLite database from one user to another
-func ForkDatabase(srcOwner string, srcFolder string, dbName string, srcVer int, dstOwner string,
-	dstFolder string, dstMinioID string) (int, error) {
-
-	// Retrieve the Minio bucket for the owner
-	dstBucket, err := MinioUserBucket(dstOwner)
-	if err != nil {
-		log.Printf("Error looking up Minio bucket for user '%s': %v\n", dstOwner, err.Error())
-		return 0, err
-	}
-
+func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner string) (int, error) {
 	// Copy the main database entry
 	dbQuery := `
-		INSERT INTO sqlite_databases (username, folder, dbname, public, forks, description, readme, minio_bucket, root_database, forked_from)
-		SELECT $1, $2, dbname, public, forks, description, readme, $3, root_database, idnum
-		FROM sqlite_databases
-		WHERE username = $4
-			AND folder = $5
-			AND dbname = $6`
-	commandTag, err := pdb.Exec(dbQuery, dstOwner, dstFolder, dstBucket, srcOwner, srcFolder, dbName)
+		WITH dst_u AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		)
+		INSERT INTO sqlite_databases (user_id, folder, db_name, public, forks, one_line_description, full_description,
+			commits,  branches, contributors,
+			root_database, default_table, source_url, commit_list, branch_heads, tags, default_branch,
+			forked_from)
+		SELECT dst_u.user_id, folder, db_name, public, forks, one_line_description, full_description,
+			commits,  branches, contributors,
+			root_database, default_table, source_url, commit_list, branch_heads, tags, default_branch,
+			db_id
+		FROM sqlite_databases, dst_u
+		WHERE sqlite_databases.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $2
+			)
+			AND folder = $3
+			AND db_name = $4`
+	commandTag, err := pdb.Exec(dbQuery, dstOwner, srcOwner, dbFolder, dbName)
 	if err != nil {
-		log.Printf("Forking database '%s%s/%s' version %d entry in PostgreSQL failed: %v\n",
-			srcOwner, srcFolder, dbName, srcVer, err)
+		log.Printf("Forking database '%s%s%s' in PostgreSQL failed: %v\n", srcOwner, dbFolder, dbName, err)
 		return 0, err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows affected (%d) when forking main database entry: "+
-			"'%s%s%s' version %d to '%s%s%s'\n", numRows, srcOwner, srcFolder, dbName, srcVer, dstOwner,
-			dstFolder, dbName)
-	}
-
-	// Add a new database version entry
-	dbQuery = `
-		WITH new_db AS (
-			SELECT idnum
-			FROM sqlite_databases
-			WHERE username = $1
-				AND folder = $2
-				AND dbname = $3
-		)
-		INSERT INTO database_versions (db, size, version, sha256, minioid)
-		SELECT new_db.idnum, ver.size, 1, ver.sha256, $4
-		FROM new_db, database_versions AS ver
-		WHERE db = (
-			SELECT idnum
-			FROM sqlite_databases
-			WHERE username = $5
-				AND folder = $6
-				AND dbname = $3
-			)
-			AND version = $7`
-	commandTag, err = pdb.Exec(dbQuery, dstOwner, dstFolder, dbName, dstMinioID, srcOwner, srcFolder, srcVer)
-	if err != nil {
-		log.Printf("Forking database entry in PostgreSQL failed: %v\n", err)
-		return 0, err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows affected (%d) when forking database version entry: "+
-			"'%s%s%s' version %d to '%s%s%s'\n", numRows, srcOwner, srcFolder, dbName, srcVer, dstOwner,
-			dstFolder, dbName)
+			"'%s%s%s' to '%s%s%s'\n", numRows, srcOwner, dbFolder, dbName, dstOwner, dbFolder, dbName)
 	}
 
 	// Increment the forks count for the root database
 	dbQuery = `
 		UPDATE sqlite_databases
 		SET forks = forks + 1
-		WHERE idnum = (
+		WHERE db_id = (
 			SELECT root_database
 			FROM sqlite_databases
-			WHERE username = $1
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
 				AND folder = $2
-				AND dbname = $3
+				AND db_name = $3
 			)
 		RETURNING forks`
 	var newForks int
-	err = pdb.QueryRow(dbQuery, dstOwner, dstFolder, dbName).Scan(&newForks)
+	err = pdb.QueryRow(dbQuery, dstOwner, dbFolder, dbName).Scan(&newForks)
 	if err != nil {
 		log.Printf("Updating fork count in PostgreSQL failed: %v\n", err)
 		return 0, err
 	}
-
 	return newForks, nil
 }
 
@@ -644,14 +701,17 @@ func ForkDatabase(srcOwner string, srcFolder string, dbName string, srcVer int, 
 func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string, forkFol string, forkDB string,
 	err error) {
 	// Check if the database was forked from another
-	var idnum, forkedFrom pgx.NullInt32
+	var dbID, forkedFrom pgx.NullInt64
 	dbQuery := `
-		SELECT idnum, forked_from
+		SELECT db_id, forked_from
 		FROM sqlite_databases
-		WHERE username = $1
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1)
 			AND folder = $2
-			AND dbname = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&idnum, &forkedFrom)
+			AND db_name = $3`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID, &forkedFrom)
 	if err != nil {
 		log.Printf("Error checking if database was forked from another '%s%s%s'. Error: %v\n", dbOwner,
 			dbFolder, dbName, err)
@@ -664,9 +724,10 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 
 	// Return the details of the database this one was forked from
 	dbQuery = `
-		SELECT username, folder, dbname
-		FROM sqlite_databases
-		WHERE idnum = $1`
+		SELECT u.user_name, db.folder, db.db_name
+		FROM users AS u, sqlite_databases AS db
+		WHERE db.db_id = $1
+			AND u.user_id = db.user_id`
 	err = pdb.QueryRow(dbQuery, forkedFrom).Scan(&forkOwn, &forkFol, &forkDB)
 	if err != nil {
 		log.Printf("Error retrieving forked database information for '%s%s%s'. Error: %v\n", dbOwner,
@@ -679,16 +740,21 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 // Return the complete fork tree for a given database
 func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName string) (outputList []ForkEntry, err error) {
 	dbQuery := `
-		SELECT username, folder, dbname, public, idnum, forked_from
-		FROM sqlite_databases
-		WHERE root_database = (
+		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from
+		FROM sqlite_databases AS db, users
+		WHERE db.root_database = (
 				SELECT root_database
 				FROM sqlite_databases
-				WHERE username = $1
+				WHERE user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
 					AND folder = $2
-					AND dbname = $3
+					AND db_name = $3
 				)
-		ORDER BY forked_from NULLS FIRST`
+			AND db.user_id = users.user_id
+		ORDER BY db.forked_from NULLS FIRST`
 	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
@@ -697,7 +763,7 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 	defer rows.Close()
 	var dbList []ForkEntry
 	for rows.Next() {
-		var frk pgx.NullInt32
+		var frk pgx.NullInt64
 		var oneRow ForkEntry
 		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk)
 		if err != nil {
@@ -706,7 +772,7 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 			return nil, err
 		}
 		if frk.Valid {
-			oneRow.ForkedFrom = int(frk.Int32)
+			oneRow.ForkedFrom = int(frk.Int64)
 		}
 		dbList = append(dbList, oneRow)
 	}
@@ -799,6 +865,124 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 	return outputList, nil
 }
 
+// Load the branch heads for a database.
+// TODO: It might be better to have the default branch name be returned as part of this list, by indicating in the list
+// TODO  which of the branches is the default.
+func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[string]BranchEntry, err error) {
+	dbQuery := `
+		SELECT db.branch_heads
+		FROM sqlite_databases AS db
+		WHERE db.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND db.folder = $2
+			AND db.db_name = $3`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&branches)
+	if err != nil {
+		log.Printf("Error when retrieving branch heads for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+			err)
+		return nil, err
+	}
+	return branches, nil
+}
+
+// Retrieve the default branch name for a database.
+func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (string, error) {
+	// Return the default branch name
+	dbQuery := `
+		SELECT db.default_branch
+		FROM sqlite_databases AS db
+		WHERE db.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND db.folder = $2
+			AND db.db_name = $3`
+	var branchName string
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&branchName)
+	if err != nil {
+		if err != pgx.ErrNoRows {
+			log.Printf("Error when retrieving default branch name for database '%s%s%s': %v\n", dbOwner,
+				dbFolder, dbName, err)
+			return "", err
+		} else {
+			log.Printf("No default branch name exists for database '%s%s%s'. This shouldn't happen\n", dbOwner,
+				dbFolder, dbName)
+			return "", err
+		}
+	}
+	return branchName, nil
+}
+
+// Retrieves the full commit list for a database.
+func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]CommitEntry, error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		)
+		SELECT commit_list as commits
+		FROM sqlite_databases AS db, u
+		WHERE db.user_id = u.user_id
+			AND db.folder = $2
+			AND db.db_name = $3`
+	var l map[string]CommitEntry
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&l)
+	if err != nil {
+		log.Printf("Retrieving commit list for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		return map[string]CommitEntry{}, err
+	}
+	return l, nil
+}
+
+// Retrieve display name and email address for a given user.
+func GetUserDetails(userName string) (string, string, error) {
+	// Retrieve the values from the database
+	dbQuery := `
+		SELECT display_name, email
+		FROM users
+		WHERE user_name = $1`
+	var dn, em pgx.NullString
+	err := pdb.QueryRow(dbQuery, userName).Scan(&dn, &em)
+	if err != nil {
+		log.Printf("Error when retrieving display name and email for user '%s': %v\n", userName, err)
+		return "", "", err
+	}
+
+	// Return the values which aren't NULL.  For those which are, return an empty string.
+	var displayName, email string
+	if dn.Valid {
+		displayName = dn.String
+	}
+	if em.Valid {
+		email = em.String
+	}
+	return displayName, email, err
+}
+
+// Returns the username associated with an email address.
+func GetUsernameFromEmail(email string) (string, error) {
+	dbQuery := `
+		SELECT user_name
+		FROM users
+		WHERE email = $1`
+	var u string
+	err := pdb.QueryRow(dbQuery, email).Scan(&u)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			// No matching username of the email
+			return "", nil
+		}
+		log.Printf("Looking up username for email address '%s' failed: %v\n", email, err)
+		return "", err
+	}
+	return u, nil
+}
+
 // Retrieve the highest version number of a database (if any), available to a given user.
 // Use the empty string "" to retrieve the highest available public version.
 func HighestDBVersion(dbOwner string, dbName string, dbFolder string, loggedInUser string) (ver int, err error) {
@@ -832,6 +1016,59 @@ func HighestDBVersion(dbOwner string, dbName string, dbFolder string, loggedInUs
 	return ver, nil
 }
 
+// Return the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from owner/folder/database URL
+// fragment, // loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
+// string ("") as the loggedInUser parameter if the true value isn't set or known.
+// If the requested database doesn't exist, or the loggedInUser doesn't have access to it, then an error will be
+// returned.
+func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (string,
+	string, error) {
+
+	// TODO: This will likely need updating to query the "database_files" table to retrieve the Minio server name
+
+	// If no commit was provided, we grab the default one
+	if commitID == "" {
+		var err error
+		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
+		if err != nil {
+			return "", "", err
+		}
+	}
+
+	// Retrieve the sha256 for the requested commit's database file
+	var dbQuery string
+	dbQuery = `
+		SELECT commit_list->$4::text->'tree'->'entries'->0->'sha256' AS sha256
+		FROM sqlite_databases AS db
+		WHERE db.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND db.folder = $2
+			AND db.db_name = $3`
+
+	// If the request is for another users database, it needs to be a public one
+	if loggedInUser != dbOwner {
+		dbQuery += `
+				AND db.public = true`
+	}
+
+	var sha256 string
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&sha256)
+	if err != nil {
+		log.Printf("Error retrieving MinioID for %s/%s version %v: %v\n", dbOwner, dbName, commitID, err)
+		return "", "", err
+	}
+
+	if sha256 == "" {
+		// The requested database doesn't exist, or the logged in user doesn't have access to it
+		return "", "", errors.New("The requested database wasn't found")
+	}
+
+	return sha256[:MinioFolderChars], sha256[MinioFolderChars:], nil
+}
+
 // Return the Minio bucket name for a given user.
 func MinioUserBucket(userName string) (string, error) {
 	var minioBucket string
@@ -852,52 +1089,16 @@ func MinioUserBucket(userName string) (string, error) {
 	return minioBucket, nil
 }
 
-// Return the Minio bucket and ID for a given database. dbOwner & dbName are from owner/database URL fragment,
-// loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty string ("")
-// as the loggedInUser parameter if the true value isn't set or known.  If the requested database doesn't exist, or
-// the loggedInUser doesn't have access to it, then an error will be returned.
-func MinioBucketID(dbOwner string, dbName string, dbVersion int, loggedInUser string) (bkt string, id string, err error) {
-	var dbQuery string
-	if loggedInUser != dbOwner {
-		// The request is for another users database, so it needs to be a public one
-		dbQuery = `
-			SELECT db.minio_bucket, ver.minioid
-			FROM database_versions AS ver, sqlite_databases AS db
-			WHERE ver.db = db.idnum
-				AND db.username = $1
-				AND db.dbname = $2
-				AND ver.version = $3
-				AND db.public = true`
-	} else {
-		dbQuery = `
-			SELECT db.minio_bucket, ver.minioid
-			FROM database_versions AS ver, sqlite_databases AS db
-			WHERE ver.db = db.idnum
-				AND db.username = $1
-				AND db.dbname = $2
-				AND ver.version = $3`
-	}
-	err = pdb.QueryRow(dbQuery, dbOwner, dbName, dbVersion).Scan(&bkt, &id)
-	if err != nil {
-		log.Printf("Error retrieving MinioID for %s/%s version %v: %v\n", dbOwner, dbName, dbVersion, err)
-		return "", "", err
-	}
-
-	if bkt == "" || id == "" {
-		// The requested database doesn't exist, or the logged in user doesn't have access to it
-		return "", "", errors.New("The requested database wasn't found")
-	}
-
-	return bkt, id, nil
-}
-
 // Return the user's preference for maximum number of SQLite rows to display.
 func PrefUserMaxRows(loggedInUser string) int {
 	// Retrieve the user preference data
 	dbQuery := `
 		SELECT pref_max_rows
 		FROM users
-		WHERE username = $1`
+		WHERE user_id = (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1)`
 	var maxRows int
 	err := pdb.QueryRow(dbQuery, loggedInUser).Scan(&maxRows)
 	if err != nil {
@@ -912,13 +1113,14 @@ func PrefUserMaxRows(loggedInUser string) int {
 func PublicUserDBs() ([]UserInfo, error) {
 	dbQuery := `
 		WITH public_dbs AS (
-			SELECT DISTINCT ON (username) username, last_modified
+			SELECT DISTINCT ON (user_id) user_id, last_modified
 			FROM sqlite_databases
 			WHERE public = true
-			ORDER BY username, last_modified DESC
+			ORDER BY user_id, last_modified DESC
 		)
-		SELECT username, last_modified
-		FROM public_dbs
+		SELECT users.user_name, dbs.last_modified
+		FROM public_dbs AS dbs, users
+		WHERE users.user_id = dbs.user_id
 		ORDER BY last_modified DESC`
 	rows, err := pdb.Query(dbQuery)
 	if err != nil {
@@ -952,7 +1154,7 @@ func RemoveDBVersion(dbOwner string, folder string, dbName string, dbVersion int
 			AND version = $4`
 	commandTag, err := pdb.Exec(dbQuery, dbOwner, folder, dbName, dbVersion)
 	if err != nil {
-		log.Printf("%s: Removing database entry '%s' / '%s' / '%s' version %v failed: %v\n",
+		log.Printf("Removing database entry '%s' / '%s' / '%s' version %v failed: %v\n",
 			dbOwner, folder, dbName, dbVersion, err)
 		return err
 	}
@@ -991,7 +1193,7 @@ func RemoveDBVersion(dbOwner string, folder string, dbName string, dbVersion int
 			AND dbname = $3`
 	commandTag, err = pdb.Exec(dbQuery, dbOwner, folder, dbName)
 	if err != nil {
-		log.Printf("%s: Removing main entry for '%s' / '%s' / '%s' failed: %v\n", dbOwner, folder,
+		log.Printf("Removing main entry for '%s' / '%s' / '%s' failed: %v\n", dbOwner, folder,
 			dbName, err)
 		return err
 	}
@@ -1003,7 +1205,7 @@ func RemoveDBVersion(dbOwner string, folder string, dbName string, dbVersion int
 	return nil
 }
 
-// Rename a SQLite daatabase.
+// Rename a SQLite database.
 func RenameDatabase(userName string, dbFolder string, dbName string, newName string) error {
 	// Save the database settings
 	SQLQuery := `
@@ -1033,30 +1235,35 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 }
 
 // Saves updated database settings to PostgreSQL.
-func SaveDBSettings(userName string, dbFolder string, dbName string, descrip string, readme string, defTable string, public bool) error {
+func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc string, fullDesc string, defTable string, public bool) error {
 	// Check for values which should be NULL
-	var nullableDescrip, nullableReadme pgx.NullString
-	if descrip == "" {
-		nullableDescrip.Valid = false
+	var nullable1LineDesc, nullableFullDesc pgx.NullString
+	if oneLineDesc == "" {
+		nullable1LineDesc.Valid = false
 	} else {
-		nullableDescrip.String = descrip
-		nullableDescrip.Valid = true
+		nullable1LineDesc.String = oneLineDesc
+		nullable1LineDesc.Valid = true
 	}
-	if readme == "" {
-		nullableReadme.Valid = false
+	if fullDesc == "" {
+		nullableFullDesc.Valid = false
 	} else {
-		nullableReadme.String = readme
-		nullableReadme.Valid = true
+		nullableFullDesc.String = fullDesc
+		nullableFullDesc.Valid = true
 	}
 
 	// Save the database settings
 	SQLQuery := `
 		UPDATE sqlite_databases
-		SET description = $4, readme = $5, default_table = $6, public = $7
-		WHERE username = $1
+		SET one_line_description = $4, full_description = $5, default_table = $6, public = $7
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
 			AND folder = $2
-			AND dbname = $3`
-	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullableDescrip, nullableReadme, defTable, public)
+			AND db_name = $3`
+	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullable1LineDesc, nullableFullDesc, defTable,
+		public)
 	if err != nil {
 		log.Printf("Updating description for database '%s%s%s' failed: %v\n", userName, dbFolder,
 			dbName, err)
@@ -1070,7 +1277,7 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, descrip str
 	}
 
 	// Invalidate the old memcached entry for the database
-	err = InvalidateCacheEntry(userName, userName, dbFolder, dbName, 0) // 0 indicates "for all versions"
+	err = InvalidateCacheEntry(userName, userName, dbFolder, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -1102,12 +1309,12 @@ func SetClientCert(newCert []byte, userName string) error {
 }
 
 // Sets the user's preference for maximum number of SQLite rows to display.
-func SetPrefUserMaxRows(userName string, maxRows int) error {
+func SetPrefUserMaxRows(userName string, maxRows int, displayName string, email string) error {
 	dbQuery := `
 		UPDATE users
-		SET pref_max_rows = $1
-		WHERE username = $2`
-	commandTag, err := pdb.Exec(dbQuery, maxRows, userName)
+		SET pref_max_rows = $2, display_name = $3, email = $4
+		WHERE user_name = $1`
+	commandTag, err := pdb.Exec(dbQuery, userName, maxRows, displayName, email)
 	if err != nil {
 		log.Printf("Updating user preferences failed for user '%s'. Error: '%v'\n", userName, err)
 		return err
@@ -1124,7 +1331,7 @@ func SetUserEmail(userName string, email string) error {
 	dbQuery := `
 		UPDATE users
 		SET email = $1
-		WHERE username = $2`
+		WHERE user_name = $2`
 	commandTag, err := pdb.Exec(dbQuery, email, userName)
 	if err != nil {
 		log.Printf("Updating user email failed: %v\n", err)
@@ -1164,13 +1371,16 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 	dbQuery := `
 		SELECT stars
 		FROM sqlite_databases
-		WHERE username = $1
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
 			AND folder = $2
-			AND dbname = $3`
+			AND db_name = $3`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&st)
 	if err != nil {
-		log.Printf("Error retrieving star count for '%s%s%s': %v\n", dbOwner, dbFolder,
-			dbName, err)
+		log.Printf("Error retrieving star count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
 		return -1, -1, -1, err
 	}
 
@@ -1178,21 +1388,138 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 	dbQuery = `
 		SELECT forks
 		FROM sqlite_databases
-		WHERE idnum = (
-			SELECT root_database
-			FROM sqlite_databases
-			WHERE username = $1
+		WHERE db_id = (
+				SELECT root_database
+				FROM sqlite_databases
+				WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+					)
 			AND folder = $2
-			AND dbname = $3)`
+			AND db_name = $3)`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&fo)
 	if err != nil {
-		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbFolder,
-			dbName, err)
+		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
 		return -1, -1, -1, err
 	}
 
 	// TODO: Implement watchers
 	return 0, st, fo, nil
+}
+
+// Updates the branches list for database.
+func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry) error {
+	dbQuery := `
+		UPDATE sqlite_databases
+		SET branch_heads = $4, branches = $5
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+				)
+			AND folder = $2
+			AND db_name = $3`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, branches, len(branches))
+	if err != nil {
+		log.Printf("Updating branch heads for database '%s%s%s' to '%v' failed: %v\n", dbOwner, dbFolder,
+			dbName, branches, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when updating branch heads for database '%s%s%s' to '%v'\n",
+			numRows, dbOwner, dbFolder, dbName, branches)
+	}
+	return nil
+}
+
+// Stores database details in PostgreSQL, and the database data itself in Minio.
+func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry, c CommitEntry,
+	pub bool, buf []byte, sha string, oneLineDesc string, fullDesc string, createDefBranch bool, branchName string) error {
+	// Store the database file
+	err := StoreDatabaseFile(buf, sha)
+	if err != nil {
+		return err
+	}
+
+	// Check for values which should be NULL
+	var nullable1LineDesc, nullableFullDesc pgx.NullString
+	if oneLineDesc == "" {
+		nullable1LineDesc.Valid = false
+	} else {
+		nullable1LineDesc.String = oneLineDesc
+		nullable1LineDesc.Valid = true
+	}
+	if fullDesc == "" {
+		nullableFullDesc.Valid = false
+	} else {
+		nullableFullDesc.String = fullDesc
+		nullableFullDesc.Valid = true
+	}
+
+	// Store the database metadata
+	cMap := map[string]CommitEntry{c.ID: c}
+	dbQuery := `
+		WITH root AS (
+			SELECT nextval('sqlite_databases_db_id_seq') AS val
+		)
+		INSERT INTO sqlite_databases (user_id, db_id, folder, db_name, public, one_line_description, full_description,
+			branch_heads, root_database, commit_list)
+		SELECT (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1), (SELECT val FROM root), $2, $3, $4, $5, $6, $8, (SELECT val FROM root), $7
+		ON CONFLICT (user_id, folder, db_name)
+			DO UPDATE
+			SET commit_list = sqlite_databases.commit_list || $7,
+				branch_heads = sqlite_databases.branch_heads || $8,
+				last_modified = now(),
+				commits = sqlite_databases.commits + 1`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, pub, nullable1LineDesc, nullableFullDesc,
+		cMap, branches)
+	if err != nil {
+		log.Printf("Storing database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected while storing database '%s%s%s'\n", numRows, dbOwner,
+			dbFolder, dbName)
+	}
+
+	if createDefBranch {
+		err = StoreDefaultBranchName(dbOwner, dbFolder, dbName, branchName)
+		if err != nil {
+			log.Printf("Storing default branch '%s' name for '%s%s%s' failed: %v\n", branchName, dbOwner,
+				dbFolder, dbName, err)
+			return err
+		}
+	}
+	return nil
+}
+
+// Stores the default branch name for a database.
+func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branchName string) error {
+	dbQuery := `
+		UPDATE sqlite_databases
+		SET default_branch = $4
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+				)
+			AND folder = $2
+			AND db_name = $3`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, folder, dbName, branchName)
+	if err != nil {
+		log.Printf("Changing default branch for database '%v' to '%v' failed: %v\n", dbName, branchName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected during update: database: %v, new branch name: '%v'\n",
+			numRows, dbName, branchName)
+	}
+	return nil
 }
 
 // Toggle on or off the starring of a database by a user.
@@ -1204,7 +1531,7 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 	}
 
 	// Get the ID number of the database
-	dbID, err := databaseID(dbOwner, dbName)
+	dbID, err := databaseID(dbOwner, dbFolder, dbName)
 	if err != nil {
 		return err
 	}
@@ -1213,8 +1540,14 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 	if !starred {
 		// Star the database
 		insertQuery := `
-			INSERT INTO database_stars (db, username)
-			VALUES ($1, $2)`
+			WITH u AS (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $2
+			)
+			INSERT INTO database_stars (db_id, user_id)
+			SELECT $1, u.user_id
+			FROM u`
 		commandTag, err := pdb.Exec(insertQuery, dbID, loggedInUser)
 		if err != nil {
 			log.Printf("Adding star to database failed. Database ID: '%v' Username: '%s' Error '%v'\n",
@@ -1230,7 +1563,11 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 		deleteQuery := `
 		DELETE FROM database_stars
 		WHERE db = $1
-			AND username = $2`
+			AND user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $2
+			)`
 		commandTag, err := pdb.Exec(deleteQuery, dbID, loggedInUser)
 		if err != nil {
 			log.Printf("Removing star from database failed. Database ID: '%v' Username: '%s' Error: '%v'\n",
@@ -1247,10 +1584,10 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 	updateQuery := `
 		UPDATE sqlite_databases
 		SET stars = (
-			SELECT count(db)
+			SELECT count(db_id)
 			FROM database_stars
-			WHERE db = $1
-		) WHERE idnum = $1`
+			WHERE db_id = $1
+		) WHERE db_id = $1`
 	commandTag, err := pdb.Exec(updateQuery, dbID)
 	if err != nil {
 		log.Printf("Updating star count in database failed: %v\n", err)
@@ -1265,7 +1602,7 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 // Returns details for a user.
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
-		SELECT username, email, password_hash, date_joined, client_certificate
+		SELECT user_name, email, password_hash, date_joined, client_cert
 		FROM users
 		WHERE username = $1`
 	err = pdb.QueryRow(dbQuery, userName).Scan(&user.Username, &user.Email, &user.PHash, &user.DateJoined,
@@ -1288,13 +1625,16 @@ func User(userName string) (user UserDetails, err error) {
 func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	// Construct SQL query for retrieving the requested database list
 	dbQuery := `
-	WITH dbs AS (
-		SELECT db.dbname, db.folder, db.date_created, db.last_modified, ver.size, ver.version, db.public,
-			ver.sha256, db.watchers, db.stars, db.discussions, db.pull_requests, db.updates, db.branches,
-			db.releases, db.contributors, db.description
-		FROM sqlite_databases AS db, database_versions AS ver
-		WHERE db.idnum = ver.db
-			AND db.username = $1`
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		), dbs AS (
+			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
+				db.watchers, db.stars, db.discussions, db.merge_requests, db.commits, db.branches, db.releases,
+				db.contributors, db.one_line_description
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id`
 	switch public {
 	case DB_PUBLIC:
 		// Only public databases
@@ -1309,11 +1649,11 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		return nil, fmt.Errorf("Incorrect 'public' value '%v' passed to UserDBs() function.", public)
 	}
 	dbQuery += `
-		ORDER BY dbname, version DESC
-	), unique_dbs AS (
-		SELECT DISTINCT ON (dbname) * FROM dbs ORDER BY dbname
-	)
-	SELECT * FROM unique_dbs ORDER BY last_modified DESC`
+			ORDER BY db.db_name
+		)
+		SELECT *
+		FROM dbs
+		ORDER BY last_modified DESC`
 	rows, err := pdb.Query(dbQuery, userName)
 	if err != nil {
 		log.Printf("Getting list of databases for user failed: %v\n", err)
@@ -1323,18 +1663,17 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	for rows.Next() {
 		var desc pgx.NullString
 		var oneRow DBInfo
-		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified,
-			&oneRow.Size, &oneRow.Version, &oneRow.Public, &oneRow.SHA256, &oneRow.Watchers, &oneRow.Stars,
-			&oneRow.Discussions, &oneRow.MRs, &oneRow.Updates, &oneRow.Branches, &oneRow.Releases,
-			&oneRow.Contributors, &desc)
+		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified, &oneRow.Public,
+			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Commits, &oneRow.Branches,
+			&oneRow.Releases, &oneRow.Contributors, &desc)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err
 		}
 		if !desc.Valid {
-			oneRow.Description = ""
+			oneRow.OneLineDesc = ""
 		} else {
-			oneRow.Description = fmt.Sprintf(": %s", desc.String)
+			oneRow.OneLineDesc = fmt.Sprintf(": %s", desc.String)
 		}
 		list = append(list, oneRow)
 	}
@@ -1343,14 +1682,19 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	for i, j := range list {
 		// Retrieve latest fork count
 		dbQuery = `
-		SELECT forks
-		FROM sqlite_databases
-		WHERE idnum = (
-			SELECT root_database
-			FROM sqlite_databases
-			WHERE username = $1
-			AND folder = $2
-			AND dbname = $3)`
+			WITH u AS (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			SELECT forks
+			FROM sqlite_databases, u
+			WHERE db_id = (
+				SELECT root_database
+				FROM sqlite_databases
+				WHERE user_id = u.user_id
+					AND folder = $2
+					AND db_name = $3)`
 		err = pdb.QueryRow(dbQuery, userName, j.Folder, j.Database).Scan(&list[i].Forks)
 		if err != nil {
 			log.Printf("Error retrieving fork count for '%s%s%s': %v\n", userName, j.Folder,
@@ -1413,9 +1757,9 @@ func UserList() ([]UserDetails, error) {
 func UserNameFromAuth0ID(auth0id string) (string, error) {
 	// Query the database for a username matching the given Auth0 ID
 	dbQuery := `
-		SELECT username
+		SELECT user_name
 		FROM users
-		WHERE auth0id = $1`
+		WHERE auth0_id = $1`
 	var userName string
 	err := pdb.QueryRow(dbQuery, auth0id).Scan(&userName)
 	if err != nil {
@@ -1441,21 +1785,26 @@ func UserPasswordHash(userName string) ([]byte, error) {
 		log.Printf("Error looking up password hash for username '%s'. Error: %v\n", userName, err)
 		return nil, err
 	}
-
 	return passHash, nil
 }
 
 // Returns the list of databases starred by a user.
 func UserStarredDBs(userName string) (list []DBEntry, err error) {
 	dbQuery := `
-		WITH stars AS (
-			SELECT db, date_starred
-			FROM database_stars
-			WHERE username = $1
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		),
+		stars AS (
+			SELECT st.db_id, st.user_id, st.date_starred
+			FROM database_stars AS st, u
+			WHERE st.user_id = u.user_id
 		)
-		SELECT dbs.username, dbs.dbname, stars.date_starred
-		FROM sqlite_databases AS dbs, stars
-		WHERE dbs.idnum = stars.db
+		SELECT users.user_name, dbs.db_name, stars.date_starred
+		FROM users, stars, sqlite_databases AS dbs
+		WHERE stars.user_id = users.user_id
+			AND stars.db_id = dbs.db_id
 		ORDER BY date_starred DESC`
 	rows, err := pdb.Query(dbQuery, userName)
 	if err != nil {
@@ -1477,23 +1826,27 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 }
 
 // Returns the list of users who starred a database.
-func UsersStarredDB(dbOwner string, dbName string) (list []DBEntry, err error) {
+func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH star_users AS (
-			SELECT DISTINCT ON (username) username, date_starred
+			SELECT user_id, date_starred
 			FROM database_stars
-			WHERE db = (
-				SELECT idnum
+			WHERE db_id = (
+				SELECT db_id
 				FROM sqlite_databases
-				WHERE username = $1
-					AND dbname = $2
+				WHERE user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
+					AND folder = $2
+					AND db_name = $3
 				)
-			ORDER BY username DESC
 		)
-		SELECT username, date_starred
-		FROM star_users
-		ORDER BY date_starred DESC`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbName)
+		SELECT users.user_name, star_users.date_starred
+		FROM users, star_users
+		  WHERE users.user_id = star_users.user_id`
+	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
@@ -1508,6 +1861,5 @@ func UsersStarredDB(dbOwner string, dbName string) (list []DBEntry, err error) {
 		}
 		list = append(list, oneRow)
 	}
-
 	return list, nil
 }

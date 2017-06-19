@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 	"strconv"
 
-	sqlite "github.com/gwenn/gosqlite"
+	"github.com/gwenn/gosqlite"
 )
 
 // Returns the number of rows in a SQLite table.
@@ -23,15 +24,15 @@ func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 }
 
 // Reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then read all rows.
-func ReadSQLiteDB(db *sqlite.Conn, dbTable string, maxRows int, sortCol string, sortDir string, rowOffset int) (SQLiteRecordSet, error) {
-	return ReadSQLiteDBCols(db, dbTable, false, false, maxRows, sortCol, sortDir, rowOffset)
+func ReadSQLiteDB(sdb *sqlite.Conn, dbTable string, maxRows int, sortCol string, sortDir string, rowOffset int) (SQLiteRecordSet, error) {
+	return ReadSQLiteDBCols(sdb, dbTable, false, false, maxRows, sortCol, sortDir, rowOffset)
 }
 
 // Reads up to maxRows # of rows from a SQLite database.  Only returns the requested columns.
 func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignoreNull bool, maxRows int,
 	sortCol string, sortDir string, rowOffset int) (SQLiteRecordSet, error) {
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
-	// shouldn't be parameterised.  Limitation from SQLite's implementation? :(
+	// shouldn't be parametrised.  Limitation from SQLite's implementation? :(
 	var dataRows SQLiteRecordSet
 	var err error
 	var stmt *sqlite.Stmt
@@ -283,10 +284,19 @@ func SanityCheck(fileName string) error {
 
 // Returns the list of tables in the SQLite database.
 func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
+	// TODO: It might be useful to cache this info in PG or memcached
 	// Retrieve the list of tables in the database
 	tables, err := sdb.Tables("")
 	if err != nil {
-		log.Printf("Error retrieving table names: %s", err)
+		log.Printf("Error retrieving table names in Tables(): %v\n", err)
+		if cerr, ok := err.(sqlite.ConnError); ok {
+			log.Printf("Error code: %v\n", cerr.Code())
+			log.Printf("Extended error code: %v\n", cerr.ExtendedCode())
+			log.Printf("Extended error message: %v\n", cerr.Error())
+			log.Printf("Extended error filename: %v\n", cerr.Filename())
+		} else {
+			log.Printf("Expected a connection error, but got a '%v'\n", reflect.TypeOf(cerr))
+		}
 		return nil, err
 	}
 	if len(tables) == 0 {
@@ -294,6 +304,5 @@ func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
 		return nil, err
 	}
-
 	return tables, nil
 }

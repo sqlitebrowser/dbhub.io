@@ -3,6 +3,25 @@
 <html ng-app="DBHub" ng-controller="databaseView">
 [[ template "head" . ]]
 <body>
+<style>
+    .colHeader {
+        color: black;
+        text-decoration: none;
+    }
+
+    .colHeader:hover {
+        text-decoration: underline;
+    }
+
+    .blackLink {
+        color: black;
+    }
+
+    .blackLink:hover {
+        color: #23527c;
+        text-decoration: underline;
+    }
+</style>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
@@ -10,7 +29,7 @@
             <h2 id="viewdb" style="margin-top: 10px;">
                 <div class="pull-left">
                     <div>
-                        <a href="/">/</a> <a href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> / [[ .Meta.Database ]]
+                        <a class="blackLink" href="/">/</a> <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> / [[ .Meta.Database ]]
                     </div>
                     [[ if .Meta.ForkDatabase ]]
                     <div style="font-size: small">
@@ -54,7 +73,7 @@
                 </div>
                 <div class="col-md-3">
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                        <label id="settings"><a href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]">Settings</a></label>
+                        <label id="settings"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">Settings</a></label>
                     [[ else ]]
                         &nbsp;
                     [[ end ]]
@@ -66,8 +85,12 @@
         </div>
         <div class="col-md-4">
             <div class="pull-right">
-                <b>Visibility:</b> {{ meta.Public }} &nbsp;
-                <b>Version:</b> {{ meta.Version }} &nbsp;
+                [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                    <b>Visibility:</b> <a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">{{ meta.Public }}</a> &nbsp;
+                [[ else ]]
+                    <b>Visibility:</b> {{ meta.Public }} &nbsp;
+                [[ end ]]
+                <b>Commit:</b> {{ meta.CommitID | limitTo: 8 }} &nbsp;
                 <b>Size:</b> {{ meta.Size / 1024 | number : 0 }} KB
             </div>
         </div>
@@ -75,7 +98,7 @@
     <div class="row">
         <div class="col-md-12">
             <div class="well well-sm" style="margin-bottom: 10px;">
-                <label id="viewdesc" ng-bind="meta.Description"></label>
+                <label id="viewdesc" ng-bind="meta.OneLineDesc"></label>
             </div>
         </div>
     </div>
@@ -84,10 +107,10 @@
             <table width="100%" class="table table-bordered" style="margin-bottom: 10px;">
                 <tr>
                     <td>
-                        <label id="viewupdates" ng-bind="'Updates: ' + meta.Updates"></label>
+                        <a href="/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?&branch={{ meta.Branch }}"><label class="blackLink" id="viewcommits" ng-bind="'Commits: ' + meta.Commits"></label></a>
                     </td>
                     <td>
-                        <label id="viewbranches" ng-bind="'Branches: ' + meta.Branches"></label>
+                        <a href="/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewbranches" ng-bind="'Branches: ' + meta.Branches"></label></a>
                     </td>
                     <td>
                         <label id="viewreleases" ng-bind="'Releases: ' + meta.Releases"></label>
@@ -132,8 +155,8 @@
                         Download <span class="caret"></span>
                     </button>
                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
-                        <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
+                        <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
+                        <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
                     </ul>
                 </div>
             </span>
@@ -144,7 +167,7 @@
             <table class="table table-bordered table-striped table-responsive">
                 <tr>
                     <th ng-repeat="header in db.ColNames" width="{{ 100 / db.ColCount }}%">
-                        <a href="" style="text-decoration: none;" ng-click="sortOrder(header)"><span id="col{{ header }}" ng-bind="addArrow(header)"></span></a>
+                        <a href="" class="colHeader" ng-click="sortOrder(header)"><span id="col{{ header }}" ng-bind="addArrow(header)"></span></a>
                     </th>
                 </tr>
                 <tr ng-repeat="row in db.Records">
@@ -170,7 +193,7 @@
                     <td class="page-header"><h4>DESCRIPTION</h4></td>
                 </tr>
                 <tr>
-                    <td id="viewreadme" ng-bind-html="meta.Readme"></td>
+                    <td id="viewreadme" ng-bind-html="meta.FullDesc"></td>
                 </tr>
             </table>
         </div>
@@ -196,24 +219,25 @@
     app.controller('databaseView', function($scope, $http) {
         // Pre-filled database metadata
         $scope.meta = {
-            Owner: "[[ .Meta.Owner ]]",
-            Database: "[[ .Meta.Database ]]",
-            Public: "",
-            Watchers: "[[ .DB.Info.Watchers ]]",
-            Stars: "[[ .DB.Info.Stars ]]",
-            MyStar: "[[  .MyStar ]]",
-            Forks: "[[ .DB.Info.Forks ]]",
-            Discussions: "[[ .DB.Info.Discussions ]]",
-            MRs: "[[ .DB.Info.MRs ]]",
-            Description: "[[ .DB.Info.Description ]]",
-            Updates: "[[ .DB.Info.Updates ]]",
+            Branch: "master",
             Branches: "[[ .DB.Info.Branches ]]",
-            Releases: "[[ .DB.Info.Releases ]]",
+            CommitID: "[[ .DB.Info.CommitID ]]",
+            Commits: "[[ .DB.Info.Commits ]]",
             Contributors: "[[ .DB.Info.Contributors ]]",
-            Readme: "[[ .DB.Info.Readme ]]",
-            Size: "[[ .DB.Info.Size ]]",
-            Version: "[[ .DB.Info.Version ]]",
+            Database: "[[ .Meta.Database ]]",
+            Discussions: "[[ .DB.Info.Discussions ]]",
+            Forks: "[[ .DB.Info.Forks ]]",
+            FullDesc: "[[ .DB.Info.FullDesc ]]",
             MaxRows: "[[ .DB.MaxRows ]]",
+            MRs: "[[ .DB.Info.MRs ]]",
+            MyStar: "[[  .MyStar ]]",
+            OneLineDesc: "[[ .DB.Info.OneLineDesc ]]",
+            Owner: "[[ .Meta.Owner ]]",
+            Public: "",
+            Releases: "[[ .DB.Info.Releases ]]",
+            Size: "[[ .DB.Info.DBEntry.Size ]]",
+            Stars: "[[ .DB.Info.Stars ]]",
+            Watchers: "[[ .DB.Info.Watchers ]]",
             Tables: [[ .DB.Info.Tables ]],
             [[ if .Meta.LoggedInUser ]]
                 Loggedin: "true",
@@ -258,7 +282,7 @@
 
         // Retrieves the table data for a given table
         $scope.changeTable = function(newtable) {
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
                 newtable).then(
                     function (response) {
                         // Update table data
@@ -287,7 +311,7 @@
             // Only proceed if the database being forked doesn't already belong to the user
             if ("[[ .Meta.LoggedInUser ]]" != "[[ .Meta.Owner ]]") {
                 // Call the fork database code, which should bounce us to the forked database
-                window.location = "/x/forkdb/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]"
+                window.location = "/x/forkdb/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]"
             }
         };
 
@@ -306,7 +330,7 @@
             }
 
             var newOffset = Number($scope.db.RowCount) - Number($scope.meta.MaxRows);
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
                 $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
                 function (response) {
                     // Retrieve the new table data range
@@ -330,7 +354,7 @@
 
             // Retrieve the updated page data
             var newOffset = 0;
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
                 $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
                 function (response) {
                     // Retrieve the new table data range
@@ -364,7 +388,7 @@
             }
 
             // Retrieve the updated page data
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
                 $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
                     function (response) {
                         // Retrieve the new table data range
@@ -389,7 +413,7 @@
             }
 
             var newOffset = Number($scope.db.Offset) + Number($scope.meta.MaxRows);
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
                 $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
                     function (response) {
                         // Retrieve the new table data range
@@ -429,7 +453,7 @@
             }
 
             // Retrieve updated table data
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?version=[[ .DB.Info.Version ]]&table="+
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
                 $scope.db.Tablename+"&sort="+newSortCol+"&dir="+$scope.db.SortDir+"&offset="+$scope.db.Offset).then(
                 function (response) { $scope.db = response.data; });
 

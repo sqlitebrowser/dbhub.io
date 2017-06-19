@@ -1,12 +1,12 @@
 package common
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"os"
 
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/minio/minio-go"
@@ -88,11 +88,12 @@ func MinioObjCopy(sourceBucket string, sourceID string, destBucket string) (stri
 }
 
 // Retrieves a SQLite database from Minio, opens it, returns the connection handle.
-func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
+// Also returns the name of the temp file created, which the caller needs to delete (os.Remove()) when finished with it
+func OpenMinioObject(bucket string, id string) (*sqlite.Conn, string, error) {
 	// Get a handle from Minio for the database object
 	userDB, err := MinioHandle(bucket, id)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// Close the object handle when this function finishes
@@ -101,32 +102,34 @@ func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 	}()
 
 	// Save the database locally to a temporary file
-	tempfileHandle, err := ioutil.TempFile("", "databaseViewHandler-")
+	tempFileHandle, err := ioutil.TempFile("", "databaseViewHandler-")
 	if err != nil {
 		log.Printf("Error creating tempfile: %v\n", err)
-		return nil, errors.New("Internal server error")
+		return nil, "", errors.New("Internal server error")
 	}
-	tempfile := tempfileHandle.Name()
-	bytesWritten, err := io.Copy(tempfileHandle, userDB)
+	tempFile := tempFileHandle.Name()
+	bytesWritten, err := io.Copy(tempFileHandle, userDB)
 	if err != nil {
 		log.Printf("Error writing database to temporary file: %v\n", err)
-		return nil, errors.New("Internal server error")
+		return nil, "", errors.New("Internal server error")
 	}
 	if bytesWritten == 0 {
 		log.Printf("0 bytes written to the SQLite temporary file. Minio object: %s/%s\n", bucket, id)
-		return nil, errors.New("Internal server error")
+		return nil, "", errors.New("Internal server error")
 	}
-	tempfileHandle.Close()
-	defer os.Remove(tempfile) // Delete the temporary file when this function finishes
+	tempFileHandle.Close()
 
 	// Open database
-	sdb, err := sqlite.Open(tempfile, sqlite.OpenReadOnly)
+	sdb, err := sqlite.Open(tempFile, sqlite.OpenReadOnly)
 	if err != nil {
 		log.Printf("Couldn't open database: %s", err)
-		return nil, errors.New("Internal server error")
+		return nil, "", errors.New("Internal server error")
 	}
-
-	return sdb, nil
+	err = sdb.EnableExtendedResultCodes(true)
+	if err != nil {
+		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
+	}
+	return sdb, tempFile, nil
 }
 
 // Removes a Minio bucket, and all files inside it.
@@ -178,4 +181,37 @@ func StoreMinioObject(bucket string, id string, reader io.Reader, contentType st
 	}
 
 	return int(dbSize), nil
+}
+
+// Store a database file in Minio.
+func StoreDatabaseFile(db []byte, sha string) error {
+	bkt := sha[:MinioFolderChars]
+	id := sha[MinioFolderChars:]
+
+	// If a Minio bucket with the desired name doesn't already exist, create it
+	found, err := minioClient.BucketExists(bkt)
+	if err != nil {
+		log.Printf("Error when checking if Minio bucket '%s' already exists: %v\n", bkt, err)
+		return err
+	}
+	if !found {
+		err := minioClient.MakeBucket(bkt, "us-east-1")
+		if err != nil {
+			log.Printf("Error creating Minio bucket '%v': %v\n", bkt, err)
+			return err
+		}
+	}
+
+	// Store the SQLite database file in Minio
+	dbSize, err := minioClient.PutObject(bkt, id, bytes.NewReader(db), "application/x-sqlite3")
+	if err != nil {
+		log.Printf("Storing file in Minio failed: %v\n", err)
+		return err
+	}
+	// Sanity check.  Make sure the # of bytes written is equal to the size of the buffer we were given
+	if len(db) != int(dbSize) {
+		log.Printf("Something went wrong storing the database file: %v\n", err.Error())
+		return err
+	}
+	return nil
 }

@@ -3,11 +3,25 @@
 <html ng-app="DBHub" ng-controller="settingsView">
 [[ template "head" . ]]
 <body>
+<style>
+    .blackLink {
+        color: black;
+    }
+
+    .blackLink:hover {
+        color: #23527c;
+        text-decoration: underline;
+    }
+</style>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
         <div class="col-md-12">
-            <h2 style="text-align: center;">Database settings</h2>
+            <h2 style="text-align: center;">
+                Database settings for
+                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
+                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+            </h2>
         </div>
     </div>
     <form action="/x/savesettings" method="post">
@@ -23,7 +37,7 @@
                     </tr>
                     <tr>
                         <th style="vertical-align: middle;">One line description</th>
-                        <td><input type="text" name="descrip" size="80" maxlength="80" value="{{ meta.Description }}"></td>
+                        <td><input type="text" name="onelinedesc" size="80" maxlength="80" value="{{ meta.OneLineDesc }}"></td>
                     </tr>
                     <tr>
                         <th style="vertical-align: middle;">Default table</th>
@@ -66,7 +80,6 @@
             </div>
             <div class="col-md-8">
                 <div style="text-align: center;">
-
                     <h3>Full length description</h3>
                     <i>Markdown (<a href="http://commonmark.org">CommonMark</a> format) is supported</i>
                 </div>
@@ -74,7 +87,7 @@
                     <br />
                     <uib-tabset active="active">
                         <uib-tab index="0" heading="Edit">
-                            <textarea id="readme" name="readme" cols="113" rows="18" style="margin-top: 2px;" ng-bind="meta.Readme"></textarea>
+                            <textarea id="fulldesc" name="fulldesc" cols="113" rows="18" style="margin-top: 2px;" ng-bind="meta.FullDesc"></textarea>
                         </uib-tab>
                         <uib-tab index="1" heading="Preview" select="getMarkdown()">
                             <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
@@ -90,7 +103,7 @@
                 <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
                 <input type="hidden" name="folder" value="[[ .DB.Info.Folder ]]">
                 <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
-                <input type="hidden" name="version" value="[[ .DB.Info.Version ]]">
+                <input type="hidden" name="commit" value="[[ .DB.Info.CommitID ]]">
                 <input type="hidden" name="public" value="{{ radioPublic }}">
                 <input type="hidden" name="defaulttable" id="defaulttable">
             </div>
@@ -111,22 +124,8 @@
                                         <span class="caret"></span>
                                     </button>
                                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        Some kind of loop should go here to fill out the licence list
                                         <li role="menuitem"><a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a></li>
-                                        <li role="menuitem"><a href="http://opendatacommons.org/licenses/pddl/summary/">PDDL</a></li>
-                                        <li role="menuitem"><a href="https://creativecommons.org/licenses/by/4.0/">CCBY</a></li>
-                                        <li role="menuitem"><a href="http://opendatacommons.org/licenses/by/summary/">ODCBY</a></li>
-                                        <li role="menuitem"><a href="http://creativecommons.org/licenses/by-sa/4.0/">CCBYSA</a></li>
-                                        <li role="menuitem"><a href="http://opendatacommons.org/licenses/odbl/summary/">ODbL</a></li>
-                                        <li role="menuitem"><a href="https://creativecommons.org/licenses/by/3.0/">CCA</a></li>
-                                        <li role="menuitem"><a href="http://creativecommons.org/licenses/by-sa/3.0/">CCSA</a></li>
-                                        <li role="menuitem"><a href="https://www.govdata.de/dl-de/by-2-0">DLDEBY</a></li>
-                                        <li role="menuitem"><a href="https://www.govdata.de/dl-de/zero-2-0">DLDE0</a></li>
-                                        <li role="menuitem"><a href="http://pentangle.net/python/dsl.html">DSL</a></li>
-                                        <li role="menuitem"><a href="http://artlibre.org/licence/lal/en/">FAL</a></li>
-                                        <li role="menuitem"><a href="https://www.gnu.org/licenses/fdl.html">GNUFDL</a></li>
-                                        <li role="menuitem"><a href="https://www.mirbsd.org/MirOS-Licence">MIROSL</a></li>
-                                        <li role="menuitem"><a href="http://open.canada.ca/en/open-government-licence-canada">OGLC</a></li>
-                                        <li role="menuitem"><a href="https://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/open-government-licence/">OGLUK</a></li>
                                         <li role="menuitem"><a href="">NONE</a></li>
                                         <li role="menuitem"><a href="">OTHER</a></li>
                                     </ul>
@@ -161,7 +160,7 @@
                     <tr>
                         <td>
                             <div style="text-align: center;">
-                                <button type="button" class="btn btn-danger">Delete this version ([[ .DB.Info.Version ]]) only</button>
+                                <button type="button" class="btn btn-danger">Delete this version ([[ .DB.Info.CommitID ]]) only</button>
                             </div>
                         </td>
                     </tr>
@@ -179,80 +178,21 @@
     app.controller('settingsView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
             Database: "[[ .Meta.Database ]]",
-            Description: "[[ .DB.Info.Description ]]",
-            Readme: "[[ .DB.Info.Readme ]]",
             DefaultTable: "[[ .DB.Info.DefaultTable ]]",
+            FullDesc: "[[ .DB.Info.FullDesc ]]",
+            OneLineDesc: "[[ .DB.Info.OneLineDesc ]]",
             Tables: [[ .DB.Info.Tables ]],
         };
 
         // Do initial setup of default table values sent with form data
         document.getElementById("defaulttable").value = "[[ .DB.Info.DefaultTable ]]";
 
-        // Convert the license field number to human readable format
-        var lic = [[ .DB.Info.License ]];
-        switch(lic) {
-        case 0:
-            $scope.meta.License = "CC0";
-            break;
-        case 1:
-            $scope.meta.License = "PDDL";
-            break;
-        case 2:
-            $scope.meta.License = "CCBY";
-            break;
-        case 3:
-            $scope.meta.License = "ODCBY";
-            break;
-        case 4:
-            $scope.meta.License = "CCBYSA";
-            break;
-        case 5:
-            $scope.meta.License = "ODbL";
-            break;
-        case 6:
-            $scope.meta.License = "CCA";
-            break;
-        case 7:
-            $scope.meta.License = "CCSA";
-            break;
-        case 8:
-            $scope.meta.License = "DLDEBY";
-            break;
-        case 9:
-            $scope.meta.License = "DLDE0";
-            break;
-        case 10:
-            $scope.meta.License = "DSL";
-            break;
-        case 11:
-            $scope.meta.License = "FAL";
-            break;
-        case 12:
-            $scope.meta.License = "GNUFDL";
-            break;
-        case 13:
-            $scope.meta.License = "MIROSL";
-            break;
-        case 14:
-            $scope.meta.License = "OGLC";
-            break;
-        case 15:
-            $scope.meta.License = "OGLUK";
-            break;
-        case 16:
-            $scope.meta.License = "NONE";
-            break;
-        default:
-            $scope.meta.License = "OTHER";
-            break;
-        }
-
         // Handler for the cancel button.  Just bounces back to the database page
         $scope.cancelSettings = function() {
             window.location = "/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
         };
 
-        // Update name of default table in the dropdown selector
+        // Update name of default table in the drop down selector
         $scope.changeTable = function(newtable) {
             // Update displayed value
             $scope.meta.DefaultTable = newtable;
@@ -273,11 +213,11 @@
         // Get rendered markdown from the server, for display in the README preview tab
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
-            // Retrieve latest markdown text from the textarea
-            var readmeText = document.getElementById("readme").value;
+            // Retrieve latest markdown text from the text area
+            var txt = document.getElementById("fulldesc").value;
 
             // Check for the placeholder string
-            if (readmeText === "No full description") {
+            if (txt === "No full description") {
                 $scope.markDownPreview = "";
                 return;
             }
@@ -286,7 +226,7 @@
             $http({
                 method: "POST",
                 url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": readmeText}),
+                data: $httpParamSerializerJQLike({"mkdown": txt}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.markDownPreview = response.data; });
         };

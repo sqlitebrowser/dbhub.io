@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/icza/session"
 	"github.com/rhinoman/go-commonmark"
@@ -45,7 +48,368 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string, dbVersion int, dbTable string, sortCol string, sortDir string, rowOffset int) {
+// Render the branches page, which lists the branches for a database.
+func branchesPage(w http.ResponseWriter, r *http.Request) {
+	// Structure to hold page data
+	type brEntry struct {
+		Commit      string `json:"commit"`
+		Description string `json:"description"`
+		Name        string `json:"name"`
+	}
+	var pageData struct {
+		Auth0         com.Auth0Set
+		Branches      []brEntry
+		DB            com.SQLiteDBinfo
+		DefaultBranch string
+		Meta          com.MetaInfo
+	}
+	pageData.Meta.Title = "Branch list"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Retrieve the database owner & name, and branch name
+	// TODO: Add folder support
+	dbFolder := "/"
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/branches/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Validate the supplied information
+	if dbOwner == "" || dbName == "" {
+		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Read the branch heads list from the database
+	branches, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	pageData.DefaultBranch, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Fill out the metadata
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+	for i, j := range branches {
+		k := brEntry{
+			Commit:      j.Commit,
+			Description: j.Description,
+			Name:        i,
+		}
+		pageData.Branches = append(pageData.Branches, k)
+	}
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
+	// Render the page
+	t := tmpl.Lookup("branchesPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+// Render the commits page.  This shows all of the commits in a given branch, in reverse order from newest to oldest.
+func commitsPage(w http.ResponseWriter, r *http.Request) {
+	// Structure to hold page data
+	type HistEntry struct {
+		AuthorEmail    string     `json:"author_email"`
+		AuthorName     string     `json:"author_name"`
+		AuthorUserName string     `json:"author_user_name"`
+		CommitterEmail string     `json:"committer_email"`
+		CommitterName  string     `json:"committer_name"`
+		ID             string     `json:"id"`
+		Message        string     `json:"message"`
+		Parent         string     `json:"parent"`
+		Timestamp      time.Time  `json:"timestamp"`
+		Tree           com.DBTree `json:"tree"`
+	}
+	var pageData struct {
+		Auth0    com.Auth0Set
+		Branch   string
+		Branches []string
+		DB       com.SQLiteDBinfo
+		History  []HistEntry
+		Meta     com.MetaInfo
+	}
+	pageData.Meta.Title = "Commits settings"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Retrieve the database owner & name, and branch name
+	// TODO: Add folder support
+	dbFolder := "/"
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/settings/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Validate the supplied information
+	if dbOwner == "" || dbName == "" {
+		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Read the branch heads list from the database
+	branches, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// If no branch name was given, we use the default branch
+	if branchName == "" {
+		branchName, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	// Work out the head commit ID for the requested branch
+	headCom, ok := branches[branchName]
+	headID := headCom.Commit
+	if !ok {
+		// Unknown branch
+		errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf("Branch '%s' not found", branchName))
+		return
+	}
+	if headID == "" {
+		// The requested branch wasn't found.  Bad request?
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Walk the commit history backwards from the head commit, assembling the commit history for this branch from the
+	// full list
+	rawList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// TODO: Ugh, this is an ugly approach just to add the username to the commit data.  Surely there's a better way?
+	// TODO  Maybe store the username in the commit data structure in the database instead?
+	// TODO: Display licence changes too
+	eml, err := com.GetUsernameFromEmail(rawList[headID].AuthorEmail)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.History = []HistEntry{
+		{
+			AuthorEmail:    rawList[headID].AuthorEmail,
+			AuthorName:     rawList[headID].AuthorName,
+			AuthorUserName: eml,
+			CommitterEmail: rawList[headID].CommitterEmail,
+			CommitterName:  rawList[headID].CommitterName,
+			ID:             rawList[headID].ID,
+			Message:        commonmark.Md2Html(rawList[headID].Message, commonmark.CMARK_OPT_DEFAULT),
+			Parent:         rawList[headID].Parent,
+			Timestamp:      rawList[headID].Timestamp,
+			Tree:           rawList[headID].Tree,
+		},
+	}
+	commitData := com.CommitEntry{Parent: rawList[headID].Parent}
+	for commitData.Parent != "" {
+		commitData, ok = rawList[commitData.Parent]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, "Internal error when retrieving commit data")
+			return
+		}
+		eml, err := com.GetUsernameFromEmail(commitData.AuthorEmail)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		newEntry := HistEntry{
+			AuthorEmail:    commitData.AuthorEmail,
+			AuthorName:     commitData.AuthorName,
+			AuthorUserName: eml,
+			CommitterEmail: commitData.CommitterEmail,
+			CommitterName:  commitData.CommitterName,
+			ID:             commitData.ID,
+			Message:        commonmark.Md2Html(commitData.Message, commonmark.CMARK_OPT_DEFAULT),
+			Parent:         commitData.Parent,
+			Timestamp:      commitData.Timestamp,
+			Tree:           commitData.Tree,
+		}
+		pageData.History = append(pageData.History, newEntry)
+	}
+
+	// Fill out the metadata
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+	pageData.Branch = branchName
+	for i := range branches {
+		pageData.Branches = append(pageData.Branches, i)
+	}
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
+	// Render the page
+	t := tmpl.Lookup("commitsPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+// Displays a web page asking for the new branch name.
+func createBranchPage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		Auth0  com.Auth0Set
+		Meta   com.MetaInfo
+		Commit string
+	}
+	pageData.Meta.Title = "Create new branch"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+	if validSession != true {
+		// Display an error message
+		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
+		return
+	}
+
+	// Retrieve the owner, database, and commit ID
+	var err error
+	dbOwner, dbName, commit, err := com.GetODC(1, r) // "1" means skip the first URL word
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for commit value")
+		return
+	}
+	// TODO: Add folder support
+	dbFolder := "/"
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Make sure the database owner matches the logged in user
+	if loggedInUser != dbOwner {
+		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
+		return
+	}
+
+	// Fill out metadata for the page to be rendered
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+	pageData.Commit = commit
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
+	// Render the page
+	t := tmpl.Lookup("createBranchPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string, commitID string, dbTable string, sortCol string, sortDir string, rowOffset int) {
 	pageName := "Render database page"
 
 	var pageData struct {
@@ -71,7 +435,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 
 	// Check if the user has access to the requested database (and get it's details if available)
 	// TODO: Add proper folder support
-	err := com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, dbVersion)
+	err := com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -104,9 +468,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 
 	// Generate predictable cache keys for the metadata and sqlite table rows
 	mdataCacheKey := com.MetadataCacheKey("dwndb-meta", loggedInUser, dbOwner, "/", dbName,
-		dbVersion)
+		commitID)
 	rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-		loggedInUser, dbOwner, "/", dbName, dbVersion, dbTable, pageData.DB.MaxRows)
+		loggedInUser, dbOwner, "/", dbName, commitID, dbTable, pageData.DB.MaxRows)
 
 	// If a cached version of the page data exists, use it
 	ok, err := com.GetCachedData(mdataCacheKey, &pageData)
@@ -126,6 +490,13 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		// Restore the correct username
 		pageData.Meta.LoggedInUser = loggedInUser
 
+		// Get latest star and fork count
+		_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, "/", dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
 		// Render the page (using the caches)
 		if ok {
 			t := tmpl.Lookup("databasePage")
@@ -141,11 +512,18 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(pageData.DB.MinioBkt, pageData.DB.MinioId)
+	sdb, tempFile, err := com.OpenMinioObject(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
+		pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:])
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// Close the SQLite database and delete the temp file
+	defer func() {
+		sdb.Close()
+		os.Remove(tempFile)
+	}()
 
 	// Retrieve the list of tables in the database
 	tables, err := com.Tables(sdb, dbName)
@@ -205,7 +583,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		// Validation failed, so don't pass on the table name
 
 		// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
-		// bot picking up AngluarJS in a string and doing a request with it
+		// bot picking up AngularJS in a string and doing a request with it
 		if dbTable != "{{ db.Tablename }}" {
 			log.Printf("%s: Validation failed for table name: '%s': %s", pageName, dbTable, err)
 		}
@@ -237,8 +615,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	// Update database star status for the logged in user
 	pageData.MyStar = myStar
 
-	// Render the README as markdown / CommonMark
-	pageData.DB.Info.Readme = commonmark.Md2Html(pageData.DB.Info.Readme, commonmark.CMARK_OPT_DEFAULT)
+	// Render the full description as markdown / CommonMark
+	pageData.DB.Info.FullDesc = commonmark.Md2Html(pageData.DB.Info.FullDesc, commonmark.CMARK_OPT_DEFAULT)
 
 	// Cache the page metadata
 	err = com.CacheData(mdataCacheKey, pageData, com.CacheTime)
@@ -262,9 +640,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		}
 		pageData.Data.Tablename = dbTable
 	}
-
-	// Close the SQLite database
-	defer sdb.Close()
 
 	// Cache the table row data
 	err = com.CacheData(rowCacheKey, pageData.Data, com.CacheTime)
@@ -410,12 +785,26 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Preferences page.
 func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	var pageData struct {
-		Auth0   com.Auth0Set
-		MaxRows int
-		Meta    com.MetaInfo
+		Auth0       com.Auth0Set
+		DisplayName string
+		Email       string
+		MaxRows     int
+		Meta        com.MetaInfo
 	}
 	pageData.Meta.Title = "Preferences"
 	pageData.Meta.LoggedInUser = loggedInUser
+
+	// Grab the user's display name and email address
+	var err error
+	pageData.DisplayName, pageData.Email, err = com.GetUserDetails(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+
+	// Set the server name, used for the placeholder email address suggestion
+	serverName := strings.Split(com.WebServer(), ":")
+	pageData.Meta.Server = serverName[0]
 
 	// Retrieve the user preference data
 	pageData.MaxRows = com.PrefUserMaxRows(loggedInUser)
@@ -427,7 +816,7 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 
 	// Render the page
 	t := tmpl.Lookup("prefPage")
-	err := t.Execute(w, pageData)
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -493,7 +882,8 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 }
 
-func selectUsernamePage(w http.ResponseWriter, r *http.Request) {
+// Displays a web page for new users to choose their username.
+func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		Auth0 com.Auth0Set
 		Meta  com.MetaInfo
@@ -528,14 +918,14 @@ func selectUsernamePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.ClientID = com.Auth0ClientID()
 	pageData.Auth0.Domain = com.Auth0Domain()
 
-	// If the Auth0 profile included a nickname, we use that to prefill the input field
+	// If the Auth0 profile included a nickname, we use that to pre-fill the input field
 	ni := sess.CAttr("nickname")
 	if ni != nil {
 		pageData.Nick = ni.(string)
 	}
 
 	// Render the page
-	t := tmpl.Lookup("selectUsernamePage")
+	t := tmpl.Lookup("selectUserNamePage")
 	err := t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
@@ -573,9 +963,9 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve the database owner, database name, and version
+	// Retrieve the database owner, database name
 	// TODO: Add folder support
-	dbOwner, dbName, dbVersion, err := com.GetODV(1, r) // 1 = Ignore "/settings/" at the start of the URL
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/settings/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -586,10 +976,6 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
 		return
 	}
-	if dbVersion == 0 {
-		errorPage(w, r, http.StatusBadRequest, "Missing database version number")
-		return
-	}
 	if dbOwner != loggedInUser {
 		errorPage(w, r, http.StatusBadRequest,
 			"You can only access the settings page for your own databases")
@@ -597,26 +983,26 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, dbVersion)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Get the Minio bucket and ID for the given database
-	bkt, id, err := com.MinioBucketID(dbOwner, dbName, dbVersion, loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError,
-			"Could not retrieve internal information for the requested database")
-		return
-	}
-
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(bkt, id)
+	bkt := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
+	id := pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:]
+	sdb, tempFile, err := com.OpenMinioObject(bkt, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// Close the SQLite database and delete the temp file
+	defer func() {
+		sdb.Close()
+		os.Remove(tempFile)
+	}()
 
 	// Retrieve the list of tables in the database
 	pageData.DB.Info.Tables, err = com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, "/", dbName))
@@ -651,16 +1037,14 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Render the stars page.
-func starsPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string) {
+// Present the stars page to the user.
+func starsPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		Auth0 com.Auth0Set
 		Meta  com.MetaInfo
 		Stars []com.DBEntry
 	}
 	pageData.Meta.Title = "Stars"
-	pageData.Meta.Owner = dbOwner
-	pageData.Meta.Database = dbName
 
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -675,9 +1059,17 @@ func starsPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName st
 		}
 	}
 
+	// Retrieve owner and database name
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/stars/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+
 	// Retrieve list of users who starred the database
-	var err error
-	pageData.Stars, err = com.UsersStarredDB(dbOwner, dbName)
+	pageData.Stars, err = com.UsersStarredDB(dbOwner, "/", dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return

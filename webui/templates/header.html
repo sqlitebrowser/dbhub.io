@@ -10,9 +10,9 @@
         <div id="auth" class="col-md-6">
             <div class="pull-right">
                 [[ if .Meta.LoggedInUser ]]
-                    <a href="/pref">Preferences</a> | <a href="/[[ .Meta.LoggedInUser ]]">Home</a> | <a href="/logout">Log out</a>
+                    <a href="/pref" style="color: black;">Preferences</a> | <a href="/[[ .Meta.LoggedInUser ]]" style="color: black;">Home</a> | <a href="/logout" style="color: black;">Log out</a>
                 [[ else ]]
-                    <a href="" ng-click="showLock()">Login / Register</a>
+                    <a href="" ng-click="showLock()" style="color: black;">Login / Register</a>
                 [[  end ]]
             </div>
         </div>
