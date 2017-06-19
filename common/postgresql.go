@@ -1629,12 +1629,17 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			SELECT user_id
 			FROM users
 			WHERE user_name = $1
+		), default_commits AS (
+			SELECT DISTINCT ON (db.db_name) db_name, db.db_id, db.branch_heads->db.default_branch->>'commit' AS id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
 		), dbs AS (
 			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
 				db.watchers, db.stars, db.discussions, db.merge_requests, db.commits, db.branches, db.releases,
-				db.contributors, db.one_line_description
-			FROM sqlite_databases AS db, u
-			WHERE db.user_id = u.user_id`
+				db.contributors, db.one_line_description, default_commits.id,
+				db.commit_list->default_commits.id->'tree'->'entries'->0->'size' AS size
+			FROM sqlite_databases AS db, default_commits
+			WHERE db.db_id = default_commits.db_id`
 	switch public {
 	case DB_PUBLIC:
 		// Only public databases
@@ -1649,7 +1654,6 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		return nil, fmt.Errorf("Incorrect 'public' value '%v' passed to UserDBs() function.", public)
 	}
 	dbQuery += `
-			ORDER BY db.db_name
 		)
 		SELECT *
 		FROM dbs
@@ -1665,7 +1669,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		var oneRow DBInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified, &oneRow.Public,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Commits, &oneRow.Branches,
-			&oneRow.Releases, &oneRow.Contributors, &desc)
+			&oneRow.Releases, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.Size)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err
