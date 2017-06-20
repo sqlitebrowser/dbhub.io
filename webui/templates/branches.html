@@ -62,7 +62,14 @@
                     [[ end ]]
                     <td style="border-style: none;" colspan="2">
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                            <input type="text" name="{{ row.name }}_desc" id="{{ row.name }}_desc" size="70" maxlength="80" value="{{ row.description }}"> &nbsp; &nbsp;
+                            <uib-tabset>
+                                <uib-tab index="0" heading="Edit">
+                                    <textarea id="{{ row.name }}_desc" name="{{ row.name }}_desc" cols="80" rows="10" style="margin-top: 2px;" placeholder="A description for this branch">{{ row.description }}</textarea>
+                                </uib-tab>
+                                <uib-tab index="1" heading="Preview" select="getMarkdown(row.name)">
+                                    <div style="text-align: left; margin-top: 2px;" id="{{ row.name }}_mkdn"></div>
+                                </uib-tab>
+                            </uib-tabset>
                             <span name="{{ row.name }}_msg" id="{{ row.name }}_msg"></span>
                         [[ else ]]
                             <span ng-bind-html="row.mkdowndesc"></span>
@@ -133,6 +140,23 @@
                 if (status == 200) {
                     window.location = '/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
                 }
+            });
+        };
+
+        $scope.getMarkdown = function(rowDesc) {
+            // Retrieve latest markdown text from the text area
+            var rawTxt = document.getElementById(rowDesc + "_desc").value;
+            var mkdnID = document.getElementById(rowDesc + "_mkdn");
+            var msgID =  document.getElementById(rowDesc + "_msg");
+
+            // Call the server, asking for a rendered version of the markdown
+            $http({
+                method: "POST",
+                url: "/x/markdownpreview/",
+                data: $httpParamSerializerJQLike({"mkdown": rawTxt}),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                mkdnID.innerHTML = response.data;
             });
         };
 
