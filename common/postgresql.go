@@ -632,6 +632,125 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 	return commitID, nil
 }
 
+// Deletes the latest commit from a given branch.
+func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, branchName string) error {
+	// Make sure the commit we're deleting isn't the only one in the branch.  We do this by making sure the
+	// commit has a parent commit defined
+	dbQuery := `
+		WITH the_db AS (
+			SELECT db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		), branch AS (
+			SELECT $4::text AS name
+		), head_commit AS (
+			SELECT db.branch_heads->branch.name->>'commit' AS id
+			FROM sqlite_databases AS db, branch, the_db
+			WHERE db.db_id = the_db.db_id
+		), parent_commit AS (
+			SELECT db.commit_list->head_commit.id->>'parent' AS id
+			FROM sqlite_databases AS db, head_commit, the_db
+			WHERE db.db_id = the_db.db_id
+		)
+		SELECT count(parent_commit.id)
+		FROM sqlite_databases AS db, head_commit, parent_commit, branch, the_db
+		WHERE db.db_id = the_db.db_id
+			AND parent_commit.id != ''`
+	var parentCount int
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, branchName).Scan(&parentCount)
+	if err != nil {
+		log.Printf("Querying database '%s%s%s' in DeleteLatestBranchCommit() files: %v\n", dbOwner, dbFolder,
+			dbName, err)
+		return err
+	}
+	if parentCount != 1 {
+		// This is the last commit for the branch, so don't proceed
+		log.Printf("Error.  Not going to remove the last commit of branch '%s' on database '%s%s%s'\n",
+			branchName, dbOwner, dbFolder, dbName)
+		return errors.New("Removing the only remaining commit for a branch isn't allowed")
+	}
+
+	// This query removes the latest commit from the given branch, and decrements the commit counter for the database
+	dbQuery = `
+		WITH the_db AS (
+			SELECT db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		), branch AS (
+			SELECT $4::text AS name
+		), head_commit AS (
+			SELECT db.branch_heads->branch.name->>'commit' AS id
+			FROM sqlite_databases AS db, branch, the_db
+			WHERE db.db_id = the_db.db_id
+		), parent_commit AS (
+			SELECT db.commit_list->head_commit.id->'parent' AS id
+			FROM sqlite_databases AS db, head_commit, the_db
+			WHERE db.db_id = the_db.db_id
+		)
+		UPDATE sqlite_databases AS db
+		SET branch_heads = jsonb_set(db.branch_heads, ('{"' || branch.name || '", "commit"}')::text[], parent_commit.id, false),
+			commit_list = db.commit_list - head_commit.id
+		FROM head_commit, parent_commit, branch, the_db
+		WHERE db.db_id = the_db.db_id`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, branchName)
+	if err != nil {
+		log.Printf("Removing latest commit failed for database '%s%s%s' branch '%s': %v\n", dbOwner, dbFolder,
+			dbName, branchName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when removing latest commit from branch '%s' for database '%s%s%s'\n",
+			numRows, branchName, dbOwner, dbFolder, dbName)
+	}
+
+	// Update the commit counter for the database
+	// TODO: This is likely a minor race condition and should be folded into the above query, but atm I just can't be
+	// TODO  bothered trying to work it out :)
+	dbQuery = `
+		WITH the_db AS (
+			SELECT db_id, jsonb_object_keys(commit_list)
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		), commit_count AS (
+			SELECT count(*) AS total
+			FROM the_db
+		)
+		UPDATE sqlite_databases AS db
+		SET commits = commit_count.total
+		FROM the_db, commit_count
+		WHERE db.db_id = the_db.db_id`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Updating commit count failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when updating commit count for database '%s%s%s'\n", numRows,
+			dbOwner, dbFolder, dbName)
+	}
+	return nil
+}
+
 // Disconnects the PostgreSQL database connection.
 func DisconnectPostgreSQL() {
 	pdb.Close()

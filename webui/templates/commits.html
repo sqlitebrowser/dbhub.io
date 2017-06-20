@@ -79,8 +79,8 @@
                 <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-style: none;">
-                            <span ng-if="row.id == headCommit">
-                                <button class="btn btn-primary" ng-click="deleteCommit()">Delete Commit</button>
+                            <span ng-if="(row.id == headCommit) && (row.id != lastCommit)">
+                                <button class="btn btn-primary" ng-click="deleteCommit(row.id)">Delete Commit</button>
                             </span>&nbsp;
                         </td>
                     [[ end ]]
@@ -96,27 +96,46 @@
 [[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('commitsView', function($scope) {
+    app.controller('commitsView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
             Branch: "[[ .Branch ]]",
             Branches: [[ .Branches ]],
             History: [[ .History ]]
         }
 
-        // Take note of the first commit ID, so we can compare against it
+        // Take note of the first and last commit IDs, so we can compare against them
+        var numCommits = $scope.meta.History.length;
         $scope.headCommit = $scope.meta.History[0].id;
+        $scope.lastCommit = $scope.meta.History[numCommits - 1].id;
 
         // Bounce to the page for creating branches
         $scope.createBranch = function(commit){
             window.location = "/createbranch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=" + commit;
         };
 
-        // Bounce to the page for creating branches
-        $scope.deleteCommit = function(){
-            // TODO: Write the code to delete the head commit, update the branch heads with the previous commit id,
-            // TODO  and refresh the page
+        // Delete a commit from the viewed branch
+        $scope.deleteCommit = function(commit) {
+            $http({
+                method: "POST",
+                url: "/x/deletecommit/",
+                data: $httpParamSerializerJQLike({
+                        "branchName": $scope.meta.Branch,
+                        "commit": commit,
+                        "dbFolder": "/",
+                        "dbName": [[ .Meta.Database ]],
+                        "dbOwner": [[ .Meta.Owner ]]
+                    }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // If successful, reload the page
+                var status = response.status;
+                if (status == 200) {
+                    window.location = '/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch=' + $scope.meta.Branch;
+                }
+            });
         };
 
+        // Auth0 popup
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
