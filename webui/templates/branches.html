@@ -29,16 +29,15 @@
             <table class="table table-bordered table-striped table-responsive">
                 <tr>
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                    <th width="280px">Actions</th>
+                    <th>Actions</th>
                     [[ end ]]
-                    <th>Branch</th><th>Description</th>
+                    <th>Name</th><th>Commit ID</th>
                 </tr>
-                <tr ng-repeat="row in meta.Branches">
+                <tr ng-repeat-start="row in meta.Branches">
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-style: none;">
                             <button class="btn btn-primary" ng-click="updateBranch(row.name)">Update</button>
                             <button ng-if="row.name != meta.DefBranch" class="btn btn-primary" ng-click="setDefaultBranch(row.name)">Set Default</button>
-                            <button ng-if="row.name != meta.DefBranch" class="btn btn-primary" ng-click="deleteBranch(row.name)">Delete</button>
                             <span ng-if="row.name == meta.DefBranch" style="vertical-align: middle;">
                                 &nbsp; &nbsp; &nbsp; <i>Default branch</i>
                             </span>
@@ -48,15 +47,25 @@
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <input type="text" name="{{ row.name }}_name" id="{{ row.name }}_name" size="20" maxlength="20" value="{{ row.name }}">
                         [[ else ]]
-                            {{ row.name }}
+                            <div style="padding-top: 8px;" ng-bind-html="row.name"></div>
                         [[ end ]]
                     </td>
                     <td style="border-style: none;">
+                        <div style="padding-top: 8px;" ng-bind-html="row.commit"></div>
+                    </td>
+                </tr>
+                <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
+                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                        <td style="border-style: none;">
+                            <button ng-if="row.name != meta.DefBranch" class="btn btn-primary" ng-click="deleteBranch(row.name)">Delete</button>
+                        </td>
+                    [[ end ]]
+                    <td style="border-style: none;" colspan="2">
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <input type="text" name="{{ row.name }}_desc" id="{{ row.name }}_desc" size="70" maxlength="80" value="{{ row.description }}"> &nbsp; &nbsp;
                             <span name="{{ row.name }}_msg" id="{{ row.name }}_msg"></span>
                         [[ else ]]
-                            {{ row.description }}
+                            <span ng-bind-html="row.mkdowndesc"></span>
                         [[ end ]]
                     </td>
                 </tr>

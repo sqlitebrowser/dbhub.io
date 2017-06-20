@@ -52,9 +52,10 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 func branchesPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	type brEntry struct {
-		Commit      string `json:"commit"`
-		Description string `json:"description"`
-		Name        string `json:"name"`
+		Commit       string `json:"commit"`
+		Description  string `json:"description"`
+		MarkDownDesc string `json:"mkdowndesc"`
+		Name         string `json:"name"`
 	}
 	var pageData struct {
 		Auth0         com.Auth0Set
@@ -130,9 +131,10 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Database = dbName
 	for i, j := range branches {
 		k := brEntry{
-			Commit:      j.Commit,
-			Description: j.Description,
-			Name:        i,
+			Commit:       j.Commit,
+			Description:  j.Description,
+			MarkDownDesc: commonmark.Md2Html(j.Description, commonmark.CMARK_OPT_DEFAULT),
+			Name:         i,
 		}
 		pageData.Branches = append(pageData.Branches, k)
 	}
