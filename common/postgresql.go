@@ -639,51 +639,104 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 
 // Deletes the latest commit from a given branch.
 func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, branchName string) error {
-	// Make sure the commit we're deleting isn't the only one in the branch.  We do this by making sure the
-	// commit has a parent commit defined
-	dbQuery := `
-		WITH the_db AS (
-			SELECT db_id
-			FROM sqlite_databases
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE user_name = $1
-				)
-				AND folder = $2
-				AND db_name = $3
-		), branch AS (
-			SELECT $4::text AS name
-		), head_commit AS (
-			SELECT db.branch_heads->branch.name->>'commit' AS id
-			FROM sqlite_databases AS db, branch, the_db
-			WHERE db.db_id = the_db.db_id
-		), parent_commit AS (
-			SELECT db.commit_list->head_commit.id->>'parent' AS id
-			FROM sqlite_databases AS db, head_commit, the_db
-			WHERE db.db_id = the_db.db_id
-		)
-		SELECT count(parent_commit.id)
-		FROM sqlite_databases AS db, head_commit, parent_commit, branch, the_db
-		WHERE db.db_id = the_db.db_id
-			AND parent_commit.id != ''`
-	var parentCount int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, branchName).Scan(&parentCount)
+	// Begin a transaction
+	tx, err := pdb.Begin()
 	if err != nil {
-		log.Printf("Querying database '%s%s%s' in DeleteLatestBranchCommit() files: %v\n", dbOwner, dbFolder,
-			dbName, err)
 		return err
 	}
-	if parentCount != 1 {
-		// This is the last commit for the branch, so don't proceed
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// Retrieve the branch list for the database, as we'll use it a few times in this function
+	dbQuery := `
+		SELECT branch_heads
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	var branchList map[string]BranchEntry
+	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&branchList)
+	if err != nil {
+		log.Printf("Retreving branch list failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+
+	// Grab the Commit ID of the branch head
+	branch, ok := branchList[branchName]
+	if !ok {
+		// We weren't able to retrieve the branch information, so it's likely the branch doesn't exist any more, or
+		// some other weirdness is happening
+		log.Printf("Although no database error occurred, we couldn't retrieve a commit ID for branch '%s' of "+
+			"database '%s%s%s'.", branchName, dbOwner, dbFolder, dbName)
+		return errors.New("Database error when attempting to delete the commit")
+	}
+	commitID := branch.Commit
+
+	// Retrieve the entire commit list for the database, as we'll use it a few times in this function
+	dbQuery = `
+		SELECT commit_list
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	var commitList map[string]CommitEntry
+	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&commitList)
+	if err != nil {
+		log.Printf("Retreving commit list failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+
+	// Ensure we're not being asked to delete the last commit of a branch (eg ensure it has a non empty Parent field)
+	headCommit, ok := commitList[commitID]
+	if !ok {
+		log.Printf("Something went wrong retrieving commit '%s' from the commit list of database "+
+			"'%s%s%s'\n", commitID, dbOwner, dbFolder, dbName)
+		return errors.New("Error when retrieving commit information for the database")
+	}
+	if headCommit.Parent == "" {
 		log.Printf("Error.  Not going to remove the last commit of branch '%s' on database '%s%s%s'\n",
 			branchName, dbOwner, dbFolder, dbName)
 		return errors.New("Removing the only remaining commit for a branch isn't allowed")
 	}
 
-	// This query removes the latest commit from the given branch, and decrements the commit counter for the database
+	// Walk the other branches, checking if the commit is used in any of them.  If it is, we'll still move the branch
+	// head back by one, but we'd better not remove the commit itself from the commit_list in the database
+	foundElsewhere := false
+	for bName, bEntry := range branchList {
+		if bName == branchName {
+			// No need to walk the tree for the branch we're deleting from
+			continue
+		}
+		c := CommitEntry{Parent: bEntry.Commit}
+		for c.Parent != "" {
+			c, ok = commitList[c.Parent]
+			if !ok {
+				log.Printf("Error when walking the commit history of '%s%s%s', looking for commit '%s' in branch '%s'\n",
+					dbOwner, dbFolder, dbName, c.Parent, bName)
+				return errors.New("Error when attempting to remove the commit")
+			}
+			if c.ID == commitID {
+				// The commit is being used by other branches, so we'd better not delete it from the commit_list in
+				// the database
+				foundElsewhere = true
+				break
+			}
+		}
+	}
+
+	// Update the branch head to point at the previous commit
+	branch.Commit = headCommit.Parent
+	branchList[branchName] = branch
 	dbQuery = `
-		WITH the_db AS (
+		WITH our_db AS (
 			SELECT db_id
 			FROM sqlite_databases
 			WHERE user_id = (
@@ -693,37 +746,57 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 				)
 				AND folder = $2
 				AND db_name = $3
-		), branch AS (
-			SELECT $4::text AS name
-		), head_commit AS (
-			SELECT db.branch_heads->branch.name->>'commit' AS id
-			FROM sqlite_databases AS db, branch, the_db
-			WHERE db.db_id = the_db.db_id
-		), parent_commit AS (
-			SELECT db.commit_list->head_commit.id->'parent' AS id
-			FROM sqlite_databases AS db, head_commit, the_db
-			WHERE db.db_id = the_db.db_id
 		)
 		UPDATE sqlite_databases AS db
-		SET branch_heads = jsonb_set(db.branch_heads, ('{"' || branch.name || '", "commit"}')::text[], parent_commit.id, false),
-			commit_list = db.commit_list - head_commit.id
-		FROM head_commit, parent_commit, branch, the_db
-		WHERE db.db_id = the_db.db_id`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, branchName)
+		SET branch_heads = $4
+		FROM our_db
+		WHERE db.db_id = our_db.db_id`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, branchList)
 	if err != nil {
-		log.Printf("Removing latest commit failed for database '%s%s%s' branch '%s': %v\n", dbOwner, dbFolder,
-			dbName, branchName, err)
+		log.Printf("Moving branch '%s' back one commit failed for database '%s%s%s': %v\n", branchName, dbOwner,
+			dbFolder, dbName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when removing latest commit from branch '%s' for database '%s%s%s'\n",
+			"Wrong number of rows (%v) affected when moving branch '%s' back one commit for database '%s%s%s'\n",
 			numRows, branchName, dbOwner, dbFolder, dbName)
 	}
 
+	// If needed remove the commit from the commit list
+	delete(commitList, commitID)
+	if !foundElsewhere {
+		dbQuery = `
+		WITH our_db AS (
+			SELECT db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		)
+		UPDATE sqlite_databases AS db
+		SET commit_list = $4
+		FROM our_db
+		WHERE db.db_id = our_db.db_id`
+		commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commitList)
+		if err != nil {
+			log.Printf("Removing commit '%s' failed for database '%s%s%s': %v\n", commitID, dbOwner, dbFolder, dbName,
+				err)
+			return err
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf(
+				"Wrong number of rows (%v) affected when removing commit '%s' for database '%s%s%s'\n", numRows,
+				commitID, dbOwner, dbFolder, dbName)
+		}
+
+	}
+
 	// Update the commit counter for the database
-	// TODO: This is likely a minor race condition and should be folded into the above query, but atm I just can't be
-	// TODO  bothered trying to work it out :)
 	dbQuery = `
 		WITH the_db AS (
 			SELECT db_id, jsonb_object_keys(commit_list)
@@ -743,7 +816,7 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 		SET commits = commit_count.total
 		FROM the_db, commit_count
 		WHERE db.db_id = the_db.db_id`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
 	if err != nil {
 		log.Printf("Updating commit count failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
 		return err
@@ -752,6 +825,12 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating commit count for database '%s%s%s'\n", numRows,
 			dbOwner, dbFolder, dbName)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -1602,7 +1681,7 @@ func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[
 		dbQuery += `, source_url`
 	}
 	dbQuery +=
-			`)
+		`)
 		SELECT (
 			SELECT user_id
 			FROM users
