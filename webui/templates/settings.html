@@ -68,6 +68,10 @@
                             <span ng-bind-html="publicDesc"></span>
                         </td>
                     </tr>
+                    <tr>
+                        <th style="vertical-align: middle;">Source URL</th>
+                        <td><input type="text" name="sourceurl" size="80" maxlength="80" value="{{ meta.SourceURL }}"></td>
+                    </tr>
                 </table>
             </div>
             <div class="col-md-2">
@@ -180,6 +184,7 @@
             DefaultTable: "[[ .DB.Info.DefaultTable ]]",
             FullDesc: "[[ .DB.Info.FullDesc ]]",
             OneLineDesc: "[[ .DB.Info.OneLineDesc ]]",
+            SourceURL: "[[ .DB.Info.SourceURL ]]",
             Tables: [[ .DB.Info.Tables ]],
         };
 

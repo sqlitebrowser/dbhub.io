@@ -30,32 +30,40 @@
                             <span ng-bind-html="publicDesc"></span>
                         </td>
                     </tr>
-                    <tr>
-                        <td style="vertical-align: middle;">
-                            <b>Commit Message</b><br /><br />
-                            <i>Markdown (<a href="http://commonmark.org">CommonMark</a> format) is supported</i></td>
-                        <td>
-                            <div>
-                                <uib-tabset active="active">
-                                    <uib-tab index="0" heading="Edit">
-                                        <textarea id="commitmsg" name="commitmsg" cols="102" rows="18" style="margin-top: 2px;" placeholder="A description for this specific upload"></textarea>
-                                    </uib-tab>
-                                    <uib-tab index="1" heading="Preview" select="getMarkdown()">
-                                        <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
-                                    </uib-tab>
-                                </uib-tabset>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                            <div style="text-align: center;">
-                                <input type="hidden" name="public" value="{{ radioPublic }}">
-                                <input type="submit" class="btn btn-success" value="Upload">
-                            </div>
-                        </td>
-                    </tr>
                 </table>
+                <uib-accordion>
+                    <div uib-accordion-group class="panel-default" heading="Advanced" is-open="false">
+                        <table class="table table-bordered table-striped table-responsive" width="100%">
+                            <tr>
+                                <td style="vertical-align: middle;">
+                                    <b>Commit Message</b><br /><br />
+                                    <i>Markdown (<a href="http://commonmark.org">CommonMark</a> format) is supported</i></td>
+                                <td>
+                                    <div>
+                                        <uib-tabset active="active">
+                                            <uib-tab index="0" heading="Edit">
+                                                <textarea id="commitmsg" name="commitmsg" cols="80" rows="18" style="margin-top: 2px;" placeholder="A description for this specific upload"></textarea>
+                                            </uib-tab>
+                                            <uib-tab index="1" heading="Preview" select="getMarkdown()">
+                                                <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
+                                            </uib-tab>
+                                        </uib-tabset>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Source URL:</th>
+                                <td>
+                                    <input type="text" name="sourceurl" size="80" maxlength="240">
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </uib-accordion>
+                <div style="text-align: center;">
+                    <input type="hidden" name="public" value="{{ radioPublic }}">
+                    <input type="submit" class="btn btn-success" value="Upload">
+                </div>
             </form>
             <br />
         </div>

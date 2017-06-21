@@ -95,13 +95,22 @@
             </div>
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-12">
-            <div class="well well-sm" style="margin-bottom: 10px;">
-                <label id="viewdesc" ng-bind="meta.OneLineDesc"></label>
+    [[ if or (ne .DB.Info.OneLineDesc "No description") ((ne .DB.Info.SourceURL "")) ]]
+        <div class="row">
+            <div class="col-md-12">
+                <div class="well well-sm" style="margin-bottom: 10px;">
+                    [[ if (ne .DB.Info.OneLineDesc "No description") ]]
+                        <label id="viewdesc" ng-bind="meta.OneLineDesc"></label>
+                    [[ end ]]
+                    [[ if (ne .DB.Info.SourceURL "") ]]
+                        <div>
+                            <label>Source:</label> <a href="{{ meta.SourceURL }}" ng-bind="meta.SourceURL"></a>
+                        </div>
+                    [[ end ]]
+                </div>
             </div>
         </div>
-    </div>
+    [[ end ]]
     <div class="row">
         <div class="col-md-12">
             <table width="100%" class="table table-bordered" style="margin-bottom: 10px;">
@@ -236,6 +245,7 @@
             Public: "",
             Releases: "[[ .DB.Info.Releases ]]",
             Size: "[[ .DB.Info.DBEntry.Size ]]",
+            SourceURL: "[[ .DB.Info.SourceURL ]]",
             Stars: "[[ .DB.Info.Stars ]]",
             Watchers: "[[ .DB.Info.Watchers ]]",
             Tables: [[ .DB.Info.Tables ]],

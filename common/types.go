@@ -229,6 +229,7 @@ type DBInfo struct {
 	Releases     int
 	SHA256       string
 	Size         int
+	SourceURL    string
 	Stars        int
 	Tables       []string
 	Watchers     int

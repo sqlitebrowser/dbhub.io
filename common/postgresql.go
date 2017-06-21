@@ -450,7 +450,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
 			db.commits, $4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
 			db.branches, db.releases, db.contributors, db.one_line_description, db.full_description,
-			db.default_table, db.public
+			db.default_table, db.public, db.source_url
 		FROM sqlite_databases AS db
 		WHERE db.user_id = (
 				SELECT user_id
@@ -481,13 +481,13 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	}
 
 	// Retrieve the requested database details
-	var oneLineDesc, fullDesc, defTable pgx.NullString
+	var defTable, fullDesc, oneLineDesc, sourceURL pgx.NullString
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
 		&DB.Info.LastModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
 		&DB.Info.Commits, &DB.Info.CommitID,
 		&DB.Info.DBEntry,
 		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
-		&DB.Info.Public)
+		&DB.Info.Public, &sourceURL)
 
 	if err != nil {
 		log.Printf("Error when retrieving database details: %v\n", err.Error())
@@ -507,6 +507,11 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		DB.Info.DefaultTable = ""
 	} else {
 		DB.Info.DefaultTable = defTable.String
+	}
+	if !sourceURL.Valid {
+		DB.Info.SourceURL = ""
+	} else {
+		DB.Info.SourceURL = sourceURL.String
 	}
 	// Remove the " marks on the start and end of the commit id
 	DB.Info.CommitID = strings.Trim(DB.Info.CommitID, "\"")
@@ -1354,9 +1359,9 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 }
 
 // Saves updated database settings to PostgreSQL.
-func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc string, fullDesc string, defTable string, public bool) error {
+func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc string, fullDesc string, defTable string, public bool, sourceURL string) error {
 	// Check for values which should be NULL
-	var nullable1LineDesc, nullableFullDesc pgx.NullString
+	var nullable1LineDesc, nullableFullDesc, nullableSourceURL pgx.NullString
 	if oneLineDesc == "" {
 		nullable1LineDesc.Valid = false
 	} else {
@@ -1369,11 +1374,17 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc
 		nullableFullDesc.String = fullDesc
 		nullableFullDesc.Valid = true
 	}
+	if sourceURL == "" {
+		nullableSourceURL.Valid = false
+	} else {
+		nullableSourceURL.String = sourceURL
+		nullableSourceURL.Valid = true
+	}
 
 	// Save the database settings
 	SQLQuery := `
 		UPDATE sqlite_databases
-		SET one_line_description = $4, full_description = $5, default_table = $6, public = $7
+		SET one_line_description = $4, full_description = $5, default_table = $6, public = $7, source_url = $8
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
@@ -1382,7 +1393,7 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc
 			AND folder = $2
 			AND db_name = $3`
 	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullable1LineDesc, nullableFullDesc, defTable,
-		public)
+		public, nullableSourceURL)
 	if err != nil {
 		log.Printf("Updating description for database '%s%s%s' failed: %v\n", userName, dbFolder,
 			dbName, err)
@@ -1555,7 +1566,8 @@ func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[
 
 // Stores database details in PostgreSQL, and the database data itself in Minio.
 func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry, c CommitEntry,
-	pub bool, buf []byte, sha string, oneLineDesc string, fullDesc string, createDefBranch bool, branchName string) error {
+	pub bool, buf []byte, sha string, oneLineDesc string, fullDesc string, createDefBranch bool, branchName string,
+	sourceURL string) error {
 	// Store the database file
 	err := StoreDatabaseFile(buf, sha)
 	if err != nil {
@@ -1579,24 +1591,41 @@ func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[
 
 	// Store the database metadata
 	cMap := map[string]CommitEntry{c.ID: c}
+	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH root AS (
 			SELECT nextval('sqlite_databases_db_id_seq') AS val
 		)
 		INSERT INTO sqlite_databases (user_id, db_id, folder, db_name, public, one_line_description, full_description,
-			branch_heads, root_database, commit_list)
+			branch_heads, root_database, commit_list`
+	if sourceURL != "" {
+		dbQuery += `, source_url`
+	}
+	dbQuery +=
+			`)
 		SELECT (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1), (SELECT val FROM root), $2, $3, $4, $5, $6, $8, (SELECT val FROM root), $7
+			WHERE user_name = $1), (SELECT val FROM root), $2, $3, $4, $5, $6, $8, (SELECT val FROM root), $7`
+	if sourceURL != "" {
+		dbQuery += `, $9`
+	}
+	dbQuery += `
 		ON CONFLICT (user_id, folder, db_name)
 			DO UPDATE
 			SET commit_list = sqlite_databases.commit_list || $7,
 				branch_heads = sqlite_databases.branch_heads || $8,
 				last_modified = now(),
 				commits = sqlite_databases.commits + 1`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, pub, nullable1LineDesc, nullableFullDesc,
-		cMap, branches)
+	if sourceURL != "" {
+		dbQuery += `,
+			source_url = $9`
+		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, pub, nullable1LineDesc, nullableFullDesc,
+			cMap, branches, sourceURL)
+	} else {
+		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, pub, nullable1LineDesc, nullableFullDesc,
+			cMap, branches)
+	}
 	if err != nil {
 		log.Printf("Storing database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
 		return err
@@ -1756,7 +1785,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
 				db.watchers, db.stars, db.discussions, db.merge_requests, db.commits, db.branches, db.releases,
 				db.contributors, db.one_line_description, default_commits.id,
-				db.commit_list->default_commits.id->'tree'->'entries'->0->'size' AS size
+				db.commit_list->default_commits.id->'tree'->'entries'->0->'size' AS size, db.source_url
 			FROM sqlite_databases AS db, default_commits
 			WHERE db.db_id = default_commits.db_id`
 	switch public {
@@ -1784,11 +1813,11 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var desc pgx.NullString
+		var desc, source pgx.NullString
 		var oneRow DBInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified, &oneRow.Public,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Commits, &oneRow.Branches,
-			&oneRow.Releases, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.Size)
+			&oneRow.Releases, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.Size, &source)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err
@@ -1797,6 +1826,11 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			oneRow.OneLineDesc = ""
 		} else {
 			oneRow.OneLineDesc = fmt.Sprintf(": %s", desc.String)
+		}
+		if !source.Valid {
+			oneRow.SourceURL = ""
+		} else {
+			oneRow.SourceURL = source.String
 		}
 		list = append(list, oneRow)
 	}

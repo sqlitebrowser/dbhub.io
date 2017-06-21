@@ -1344,7 +1344,10 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	oneLineDesc := r.PostFormValue("onelinedesc")
 	newName := r.PostFormValue("newname")
 	fullDesc := r.PostFormValue("fulldesc")
+	sourceURL := r.PostFormValue("sourceurl") // Optional
 	defTable := r.PostFormValue("defaulttable") // TODO: Update the default table to be "per branch"
+
+	// TODO: Validate the sourceURL field
 
 	// Grab and validate the supplied "public" form field
 	public, err := com.GetPub(r)
@@ -1442,7 +1445,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save settings
-	err = com.SaveDBSettings(dbOwner, dbFolder, dbName, oneLineDesc, fullDesc, defTable, public)
+	err = com.SaveDBSettings(dbOwner, dbFolder, dbName, oneLineDesc, fullDesc, defTable, public, sourceURL)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -1986,10 +1989,10 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Extract the other form variables
 	commitMsg := r.PostFormValue("commitmsg")
+	sourceURL := r.PostFormValue("sourceurl")
 
-	// TODO: Validate the commit message
+	// TODO: Validate the input fields
 
-	// TODO: Add (optional) source URL field to the upload form
 	// TODO: Add (optional) branch name field to the upload form
 	branchName, err := com.GetFormBranch(r) // Optional
 	if err != nil {
@@ -2193,7 +2196,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	b := branches[branchName]
 	b.Commit = c.ID
 	branches[branchName] = b
-	err = com.StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, buf.Bytes(), sha, "", "", needDefaultBranchCreated, branchName)
+	err = com.StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, buf.Bytes(), sha, "", "", needDefaultBranchCreated, branchName, sourceURL)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error storing database")
 		return
