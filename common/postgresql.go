@@ -1789,7 +1789,7 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 		// Unstar the database
 		deleteQuery := `
 		DELETE FROM database_stars
-		WHERE db = $1
+		WHERE db_id = $1
 			AND user_id = (
 				SELECT user_id
 				FROM users
