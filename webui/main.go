@@ -1010,6 +1010,7 @@ func main() {
 	http.HandleFunc("/about", logReq(aboutPage))
 	http.HandleFunc("/branches/", logReq(branchesPage))
 	http.HandleFunc("/commits/", logReq(commitsPage))
+	http.HandleFunc("/contributors/", logReq(contributorsPage))
 	http.HandleFunc("/createbranch/", logReq(createBranchPage))
 	http.HandleFunc("/forks/", logReq(forksHandler))
 	http.HandleFunc("/logout", logReq(logoutHandler))

@@ -125,7 +125,7 @@
                         <label id="viewreleases" ng-bind="'Releases: ' + meta.Releases"></label>
                     </td>
                     <td>
-                        <label id="viewcontribs" ng-bind="'Contributors: ' + meta.Contributors"></label>
+                        <a href="/contributors/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewcontribs" ng-bind="'Contributors: ' + meta.Contributors"></label></a>
                     </td>
                 </tr>
             </table>

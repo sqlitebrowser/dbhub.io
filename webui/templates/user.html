@@ -23,7 +23,7 @@
                         <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' : 'UTC' }} &nbsp;
                         <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
                         <b>Commits:</b> <a href="/commits//{{ meta.Owner + '/' + row.Database }}">{{ row.Commits }}</a> &nbsp;
-                        <b>Contributors:</b> {{ row.Contributors }}<br />
+                        <b>Contributors:</b> <a href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
                         <b>Commit ID:</b> {{ row.CommitID }} &nbsp;<br />
                         <b>Watchers:</b> {{ row.Watchers }} &nbsp;
                         <b>Stars:</b> <a href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;

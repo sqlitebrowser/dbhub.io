@@ -336,6 +336,127 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Render the contributors page, which lists the contributors to a database.
+func contributorsPage(w http.ResponseWriter, r *http.Request) {
+	// Structures to hold page data
+	type AuthorEntry struct {
+		AuthorEmail    string `json:"author_email"`
+		AuthorName     string `json:"author_name"`
+		AuthorUserName string `json:"author_user_name"`
+		NumCommits     int    `json:"num_commits"`
+	}
+	var pageData struct {
+		Auth0         com.Auth0Set
+		Contributors  map[string]AuthorEntry
+		DB            com.SQLiteDBinfo
+		Meta          com.MetaInfo
+	}
+	pageData.Meta.Title = "Branch list"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Retrieve the database owner & name, and branch name
+	// TODO: Add folder support
+	dbFolder := "/"
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/branches/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Validate the supplied information
+	if dbOwner == "" || dbName == "" {
+		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Read the commit list from the database
+	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Fill out the metadata
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+	pageData.Contributors = make(map[string]AuthorEntry)
+	for _, j := range commitList {
+		// Look up the author's username
+		// TODO: There are likely a bunch of ways to optimise this, from keeping the user name entries in a map to
+		// TODO  directly storing the username in the jsonb commit data.  Storing the user name entry in the jsonb is
+		// TODO  probably the way to go, as it would save lookups in a lot of places
+		u, err := com.GetUsernameFromEmail(j.AuthorEmail)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// This ok check is just a way to decide whether to increment the NumCommits counter
+		_, ok := pageData.Contributors[j.AuthorName]
+		if !ok {
+			// This is the first time in the loop we're adding the author to the Contributors list
+			pageData.Contributors[j.AuthorName] = AuthorEntry{
+				AuthorEmail: j.AuthorEmail,
+				AuthorName: j.AuthorName,
+				AuthorUserName: u,
+				NumCommits: 1,
+			}
+		} else {
+			// The author is already in the contributors list, so we increment their NumCommits counter
+			n := pageData.Contributors[j.AuthorName].NumCommits + 1
+			pageData.Contributors[j.AuthorName] = AuthorEntry{
+				AuthorEmail: j.AuthorEmail,
+				AuthorName: j.AuthorName,
+				AuthorUserName: u,
+				NumCommits: n,
+			}
+		}
+	}
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
+	// Render the page
+	t := tmpl.Lookup("contributorsPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 // Displays a web page asking for the new branch name.
 func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
