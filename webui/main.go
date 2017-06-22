@@ -1345,7 +1345,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	oneLineDesc := r.PostFormValue("onelinedesc")
 	newName := r.PostFormValue("newname")
 	fullDesc := r.PostFormValue("fulldesc")
-	sourceURL := r.PostFormValue("sourceurl") // Optional
+	sourceURL := r.PostFormValue("sourceurl")   // Optional
 	defTable := r.PostFormValue("defaulttable") // TODO: Update the default table to be "per branch"
 
 	// TODO: Validate the sourceURL field
