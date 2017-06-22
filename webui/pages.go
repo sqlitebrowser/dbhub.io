@@ -721,7 +721,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", dbOwner, dbName)
 
 	// Retrieve the "forked from" information
-	frkOwn, frkFol, frkDB, err := com.ForkedFrom(dbOwner, "/", dbName)
+	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, "/", dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
 		return
@@ -729,6 +729,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	pageData.Meta.ForkOwner = frkOwn
 	pageData.Meta.ForkFolder = frkFol
 	pageData.Meta.ForkDatabase = frkDB
+	pageData.Meta.ForkDeleted = frkDel
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
@@ -838,8 +839,18 @@ func forksPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder 
 		}
 	}
 
+	// Check if the database exists
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, "That database doesn't seem to exist")
+		return
+	}
+
 	// Retrieve list of forks for the database
-	var err error
 	pageData.Forks, err = com.ForkTree(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError,
@@ -1190,6 +1201,18 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
+
+	// Check if the database exists
+	// TODO: Add folder support
+	exists, err := com.CheckDBExists(dbOwner, "/", dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, "That database doesn't seem to exist")
+		return
+	}
 
 	// Retrieve list of users who starred the database
 	pageData.Stars, err = com.UsersStarredDB(dbOwner, "/", dbName)

@@ -606,6 +606,87 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// This function deletes a database.
+func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Delete Database handler"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract the required form variables
+	dbFolder := r.PostFormValue("dbFolder")
+	dbName := r.PostFormValue("dbName")
+	dbOwner := r.PostFormValue("dbOwner")
+
+	// If any of the required values were empty, indicate failure
+	if dbFolder == "" || dbName == "" || dbOwner == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO: Validate the variables
+
+	// Validate the database name
+	err := com.ValidateDB(dbName)
+	if err != nil {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
+	if dbOwner != loggedInUser {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = com.DeleteDatabase(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Invalidate the memcache data for the database, so the new branch count gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Update succeeded
+	w.WriteHeader(http.StatusOK)
+}
+
 // Sends the X509 DB4S certificate to the user
 func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
@@ -1025,6 +1106,7 @@ func main() {
 	http.HandleFunc("/x/createbranch", logReq(createBranchHandler))
 	http.HandleFunc("/x/deletebranch/", logReq(deleteBranchHandler))
 	http.HandleFunc("/x/deletecommit/", logReq(deleteCommitHandler))
+	http.HandleFunc("/x/deletedatabase/", logReq(deleteDatabaseHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
 	http.HandleFunc("/x/downloadcert", logReq(downloadCertHandler))
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))

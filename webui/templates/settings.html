@@ -116,6 +116,7 @@
                 &nbsp;
             </div>
         </div>
+        <br />
                 <!-- Not implemented yet
                 <table class="table table-bordered table-striped table-responsive">
                     <tr>
@@ -141,41 +142,26 @@
                     </tr>
                 </table>
                 -->
+        <div class="row">
+            <div class="col-md-2">
+                &nbsp;
+            </div>
+            <div class="col-md-8">
+                <h3 style="text-align: center;">Destructive options</h3>
+                <div style="font-size: large; text-align: center; font-style: italic;">Be careful with this...!</div>
+                <br />
+                <form action="" method="post">
+                    <div style="text-align: center;">
+                        <button type="button" class="btn btn-danger" ng-click="deleteDatabase()">Delete database</button>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-2">
+                &nbsp;
+            </div>
+        </div>
     </form>
     <br />
-    <!-- Not implemented yet
-    <div class="row">
-        <div class="col-md-3">
-            &nbsp;
-        </div>
-        <div class="col-md-6">
-            <h2 style="text-align: center;">Database deletion options</h2>
-            <div style="font-size: large; text-align: center; font-style: italic;">Be careful with these!</div>
-            <br />
-            <form action="" method="post">
-                <table class="table table-bordered table-striped table-responsive">
-                    <tr>
-                        <td>
-                            <div style="text-align: center;">
-                                <button type="button" class="btn btn-danger">Delete the complete database (all versions)</button>
-                            </div>
-                        </td>
-                    </tr>
-                    TODO: Maybe list all the database versions below?
-                    <tr>
-                        <td>
-                            <div style="text-align: center;">
-                                <button type="button" class="btn btn-danger">Delete this version ([[ .DB.Info.CommitID ]]) only</button>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </form>
-        </div>
-        <div class="col-md-3">
-            &nbsp;
-        </div>
-    </div> -->
 </div>
 [[ template "footer" . ]]
 <script>
@@ -207,13 +193,24 @@
             document.getElementById("defaulttable").value = newtable;
         };
 
-        // Code for Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
-            redirectUrl: "[[ .Auth0.CallbackURL]]"
-        }});
-
-        $scope.showLock = function() {
-            lock.show();
+        // Delete the database
+        $scope.deleteDatabase = function() {
+            $http({
+                method: "POST",
+                url: "/x/deletedatabase/",
+                data: $httpParamSerializerJQLike({
+                        "dbFolder": "/",
+                        "dbName": [[ .Meta.Database ]],
+                        "dbOwner": [[ .Meta.Owner ]]
+                    }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // If successful, reload the page
+                var status = response.status;
+                if (status == 200) {
+                    window.location = '/[[ .Meta.Owner ]]';
+                }
+            });
         };
 
         // Get rendered markdown from the server, for display in the README preview tab
@@ -247,14 +244,22 @@
             $scope.publicDesc = "&nbsp; Database will be <b>private</b>. Only you have access to it.";
             $scope.radioPublic = "false";
         }
-
         $scope.publicClick = function(newValue) {
             if (newValue === "true") {
                 $scope.publicDesc = "&nbsp; Database will be <b>public</b>. Everyone has read access to it.";
             } else {
                 $scope.publicDesc = "&nbsp; Database will be <b>private</b>. Only you have access to it.";
             }
-        }
+        };
+
+        // Code for Auth0
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+
+        $scope.showLock = function() {
+            lock.show();
+        };
     });
 </script>
 </body>

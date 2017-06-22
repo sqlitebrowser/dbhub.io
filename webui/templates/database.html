@@ -31,10 +31,14 @@
                     <div>
                         <a class="blackLink" href="/">/</a> <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> / [[ .Meta.Database ]]
                     </div>
-                    [[ if .Meta.ForkDatabase ]]
+                    [[ if .Meta.ForkOwner ]]
                     <div style="font-size: small">
                         forked from <a href="/[[ .Meta.ForkOwner ]]">[[ .Meta.ForkOwner ]]</a> /
-                        <a href="/[[ .Meta.ForkOwner ]]/[[ .Meta.ForkDatabase ]]">[[ .Meta.ForkDatabase ]]</a>
+                        [[ if not .Meta.ForkDeleted ]]
+                            <a href="/[[ .Meta.ForkOwner ]]/[[ .Meta.ForkDatabase ]]">[[ .Meta.ForkDatabase ]]</a>
+                        [[ else ]]
+                            deleted database
+                        [[ end ]]
                     </div>
                     [[ end ]]
                 </div>

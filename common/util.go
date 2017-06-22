@@ -76,8 +76,13 @@ func nextChild(loggedInUser string, rawListPtr *[]ForkEntry, outputListPtr *[]Fo
 				rawList[j].IconList = append(rawList[j].IconList, END)
 
 				// If the database is no longer public, then use placeholder details instead
-				if !rawList[j].Public && loggedInUser != rawList[j].Owner {
+				if !rawList[j].Public && (rawList[j].Owner != loggedInUser) {
 					rawList[j].DBName = "private database"
+				}
+
+				// If the database is deleted, use a placeholder indicating that instead
+				if rawList[j].Deleted {
+					rawList[j].DBName = "deleted database"
 				}
 
 				// Add this database to the output list

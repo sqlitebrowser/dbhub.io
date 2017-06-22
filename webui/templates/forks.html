@@ -90,8 +90,14 @@
             return returnList;
         };
 
-        // Display public URLs as clickable links
+        // Ensure private and deleted databases display appropriately
         $scope.rowURL = function(row) {
+            // Simple placeholder for deleted databases
+            if (row.Deleted === true) {
+                return "deleted database";
+            }
+
+            // Create appropriate link or placeholder for public/private databases
             if (row.Public === true) {
                 return '<a href="/'+ row.Owner + row.Folder + row.DBName + '">' + row.DBName + '</a>';
             } else if (row.Owner == "[[ .Meta.LoggedInUser ]]") {

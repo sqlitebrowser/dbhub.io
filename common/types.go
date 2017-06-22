@@ -244,11 +244,13 @@ type ForkEntry struct {
 	Owner      string
 	Processed  bool
 	Public     bool
+	Deleted    bool
 }
 
 type MetaInfo struct {
 	Database     string
 	ForkDatabase string
+	ForkDeleted  bool
 	ForkFolder   string
 	ForkOwner    string
 	LoggedInUser string

@@ -171,7 +171,8 @@ func CheckDBExists(dbOwner string, dbFolder string, dbName string) (bool, error)
 				WHERE user_name = $1
 			)
 			AND folder = $2
-			AND db_name = $3`
+			AND db_name = $3
+			AND is_deleted = false`
 	var DBCount int
 	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DBCount)
 	if err != nil {
@@ -193,18 +194,21 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 		SELECT count(db_id)
 		FROM database_stars
 		WHERE database_stars.user_id = (
-			SELECT user_id
-			FROM users
-			WHERE user_name = $1)
-		AND database_stars.db_id = (
-			SELECT db_id
-			FROM sqlite_databases
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE user_name = $2)
-				AND folder = $3
-				AND db_name = $4)`
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND database_stars.db_id = (
+					SELECT db_id
+					FROM sqlite_databases
+					WHERE user_id = (
+							SELECT user_id
+							FROM users
+							WHERE user_name = $2
+						)
+						AND folder = $3
+						AND db_name = $4
+						AND is_deleted = false)`
 	var starCount int
 	err := pdb.QueryRow(dbQuery, loggedInUser, dbOwner, dbFolder, dbName).Scan(&starCount)
 	if err != nil {
@@ -292,7 +296,8 @@ func CheckUserDBAccess(dbOwner string, dbFolder string, dbName string, loggedInU
 				WHERE user_name = $1
 			)
 			AND folder = $2
-			AND db_name = $3`
+			AND db_name = $3
+			AND is_deleted = false`
 	if dbOwner != loggedInUser {
 		dbQuery += ` AND public = true `
 	}
@@ -373,7 +378,8 @@ func databaseID(dbOwner string, dbFolder string, dbName string) (dbID int, err e
 				FROM users
 				WHERE user_name = $1)
 			AND folder = $2
-			AND db_name = $3`
+			AND db_name = $3
+			AND is_deleted = false`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID)
 	if err != nil {
 		log.Printf("Error looking up database id. Owner: '%s', Database: '%s'. Error: %v\n", dbOwner, dbName,
@@ -394,6 +400,7 @@ func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 			SELECT DISTINCT ON (db_id) db_id, last_modified
 			FROM sqlite_databases
 			WHERE user_id = u.user_id
+			AND is_deleted = false
 		), most_recent_user_db AS (
 			SELECT db_idm, last_modified
 			FROM user_db_list
@@ -403,6 +410,7 @@ func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 			SELECT db_id, last_modified
 			FROM sqlite_databases
 			WHERE public = true
+			AND is_deleted = false
 			ORDER BY last_modified DESC
 		), public_users AS (
 			SELECT DISTINCT ON (db.user_id) db.user_id, db.last_modified
@@ -458,7 +466,8 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 				WHERE user_name = $1
 			)
 			AND db.folder = $2
-			AND db.db_name = $3`
+			AND db.db_name = $3
+			AND db.is_deleted = false`
 
 	// If the request is for another users database, ensure we only look up public ones
 	if loggedInUser != dbOwner {
@@ -551,18 +560,19 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 
 // Returns the star count for a given database.
 func DBStars(dbOwner string, dbFolder string, dbName string) (starCount int, err error) {
-	// Get the ID number of the database
-	dbID, err := databaseID(dbOwner, dbFolder, dbName)
-	if err != nil {
-		return -1, err
-	}
-
 	// Retrieve the updated star count
 	dbQuery := `
 		SELECT stars
 		FROM sqlite_databases
-		WHERE db_id = $1`
-	err = pdb.QueryRow(dbQuery, dbID).Scan(&starCount)
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3
+			AND is_deleted = false`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&starCount)
 	if err != nil {
 		log.Printf("Error looking up star count for database '%s/%s'. Error: %v\n", dbOwner, dbName, err)
 		return -1, err
@@ -615,7 +625,7 @@ func DBVersions(loggedInUser string, dbOwner string, dbFolder string, dbName str
 	return l, nil
 }
 
-// Retrieve the default commit ID for specific database
+// Retrieve the default commit ID for a specific database
 func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, error) {
 	// If no commit ID was supplied, we retrieve the latest commit one from the default branch
 	dbQuery := `
@@ -627,7 +637,8 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 					WHERE user_name = $1
 			)
 			AND folder = $2
-			AND db_name = $3`
+			AND db_name = $3
+			AND is_deleted = false`
 	var commitID string
 	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&commitID)
 	if err != nil {
@@ -635,6 +646,141 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 		return "", errors.New("Internal error when looking up database details")
 	}
 	return commitID, nil
+}
+
+// Deletes a database from PostgreSQL.
+func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
+	// TODO: At some point we'll need to figure out a garbage collection approach to remove databases from Minio which
+	// TODO  are no longer pointed to by anything
+
+	// Begin a transaction
+	tx, err := pdb.Begin()
+	if err != nil {
+		return err
+	}
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// Check if there are any forks of this database
+	dbQuery := `
+		WITH this_db AS (
+			SELECT db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		)
+		SELECT count(*)
+		FROM sqlite_databases AS db, this_db
+		WHERE db.forked_from = this_db.db_id`
+	var numForks int
+	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&numForks)
+	if err != nil {
+		log.Printf("Retreving fork list failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numForks == 0 {
+		// * There are no forks for this database, so we just remove it's entry from sqlite_databases.  The 'ON DELETE
+		// CASCADE' definition for the database_stars table/field should automatically remove any references to the
+		// now deleted entry *
+		dbQuery = `
+			DELETE
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3`
+		commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+		if err != nil {
+			log.Printf("Deleting database entry failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+				err)
+			return err
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf(
+				"Wrong number of rows (%v) affected when deleting database '%s%s%s'\n", numRows, dbOwner,
+				dbFolder, dbName)
+		}
+
+		// Commit the transaction
+		err = tx.Commit()
+		if err != nil {
+			return err
+		}
+
+		// Log the database deletion
+		log.Printf("Database '%s%s%s' deleted\n", dbOwner, dbFolder, dbName)
+		return nil
+	}
+
+	// * If there are any forks of this database, we need to leave stub/placeholder info for its entry so the fork tree
+	// doesn't go weird.  We also set the "is_deleted" boolean to true for its entry, so our database query functions
+	// know to skip it *
+
+	// Delete all stars referencing the database stub
+	dbQuery = `
+		DELETE FROM database_stars
+		WHERE db_id = (
+			SELECT db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+			)`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Deleting (forked) database stars failed for database '%s%s%s': %v\n", dbOwner, dbFolder,
+			dbName, err)
+		return err
+	}
+
+	// Generate a random string to be used in the deleted database's name field, so if the user adds a database with
+	// the deleted one's name then the unique constraint on the database won't reject it
+	newName := "deleted-database-" + RandomString(20)
+
+	// Replace the database entry in sqlite_databases with a stub
+	dbQuery = `
+		UPDATE sqlite_databases AS db
+		SET is_deleted = true, public = false, db_name = $4, last_modified = now()
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, newName)
+	if err != nil {
+		log.Printf("Deleting (forked) database entry failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+			err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when deleting (forked) database '%s%s%s'\n", numRows, dbOwner,
+			dbFolder, dbName)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	// Log the database deletion
+	log.Printf("(Forked) database '%s%s%s' deleted\n", dbOwner, dbFolder, dbName)
+	return nil
 }
 
 // Deletes the latest commit from a given branch.
@@ -657,7 +803,8 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 				WHERE user_name = $1
 			)
 			AND folder = $2
-			AND db_name = $3`
+			AND db_name = $3
+			AND is_deleted = false`
 	var branchList map[string]BranchEntry
 	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&branchList)
 	if err != nil {
@@ -686,7 +833,8 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 				WHERE user_name = $1
 			)
 			AND folder = $2
-			AND db_name = $3`
+			AND db_name = $3
+			AND is_deleted = false`
 	var commitList map[string]CommitEntry
 	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&commitList)
 	if err != nil {
@@ -746,6 +894,7 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 				)
 				AND folder = $2
 				AND db_name = $3
+				AND is_deleted = false
 		)
 		UPDATE sqlite_databases AS db
 		SET branch_heads = $4
@@ -777,6 +926,7 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 				)
 				AND folder = $2
 				AND db_name = $3
+				AND is_deleted = false
 		)
 		UPDATE sqlite_databases AS db
 		SET commit_list = $4
@@ -808,6 +958,7 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 				)
 				AND folder = $2
 				AND db_name = $3
+				AND is_deleted = false
 		), commit_count AS (
 			SELECT count(*) AS total
 			FROM the_db
@@ -902,7 +1053,7 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 
 // Checks if the given database was forked from another, and if so returns that one's owner, folder and database name
 func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string, forkFol string, forkDB string,
-	err error) {
+	forkDel bool, err error) {
 	// Check if the database was forked from another
 	var dbID, forkedFrom pgx.NullInt64
 	dbQuery := `
@@ -918,32 +1069,37 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 	if err != nil {
 		log.Printf("Error checking if database was forked from another '%s%s%s'. Error: %v\n", dbOwner,
 			dbFolder, dbName, err)
-		return "", "", "", err
+		return "", "", "", false, err
 	}
 	if !forkedFrom.Valid {
 		// The database wasn't forked, so return empty strings
-		return "", "", "", nil
+		return "", "", "", false, nil
 	}
 
 	// Return the details of the database this one was forked from
 	dbQuery = `
-		SELECT u.user_name, db.folder, db.db_name
+		SELECT u.user_name, db.folder, db.db_name, db.is_deleted
 		FROM users AS u, sqlite_databases AS db
 		WHERE db.db_id = $1
 			AND u.user_id = db.user_id`
-	err = pdb.QueryRow(dbQuery, forkedFrom).Scan(&forkOwn, &forkFol, &forkDB)
+	err = pdb.QueryRow(dbQuery, forkedFrom).Scan(&forkOwn, &forkFol, &forkDB, &forkDel)
 	if err != nil {
 		log.Printf("Error retrieving forked database information for '%s%s%s'. Error: %v\n", dbOwner,
 			dbFolder, dbName, err)
-		return "", "", "", err
+		return "", "", "", false, err
 	}
-	return forkOwn, forkFol, forkDB, nil
+
+	// If the database this one was forked from has been deleted, indicate that and clear the database name value
+	if forkDel {
+		forkDB = ""
+	}
+	return forkOwn, forkFol, forkDB, forkDel, nil
 }
 
 // Return the complete fork tree for a given database
 func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName string) (outputList []ForkEntry, err error) {
 	dbQuery := `
-		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from
+		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
 		FROM sqlite_databases AS db, users
 		WHERE db.root_database = (
 				SELECT root_database
@@ -968,7 +1124,7 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 	for rows.Next() {
 		var frk pgx.NullInt64
 		var oneRow ForkEntry
-		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk)
+		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk, &oneRow.Deleted)
 		if err != nil {
 			log.Printf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
 				err)
@@ -1003,8 +1159,13 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 	dbList[0].IconList = append(dbList[0].IconList, ROOT)
 
 	// If the root database is no longer public, then use placeholder details instead
-	if !dbList[0].Public {
+	if !dbList[0].Public && (dbList[0].Owner != loggedInUser) {
 		dbList[0].DBName = "private database"
+	}
+
+	// If the root database is deleted, use a placeholder indicating that instead
+	if dbList[0].Deleted {
+		dbList[0].DBName = "deleted database"
 	}
 
 	// Append this completed database line to the output list
@@ -1103,7 +1264,8 @@ func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (strin
 				WHERE user_name = $1
 			)
 			AND db.folder = $2
-			AND db.db_name = $3`
+			AND db.db_name = $3
+			AND db.is_deleted = false`
 	var branchName string
 	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&branchName)
 	if err != nil {
@@ -1132,7 +1294,8 @@ func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]C
 		FROM sqlite_databases AS db, u
 		WHERE db.user_id = u.user_id
 			AND db.folder = $2
-			AND db.db_name = $3`
+			AND db.db_name = $3
+			AND db.is_deleted = false`
 	var l map[string]CommitEntry
 	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&l)
 	if err != nil {
@@ -1249,7 +1412,8 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 				WHERE user_name = $1
 			)
 			AND db.folder = $2
-			AND db.db_name = $3`
+			AND db.db_name = $3
+			AND db.is_deleted = false`
 
 	// If the request is for another users database, it needs to be a public one
 	if loggedInUser != dbOwner {
@@ -1319,6 +1483,7 @@ func PublicUserDBs() ([]UserInfo, error) {
 			SELECT DISTINCT ON (user_id) user_id, last_modified
 			FROM sqlite_databases
 			WHERE public = true
+			AND is_deleted = false
 			ORDER BY user_id, last_modified DESC
 		)
 		SELECT users.user_name, dbs.last_modified
@@ -1905,7 +2070,8 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 				db.contributors, db.one_line_description, default_commits.id,
 				db.commit_list->default_commits.id->'tree'->'entries'->0->'size' AS size, db.source_url
 			FROM sqlite_databases AS db, default_commits
-			WHERE db.db_id = default_commits.db_id`
+			WHERE db.db_id = default_commits.db_id
+				AND db.is_deleted = false`
 	switch public {
 	case DB_PUBLIC:
 		// Only public databases
@@ -2072,14 +2238,18 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 			WHERE user_name = $1
 		),
 		stars AS (
-			SELECT st.db_id, st.user_id, st.date_starred
+			SELECT st.db_id, st.date_starred
 			FROM database_stars AS st, u
 			WHERE st.user_id = u.user_id
+		),
+		db_users AS (
+			SELECT db.user_id, db.db_id, db.folder, db.db_name, stars.date_starred
+			FROM sqlite_databases AS db, stars
+			WHERE db.db_id = stars.db_id
 		)
-		SELECT users.user_name, dbs.db_name, stars.date_starred
-		FROM users, stars, sqlite_databases AS dbs
-		WHERE stars.user_id = users.user_id
-			AND stars.db_id = dbs.db_id
+		SELECT users.user_name, db_users.folder, db_users.db_name, db_users.date_starred
+		FROM users, db_users
+		WHERE users.user_id = db_users.user_id
 		ORDER BY date_starred DESC`
 	rows, err := pdb.Query(dbQuery, userName)
 	if err != nil {
@@ -2089,7 +2259,7 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var oneRow DBEntry
-		err = rows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.DateEntry)
+		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.DateEntry)
 		if err != nil {
 			log.Printf("Error retrieving stars list for user: %v\n", err)
 			return nil, err
@@ -2116,11 +2286,12 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 					)
 					AND folder = $2
 					AND db_name = $3
+					AND is_deleted = false
 				)
 		)
 		SELECT users.user_name, star_users.date_starred
 		FROM users, star_users
-		  WHERE users.user_id = star_users.user_id`
+		WHERE users.user_id = star_users.user_id`
 	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
