@@ -80,7 +80,7 @@
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-style: none;">
                             <span ng-if="(row.id == headCommit) && (row.id != lastCommit)">
-                                <button class="btn btn-default" ng-click="deleteCommit(row.id)">Delete Commit</button>
+                                <button class="btn btn-danger" ng-click="deleteCommit(row.id)">Delete Commit</button>
                             </span>&nbsp;
                         </td>
                     [[ end ]]
