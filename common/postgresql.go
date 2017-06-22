@@ -1826,6 +1826,45 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 	return nil
 }
 
+// Updates the contributors count for a database.
+func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
+	// Get the commit list for the database
+	commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return err
+	}
+
+	// Work out the new contributor count
+	d := map[string]struct{}{}
+	for _, k := range commitList {
+		d[k.AuthorEmail] = struct{}{}
+	}
+	n := len(d)
+
+	// Store the new contributor count in the database
+	dbQuery := `
+		UPDATE sqlite_databases
+		SET contributors = $4
+			WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+				AND folder = $2
+				AND db_name = $3`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, n)
+	if err != nil {
+		log.Printf("Updating contributor count in database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName,
+			err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong # of rows affected (%v) when updating contributor count for database '%s%s%s'\n",
+			numRows, dbOwner, dbFolder, dbName)
+	}
+	return nil
+}
+
 // Returns details for a user.
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `

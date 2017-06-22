@@ -2203,6 +2203,15 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If the database already existed, update it's contributor count
+	if exists {
+		err = com.UpdateContributorsCount(loggedInUser, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Error when updating contributor count for the database")
+			return
+		}
+	}
+
 	// Invalidate the memcached entry for the database (only really useful if we're updating an existing database)
 	err = com.InvalidateCacheEntry(loggedInUser, loggedInUser, "/", dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
@@ -2211,10 +2220,6 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log the successful database upload
-	log.Printf("%s: Username: %v, database '%v' uploaded as '%v/%v', bytes: %v\n", pageName, loggedInUser, dbName,
-		sha[:com.MinioFolderChars], sha[com.MinioFolderChars:], bytesWritten)
-
 	// Invalidate any memcached entries for the previous highest version # of the database
 	err = com.InvalidateCacheEntry(loggedInUser, loggedInUser, dbFolder, dbName, c.ID) // And empty string indicates "for all commits"
 	if err != nil {
@@ -2222,6 +2227,10 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
 		return
 	}
+
+	// Log the successful database upload
+	log.Printf("%s: Username: %v, database '%v' uploaded as '%v/%v', bytes: %v\n", pageName, loggedInUser, dbName,
+		sha[:com.MinioFolderChars], sha[com.MinioFolderChars:], bytesWritten)
 
 	// Database upload succeeded.  Bounce the user to the page for their new database
 	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, "/", dbName), http.StatusTemporaryRedirect)

@@ -346,10 +346,10 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		NumCommits     int    `json:"num_commits"`
 	}
 	var pageData struct {
-		Auth0         com.Auth0Set
-		Contributors  map[string]AuthorEntry
-		DB            com.SQLiteDBinfo
-		Meta          com.MetaInfo
+		Auth0        com.Auth0Set
+		Contributors map[string]AuthorEntry
+		DB           com.SQLiteDBinfo
+		Meta         com.MetaInfo
 	}
 	pageData.Meta.Title = "Branch list"
 
@@ -427,19 +427,19 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			// This is the first time in the loop we're adding the author to the Contributors list
 			pageData.Contributors[j.AuthorName] = AuthorEntry{
-				AuthorEmail: j.AuthorEmail,
-				AuthorName: j.AuthorName,
+				AuthorEmail:    j.AuthorEmail,
+				AuthorName:     j.AuthorName,
 				AuthorUserName: u,
-				NumCommits: 1,
+				NumCommits:     1,
 			}
 		} else {
 			// The author is already in the contributors list, so we increment their NumCommits counter
 			n := pageData.Contributors[j.AuthorName].NumCommits + 1
 			pageData.Contributors[j.AuthorName] = AuthorEntry{
-				AuthorEmail: j.AuthorEmail,
-				AuthorName: j.AuthorName,
+				AuthorEmail:    j.AuthorEmail,
+				AuthorName:     j.AuthorName,
 				AuthorUserName: u,
-				NumCommits: n,
+				NumCommits:     n,
 			}
 		}
 	}
