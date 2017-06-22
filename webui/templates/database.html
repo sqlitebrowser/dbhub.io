@@ -40,7 +40,7 @@
                 </div>
                 <div class="pull-right">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-bind="watchersText" ng-disabled="true" ng-click="toggleWatch()"></button>
+                        <button type="button" class="btn btn-default" ng-disabled="true" ng-click="toggleWatch()">Watch</button>
                         <button type="button" class="btn btn-default" ng-bind="meta.Watchers"></button>
                     </div>
                     <div class="btn-group">
@@ -49,9 +49,9 @@
                     </div>
                     <div class="btn-group">
                         [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
-                            <button type="button" class="btn btn-default" ng-bind="'Forks:'" ng-click="forkDB()"></button>
+                            <button type="button" class="btn btn-default" ng-click="forkDB()">Fork</button>
                         [[ else ]]
-                            <button type="button" class="btn btn-default" ng-bind="'Forks:'" ng-disabled="true"></button>
+                            <button type="button" class="btn btn-default" ng-disabled="true">Fork</button>
                         [[ end ]]
                         <button type="button" class="btn btn-default" ng-bind="meta.Forks" ng-click="forksPage()"></button>
                     </div>
@@ -273,9 +273,6 @@
             SortDir:  [[ .Data.SortDir ]],
             Offset:   [[ .Data.Offset ]],
         }
-
-        $scope.starsText = "Stars";
-        $scope.watchersText = "Watchers";
 
         // Add an appropriate direction arrow (▲/▼) to a column heading
         $scope.addArrow = function(header) {
@@ -532,9 +529,10 @@
         };
 
         // Update star button text to say "Stars" or "Unstar"
+        $scope.starsText = "Star";
         $scope.updateStarsText = function() {
             if ($scope.meta.MyStar != "true") {
-                $scope.starsText = "Stars";
+                $scope.starsText = "Star";
             } else {
                 $scope.starsText = "Unstar";
             }
