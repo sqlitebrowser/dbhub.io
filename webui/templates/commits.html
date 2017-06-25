@@ -79,7 +79,9 @@
                 <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-style: none;">
+                            <button class="btn btn-primary" ng-click="createTag(row.id)">Create Tag</button>
                             <span ng-if="(row.id == headCommit) && (row.id != lastCommit)">
+                                <br /><br />
                                 <button class="btn btn-danger" ng-click="deleteCommit(row.id)">Delete Commit</button>
                             </span>&nbsp;
                         </td>
@@ -116,6 +118,11 @@
         // Bounce to the page for creating branches
         $scope.createBranch = function(commit){
             window.location = "/createbranch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=" + commit;
+        };
+
+        // Bounce to the page for creating tags
+        $scope.createTag = function(commit){
+            window.location = "/createtag/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=" + commit;
         };
 
         // Delete a commit from the viewed branch

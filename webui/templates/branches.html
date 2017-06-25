@@ -47,11 +47,15 @@
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <input type="text" name="{{ row.name }}_name" id="{{ row.name }}_name" size="20" maxlength="20" value="{{ row.name }}">
                         [[ else ]]
-                            <div style="padding-top: 8px;" ng-bind-html="row.name"></div>
+                            <div style="padding-top: 8px;">
+                                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ row.name }}">{{ row.name }}</a>
+                            </div>
                         [[ end ]]
                     </td>
                     <td style="border-style: none;">
-                        <div style="padding-top: 8px;" ng-bind-html="row.commit"></div>
+                        <div style="padding-top: 8px;">
+                            <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}">{{ row.commit }}</a>
+                        </div>
                     </td>
                 </tr>
                 <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
@@ -59,9 +63,7 @@
                         <td style="border-style: none;">
                             <button ng-if="row.name != meta.DefBranch" class="btn btn-primary" ng-click="deleteBranch(row.name)">Delete</button>
                         </td>
-                    [[ end ]]
-                    <td style="border-style: none;" colspan="2">
-                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                        <td style="border-style: none;" colspan="2">
                             <uib-tabset>
                                 <uib-tab index="0" heading="Edit">
                                     <textarea id="{{ row.name }}_desc" name="{{ row.name }}_desc" cols="80" rows="10" style="margin-top: 2px;" placeholder="A description for this branch">{{ row.description }}</textarea>
@@ -71,10 +73,15 @@
                                 </uib-tab>
                             </uib-tabset>
                             <span name="{{ row.name }}_msg" id="{{ row.name }}_msg"></span>
-                        [[ else ]]
+                        </td>
+                    [[ else ]]
+                        <td style="border-style: none;">
+                            &nbsp;
+                        </td>
+                        <td style="border-style: none;">
                             <span ng-bind-html="row.mkdowndesc"></span>
-                        [[ end ]]
-                    </td>
+                        </td>
+                    [[ end ]]
                 </tr>
             </table>
         </div>
@@ -147,7 +154,6 @@
             // Retrieve latest markdown text from the text area
             var rawTxt = document.getElementById(rowDesc + "_desc").value;
             var mkdnID = document.getElementById(rowDesc + "_mkdn");
-            var msgID =  document.getElementById(rowDesc + "_msg");
 
             // Call the server, asking for a rendered version of the markdown
             $http({

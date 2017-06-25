@@ -247,6 +247,107 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		http.StatusTemporaryRedirect)
 }
 
+func createTagHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract and validate the form variables
+	dbOwner, dbName, commit, err := com.GetFormUDC(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
+		return
+	}
+	tagName, err := com.GetFormTag(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect branch name")
+		return
+	}
+	tagMsg := r.PostFormValue("tagmsg") // Optional
+
+	// Check if the requested database exists
+	dbFolder := "/"
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Make sure the database owner matches the logged in user
+	if loggedInUser != dbOwner {
+		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
+		return
+	}
+
+	// Read the branch heads list from the database
+	tags, err := com.GetTags(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Make sure the tag doesn't already exist
+	_, ok := tags[tagName]
+	if ok {
+		errorPage(w, r, http.StatusConflict, "A tag of that name already exists!")
+		return
+	}
+
+	// Create the tag
+	name, email, err := com.GetUserDetails(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusConflict, "An error occurred when retrieving user details")
+	}
+	newTag := com.TagEntry{
+		Commit:      commit,
+		Date:        time.Now(),
+		Message:     tagMsg,
+		TaggerEmail: email,
+		TaggerName:  name,
+	}
+	tags[tagName] = newTag
+
+	// Store it in PostgreSQL
+	err = com.StoreTags(dbOwner, dbFolder, dbName, tags)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Invalidate the memcache data for the database, so the new tag count gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Bounce to the tags page
+	http.Redirect(w, r, fmt.Sprintf("/tags/%s%s%s", loggedInUser, dbFolder, dbName),
+		http.StatusTemporaryRedirect)
+}
+
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Make sure this user creation session is valid
 	sess := session.Get(r)
@@ -687,6 +788,104 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// This function deletes a tag.
+func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Delete Tag handler"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract the required form variables
+	tagName := r.PostFormValue("tagName")
+	dbFolder := r.PostFormValue("dbFolder")
+	dbName := r.PostFormValue("dbName")
+	dbOwner := r.PostFormValue("dbOwner")
+
+	// If any of the required values were empty, indicate failure
+	if tagName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO: Validate the variables
+
+	// Validate the database name
+	err := com.ValidateDB(dbName)
+	if err != nil {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
+	if dbOwner != loggedInUser {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Load the existing tags for the database
+	tags, err := com.GetTags(loggedInUser, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the given tag exists
+	_, ok := tags[tagName]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Delete the tag
+	delete(tags, tagName)
+	err = com.StoreTags(dbOwner, dbFolder, dbName, tags)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Invalidate the memcache data for the database, so the new tag count gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Update succeeded
+	w.WriteHeader(http.StatusOK)
+}
+
 // Sends the X509 DB4S certificate to the user
 func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
@@ -1093,6 +1292,7 @@ func main() {
 	http.HandleFunc("/commits/", logReq(commitsPage))
 	http.HandleFunc("/contributors/", logReq(contributorsPage))
 	http.HandleFunc("/createbranch/", logReq(createBranchPage))
+	http.HandleFunc("/createtag/", logReq(createTagPage))
 	http.HandleFunc("/forks/", logReq(forksHandler))
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))
@@ -1100,13 +1300,16 @@ func main() {
 	http.HandleFunc("/selectusername", logReq(selectUserNamePage))
 	http.HandleFunc("/settings/", logReq(settingsPage))
 	http.HandleFunc("/stars/", logReq(starsPage))
+	http.HandleFunc("/tags/", logReq(tagsPage))
 	http.HandleFunc("/upload/", logReq(uploadFormHandler))
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
 	http.HandleFunc("/x/createbranch", logReq(createBranchHandler))
+	http.HandleFunc("/x/createtag", logReq(createTagHandler))
 	http.HandleFunc("/x/deletebranch/", logReq(deleteBranchHandler))
 	http.HandleFunc("/x/deletecommit/", logReq(deleteCommitHandler))
 	http.HandleFunc("/x/deletedatabase/", logReq(deleteDatabaseHandler))
+	http.HandleFunc("/x/deletetag/", logReq(deleteTagHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
 	http.HandleFunc("/x/downloadcert", logReq(downloadCertHandler))
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
@@ -1118,6 +1321,7 @@ func main() {
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))
 	http.HandleFunc("/x/updatebranch/", logReq(updateBranchHandler))
+	http.HandleFunc("/x/updatetag/", logReq(updateTagHandler))
 	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
 
 	// Static files
@@ -1216,6 +1420,20 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check if a branch name was requested
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		return
+	}
+
+	// Check if a named tag was requested
+	tagName, err := com.GetFormTag(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for tag name")
+		return
+	}
+
 	// Extract sort column, sort direction, and offset variables if present
 	sortCol := r.FormValue("sort")
 	sortDir := r.FormValue("dir")
@@ -1258,7 +1476,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Add support for folders and sub-folders in request paths
-	databasePage(w, r, userName, dbName, commitID, dbTable, sortCol, sortDir, rowOffset)
+	databasePage(w, r, userName, dbName, commitID, dbTable, sortCol, sortDir, rowOffset, branchName, tagName)
 }
 
 // Returns HTML rendered content from a given markdown string, for the settings page README preview tab.
@@ -1983,6 +2201,106 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 		Description: newDesc,
 	}
 	err = com.StoreBranches(dbOwner, dbFolder, dbName, branches)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Update succeeded
+	w.WriteHeader(http.StatusOK)
+}
+
+// This function processes tag rename and message updates.
+func updateTagHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Update Tag handler"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract the required form variables
+	tagName := r.PostFormValue("tagName")
+	dbFolder := r.PostFormValue("dbFolder")
+	dbName := r.PostFormValue("dbName")
+	dbOwner := r.PostFormValue("dbOwner")
+	newMsg := r.PostFormValue("newDesc")
+	newName := r.PostFormValue("newName")
+
+	// If any of the required values were empty, indicate failure
+	if tagName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newMsg == "" || newName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO: Validate the variables
+
+	// Validate the database name
+	err := com.ValidateDB(dbName)
+	if err != nil {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
+	if dbOwner != loggedInUser {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Load the existing tags for the database
+	tags, err := com.GetTags(loggedInUser, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the given tag exists
+	oldInfo, ok := tags[tagName]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Update the tag info
+	delete(tags, tagName)
+	tags[newName] = com.TagEntry{
+		Commit:      oldInfo.Commit,
+		Date:        oldInfo.Date,
+		Message:     newMsg,
+		TaggerEmail: oldInfo.TaggerEmail,
+		TaggerName:  oldInfo.TaggerName,
+	}
+
+	err = com.StoreTags(dbOwner, dbFolder, dbName, tags)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

@@ -75,6 +75,20 @@ func GetFormFolder(r *http.Request) (string, error) {
 	return folder, nil
 }
 
+// Return the requested tag name, from get or post data.
+func GetFormTag(r *http.Request) (string, error) {
+	// If no tag was given in the input, returns an empty string
+	c := r.FormValue("tag")
+	if c == "" {
+		return "", nil
+	}
+	err := Validate.Var(c, "alphanum,min=1,max=32") // 32 seems a reasonable first guess.
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Invalid tag name: '%v'", c))
+	}
+	return c, nil
+}
+
 // Return the username, database, and commit (if any) present in the form data.
 func GetFormUDC(r *http.Request) (string, string, string, error) {
 	// Extract the username

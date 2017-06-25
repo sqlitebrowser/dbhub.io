@@ -9,3 +9,7 @@ from the postgres superuser:
     $ psql < dbhub.sql
 
 It should finish with no errors.
+
+Note - This schema was created using:
+
+    $ pg_dump -Os -U dbhub dbhub > dbhub.sql

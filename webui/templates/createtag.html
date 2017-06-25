@@ -1,0 +1,88 @@
+[[ define "createTagPage" ]]
+<!doctype html>
+<html ng-app="DBHub" ng-controller="createtagView">
+[[ template "head" . ]]
+<body>
+[[ template "header" . ]]
+<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row">
+        <div class="col-md-1">
+            &nbsp;
+        </div>
+        <div class="col-md-10">
+            <h2 style="text-align: center;">Create new tag</h2>
+            <form action="/x/createtag" method="post">
+                <div style="text-align: center;"><i>On commit: [[ .Commit ]]</i></div>
+                <table class="table table-striped table-responsive">
+                    <tr>
+                        <th style="vertical-align: middle;" width="25%">Name for the new tag:</th>
+                        <td>
+                            <input type="text" id="tag" name="tag" size="50" maxlength="80"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top;">
+                            <b>Tag message</b><br /><br />
+                            <i>Markdown (<a href="http://commonmark.org">CommonMark</a> format) is supported</i></td>
+                        <td>
+                            <div>
+                                <uib-tabset active="active">
+                                    <uib-tab index="0" heading="Edit">
+                                        <textarea id="tagmsg" name="tagmsg" cols="80" rows="10" style="margin-top: 2px;" placeholder="A message to display with this tag"></textarea>
+                                    </uib-tab>
+                                    <uib-tab index="1" heading="Preview" select="getMarkdown()">
+                                        <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
+                                    </uib-tab>
+                                </uib-tabset>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div style="text-align: center;">
+                                <input type="hidden" name="commit" value="[[ .Commit ]]">
+                                <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
+                                <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
+                                <input type="submit" class="btn btn-success" value="Create it">
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        <div class="col-md-1">
+            &nbsp;
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('createtagView', function($scope, $http, $httpParamSerializerJQLike) {
+        // Get rendered markdown from the server, for display in the Commit Message preview tab
+        $scope.markDownPreview = "";
+        $scope.getMarkdown = function() {
+            // Retrieve latest markdown text from the text area
+            var txt = document.getElementById("tagmsg").value;
+
+            // Call the server, asking for a rendered version of the markdown
+            $http({
+                method: "POST",
+                url: "/x/markdownpreview/",
+                data: $httpParamSerializerJQLike({"mkdown": txt}),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) { $scope.markDownPreview = response.data; });
+        };
+
+        // Auth0
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+        $scope.showLock = function() {
+            lock.show();
+        };
+    });
+</script>
+</body>
+</html>
+[[ end ]]

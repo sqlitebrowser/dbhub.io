@@ -31,7 +31,8 @@
                         <b>Discussions:</b> {{ row. Discussions }} &nbsp;
                         <b>MRs:</b> {{ row.MRs }} &nbsp;
                         <b>Branches:</b> <a href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
-                        <b>Releases:</b> {{ row.Releases }}
+                        <b>Releases:</b> {{ row.Releases }} &nbsp;
+                        <b>Tags:</b> <a href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
                     </td>
                 </tr>
             </table>

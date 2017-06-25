@@ -232,6 +232,7 @@ type DBInfo struct {
 	SourceURL    string
 	Stars        int
 	Tables       []string
+	Tags         int
 	Watchers     int
 }
 
@@ -277,6 +278,14 @@ type SQLiteRecordSet struct {
 	SortDir   string
 	Tablename string
 	TotalRows int
+}
+
+type TagEntry struct {
+	Commit      string    `json:"commit"`
+	Date        time.Time `json:"date"`
+	Message     string    `json:"message"`
+	TaggerEmail string    `json:"email"`
+	TaggerName  string    `json:"name"`
 }
 
 type WhereClause struct {

@@ -126,6 +126,9 @@
                         <a href="/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewbranches" ng-bind="'Branches: ' + meta.Branches"></label></a>
                     </td>
                     <td>
+                        <a href="/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewtags" ng-bind="'Tags: ' + meta.Tags"></label></a>
+                    </td>
+                    <td>
                         <label id="viewreleases" ng-bind="'Releases: ' + meta.Releases"></label>
                     </td>
                     <td>
@@ -253,6 +256,7 @@
             Stars: "[[ .DB.Info.Stars ]]",
             Watchers: "[[ .DB.Info.Watchers ]]",
             Tables: [[ .DB.Info.Tables ]],
+            Tags: "[[ .DB.Info.Tags ]]",
             [[ if .Meta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]

@@ -97,10 +97,12 @@ CREATE TABLE sqlite_databases (
     forked_from bigint,
     default_table text,
     source_url text,
-    commit_list jsonb NOT NULL,
+    commit_list jsonb,
     branch_heads jsonb,
-    tags jsonb,
-    default_branch text NOT NULL
+    tag_list jsonb,
+    default_branch text,
+    is_deleted boolean DEFAULT false NOT NULL,
+    tags integer DEFAULT 0 NOT NULL
 );
 
 
@@ -137,7 +139,8 @@ CREATE TABLE users (
     password_hash text NOT NULL,
     pref_max_rows integer DEFAULT 10 NOT NULL,
     watchers bigint DEFAULT 0 NOT NULL,
-    default_licence integer
+    default_licence integer,
+    display_name text
 );
 
 
@@ -175,60 +178,6 @@ ALTER TABLE ONLY users ALTER COLUMN user_id SET DEFAULT nextval('users_user_id_s
 
 
 --
--- Data for Name: database_files; Type: TABLE DATA; Schema: public; Owner: -
---
-
-COPY database_files (db_sha256, minio_server, minio_folder, minio_id) FROM stdin;
-\.
-
-
---
--- Data for Name: database_licences; Type: TABLE DATA; Schema: public; Owner: -
---
-
-COPY database_licences (lic_sha256, friendly_name, user_id, licence_url, licence_text) FROM stdin;
-\.
-
-
---
--- Data for Name: database_stars; Type: TABLE DATA; Schema: public; Owner: -
---
-
-COPY database_stars (db_id, user_id, date_starred) FROM stdin;
-\.
-
-
---
--- Data for Name: sqlite_databases; Type: TABLE DATA; Schema: public; Owner: -
---
-
-COPY sqlite_databases (user_id, db_id, folder, db_name, public, date_created, last_modified, watchers, stars, forks, discussions, merge_requests, commits, branches, releases, contributors, one_line_description, full_description, root_database, forked_from, default_table, source_url, commit_list, branch_heads, tags) FROM stdin;
-\.
-
-
---
--- Name: sqlite_databases_db_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
---
-
-SELECT pg_catalog.setval('sqlite_databases_db_id_seq', 1, false);
-
-
---
--- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: -
---
-
-COPY users (user_id, user_name, auth0_id, email, date_joined, client_cert, password_hash, pref_max_rows, watchers, default_licence) FROM stdin;
-\.
-
-
---
--- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
---
-
-SELECT pg_catalog.setval('users_user_id_seq', 1, false);
-
-
---
 -- Name: database_files database_files_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -258,6 +207,14 @@ ALTER TABLE ONLY database_stars
 
 ALTER TABLE ONLY sqlite_databases
     ADD CONSTRAINT sqlite_databases_pkey PRIMARY KEY (db_id);
+
+
+--
+-- Name: sqlite_databases sqlite_databases_user_id_folder_db_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY sqlite_databases
+    ADD CONSTRAINT sqlite_databases_user_id_folder_db_name_key UNIQUE (user_id, folder, db_name);
 
 
 --
@@ -314,13 +271,6 @@ ALTER TABLE ONLY database_stars
 
 ALTER TABLE ONLY sqlite_databases
     ADD CONSTRAINT sqlite_databases_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: public; Type: ACL; Schema: -; Owner: -
---
-
-GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
 --

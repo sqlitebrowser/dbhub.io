@@ -458,7 +458,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
 			db.commits, $4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
 			db.branches, db.releases, db.contributors, db.one_line_description, db.full_description,
-			db.default_table, db.public, db.source_url
+			db.default_table, db.public, db.source_url, db.tags
 		FROM sqlite_databases AS db
 		WHERE db.user_id = (
 				SELECT user_id
@@ -496,7 +496,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		&DB.Info.Commits, &DB.Info.CommitID,
 		&DB.Info.DBEntry,
 		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
-		&DB.Info.Public, &sourceURL)
+		&DB.Info.Public, &sourceURL, &DB.Info.Tags)
 
 	if err != nil {
 		log.Printf("Error when retrieving database details: %v\n", err.Error())
@@ -1305,6 +1305,30 @@ func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]C
 	return l, nil
 }
 
+// Retrieve the tags for a database.
+func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]TagEntry, err error) {
+	dbQuery := `
+		SELECT tag_list
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&tags)
+	if err != nil {
+		log.Printf("Error when retrieving tags for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		return nil, err
+	}
+	if tags == nil {
+		// If there aren't any tags yet, return an empty set instead of nil
+		tags = make(map[string]TagEntry)
+	}
+	return tags, nil
+}
+
 // Retrieve display name and email address for a given user.
 func GetUserDetails(userName string) (string, string, error) {
 	// Retrieve the values from the database
@@ -1914,6 +1938,30 @@ func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branch
 	return nil
 }
 
+// Store the tags for a database.
+func StoreTags(dbOwner string, dbFolder string, dbName string, tags map[string]TagEntry) error {
+	dbQuery := `
+		UPDATE sqlite_databases
+		SET tag_list = $4, tags = $5
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, tags, len(tags))
+	if err != nil {
+		log.Printf("Storing tags for database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected when storing tags for database: '%s%s%s'\n", numRows,
+			dbOwner, dbFolder, dbName)
+	}
+	return nil
+}
+
 // Toggle on or off the starring of a database by a user.
 func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName string) error {
 	// Check if the database is already starred
@@ -2066,7 +2114,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			WHERE db.user_id = u.user_id
 		), dbs AS (
 			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
-				db.watchers, db.stars, db.discussions, db.merge_requests, db.commits, db.branches, db.releases,
+				db.watchers, db.stars, db.discussions, db.merge_requests, db.commits, db.branches, db.releases, db.tags,
 				db.contributors, db.one_line_description, default_commits.id,
 				db.commit_list->default_commits.id->'tree'->'entries'->0->'size' AS size, db.source_url
 			FROM sqlite_databases AS db, default_commits
@@ -2101,7 +2149,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		var oneRow DBInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified, &oneRow.Public,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Commits, &oneRow.Branches,
-			&oneRow.Releases, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.Size, &source)
+			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.Size, &source)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err
