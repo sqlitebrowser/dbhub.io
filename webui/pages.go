@@ -633,12 +633,12 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// If a specific branch was requested, retrieve its latest commit
+	branchHeads, err := com.GetBranches(dbOwner, "/", dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve branch information for database")
+		return
+	}
 	if branchName != "" {
-		branchHeads, err := com.GetBranches(dbOwner, "/", dbName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve branch information for database")
-			return
-		}
 		c, ok := branchHeads[branchName]
 		if !ok {
 			errorPage(w, r, http.StatusInternalServerError, "Unknown branch requested for this database")
@@ -664,7 +664,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 
 	// Check if the user has access to the requested database (and get it's details if available)
 	// TODO: Add proper folder support
-	err := com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, commitID)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -825,6 +825,20 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = com.WebServer()
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", dbOwner, dbName)
+
+	// Fill out the branch info
+	for i := range branchHeads {
+		pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
+	}
+	if branchName == "" {
+		pageData.DB.Info.Branch, err = com.GetDefaultBranchName(dbOwner, "/", dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
+			return
+		}
+	} else {
+		pageData.DB.Info.Branch = branchName
+	}
 
 	// Retrieve the "forked from" information
 	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, "/", dbName)

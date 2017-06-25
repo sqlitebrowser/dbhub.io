@@ -209,7 +209,9 @@ type DBTreeEntry struct {
 }
 
 type DBInfo struct {
+	Branch       string
 	Branches     int
+	BranchList   []string
 	Commits      int
 	CommitID     string
 	Contributors int
