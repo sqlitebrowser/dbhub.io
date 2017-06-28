@@ -31,11 +31,13 @@ func CreateCommitID(c CommitEntry) string {
 
 // Generate the SHA256 for a tree.
 // Tree entry structure is:
-// * [ entry type ] [ sha256 ] [ db name ] [ last modified (timestamp) ] [ db size (bytes) ]
+// * [ entry type ] [ licence sha256] [ file sha256 ] [ file name ] [ last modified (timestamp) ] [ file size (bytes) ]
 func CreateDBTreeID(entries []DBTreeEntry) string {
 	var b bytes.Buffer
 	for _, j := range entries {
 		b.WriteString(string(j.EntryType))
+		b.WriteByte(0)
+		b.WriteString(string(j.LicenceSHA))
 		b.WriteByte(0)
 		b.WriteString(j.Sha256)
 		b.WriteByte(0)

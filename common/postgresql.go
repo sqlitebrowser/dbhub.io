@@ -1,11 +1,11 @@
 package common
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx"
@@ -16,6 +16,22 @@ var (
 	// PostgreSQL connection pool handle
 	pdb *pgx.ConnPool
 )
+
+// Add the default user to the system, used so the referential integrity of licence user_id 0 works.
+func AddDefaultUser() error {
+	// Add the new user to the database
+	dbQuery := `
+		INSERT INTO users (auth0_id, user_name, email, password_hash, client_cert, display_name)
+		VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err := pdb.Exec(dbQuery, RandomString(16), "default", "", RandomString(16), "",
+		"Default system user")
+	if err != nil {
+		// For now, don't bother logging a failure here.  This *might* need changing later on
+		//log.Printf("Adding default user to database failed: %v\n", err)
+		return err
+	}
+	return nil
+}
 
 // Add a user to the system.
 func AddUser(auth0ID string, userName string, password string, email string, displayName string) error {
@@ -361,7 +377,7 @@ func ConnectPostgreSQL() (err error) {
 		return errors.New(fmt.Sprintf("Couldn't connect to PostgreSQL server: %v\n", err))
 	}
 
-	// Log successful connection message
+	// Log successful connection
 	log.Printf("Connected to PostgreSQL server: %v:%v\n", conf.Pg.Server, uint16(conf.Pg.Port))
 
 	return nil
@@ -522,8 +538,6 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	} else {
 		DB.Info.SourceURL = sourceURL.String
 	}
-	// Remove the " marks on the start and end of the commit id
-	DB.Info.CommitID = strings.Trim(DB.Info.CommitID, "\"")
 
 	// Fill out the fields we already have data for
 	DB.Info.Database = dbName
@@ -989,6 +1003,9 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 // Disconnects the PostgreSQL database connection.
 func DisconnectPostgreSQL() {
 	pdb.Close()
+
+	// Log successful disconnection
+	log.Printf("Disconnected from PostgreSQL server: %v:%v\n", conf.Pg.Server, uint16(conf.Pg.Port))
 }
 
 // Fork the PostgreSQL entry for a SQLite database from one user to another
@@ -1305,6 +1322,171 @@ func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]C
 	return l, nil
 }
 
+// Returns the text for a given licence.
+func GetLicence(userName string, licenceName string) (txt string, err error) {
+	dbQuery := `
+		SELECT licence_text
+		FROM database_licences
+		WHERE friendly_name = $2
+		AND (user_id IS NULL
+				OR user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)`
+	err = pdb.QueryRow(dbQuery, userName, licenceName).Scan(&txt)
+	if err != nil {
+		log.Printf("Error when retrieving licence '%s', user '%s': %v\n", licenceName, userName, err)
+		return "", err
+	}
+	if txt == "" {
+		// The requested licence text wasn't found
+		return "", errors.New("Licence text not found")
+	}
+	return txt, nil
+}
+
+// Returns the list of licences available to a user.
+func GetLicences(user string) (map[string]LicenceEntry, error) {
+	dbQuery := `
+		SELECT friendly_name, lic_sha256, licence_url, display_order
+		FROM database_licences
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = 'default'
+			)
+			OR user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)`
+	rows, err := pdb.Query(dbQuery, user)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return nil, err
+	}
+	defer rows.Close()
+	lics := make(map[string]LicenceEntry)
+	for rows.Next() {
+		var name string
+		var oneRow LicenceEntry
+		err = rows.Scan(&name, &oneRow.Sha256, &oneRow.URL, &oneRow.Order)
+		if err != nil {
+			log.Printf("Error retrieving licence list: %v\n", err)
+			return nil, err
+		}
+		lics[name] = oneRow
+	}
+	return lics, nil
+}
+
+// Returns the friendly name + licence URL for the licence matching a given sha256.
+// Note - When user defined licence has the same sha256 as a default one we return the user defined licences' friendly
+// name.
+func GetLicenceInfoFromSha256(userName string, sha256 string) (lName string, lURL string, err error) {
+	dbQuery := `
+		SELECT u.user_name, dl.friendly_name, dl.licence_url
+		FROM database_licences AS dl, users AS u
+		WHERE dl.lic_sha256 = $2
+			AND dl.user_id = u.user_id
+			AND (dl.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = 'default'
+			)
+			OR dl.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			))`
+	rows, err := pdb.Query(dbQuery, userName, sha256)
+	if err != nil {
+		log.Printf("Error when retrieving friendly name for licence sha256 '%s', user '%s': %v\n", sha256,
+			userName, err)
+		return "", "", err
+	}
+	defer rows.Close()
+	type lic struct {
+		Licence string
+		Name    string
+		User    string
+	}
+	var list []lic
+	for rows.Next() {
+		var oneRow lic
+		err = rows.Scan(&oneRow.User, &oneRow.Name, &oneRow.Licence)
+		if err != nil {
+			log.Printf("Error retrieving friendly name for licence sha256 '%s', user: %v\n", sha256, err)
+			return "", "", err
+		}
+		list = append(list, oneRow)
+	}
+
+	// Decide what to return based upon the number of licence matches
+	numLics := len(list)
+	switch numLics {
+	case 0:
+		// If there are no matching sha256's, something has gone wrong
+		return "", "", errors.New("No matching licence found, something has gone wrong!")
+	case 1:
+		// If there's only one matching sha256, we return the corresponding licence name + url
+		lName = list[0].Name
+		lURL = list[0].Licence
+		return lName, lURL, nil
+	default:
+		// If more than one name was found for the matching sha256, that seems a bit trickier.  At least one of them
+		// would have to be a user defined licence, so we'll return the first one of those instead of the default
+		// licence name.  This seems to allow users to define their own friendly name's for the default licences which
+		// is probably not a bad thing
+		for _, j := range list {
+			if j.User == userName {
+				lName = j.Name
+				lURL = j.Licence
+				break
+			}
+		}
+	}
+	if lName == "" {
+		// Multiple licence friendly names were returned, but none of them matched the requesting user.  Something has
+		// gone wrong
+		return "", "", fmt.Errorf("Multiple matching licences found, but belonging to user %s\n", userName)
+	}
+
+	// To get here we must have successfully picked a user defined licence out of several matches.  This seems like
+	// an acceptable scenario
+	return lName, lURL, nil
+}
+
+// Returns the sha256 for a given licence.
+func GetLicenceSha256FromName(userName string, licenceName string) (sha256 string, err error) {
+	dbQuery := `
+		SELECT lic_sha256
+		FROM database_licences
+		WHERE friendly_name = $2
+			AND (user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = 'default'
+			)
+			OR user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			))`
+	err = pdb.QueryRow(dbQuery, userName, licenceName).Scan(&sha256)
+	if err != nil {
+		log.Printf("Error when retrieving sha256 for licence '%s', user '%s' from database: %v\n", licenceName,
+			userName, err)
+		return "", err
+	}
+	if sha256 == "" {
+		// The requested licence wasn't found
+		return "", errors.New("Licence not found")
+	}
+	return sha256, nil
+}
+
 // Retrieve the tags for a database.
 func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]TagEntry, err error) {
 	dbQuery := `
@@ -1330,21 +1512,20 @@ func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]Ta
 }
 
 // Retrieve display name and email address for a given user.
-func GetUserDetails(userName string) (string, string, error) {
+func GetUserDetails(userName string) (displayName string, email string, err error) {
 	// Retrieve the values from the database
 	dbQuery := `
 		SELECT display_name, email
 		FROM users
 		WHERE user_name = $1`
 	var dn, em pgx.NullString
-	err := pdb.QueryRow(dbQuery, userName).Scan(&dn, &em)
+	err = pdb.QueryRow(dbQuery, userName).Scan(&dn, &em)
 	if err != nil {
 		log.Printf("Error when retrieving display name and email for user '%s': %v\n", userName, err)
 		return "", "", err
 	}
 
 	// Return the values which aren't NULL.  For those which are, return an empty string.
-	var displayName, email string
 	if dn.Valid {
 		displayName = dn.String
 	}
@@ -1355,13 +1536,12 @@ func GetUserDetails(userName string) (string, string, error) {
 }
 
 // Returns the username associated with an email address.
-func GetUsernameFromEmail(email string) (string, error) {
+func GetUsernameFromEmail(email string) (userName string, err error) {
 	dbQuery := `
 		SELECT user_name
 		FROM users
 		WHERE email = $1`
-	var u string
-	err := pdb.QueryRow(dbQuery, email).Scan(&u)
+	err = pdb.QueryRow(dbQuery, email).Scan(&userName)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			// No matching username of the email
@@ -1370,7 +1550,7 @@ func GetUsernameFromEmail(email string) (string, error) {
 		log.Printf("Looking up username for email address '%s' failed: %v\n", email, err)
 		return "", err
 	}
-	return u, nil
+	return userName, nil
 }
 
 // Retrieve the highest version number of a database (if any), available to a given user.
@@ -1806,7 +1986,7 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 	return 0, st, fo, nil
 }
 
-// Updates the branches list for database.
+// Updates the branches list for a database.
 func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
@@ -1828,6 +2008,31 @@ func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating branch heads for database '%s%s%s' to '%v'\n",
 			numRows, dbOwner, dbFolder, dbName, branches)
+	}
+	return nil
+}
+
+// Updates the commit list for a database.
+func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map[string]CommitEntry) error {
+	dbQuery := `
+		UPDATE sqlite_databases
+		SET commit_list = $4, commits = $5
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+				)
+			AND folder = $2
+			AND db_name = $3`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, commitList, len(commitList))
+	if err != nil {
+		log.Printf("Updating commit list for database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when updating commit list for database '%s%s%s'\n", numRows,
+			dbOwner, dbFolder, dbName)
 	}
 	return nil
 }
@@ -1934,6 +2139,37 @@ func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branch
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected during update: database: %v, new branch name: '%v'\n",
 			numRows, dbName, branchName)
+	}
+	return nil
+}
+
+// Store a licence.
+func StoreLicence(userName string, licenceName string, txt []byte, url string, orderNum int) error {
+	// Store the licence in PostgreSQL
+	sha := sha256.Sum256(txt)
+	dbQuery := `
+	WITH u AS (
+		SELECT user_id
+		FROM users
+		WHERE user_name = $1
+	)
+	INSERT INTO database_licences (user_id, friendly_name, lic_sha256, licence_text, licence_url, display_order)
+	SELECT (SELECT user_id FROM u), $2, $3, $4, $5, $6
+	ON CONFLICT (user_id, friendly_name)
+		DO UPDATE
+		SET friendly_name = $2,
+			lic_sha256 = $3,
+			licence_text = $4,
+			licence_url = $5,
+			user_id = (SELECT user_id FROM u),
+			display_order = $6`
+	commandTag, err := pdb.Exec(dbQuery, userName, licenceName, hex.EncodeToString(sha[:]), txt, url, orderNum)
+	if err != nil {
+		log.Printf("Inserting licence '%v' in database failed: %v\n", licenceName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected when storing licence '%v'\n", numRows, licenceName)
 	}
 	return nil
 }
@@ -2116,7 +2352,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
 				db.watchers, db.stars, db.discussions, db.merge_requests, db.commits, db.branches, db.releases, db.tags,
 				db.contributors, db.one_line_description, default_commits.id,
-				db.commit_list->default_commits.id->'tree'->'entries'->0->'size' AS size, db.source_url
+				db.commit_list->default_commits.id->'tree'->'entries'->0, db.source_url
 			FROM sqlite_databases AS db, default_commits
 			WHERE db.db_id = default_commits.db_id
 				AND db.is_deleted = false`
@@ -2149,7 +2385,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		var oneRow DBInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified, &oneRow.Public,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Commits, &oneRow.Branches,
-			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.Size, &source)
+			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.DBEntry, &source)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err
@@ -2163,6 +2399,18 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			oneRow.SourceURL = ""
 		} else {
 			oneRow.SourceURL = source.String
+		}
+		oneRow.Size = oneRow.DBEntry.Size
+
+		// Work out the licence name and url for the database entry
+		licSHA := oneRow.DBEntry.LicenceSHA
+		if licSHA != "" {
+			oneRow.Licence, oneRow.LicenceURL, err = GetLicenceInfoFromSha256(userName, licSHA)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			oneRow.Licence = "Not specified"
 		}
 		list = append(list, oneRow)
 	}

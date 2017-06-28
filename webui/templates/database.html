@@ -12,15 +12,6 @@
     .colHeader:hover {
         text-decoration: underline;
     }
-
-    .blackLink {
-        color: black;
-    }
-
-    .blackLink:hover {
-        color: #23527c;
-        text-decoration: underline;
-    }
 </style>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
@@ -64,7 +55,7 @@
         </div>
     </div>
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
-        <div class="col-md-8">
+        <div class="col-md-6">
             <div class="row">
                 <div class="col-md-2">
                     Data
@@ -72,7 +63,7 @@
                 <div class="col-md-3">
                     <label id="viewdiscuss"><a href="">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label id="viewmrs"><a href="">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label>
                 </div>
                 <div class="col-md-3">
@@ -82,12 +73,9 @@
                         &nbsp;
                     [[ end ]]
                 </div>
-                <div class="col-md-1">
-                    &nbsp;
-                </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="pull-right">
                 [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                     <b>Visibility:</b> <a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">{{ meta.Public }}</a> &nbsp;
@@ -95,6 +83,15 @@
                     <b>Visibility:</b> {{ meta.Public }} &nbsp;
                 [[ end ]]
                 <b>Commit:</b> {{ meta.CommitID | limitTo: 8 }} &nbsp;
+                [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                    <b>Licence:</b> <a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">{{ meta.Licence }}</a> &nbsp;
+                [[ else ]]
+                    [[ if ne .DB.Info.LicenceURL "" ]]
+                        <b>Licence:</b> <a class="blackLink" href="{{ meta.LicenceURL }}">{{ meta.Licence }}</a> &nbsp;
+                    [[ else ]]
+                        <b>Licence:</b> {{ meta.Licence }} &nbsp;
+                    [[ end ]]
+                [[ end ]]
                 <b>Size:</b> {{ meta.Size / 1024 | number : 0 }} KB
             </div>
         </div>
@@ -120,19 +117,29 @@
             <table width="100%" class="table table-bordered" style="margin-bottom: 10px;">
                 <tr>
                     <td>
-                        <a href="/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}"><label class="blackLink" id="viewcommits" ng-bind="'Commits: ' + meta.Commits"></label></a>
+                        <div style="text-align: center;">
+                            <a href="/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}"><label class="blackLink" id="viewcommits" ng-bind="'Commits: ' + meta.Commits"></label></a>
+                        </div>
                     </td>
                     <td>
-                        <a href="/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewbranches" ng-bind="'Branches: ' + meta.Branches"></label></a>
+                        <div style="text-align: center;">
+                            <a href="/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewbranches" ng-bind="'Branches: ' + meta.Branches"></label></a>
+                        </div>
                     </td>
                     <td>
-                        <a href="/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewtags" ng-bind="'Tags: ' + meta.Tags"></label></a>
+                        <div style="text-align: center;">
+                            <a href="/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewtags" ng-bind="'Tags: ' + meta.Tags"></label></a>
+                        </div>
                     </td>
                     <td>
-                        <label id="viewreleases" ng-bind="'Releases: ' + meta.Releases"></label>
+                        <div style="text-align: center;">
+                            <label id="viewreleases" ng-bind="'Releases: ' + meta.Releases"></label>
+                        </div>
                     </td>
                     <td>
-                        <a href="/contributors/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewcontribs" ng-bind="'Contributors: ' + meta.Contributors"></label></a>
+                        <div style="text-align: center;">
+                            <a href="/contributors/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewcontribs" ng-bind="'Contributors: ' + meta.Contributors"></label></a>
+                        </div>
                     </td>
                 </tr>
             </table>
@@ -257,6 +264,8 @@
             Discussions: "[[ .DB.Info.Discussions ]]",
             Forks: "[[ .DB.Info.Forks ]]",
             FullDesc: "[[ .DB.Info.FullDesc ]]",
+            Licence: "[[ .DB.Info.Licence ]]",
+            LicenceURL: "[[ .DB.Info.LicenceURL ]]",
             MaxRows: "[[ .DB.MaxRows ]]",
             MRs: "[[ .DB.Info.MRs ]]",
             MyStar: "[[  .MyStar ]]",

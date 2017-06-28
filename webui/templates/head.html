@@ -7,10 +7,17 @@
     <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-2.2.0.min.js"></script>
     <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .nav, .pagination, .carousel, .panel-title a { cursor: pointer; }
+        .nav, .pagination, .carousel, .panel-title a {
+            cursor: pointer;
+        }
 
-        #viewcommits, #viewbranches, #viewtags, #viewreleases, #viewcontribs {
-            margin-left: 30%;
+        .blackLink {
+            color: black;
+        }
+
+        .blackLink:hover {
+            color: #23527c;
+            text-decoration: underline;
         }
     </style>
     <script src="//cdn.auth0.com/js/lock/10.11/lock.min.js"></script>

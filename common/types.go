@@ -22,30 +22,6 @@ const (
 	END
 )
 
-type LicenseType int
-
-const (
-	// From http://opendefinition.org/licenses/
-	CC0 LicenseType = iota
-	PDDL
-	CCBY
-	ODCBY
-	CCBYSA
-	ODbL
-	CCA
-	CCSA
-	DLDEBY
-	DLDE0
-	DSL
-	FAL
-	GNUFDL
-	MIROSL
-	OGLC
-	OGLUK
-	NONE
-	OTHER
-)
-
 type ValType int
 
 const (
@@ -202,7 +178,7 @@ type DBTree struct {
 type DBTreeEntry struct {
 	EntryType     DBTreeEntryType `json:"entry_type"`
 	Last_Modified time.Time       `json:"last_modified"`
-	Licence       string          `json:"licence"`
+	LicenceSHA    string          `json:"licence"`
 	Name          string          `json:"name"`
 	Sha256        string          `json:"sha256"`
 	Size          int             `json:"size"`
@@ -224,7 +200,8 @@ type DBInfo struct {
 	Forks        int
 	FullDesc     string
 	LastModified time.Time
-	License      LicenseType
+	Licence      string
+	LicenceURL   string
 	MRs          int
 	OneLineDesc  string
 	Public       bool
@@ -248,6 +225,12 @@ type ForkEntry struct {
 	Processed  bool
 	Public     bool
 	Deleted    bool
+}
+
+type LicenceEntry struct {
+	Order  int    `json:"order"`
+	Sha256 string `json:"sha256"`
+	URL    string `json:"url"`
 }
 
 type MetaInfo struct {

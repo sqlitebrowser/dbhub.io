@@ -30,6 +30,25 @@
                             <span ng-bind-html="publicDesc"></span>
                         </td>
                     </tr>
+                    <tr>
+                        <th style="vertical-align: middle;" width="25%">Licence</th>
+                        <td style="vertical-align: middle;">
+                            <div class="dropdown">
+                                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="licence" type="button" class="btn">{{ Licence }}</button>
+
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="row in Licences" role="menuitem" ng-click="changeLicence(row.name)">
+                                            <span>&nbsp; <a class="blackLink" href="">{{ row.name }}</a><span ng-if="row.url != ''"> - <a href="{{ row.url }}">info</a></span></span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
                 </table>
                 <uib-accordion>
                     <div uib-accordion-group class="panel-default" heading="Advanced" is-open="false">
@@ -57,11 +76,18 @@
                                     <input type="text" name="sourceurl" size="80" maxlength="240">
                                 </td>
                             </tr>
+                            <tr>
+                                <th style="vertical-align: middle;">Branch:</th>
+                                <td>
+                                    <input type="text" name="branch" size="60" maxlength="60">
+                                </td>
+                            </tr>
                         </table>
                     </div>
                 </uib-accordion>
                 <div style="text-align: center;">
                     <input type="hidden" name="public" value="{{ radioPublic }}">
+                    <input type="hidden" name="licence" value="{{ Licence }}">
                     <input type="submit" class="btn btn-success" value="Upload">
                 </div>
             </form>
@@ -76,14 +102,30 @@
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('uploadView', function($scope, $http, $httpParamSerializerJQLike) {
+        // Sort the licence list into the desired display order
+        var rawLicences = [[ .Licences ]];
+        var numLicences = [[ .NumLicences ]];
+        var numList = [];
+        for (var lic in rawLicences) {
+            numList.push(rawLicences[lic]["order"]);
+        }
+        var sortedNums = numList.sort();
+        var i = 0;
+        $scope.Licences = [];
+        while (i < numLicences) {
+            for (var lic in rawLicences) {
+                if (sortedNums[i] == rawLicences[lic]["order"]) {
+                    var l = {name: lic, url: rawLicences[lic]["url"]};
+                    $scope.Licences.push(l);
+                    i++;
+                }
+            }
+        }
 
-        // Auth0 pieces
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
-            redirectUrl: "[[ .Auth0.CallbackURL]]"
-        }});
-
-        $scope.showLock = function() {
-            lock.show();
+        // Update the chosen licence displayed in the licence dropdown
+        $scope.Licence = "Not specified";
+        $scope.changeLicence = function (name) {
+          $scope.Licence = name;
         };
 
         // Get rendered markdown from the server, for display in the Commit Message preview tab
@@ -104,16 +146,21 @@
         // Set the public radio buttons state when the page first loads
         $scope.publicDesc = "&nbsp; Database will be <b>private</b>. Only you have access to it.";
         $scope.radioPublic = "false";
-
         $scope.publicClick = function(newValue) {
             if (newValue === "true") {
                 $scope.publicDesc = "&nbsp; Database will be <b>public</b>. Everyone has read access to it.";
             } else {
                 $scope.publicDesc = "&nbsp; Database will be <b>private</b>. Only you have access to it.";
             }
-        }
+        };
 
-
+        // Auth0 pieces
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+        $scope.showLock = function() {
+            lock.show();
+        };
     });
 </script>
 </body>

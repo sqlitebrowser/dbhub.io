@@ -1245,6 +1245,30 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	// The default licences to load into the system
+	type licenceInfo struct {
+		DisplayOrder int
+		Path         string
+		URL          string
+	}
+	licences := map[string]licenceInfo{
+		"Not specified": {DisplayOrder: 100,
+			Path: "",
+			URL: ""},
+		"CC0": {DisplayOrder: 200,
+			Path: "CC0-1.0.txt",
+			URL: "https://creativecommons.org/publicdomain/zero/1.0/"},
+		"CC-BY-4.0": {DisplayOrder: 300,
+			Path: "CC-BY-4.0.txt",
+			URL: "https://creativecommons.org/licenses/by/4.0/"},
+		"CC-BY-SA-4.0": {DisplayOrder: 400,
+			Path: "CC-BY-SA-4.0.txt",
+			URL: "https://creativecommons.org/licenses/by-sa/4.0/"},
+		"ODbL-1.0": {DisplayOrder: 500,
+			Path: "ODbL-1.0.txt",
+			URL: "https://opendatacommons.org/licenses/odbl/1.0/"},
+	}
+
 	// Read server configuration
 	var err error
 	if err = com.ReadConfig(); err != nil {
@@ -1265,7 +1289,8 @@ func main() {
 		&session.CookieMngrOptions{AllowHTTP: false})
 
 	// Parse our template files
-	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob("webui/templates/*.html"))
+	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
+		filepath.Join("webui", "templates", "*.html")))
 
 	// Connect to Minio server
 	err = com.ConnectMinio()
@@ -1279,7 +1304,34 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	// Connect to cache server
+	// Add the default user to the system
+	// Note - we don't check for an error here on purpose.  If we were to fail on an error, then subsequent runs after
+	// the first would barf with PG errors about trying to insert multiple "default" users violating unique
+	// constraints.  It would be solvable by creating a special purpose PL/pgSQL function just for this one use case...
+	// or we could just ignore failures here. ;)
+	com.AddDefaultUser()
+
+	// Add the initial default licences to the system
+	// TODO: Probably better to move this into a function call
+	for lName, l := range licences {
+		txt := []byte{}
+		if l.Path != "" {
+			// Read the file contents
+			txt, err = ioutil.ReadFile(filepath.Join("default_licences", l.Path))
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+		}
+
+		// Save the licence text, sha256, and friendly name in the database
+		err = com.StoreLicence("default", lName, txt, l.URL, l.DisplayOrder)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+	}
+	log.Println("Default licences added")
+
+	// Connect to the Memcached server
 	err = com.ConnectCache()
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -1301,7 +1353,7 @@ func main() {
 	http.HandleFunc("/settings/", logReq(settingsPage))
 	http.HandleFunc("/stars/", logReq(starsPage))
 	http.HandleFunc("/tags/", logReq(tagsPage))
-	http.HandleFunc("/upload/", logReq(uploadFormHandler))
+	http.HandleFunc("/upload/", logReq(uploadPage))
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
 	http.HandleFunc("/x/createbranch", logReq(createBranchHandler))
@@ -1647,8 +1699,9 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	fullDesc := r.PostFormValue("fulldesc")
 	sourceURL := r.PostFormValue("sourceurl")   // Optional
 	defTable := r.PostFormValue("defaulttable") // TODO: Update the default table to be "per branch"
+	licences := r.PostFormValue("licences")
 
-	// TODO: Validate the sourceURL field
+	// TODO: Validate the sourceURL and licenceName fields
 
 	// Grab and validate the supplied "public" form field
 	public, err := com.GetPub(r)
@@ -1701,7 +1754,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Close the SQLite database and delete the temp file
+	// Automatically close the SQLite database and delete the temp file when this function finishes running
 	defer func() {
 		sdb.Close()
 		os.Remove(tempFile)
@@ -1731,6 +1784,112 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Requested table '%s' not present in database '%s%s%s'\n",
 				defTable, dbOwner, dbFolder, dbName)
 			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
+			return
+		}
+	}
+
+	// Extract the new licence info for each of the branches
+	branchLics := make(map[string]string)
+	err = json.Unmarshal([]byte(licences), &branchLics)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Grab the complete commit list for the database
+	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Loop through the branches of the database, processing the user submitted licence choice for each
+	branchHeads, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	branchesUpdated := false
+	for bName, bEntry := range branchHeads {
+		// Get the previous licence entry for the branch
+		c, ok := commitList[bEntry.Commit]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
+				"Error when retrieving commit ID '%s', branch '%s' for database '%s%s%s'", bEntry.Commit,
+				bName, dbOwner, dbFolder, dbName))
+			return
+		}
+		licSHA := c.Tree.Entries[0].LicenceSHA
+		var oldLic string
+		if licSHA != "" {
+			oldLic, _, err = com.GetLicenceInfoFromSha256(loggedInUser, licSHA)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
+		// Get the new licence entry for the branch
+		newLic, ok := branchLics[bName]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
+				"Missing licence entry for branch '%s'", bName))
+			return
+		}
+
+		// If the new licence given for a branch is different from the old one, generate a new commit, add it to the
+		// commit list, and update the branch with it
+		if oldLic != newLic {
+			// We reuse the existing commit retrieved previously, just updating the fields which need changing
+			c.AuthorName, c.AuthorEmail, err = com.GetUserDetails(loggedInUser)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			c.CommitterName = c.AuthorName
+			c.CommitterEmail = c.AuthorEmail
+			c.Parent = bEntry.Commit
+			c.Timestamp = time.Now()
+			c.Message = fmt.Sprintf("Licence changed from '%s' to '%s'", oldLic, newLic)
+			newLicSHA, err := com.GetLicenceSha256FromName(loggedInUser, newLic)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			c.Tree.Entries[0].LicenceSHA = newLicSHA
+
+			// Calculate new tree ID, which is a sha256 incorporating the sha256 of the new licence
+			c.Tree.ID = com.CreateDBTreeID(c.Tree.Entries)
+
+			// Calculate a new commit ID, which incorporates the updated tree ID (and thus the new licence sha256)
+			c.ID = ""
+			c.ID = com.CreateCommitID(c)
+
+			// Add the new commit to the commit list
+			commitList[c.ID] = c
+
+			// Update the branch heads list with the new commit, and set a flag indicating it needs to be stored to the
+			// database after the loop finishes
+			newBranchEntry := com.BranchEntry{
+				Commit:      c.ID,
+				Description: bEntry.Description,
+			}
+			branchHeads[bName] = newBranchEntry
+			branchesUpdated = true
+		}
+	}
+
+	// If the branches were updated, store the new commit list and branch heads
+	if branchesUpdated {
+		err = com.StoreCommits(dbOwner, dbFolder, dbName, commitList)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		err = com.StoreBranches(dbOwner, dbFolder, dbName, branchHeads)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 	}
@@ -2310,44 +2469,6 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// This function presents the database upload form to logged in users.
-func uploadFormHandler(w http.ResponseWriter, r *http.Request) {
-	// Retrieve session data (if any)
-	var loggedInUser string
-	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
-	}
-
-	// Ensure we have a valid logged in user
-	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
-		return
-	}
-
-	// Ensure the user has set their display name and email address
-	displayName, email, err := com.GetUserDetails(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving user details")
-		return
-	}
-	if displayName == "" || email == "" {
-		errorPage(w, r, http.StatusBadRequest,
-			"You need to set your full name and email address in Preferences first")
-		return
-	}
-
-	// Render the upload page
-	uploadPage(w, r, fmt.Sprintf("%s", loggedInUser))
-}
-
 // This function processes new database data submitted through the upload form.
 func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Upload DB handler"
@@ -2391,10 +2512,11 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the other form variables
 	commitMsg := r.PostFormValue("commitmsg")
 	sourceURL := r.PostFormValue("sourceurl")
+	licenceName := r.PostFormValue("licence")
 
 	// TODO: Validate the input fields
 
-	// TODO: Add (optional) branch name field to the upload form
+	// Add (optional) branch name field to the upload form
 	branchName, err := com.GetFormBranch(r) // Optional
 	if err != nil {
 		log.Printf("%s: Error when validating branch name '%s': %v\n", pageName, branchName, err)
@@ -2523,36 +2645,39 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	e.Size = buf.Len()
-	// TODO: Add the licence support pieces, so the licence info can be included at upload time
-	//if lName == "" {
-	//	// No licence was specified by the client, so check if the database is already in the system and
-	//	// already has one.  If so, we use that.
-	//	if exists {
-	//		headBranch, ok := branches[branchName]
-	//		if !ok {
-	//			w.WriteHeader(http.StatusBadRequest)
-	//			return
-	//		}
-	//		headCommit, err := getCommit(dbName, headBranch.Commit)
-	//		if err != nil {
-	//			w.WriteHeader(http.StatusInternalServerError)
-	//			return
-	//
-	//		}
-	//		if headCommit.Tree.Entries[0].Licence != "" {
-	//			// The previous commit for the database had a licence, so we use that for this commit
-	//			// too
-	//			e.Licence = headCommit.Tree.Entries[0].Licence
-	//		}
-	//	}
-	//} else {
-	//	// A licence was specified by the client, so use that
-	//	e.Licence, err = getLicenceSha256(lName)
-	//	if err != nil {
-	//		w.WriteHeader(http.StatusInternalServerError)
-	//		return
-	//	}
-	//}
+	if licenceName == "" || licenceName == "Not specified" {
+		// No licence was specified by the client, so check if the database is already in the system and
+		// already has one.  If so, we use that.
+		if exists {
+			headBranch, ok := branches[branchName]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, "Error retrieving branch details")
+				return
+			}
+			commits, err := com.GetCommitList(loggedInUser, dbFolder, dbName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, "Error retrieving commit list")
+				return
+			}
+			headCommit, ok := commits[headBranch.Commit]
+			if !ok {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+
+			}
+			if headCommit.Tree.Entries[0].LicenceSHA != "" {
+				// The previous commit for the database had a licence, so we use that for this commit too
+				e.LicenceSHA = headCommit.Tree.Entries[0].LicenceSHA
+			}
+		}
+	} else {
+		// A licence was specified by the client, so use that
+		e.LicenceSHA, err = com.GetLicenceSha256FromName(loggedInUser, licenceName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Error retrieving licence details")
+			return
+		}
+	}
 
 	// Create a dbTree structure for the database entry
 	var t com.DBTree

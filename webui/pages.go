@@ -648,6 +648,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// If a specific tag was requested, retrieve its commit
+	// TODO: If we need to reduce database calls, we can probably make a function merging this and the GetBranches()
+	// TODO  one above.  Potentially also the DBDetails() call below too.
 	if tagName != "" {
 		tags, err := com.GetTags(dbOwner, "/", dbName)
 		if err != nil {
@@ -671,6 +673,18 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// * Execution can only get here if the user has access to the requested database *
+
+	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
+	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
+	if licSHA != "" {
+		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(dbOwner, licSHA)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		pageData.DB.Info.Licence = "Not specified"
+	}
 
 	// Check if the database was starred by the logged in user
 	myStar, err := com.CheckDBStarred(loggedInUser, dbOwner, "/", dbName)
@@ -1188,11 +1202,14 @@ func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 
 // Render the settings page.
 func settingsPage(w http.ResponseWriter, r *http.Request) {
-	// Structure to hold page data
+	// Structures to hold page data
 	var pageData struct {
-		Auth0 com.Auth0Set
-		DB    com.SQLiteDBinfo
-		Meta  com.MetaInfo
+		Auth0       com.Auth0Set
+		BranchLics  map[string]string
+		DB          com.SQLiteDBinfo
+		Licences    map[string]com.LicenceEntry
+		Meta        com.MetaInfo
+		NumLicences int
 	}
 	pageData.Meta.Title = "Database settings"
 
@@ -1266,6 +1283,54 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve the list of branches
+	branchHeads, err := com.GetBranches(dbOwner, "/", dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve all of the commits for the database
+	commitList, err := com.GetCommitList(dbOwner, "/", dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Work out the licence assigned to each of the branch heads
+	pageData.BranchLics = make(map[string]string)
+	for bName, bEntry := range branchHeads {
+		c, ok := commitList[bEntry.Commit]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
+				"Couldn't retrieve branch '%s' head commit '%s' for database '%s%s%s'\n", bName, bEntry.Commit,
+				dbOwner, "/", dbName))
+			return
+		}
+		licSHA := c.Tree.Entries[0].LicenceSHA
+
+		// If the licence SHA256 field isn't empty, look up the licence info corresponding to it
+		var a string
+		if licSHA != "" {
+			a, _, err = com.GetLicenceInfoFromSha256(dbOwner, licSHA)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		} else {
+			a = "Not specified"
+		}
+		pageData.BranchLics[bName] = a
+	}
+
+	// Populate the licence list
+	pageData.Licences, err = com.GetLicences(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
+		return
+	}
+	pageData.NumLicences = len(pageData.Licences)
+
 	// Fill out the metadata
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
@@ -1274,9 +1339,6 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	if pageData.DB.Info.DefaultTable == "" {
 		pageData.DB.Info.DefaultTable = pageData.DB.Info.Tables[0]
 	}
-
-	// TODO: Hook up the real license choices
-	pageData.DB.Info.License = com.OTHER
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
@@ -1475,13 +1537,61 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func uploadPage(w http.ResponseWriter, r *http.Request, userName string) {
+// This function presents the database upload form to logged in users.
+func uploadPage(w http.ResponseWriter, r *http.Request) {
+	// Data to pass to the upload form
 	var pageData struct {
-		Auth0 com.Auth0Set
-		Meta  com.MetaInfo
+		Auth0         com.Auth0Set
+		Branches      []string
+		DefaultBranch string
+		Licences      map[string]com.LicenceEntry
+		Meta          com.MetaInfo
+		NumLicences   int
 	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Ensure the user has set their display name and email address
+	displayName, email, err := com.GetUserDetails(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving user details")
+		return
+	}
+	if displayName == "" || email == "" {
+		errorPage(w, r, http.StatusBadRequest,
+			"You need to set your full name and email address in Preferences first")
+		return
+	}
+
+	// Populate the licence list
+	pageData.Licences, err = com.GetLicences(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
+		return
+	}
+	pageData.NumLicences = len(pageData.Licences)
+
+	// Fill out page metadata
 	pageData.Meta.Title = "Upload database"
-	pageData.Meta.LoggedInUser = userName
+	pageData.Meta.LoggedInUser = loggedInUser
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
@@ -1490,7 +1600,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request, userName string) {
 
 	// Render the page
 	t := tmpl.Lookup("uploadPage")
-	err := t.Execute(w, pageData)
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
