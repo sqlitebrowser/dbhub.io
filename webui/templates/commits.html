@@ -131,7 +131,7 @@
                 method: "POST",
                 url: "/x/deletecommit/",
                 data: $httpParamSerializerJQLike({
-                        "branchName": $scope.meta.Branch,
+                        "branch": $scope.meta.Branch,
                         "commit": commit,
                         "dbFolder": "/",
                         "dbName": [[ .Meta.Database ]],

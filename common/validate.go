@@ -8,9 +8,10 @@ import (
 )
 
 var (
+	regexBraTagName  = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
 	regexDBName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
 	regexDisplayName = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\ ]+$`)
-	regexFieldName   = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\,\ )]+$`)
+	regexFieldName   = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
 	regexFolder      = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
 	regexPGTable     = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
 	regexUsername    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
@@ -22,12 +23,20 @@ var (
 func init() {
 	// Load validation code
 	Validate = valid.New()
+	Validate.RegisterValidation("branchortagname", checkBranchOrTagName)
 	Validate.RegisterValidation("dbname", checkDBName)
 	Validate.RegisterValidation("displayname", checkDisplayName)
 	Validate.RegisterValidation("fieldname", checkFieldName)
 	Validate.RegisterValidation("folder", checkFolder)
 	Validate.RegisterValidation("pgtable", checkPGTableName)
 	Validate.RegisterValidation("username", checkUsername)
+}
+
+// Custom validation function for branch and tag names.
+// At the moment it just allows alphanumeric and "^.-_/() " chars, though it should probably be extended to cover any
+// valid file name
+func checkBranchOrTagName(fl valid.FieldLevel) bool {
+	return regexBraTagName.MatchString(fl.Field().String())
 }
 
 // Custom validation function for SQLite database names.
@@ -44,8 +53,8 @@ func checkDisplayName(fl valid.FieldLevel) bool {
 }
 
 // Custom validation function for SQLite field names
-// At the moment it just allows alphanumeric and "^.-_/() " chars, though it should probably be extended to cover all valid
-// SQLite field name characters
+// At the moment it just allows alphanumeric and "^.-_/() " chars, though it should probably be extended to cover all
+// valid SQLite field name characters
 func checkFieldName(fl valid.FieldLevel) bool {
 	return regexFieldName.MatchString(fl.Field().String())
 }

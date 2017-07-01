@@ -18,7 +18,7 @@ func GetFormBranch(r *http.Request) (string, error) {
 	if c == "" {
 		return "", nil
 	}
-	err := Validate.Var(c, "alphanum,min=1,max=32") // 32 seems a reasonable first guess.
+	err := Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Invalid branch name: '%v'", c))
 	}
@@ -82,7 +82,7 @@ func GetFormTag(r *http.Request) (string, error) {
 	if c == "" {
 		return "", nil
 	}
-	err := Validate.Var(c, "alphanum,min=1,max=32") // 32 seems a reasonable first guess.
+	err := Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Invalid tag name: '%v'", c))
 	}

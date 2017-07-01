@@ -135,7 +135,7 @@
                 method: "POST",
                 url: "/x/deletebranch/",
                 data: $httpParamSerializerJQLike({
-                        "branchName": branchName,
+                        "branch": branchName,
                         "dbFolder": "/",
                         "dbName": [[ .Meta.Database ]],
                         "dbOwner": [[ .Meta.Owner ]]
@@ -172,7 +172,7 @@
                 method: "POST",
                 url: "/x/setdefaultbranch/",
                 data: $httpParamSerializerJQLike({
-                        "branchName": branchName,
+                        "branch": branchName,
                         "dbFolder": "/",
                         "dbName": [[ .Meta.Database ]],
                         "dbOwner": [[ .Meta.Owner ]]
@@ -198,7 +198,7 @@
                 method: "POST",
                 url: "/x/updatebranch/",
                 data: $httpParamSerializerJQLike({
-                        "branchName": branchName,
+                        "branch": branchName,
                         "dbFolder": "/",
                         "dbName": [[ .Meta.Database ]],
                         "dbOwner": [[ .Meta.Owner ]],

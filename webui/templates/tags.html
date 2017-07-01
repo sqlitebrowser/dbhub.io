@@ -100,7 +100,7 @@
                 method: "POST",
                 url: "/x/deletetag/",
                 data: $httpParamSerializerJQLike({
-                        "tagName": tagName,
+                        "tag": tagName,
                         "dbFolder": "/",
                         "dbName": [[ .Meta.Database ]],
                         "dbOwner": [[ .Meta.Owner ]]
@@ -142,7 +142,7 @@
                 method: "POST",
                 url: "/x/updatetag/",
                 data: $httpParamSerializerJQLike({
-                        "tagName": tagName,
+                        "tag": tagName,
                         "dbFolder": "/",
                         "dbName": [[ .Meta.Database ]],
                         "dbOwner": [[ .Meta.Owner ]],

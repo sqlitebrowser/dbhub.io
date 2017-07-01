@@ -276,7 +276,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	tagName, err := com.GetFormTag(r)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect branch name")
+		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect tag name")
 		return
 	}
 	tagMsg := r.PostFormValue("tagmsg") // Optional
@@ -519,10 +519,16 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	branchName := r.PostFormValue("branchName")
 	dbFolder := r.PostFormValue("dbFolder")
 	dbName := r.PostFormValue("dbName")
 	dbOwner := r.PostFormValue("dbOwner")
+
+	// Check if a branch name was requested
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		return
+	}
 
 	// If any of the required values were empty, indicate failure
 	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
@@ -533,7 +539,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate the variables
 
 	// Validate the database name
-	err := com.ValidateDB(dbName)
+	err = com.ValidateDB(dbName)
 	if err != nil {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -628,11 +634,17 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	branchName := r.PostFormValue("branchName")
 	commit := r.PostFormValue("commit")
 	dbFolder := r.PostFormValue("dbFolder")
 	dbName := r.PostFormValue("dbName")
 	dbOwner := r.PostFormValue("dbOwner")
+
+	// Check if a branch name was requested
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		return
+	}
 
 	// If any of the required values were empty, indicate failure
 	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || commit == "" {
@@ -643,7 +655,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate the variables
 
 	// Validate the database name
-	err := com.ValidateDB(dbName)
+	err = com.ValidateDB(dbName)
 	if err != nil {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -813,10 +825,16 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	tagName := r.PostFormValue("tagName")
 	dbFolder := r.PostFormValue("dbFolder")
 	dbName := r.PostFormValue("dbName")
 	dbOwner := r.PostFormValue("dbOwner")
+
+	// Ensure a tag name was supplied
+	tagName, err := com.GetFormTag(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect tag name")
+		return
+	}
 
 	// If any of the required values were empty, indicate failure
 	if tagName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
@@ -827,7 +845,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate the variables
 
 	// Validate the database name
-	err := com.ValidateDB(dbName)
+	err = com.ValidateDB(dbName)
 	if err != nil {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -1952,10 +1970,16 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	branchName := r.PostFormValue("branchName")
 	dbFolder := r.PostFormValue("dbFolder")
 	dbName := r.PostFormValue("dbName")
 	dbOwner := r.PostFormValue("dbOwner")
+
+	// Check if a branch name was requested
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		return
+	}
 
 	// If any of the required values were empty, indicate failure
 	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
@@ -1966,7 +1990,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate the variables
 
 	// Validate the database name
-	err := com.ValidateDB(dbName)
+	err = com.ValidateDB(dbName)
 	if err != nil {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -2298,12 +2322,18 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	branchName := r.PostFormValue("branchName")
 	dbFolder := r.PostFormValue("dbFolder")
 	dbName := r.PostFormValue("dbName")
 	dbOwner := r.PostFormValue("dbOwner")
 	newDesc := r.PostFormValue("newDesc")
 	newName := r.PostFormValue("newName")
+
+	// Check if a branch name was requested
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		return
+	}
 
 	// If any of the required values were empty, indicate failure
 	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newDesc == "" || newName == "" {
@@ -2314,7 +2344,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate the variables
 
 	// Validate the database name
-	err := com.ValidateDB(dbName)
+	err = com.ValidateDB(dbName)
 	if err != nil {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -2394,12 +2424,18 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	tagName := r.PostFormValue("tagName")
 	dbFolder := r.PostFormValue("dbFolder")
 	dbName := r.PostFormValue("dbName")
 	dbOwner := r.PostFormValue("dbOwner")
 	newMsg := r.PostFormValue("newDesc")
 	newName := r.PostFormValue("newName")
+
+	// Ensure a tag name was supplied
+	tagName, err := com.GetFormTag(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect tag name")
+		return
+	}
 
 	// If any of the required values were empty, indicate failure
 	if tagName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newMsg == "" || newName == "" {
@@ -2410,7 +2446,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate the variables
 
 	// Validate the database name
-	err := com.ValidateDB(dbName)
+	err = com.ValidateDB(dbName)
 	if err != nil {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)
