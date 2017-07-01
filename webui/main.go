@@ -1873,7 +1873,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			c.CommitterEmail = c.AuthorEmail
 			c.Parent = bEntry.Commit
 			c.Timestamp = time.Now()
-			c.Message = fmt.Sprintf("Licence changed from '%s' to '%s'", oldLic, newLic)
+			c.Message = fmt.Sprintf("Licence changed from '%s' to '%s'.", oldLic, newLic)
 			newLicSHA, err := com.GetLicenceSha256FromName(loggedInUser, newLic)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -2567,7 +2567,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure the one line description is 1024 chars or less.  1024 chars is probably a reasonable first guess as to a
 	// useful limit
-	if len(commitMsg) > 80 {
+	if len(commitMsg) > 1024 {
 		errorPage(w, r, http.StatusBadRequest, "Commit message needs to be 1024 characters or less")
 		return
 	}
@@ -2710,6 +2710,18 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 				// The previous commit for the database had a licence, so we use that for this commit too
 				e.LicenceSHA = headCommit.Tree.Entries[0].LicenceSHA
 			}
+		} else {
+			// It's a new database, and the licence hasn't been specified
+			e.LicenceSHA, err = com.GetLicenceSha256FromName(loggedInUser, licenceName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, "Error retrieving licence details")
+				return
+			}
+
+			// If no commit message was given, use a default one and include the info of no licence being specified
+			if commitMsg == "" {
+				commitMsg = "Initial database upload, licence not specified."
+			}
 		}
 	} else {
 		// A licence was specified by the client, so use that
@@ -2717,6 +2729,11 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Error retrieving licence details")
 			return
+		}
+
+		// Generate a reasonable commit message if none was given
+		if !exists {
+			commitMsg = fmt.Sprintf("Initial database upload, using licence %s.", licenceName)
 		}
 	}
 
