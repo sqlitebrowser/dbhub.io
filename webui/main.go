@@ -691,12 +691,38 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	b, ok := branches[branchName]
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Unknown branch name"))
 		return
 	}
 
 	// Check that the given commit matches the head commit of the branch
 	if b.Commit != commit {
 		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte("Only the most recent commit for a branch can be deleted"))
+		return
+	}
+
+	// Ensure that deleting this commit won't result in any isolated tags
+	tagList, err := com.GetTags(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	var conflictedTags string
+	for tName, tEntry := range tagList {
+		// Scan through the database tag list, making sure that none of the tags is for the commit we're deleting
+		if tEntry.Commit == commit {
+			if conflictedTags == "" {
+				conflictedTags = tName
+			} else {
+				conflictedTags += ", " + tName
+			}
+		}
+	}
+	if conflictedTags != "" {
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte(fmt.Sprintf("You need to delete the tag(s) '%s' before you can delete this commit",
+		conflictedTags)))
 		return
 	}
 
