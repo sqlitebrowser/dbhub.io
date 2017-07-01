@@ -702,6 +702,29 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure that deleting this commit won't result in any isolated branches
+	var conflictedBranches string
+	for bName, bEntry := range branches {
+		if bName == branchName {
+			// We only run this comparison from "other branches", not the branch we're deleting from
+			continue
+		}
+		if bEntry.Commit == commit {
+			// Yep, this commit is on other branches too
+			if conflictedBranches == "" {
+				conflictedBranches = bName
+			} else {
+				conflictedBranches += ", " + bName
+			}
+		}
+	}
+	if conflictedBranches != "" {
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte(fmt.Sprintf("You need to delete the branch(es) '%s' before you can delete this commit",
+			conflictedBranches)))
+		return
+	}
+
 	// Ensure that deleting this commit won't result in any isolated tags
 	tagList, err := com.GetTags(dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -722,7 +745,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	if conflictedTags != "" {
 		w.WriteHeader(http.StatusConflict)
 		w.Write([]byte(fmt.Sprintf("You need to delete the tag(s) '%s' before you can delete this commit",
-		conflictedTags)))
+			conflictedTags)))
 		return
 	}
 
