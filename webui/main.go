@@ -1272,19 +1272,19 @@ func main() {
 	licences := map[string]licenceInfo{
 		"Not specified": {DisplayOrder: 100,
 			Path: "",
-			URL: ""},
+			URL:  ""},
 		"CC0": {DisplayOrder: 200,
 			Path: "CC0-1.0.txt",
-			URL: "https://creativecommons.org/publicdomain/zero/1.0/"},
+			URL:  "https://creativecommons.org/publicdomain/zero/1.0/"},
 		"CC-BY-4.0": {DisplayOrder: 300,
 			Path: "CC-BY-4.0.txt",
-			URL: "https://creativecommons.org/licenses/by/4.0/"},
+			URL:  "https://creativecommons.org/licenses/by/4.0/"},
 		"CC-BY-SA-4.0": {DisplayOrder: 400,
 			Path: "CC-BY-SA-4.0.txt",
-			URL: "https://creativecommons.org/licenses/by-sa/4.0/"},
+			URL:  "https://creativecommons.org/licenses/by-sa/4.0/"},
 		"ODbL-1.0": {DisplayOrder: 500,
 			Path: "ODbL-1.0.txt",
-			URL: "https://opendatacommons.org/licenses/odbl/1.0/"},
+			URL:  "https://opendatacommons.org/licenses/odbl/1.0/"},
 	}
 
 	// Read server configuration
@@ -1663,8 +1663,6 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 
 // Handler for the Database Settings page
 func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: Licence
-
 	// Ensure user is logged in
 	var loggedInUser string
 	validSession := false
@@ -1720,6 +1718,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	licences := r.PostFormValue("licences")
 
 	// TODO: Validate the sourceURL and licenceName fields
+
+	// Grab and validate the supplied default branch name
+	defBranch, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		return
+	}
 
 	// Grab and validate the supplied "public" form field
 	public, err := com.GetPub(r)
@@ -1923,7 +1928,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save settings
-	err = com.SaveDBSettings(dbOwner, dbFolder, dbName, oneLineDesc, fullDesc, defTable, public, sourceURL)
+	err = com.SaveDBSettings(dbOwner, dbFolder, dbName, oneLineDesc, fullDesc, defTable, public, sourceURL, defBranch)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return

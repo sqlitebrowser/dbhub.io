@@ -185,34 +185,35 @@ type DBTreeEntry struct {
 }
 
 type DBInfo struct {
-	Branch       string
-	Branches     int
-	BranchList   []string
-	Commits      int
-	CommitID     string
-	Contributors int
-	Database     string
-	DateCreated  time.Time
-	DBEntry      DBTreeEntry
-	DefaultTable string
-	Discussions  int
-	Folder       string
-	Forks        int
-	FullDesc     string
-	LastModified time.Time
-	Licence      string
-	LicenceURL   string
-	MRs          int
-	OneLineDesc  string
-	Public       bool
-	Releases     int
-	SHA256       string
-	Size         int
-	SourceURL    string
-	Stars        int
-	Tables       []string
-	Tags         int
-	Watchers     int
+	Branch        string
+	Branches      int
+	BranchList    []string
+	Commits       int
+	CommitID      string
+	Contributors  int
+	Database      string
+	DateCreated   time.Time
+	DBEntry       DBTreeEntry
+	DefaultBranch string
+	DefaultTable  string
+	Discussions   int
+	Folder        string
+	Forks         int
+	FullDesc      string
+	LastModified  time.Time
+	Licence       string
+	LicenceURL    string
+	MRs           int
+	OneLineDesc   string
+	Public        bool
+	Releases      int
+	SHA256        string
+	Size          int
+	SourceURL     string
+	Stars         int
+	Tables        []string
+	Tags          int
+	Watchers      int
 }
 
 type ForkEntry struct {

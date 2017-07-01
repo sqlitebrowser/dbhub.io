@@ -474,7 +474,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
 			db.commits, $4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
 			db.branches, db.releases, db.contributors, db.one_line_description, db.full_description,
-			db.default_table, db.public, db.source_url, db.tags
+			db.default_table, db.public, db.source_url, db.tags, db.default_branch
 		FROM sqlite_databases AS db
 		WHERE db.user_id = (
 				SELECT user_id
@@ -512,7 +512,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		&DB.Info.Commits, &DB.Info.CommitID,
 		&DB.Info.DBEntry,
 		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
-		&DB.Info.Public, &sourceURL, &DB.Info.Tags)
+		&DB.Info.Public, &sourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch)
 
 	if err != nil {
 		log.Printf("Error when retrieving database details: %v\n", err.Error())
@@ -1807,7 +1807,8 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 }
 
 // Saves updated database settings to PostgreSQL.
-func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc string, fullDesc string, defTable string, public bool, sourceURL string) error {
+func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc string, fullDesc string,
+	defaultTable string, public bool, sourceURL string, defaultBranch string) error {
 	// Check for values which should be NULL
 	var nullable1LineDesc, nullableFullDesc, nullableSourceURL pgx.NullString
 	if oneLineDesc == "" {
@@ -1832,7 +1833,8 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc
 	// Save the database settings
 	SQLQuery := `
 		UPDATE sqlite_databases
-		SET one_line_description = $4, full_description = $5, default_table = $6, public = $7, source_url = $8
+		SET one_line_description = $4, full_description = $5, default_table = $6, public = $7, source_url = $8,
+			default_branch = $9
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
@@ -1840,8 +1842,8 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc
 			)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullable1LineDesc, nullableFullDesc, defTable,
-		public, nullableSourceURL)
+	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullable1LineDesc, nullableFullDesc, defaultTable,
+		public, nullableSourceURL, defaultBranch)
 	if err != nil {
 		log.Printf("Updating description for database '%s%s%s' failed: %v\n", userName, dbFolder,
 			dbName, err)
