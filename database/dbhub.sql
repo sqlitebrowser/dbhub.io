@@ -53,10 +53,31 @@ CREATE TABLE database_files (
 CREATE TABLE database_licences (
     lic_sha256 text NOT NULL,
     friendly_name text NOT NULL,
-    user_id bigint,
+    user_id bigint NOT NULL,
     licence_url text,
-    licence_text text NOT NULL
+    licence_text text NOT NULL,
+    display_order integer,
+    lic_id integer NOT NULL
 );
+
+
+--
+-- Name: database_licences_lic_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE database_licences_lic_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: database_licences_lic_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE database_licences_lic_id_seq OWNED BY database_licences.lic_id;
 
 
 --
@@ -164,6 +185,13 @@ ALTER SEQUENCE users_user_id_seq OWNED BY users.user_id;
 
 
 --
+-- Name: database_licences lic_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY database_licences ALTER COLUMN lic_id SET DEFAULT nextval('database_licences_lic_id_seq'::regclass);
+
+
+--
 -- Name: sqlite_databases db_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -190,7 +218,7 @@ ALTER TABLE ONLY database_files
 --
 
 ALTER TABLE ONLY database_licences
-    ADD CONSTRAINT database_licences_pkey PRIMARY KEY (lic_sha256);
+    ADD CONSTRAINT database_licences_pkey PRIMARY KEY (user_id, friendly_name);
 
 
 --
@@ -239,6 +267,41 @@ ALTER TABLE ONLY users
 
 ALTER TABLE ONLY users
     ADD CONSTRAINT users_user_name_key UNIQUE (user_name);
+
+
+--
+-- Name: database_licences_lic_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX database_licences_lic_id_idx ON database_licences USING btree (lic_id);
+
+
+--
+-- Name: database_licences_lic_sha256_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX database_licences_lic_sha256_idx ON database_licences USING btree (lic_sha256);
+
+
+--
+-- Name: database_licences_user_id_friendly_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX database_licences_user_id_friendly_name_idx ON database_licences USING btree (user_id, friendly_name);
+
+
+--
+-- Name: users_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX users_user_id_idx ON users USING btree (user_id);
+
+
+--
+-- Name: users_user_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX users_user_name_idx ON users USING btree (user_name);
 
 
 --
