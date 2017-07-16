@@ -1443,7 +1443,42 @@ func main() {
 	http.HandleFunc("/x/updatetag/", logReq(updateTagHandler))
 	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
 
-	// Static files
+	// Javascript, CSS, and related files
+	http.HandleFunc("/css/bootstrap-3.3.7.min.css", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "css", "bootstrap-3.3.7.min.css"))
+	}))
+	http.HandleFunc("/css/bootstrap.min.css.map", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "css", "bootstrap-3.3.7.min.css.map"))
+	}))
+	http.HandleFunc("/css/font-awesome-4.7.0.min.css", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "css", "font-awesome-4.7.0.min.css"))
+	}))
+	http.HandleFunc("/css/fontawesome-webfont.woff2", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "css", "fontawesome-webfont-4.7.0.woff2"))
+	}))
+	http.HandleFunc("/js/angular-1.5.11.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.5.11.min.js"))
+	}))
+	http.HandleFunc("/js/angular.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.5.11.min.js.map"))
+	}))
+	http.HandleFunc("/js/angular-sanitize-1.5.11.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.5.11.min.js"))
+	}))
+	http.HandleFunc("/js/angular-sanitize.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.5.11.min.js.map"))
+	}))
+	http.HandleFunc("/js/lock-10.11.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.11.min.js"))
+	}))
+	http.HandleFunc("/js/lock.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.11.min.js.map"))
+	}))
+	http.HandleFunc("/js/ui-bootstrap-tpls-2.2.0.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "ui-bootstrap-tpls-2.2.0.min.js"))
+	}))
+
+	// Other static files
 	http.HandleFunc("/images/auth0.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "images", "auth0.svg"))
 	}))
