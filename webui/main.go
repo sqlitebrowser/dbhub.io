@@ -721,51 +721,79 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure that deleting this commit won't result in any isolated branches
-	var conflictedBranches string
-	for bName, bEntry := range branches {
-		if bName == branchName {
-			// We only run this comparison from "other branches", not the branch we're deleting from
-			continue
-		}
-		if bEntry.Commit == commit {
-			// Yep, this commit is on other branches too
-			if conflictedBranches == "" {
-				conflictedBranches = bName
-			} else {
-				conflictedBranches += ", " + bName
-			}
-		}
-	}
-	if conflictedBranches != "" {
-		w.WriteHeader(http.StatusConflict)
-		w.Write([]byte(fmt.Sprintf("You need to delete the branch(es) '%s' before you can delete this commit",
-			conflictedBranches)))
-		return
-	}
-
-	// Ensure that deleting this commit won't result in any isolated tags
+	// Ensure that deleting this commit won't result in any isolated/unreachable tags
 	tagList, err := com.GetTags(dbOwner, dbFolder, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	var conflictedTags string
+	commitTags := map[string]struct{}{}
 	for tName, tEntry := range tagList {
-		// Scan through the database tag list, making sure that none of the tags is for the commit we're deleting
+		// Scan through the database tag list, checking if any of the tags is for the commit we're deleting
 		if tEntry.Commit == commit {
-			if conflictedTags == "" {
-				conflictedTags = tName
-			} else {
-				conflictedTags += ", " + tName
-			}
+			commitTags[tName] = struct{}{}
 		}
 	}
-	if conflictedTags != "" {
-		w.WriteHeader(http.StatusConflict)
-		w.Write([]byte(fmt.Sprintf("You need to delete the tag(s) '%s' before you can delete this commit",
-			conflictedTags)))
-		return
+	if len(commitTags) > 0 {
+		// If the commit we're deleting has a tag on it, we need to check if the commit is on other branches too
+		//   * If it is, we're ok to delete the commit as the commit/tag can still be reached from the other branch(es)
+		//   * If it isn't, we need to abort the commit (and tell the user), as the tag would become unreachable
+
+		// Get the commit list for the database
+		commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		isolatedTags := true
+		for bName, bEntry := range branches {
+			if bName == branchName {
+				// We only run this comparison from "other branches", not the branch we're deleting from
+				continue
+			}
+			c := commitList[bEntry.Commit]
+			if c.ID == commit {
+				// The commit is also on another branch, so we're ok to delete the commit
+				isolatedTags = false
+				break
+			}
+			for c.Parent != "" {
+				c, ok = commitList[c.Parent]
+				if !ok {
+					log.Printf("Error when checking for isolated tags while deleting commit '%s' in branch '%s' of database '%s%s%s'\n",
+						commit, branchName, dbOwner, dbFolder, dbName)
+					return
+				}
+				if c.ID == commit {
+					// The commit is also on another branch, so we're ok to delete the commit
+					isolatedTags = false
+					break
+				}
+			}
+		}
+
+		// Deleting this commit would result in isolated tags, so abort the delete and tell the user of the problem
+		if isolatedTags {
+			var conflictedTags string
+			for tName := range commitTags {
+				if conflictedTags == "" {
+					conflictedTags = tName
+				} else {
+					conflictedTags += ", " + tName
+				}
+			}
+
+			w.WriteHeader(http.StatusConflict)
+			if len(commitTags) > 1 {
+				w.Write([]byte(fmt.Sprintf("You need to delete the tags '%s' before you can delete this commit",
+					conflictedTags)))
+			} else {
+				w.Write([]byte(fmt.Sprintf("You need to delete the tag '%s' before you can delete this commit",
+					conflictedTags)))
+			}
+			return
+		}
 	}
 
 	// Delete the commit
