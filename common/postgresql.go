@@ -472,7 +472,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	// Retrieve the database details
 	dbQuery := `
 		SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
-			db.commits, $4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
+			$4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
 			db.branches, db.releases, db.contributors, db.one_line_description, db.full_description,
 			db.default_table, db.public, db.source_url, db.tags, db.default_branch
 		FROM sqlite_databases AS db
@@ -509,7 +509,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	var defTable, fullDesc, oneLineDesc, sourceURL pgx.NullString
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
 		&DB.Info.LastModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
-		&DB.Info.Commits, &DB.Info.CommitID,
+		&DB.Info.CommitID,
 		&DB.Info.DBEntry,
 		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
 		&DB.Info.Public, &sourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch)
@@ -894,8 +894,22 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 		}
 	}
 
+	// Count the number of commits in the updated branch
+	c := commitList[headCommit.Parent]
+	commitCount := 1
+	for c.Parent != "" {
+		commitCount++
+		c, ok = commitList[c.Parent]
+		if !ok {
+			log.Printf("Error when counting # of commits in branch '%s' of database '%s%s%s'\n", branchName,
+				dbOwner, dbFolder, dbName)
+			return errors.New("Error when counting commits during commit deletion")
+		}
+	}
+
 	// Update the branch head to point at the previous commit
 	branch.Commit = headCommit.Parent
+	branch.CommitCount = commitCount
 	branchList[branchName] = branch
 	dbQuery = `
 		WITH our_db AS (
@@ -958,38 +972,6 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 				commitID, dbOwner, dbFolder, dbName)
 		}
 
-	}
-
-	// Update the commit counter for the database
-	dbQuery = `
-		WITH the_db AS (
-			SELECT db_id, jsonb_object_keys(commit_list)
-			FROM sqlite_databases
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE user_name = $1
-				)
-				AND folder = $2
-				AND db_name = $3
-				AND is_deleted = false
-		), commit_count AS (
-			SELECT count(*) AS total
-			FROM the_db
-		)
-		UPDATE sqlite_databases AS db
-		SET commits = commit_count.total
-		FROM the_db, commit_count
-		WHERE db.db_id = the_db.db_id`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
-	if err != nil {
-		log.Printf("Updating commit count failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf(
-			"Wrong number of rows (%v) affected when updating commit count for database '%s%s%s'\n", numRows,
-			dbOwner, dbFolder, dbName)
 	}
 
 	// Commit the transaction
@@ -2090,8 +2072,7 @@ func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[
 			DO UPDATE
 			SET commit_list = sqlite_databases.commit_list || $7,
 				branch_heads = sqlite_databases.branch_heads || $8,
-				last_modified = now(),
-				commits = sqlite_databases.commits + 1`
+				last_modified = now()`
 	if sourceURL != "" {
 		dbQuery += `,
 			source_url = $9`
@@ -2352,7 +2333,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			WHERE db.user_id = u.user_id
 		), dbs AS (
 			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
-				db.watchers, db.stars, db.discussions, db.merge_requests, db.commits, db.branches, db.releases, db.tags,
+				db.watchers, db.stars, db.discussions, db.merge_requests, db.branches, db.releases, db.tags,
 				db.contributors, db.one_line_description, default_commits.id,
 				db.commit_list->default_commits.id->'tree'->'entries'->0, db.source_url
 			FROM sqlite_databases AS db, default_commits
@@ -2386,7 +2367,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		var desc, source pgx.NullString
 		var oneRow DBInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified, &oneRow.Public,
-			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Commits, &oneRow.Branches,
+			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Branches,
 			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.DBEntry, &source)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)

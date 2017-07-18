@@ -22,7 +22,6 @@
                         <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
                         <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' : 'UTC' }} &nbsp;
                         <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
-                        <b>Commits:</b> <a class="blackLink" href="/commits//{{ meta.Owner + '/' + row.Database }}">{{ row.Commits }}</a> &nbsp;
                         <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
                         <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
                         <b>Licence:</b> <span ng-if="row.LicenceURL == ''">{{ row.Licence }}</span><span ng-if="row.LicenceURL != ''">

@@ -134,6 +134,7 @@ type Auth0Set struct {
 
 type BranchEntry struct {
 	Commit      string `json:"commit"`
+	CommitCount int    `json:"commit_count"`
 	Description string `json:"description"`
 }
 

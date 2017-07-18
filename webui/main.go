@@ -222,9 +222,28 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Count the number of commits in the new branch
+	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c := commitList[commit]
+	commitCount := 1
+	for c.Parent != "" {
+		commitCount++
+		c, ok = commitList[c.Parent]
+		if !ok {
+			log.Printf("Error when counting commits in new branch '%s' of database '%s%s%s'\n", branchName,
+				dbOwner, dbFolder, dbName)
+			return
+		}
+	}
+
 	// Create the branch
 	newBranch := com.BranchEntry{
 		Commit:      commit,
+		CommitCount: commitCount,
 		Description: branchDesc,
 	}
 	branches[branchName] = newBranch
@@ -2859,10 +2878,35 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		c.Parent = b.Commit
 	}
 
-	// Update the branch with the commit for this new database upload
+	// Create the commit ID for the new upload
 	c.ID = com.CreateCommitID(c)
+
+	// If the database already exists, count the number of commits in the new branch
+	commitCount := 1
+	if exists {
+		commitList, err := com.GetCommitList(loggedInUser, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		var ok bool
+		var c2 com.CommitEntry
+		c2.Parent = c.Parent
+		for c2.Parent != "" {
+			commitCount++
+			c2, ok = commitList[c2.Parent]
+			if !ok {
+				log.Printf("Error when counting commits in branch '%s' of database '%s%s%s'\n", branchName,
+					loggedInUser, dbFolder, dbName)
+				return
+			}
+		}
+	}
+
+	// Update the branch with the commit for this new database upload & the updated commit count for the branch
 	b := branches[branchName]
 	b.Commit = c.ID
+	b.CommitCount = commitCount
 	branches[branchName] = b
 	err = com.StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, buf.Bytes(), sha, "", "", needDefaultBranchCreated, branchName, sourceURL)
 	if err != nil {

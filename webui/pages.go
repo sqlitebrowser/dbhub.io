@@ -845,14 +845,14 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
 	}
 	if branchName == "" {
-		pageData.DB.Info.Branch, err = com.GetDefaultBranchName(dbOwner, "/", dbName)
+		branchName, err = com.GetDefaultBranchName(dbOwner, "/", dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
 			return
 		}
-	} else {
-		pageData.DB.Info.Branch = branchName
 	}
+	pageData.DB.Info.Branch = branchName
+	pageData.DB.Info.Commits = branchHeads[branchName].CommitCount
 
 	// Retrieve the "forked from" information
 	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, "/", dbName)
