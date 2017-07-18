@@ -591,7 +591,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the given branch exists
-	_, ok := branches[branchName]
+	branch, ok := branches[branchName]
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -606,6 +606,113 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	if defBranch == branchName {
 		w.WriteHeader(http.StatusConflict)
 		return
+	}
+
+	// Make sure that deleting this branch wouldn't result in any isolated tags.  For example, when there is a tag on
+	// a commit which is only in this branch, deleting the branch would leave the tag in place with no way to reach it
+
+	// Get the tag list for the database
+	tags, err := com.GetTags(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// If the database has tags, walk the commit history for the branch checking if any of the tags are on commits in
+	// this branch
+	branchTags := make(map[string]string)
+	if len(tags) > 0 {
+		// Walk the commit history for the branch checking if any of the tags are on commits in this branch
+		commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		c := commitList[branch.Commit]
+		for tName, tEntry := range tags {
+			// Scan through the tags, checking if any of them are for this commit
+			if tEntry.Commit == c.ID {
+				// It's a match, so add this tag to the list of tags on this branch
+				branchTags[tName] = c.ID
+			}
+		}
+		for c.Parent != "" {
+			c, ok = commitList[c.Parent]
+			if !ok {
+				log.Printf("Error when checking for isolated tags while deleting branch '%s' of database '%s%s%s'\n",
+					branchName, dbOwner, dbFolder, dbName)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			for tName, tEntry := range tags {
+				// Scan through the tags, checking if any of them are for this commit
+				if tEntry.Commit == c.ID {
+					// It's a match, so add this tag to the list of tags on this branch
+					branchTags[tName] = c.ID
+				}
+			}
+		}
+
+		// For any tags on commits in this branch, check if they're also on other branches
+		if len(branchTags) > 0 {
+			for bName, bEntry := range branches {
+				if bName == branchName {
+					// We're only checking "other branches"
+					continue
+				}
+
+				if len(branchTags) == 0 {
+					// If there are no tags left to check, we might as well stop further looping
+					break
+				}
+
+				c := commitList[bEntry.Commit]
+				for tName, tCommit := range branchTags {
+					if c.ID == tCommit {
+						// This commit matches a tag, so remove the tag from the list
+						delete(branchTags, tName)
+					}
+				}
+				for c.Parent != "" {
+					c, ok = commitList[c.Parent]
+					if !ok {
+						log.Printf("Error when checking for isolated tags while deleting branch '%s' of database '%s%s%s'\n",
+							branchName, dbOwner, dbFolder, dbName)
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					for tName, tCommit := range branchTags {
+						if c.ID == tCommit {
+							// This commit matches a tag, so remove the tag from the list
+							delete(branchTags, tName)
+						}
+					}
+				}
+			}
+		}
+
+		// If there are any tags left over which aren't on other branches, abort this branch deletion and tell the user
+		if len(branchTags) > 0 {
+			var conflictedTags string
+			for tName := range branchTags {
+				if conflictedTags == "" {
+					conflictedTags = tName
+				} else {
+					conflictedTags += ", " + tName
+				}
+			}
+
+			w.WriteHeader(http.StatusConflict)
+			if len(branchTags) > 1 {
+				w.Write([]byte(fmt.Sprintf("You need to delete the tags '%s' before you can delete this branch",
+					conflictedTags)))
+			} else {
+				w.Write([]byte(fmt.Sprintf("You need to delete the tag '%s' before you can delete this branch",
+					conflictedTags)))
+			}
+			return
+		}
 	}
 
 	// Delete the branch
@@ -763,6 +870,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 				if !ok {
 					log.Printf("Error when checking for isolated tags while deleting commit '%s' in branch '%s' of database '%s%s%s'\n",
 						commit, branchName, dbOwner, dbFolder, dbName)
+					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
 				if c.ID == commit {

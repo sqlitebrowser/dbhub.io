@@ -19,6 +19,13 @@
             </h2>
         </div>
     </div>
+    <div class="row" ng-if="statusMessage != ''">
+        <div class="col-md-12">
+            <div style="text-align: center; padding-bottom: 8px;">
+                <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
+            </div>
+        </div>
+    </div>
     <div class="row">
         <div class="col-md-12">
             [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
@@ -72,7 +79,6 @@
                                     <div style="text-align: left; margin-top: 2px;" id="{{ row.name }}_mkdn"></div>
                                 </uib-tab>
                             </uib-tabset>
-                            <span name="{{ row.name }}_msg" id="{{ row.name }}_msg"></span>
                         </td>
                     [[ else ]]
                         <td style="border-style: none;">
@@ -130,6 +136,8 @@
         }
 
         // Delete the branch
+        $scope.statusMessage = "";
+        $scope.statusMessageColour = "Red";
         $scope.deleteBranch = function(branchName) {
             $http({
                 method: "POST",
@@ -147,6 +155,15 @@
                 if (status == 200) {
                     window.location = '/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
                 }
+            }, function failure(response) {
+                // The delete failed, so display the returned error message
+                $scope.statusMessageColour = "Red";
+                if (response.data !== "") {
+                    $scope.statusMessage = "Error: " + response.data;
+                } else {
+                    $scope.statusMessage = "Error: Something went wrong when trying to delete the branch. ;)";
+                }
+
             });
         };
 
@@ -190,7 +207,6 @@
         // Send the update details to the server
         $scope.updateBranch = function(branchName){
             var descID = document.getElementById(branchName + "_desc");
-            var msgID = document.getElementById(branchName + "_msg");
             var nameID = document.getElementById(branchName + "_name");
             var newDesc = descID.value;
             var newName = nameID.value;
@@ -207,13 +223,16 @@
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
-                // Upon return, indicate success or failure
+                // If the update succeeded, let the user know
                 var status = response.status;
                 if (status == 200) {
-                    msgID.textContent = "Updated";
-                } else {
-                    msgID.textContent = "Failed";
+                    $scope.statusMessageColour = "Green";
+                    $scope.statusMessage = "Branch Updated";
                 }
+            }, function failure(response) {
+                // The delete failed, so display the returned error message
+                $scope.statusMessageColour = "Red";
+                $scope.statusMessage = "Branch update failed";
             });
         };
 
