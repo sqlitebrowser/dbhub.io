@@ -78,19 +78,21 @@ func GetCachedData(cacheKey string, cacheData interface{}) (bool, error) {
 	return false, nil
 }
 
-// Invalidate memcache data for a database version or versions
+// Invalidate memcache data for a database entry or entries
 func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) error {
-
-	// If commitID is "", that means "for all versions".  Otherwise, just invalidate the data for the requested one
+	// If commitID is "", that means "for all commits".  Otherwise, just invalidate the data for the requested one
 	var commitList []string
 	if commitID == "" {
-		// Get the list of all versions for the given database
+		// Get the list of all commits for the given database
 		var err error
-		commitList, err = DBVersions(loggedInUser, dbOwner, dbFolder, dbName) // Get the full commit list
-		commitList = append(commitList, "")                                   // Add "" on the end, to indicate all entries
+		l, err := GetCommitList(dbOwner, dbFolder, dbName) // Get the full commit list
 		if err != nil {
 			return err
 		}
+		for i := range l {
+			commitList = append(commitList, i)
+		}
+		commitList = append(commitList, "") // Add "" on the end, to indicate all entries
 	} else {
 		// Only one cached commit needs invalidation
 		commitList = append(commitList, commitID)

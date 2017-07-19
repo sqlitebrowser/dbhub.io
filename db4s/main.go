@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -12,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -99,8 +96,6 @@ func generateDefaultList(pageName string, userAcc string) (defaultList []byte, e
 func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	pageName := "GET request handler"
 
-	// TODO: Update this function to handle folder names
-
 	// Split the request URL into path components
 	pathStrings := strings.Split(r.URL.Path, "/")
 
@@ -147,24 +142,42 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	dbOwner := pathStrings[1]
 	dbName := pathStrings[2]
 
-	// Extract the requested version number from the form data
-	dbVersion, err := com.GetFormVersion(r)
+	// Validate the dbOwner and dbName inputs
+	err := com.ValidateUser(dbOwner)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = com.ValidateDB(dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// If no version number was given, we need to determine the highest available to the requesting user
-	if dbVersion == 0 {
-		dbVersion, err = com.HighestDBVersion(dbOwner, dbName, "/", userAcc)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+	// TODO: Add support for folders and branch names
+	dbFolder := "/"
+	branchName := "master"
+
+	// Extract the requested database commit id from the form data
+	commit, err := com.GetFormCommit(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// If no commit ID was given, we grab the commit ID of the latest database from the default branch
+	if commit == "" {
+		if branchName == "" {
+			commit, err = com.DefaultCommit(dbOwner, dbFolder, dbName)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 
 	// A specific database was requested, so send it to the user
-	err = retrieveDatabase(w, pageName, userAcc, dbOwner, dbName, dbVersion)
+	err = retrieveDatabase(w, pageName, userAcc, dbOwner, dbFolder, dbName, commit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -248,8 +261,26 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	targetUser := pathStrings[1]
 	targetDB := pathStrings[2]
 
+	// Validate the targetUser and targetDB inputs
+	err := com.ValidateUser(targetUser)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = com.ValidateDB(targetDB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: Add support for folders, branches, licences, a commit message, and a source URL
+	targetFolder := "/"
+	branchName := "master"
+	licenceName := ""
+	commitMsg := ""
+	sourceURL := ""
+
 	// Get public/private setting for the database
-	var err error
 	var public bool
 	val := r.Header.Get("public")
 	if val == "" {
@@ -281,105 +312,27 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		return
 	}
 
-	// Copy the file into a local buffer
-	var tempBuf bytes.Buffer
-	nBytes, err := io.Copy(&tempBuf, r.Body)
-	if err != nil {
-		log.Printf("%s: Reading uploaded file failed: %v\n", pageName, err)
-		http.Error(w, fmt.Sprintf("Reading uploaded file failed: %s", err),
-			http.StatusInternalServerError)
-		return
-	}
-	if nBytes == 0 {
-		http.Error(w, "File size is 0 bytes", http.StatusInternalServerError)
-		return
-	}
-
-	// Write the temporary file locally, so we can sanity check it
-	tempDB, err := ioutil.TempFile("", "dbhub-upload-")
-	if err != nil {
-		log.Printf("%s: Error creating temporary file. User: %s, Database: %s, Filename: %s, "+
-			"Error: %v\n", pageName, userAcc, targetDB, tempDB.Name(), err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
-	}
-	_, err = tempDB.Write(tempBuf.Bytes())
-	if err != nil {
-		log.Printf("%s: Error when writing the uploaded db to a temp file. User: %s, Database: %s"+
-			"Error: %v\n", pageName, userAcc, targetDB, err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-		return
-	}
-	tempDBName := tempDB.Name()
-
-	// Delete the temporary file when this function finishes
-	defer os.Remove(tempDBName)
-
-	// Sanity check the uploaded database
-	err = com.SanityCheck(tempDBName)
+	// Sanity check the uploaded database, and if ok then add it to the system
+	numBytes, err := com.AddDatabase(userAcc, targetUser, targetFolder, targetDB, branchName, public, licenceName,
+		commitMsg, sourceURL, r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Generate sha256 of the uploaded file
-	shaSum := sha256.Sum256(tempBuf.Bytes())
-
-	// Check if the database already exists
-	ver, err := com.HighestDBVersion(userAcc, targetDB, "/", userAcc)
-	if err != nil {
-		// No database with that folder/name exists yet
-		http.Error(w, fmt.Sprintf("Database query failure: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Increment the highest version number (this also sets it to 1 if the database didn't exist previously)
-	ver++
-
-	// Generate random filename to store the database as
-	minioID := com.RandomString(8) + ".db"
-
-	// TODO: Do we need to check if that randomly generated filename is already used?
-
-	// Get the Minio bucket name for the user
-	bucket, err := com.MinioUserBucket(userAcc)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error retrieving Minio bucket: %v", err),
-			http.StatusInternalServerError)
-		return
-	}
-
-	// Store the database file in Minio
-	dbSize, err := com.StoreMinioObject(bucket, minioID, &tempBuf, "application/x-sqlite3")
-	if err != nil {
-		log.Printf("%s: Storing file in Minio failed: %v\n", pageName, err)
-		http.Error(w, fmt.Sprintf("Storing file in Minio failed: %v\n", err),
-			http.StatusInternalServerError)
-		return
-	}
-
-	// Add the new database details to the PG database
-	err = com.AddDatabase(userAcc, "/", targetDB, ver, shaSum[:], dbSize, public, bucket, minioID, "", "")
-	// TODO: Should we add support for setting the 1-liner and full description via DB4S too?
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Adding database to PostgreSQL failed: %v\n", err),
-			http.StatusInternalServerError)
-		return
-	}
-
 	// Log the successful database upload
-	log.Printf("Database uploaded: '%v'/'%v' version '%v', bytes: %v\n", userAcc, targetDB, ver, dbSize)
+	log.Printf("Database uploaded: '%s%s%s', bytes: %v\n", userAcc, targetFolder, targetDB, numBytes)
 
 	// Indicate success back to DB4S
 	http.Error(w, fmt.Sprintf("Database created: %s", r.URL.Path), http.StatusCreated)
 }
 
-func retrieveDatabase(w http.ResponseWriter, pageName string, userAcc string, user string, database string,
-	version int) (err error) {
+func retrieveDatabase(w http.ResponseWriter, pageName string, userAcc string, dbOwner string, dbFolder string,
+	dbName string, commit string) (err error) {
 	pageName += ":retrieveDatabase()"
 
-	// Retrieve the Minio bucket and id
-	bucket, id, err := com.MinioBucketID(user, database, version, userAcc)
+	// Retrieve the Minio details for the requested database
+	bucket, id, err := com.MinioLocation(dbOwner, dbFolder, dbName, commit, userAcc)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -401,7 +354,7 @@ func retrieveDatabase(w http.ResponseWriter, pageName string, userAcc string, us
 	}()
 
 	// Send the database to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", url.QueryEscape(database)))
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", url.QueryEscape(dbName)))
 	w.Header().Set("Content-Type", "application/x-sqlite3")
 	bytesWritten, err := io.Copy(w, userDB)
 	if err != nil {
@@ -411,7 +364,7 @@ func retrieveDatabase(w http.ResponseWriter, pageName string, userAcc string, us
 	}
 
 	// Log the transfer
-	log.Printf("%s: '%v' downloaded by user '%v', %v bytes", pageName, database, user, bytesWritten)
+	log.Printf("'%s%s%s' downloaded by user '%v', %v bytes", dbOwner, dbFolder, dbName, userAcc, bytesWritten)
 	return nil
 }
 
@@ -469,7 +422,7 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 	type linkRow struct {
 		Type         string `json:"type"`
 		Name         string `json:"name"`
-		Version      int    `json:"version"`
+		CommitID     string `json:"commit_id"`
 		URL          string `json:"url"`
 		Size         int    `json:"size"`
 		SHA256       string `json:"sha256"`
@@ -500,16 +453,16 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 	var tempRow linkRow
 	for _, j := range pubDBs {
 		tempRow.Type = "database"
-		tempRow.Version = j.Version
+		tempRow.CommitID = j.CommitID
 		if j.Folder == "/" {
 			tempRow.Name = j.Database
-			tempRow.URL = fmt.Sprintf("%s/%s/%s?version=%v", server, user,
-				url.PathEscape(j.Database), j.Version)
+			tempRow.URL = fmt.Sprintf("%s/%s/%s?commit=%v", server, user,
+				url.PathEscape(j.Database), j.CommitID)
 		} else {
 			tempRow.Name = fmt.Sprintf("%s/%s", strings.TrimPrefix(j.Folder, "/"),
 				j.Database)
-			tempRow.URL = fmt.Sprintf("%s/%s%s/%s?version=%v", server, user, j.Folder,
-				url.PathEscape(j.Database), j.Version)
+			tempRow.URL = fmt.Sprintf("%s/%s%s/%s?commit=%v", server, user, j.Folder,
+				url.PathEscape(j.Database), j.CommitID)
 		}
 		tempRow.Size = j.Size
 		tempRow.SHA256 = j.SHA256

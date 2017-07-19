@@ -95,86 +95,6 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 	return nil
 }
 
-// Add a new SQLite database for a user.
-func AddDatabase(dbOwner string, dbFolder string, dbName string, dbVer int, shaSum []byte, dbSize int, public bool, bucket string, id string, descrip string, readme string) error {
-	// Check for values which should be NULL
-	var nullableDescrip, nullableReadme pgx.NullString
-	if descrip == "" {
-		nullableDescrip.Valid = false
-	} else {
-		nullableDescrip.String = descrip
-		nullableDescrip.Valid = true
-	}
-	if readme == "" {
-		nullableReadme.Valid = false
-	} else {
-		nullableReadme.String = readme
-		nullableReadme.Valid = true
-	}
-
-	// If it's a new database, add its details to the main PG sqlite_databases table
-	var dbQuery string
-	if dbVer == 1 {
-		dbQuery = `
-			WITH root_db_value AS (
-				SELECT nextval('sqlite_databases_idnum_seq')
-			)
-			INSERT INTO sqlite_databases (user_id, folder, dbname, public, db_id, root_database, description, readme)
-			VALUES ($1, $2, $3, $4, (SELECT nextval FROM root_db_value), $5, (SELECT nextval FROM root_db_value), $6, $7)`
-		commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, public, bucket, nullableDescrip,
-			nullableReadme)
-		if err != nil {
-			log.Printf("Adding database to PostgreSQL failed: %v\n", err)
-			return err
-		}
-		if numRows := commandTag.RowsAffected(); numRows != 1 {
-			log.Printf("Wrong number of rows (%v) affected when creating initial sqlite_databases "+
-				"entry for '%s%s/%s'\n", numRows, dbOwner, dbFolder, dbName)
-		}
-	}
-
-	// Add the database to database_versions
-	dbQuery = `
-		WITH databaseid AS (
-			SELECT db_id
-			FROM sqlite_databases
-			WHERE user_id = $1
-				AND dbname = $2)
-		INSERT INTO database_versions (db, size, version, sha256, minioid)
-		SELECT idnum, $3, $4, $5, $6
-		FROM databaseid`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, dbSize, dbVer, hex.EncodeToString(shaSum[:]), id)
-	if err != nil {
-		log.Printf("Adding version info to PostgreSQL failed: %v\n", err)
-		return err
-	}
-
-	// Update the last_modified date for the database in sqlite_databases
-	dbQuery = `
-		UPDATE sqlite_databases
-		SET last_modified = (
-			SELECT last_modified
-			FROM database_versions
-			WHERE db = (
-				SELECT idnum
-				FROM sqlite_databases
-				WHERE username = $1
-					AND dbname = $2)
-				AND version = $3)
-		WHERE username = $1
-			AND dbname = $2`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, dbVer)
-	if err != nil {
-		log.Printf("Updating last_modified date in PostgreSQL failed: %v\n", err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows affected: %v, user: %s, database: %v\n", numRows, dbOwner, dbName)
-	}
-
-	return nil
-}
-
 // Check if a database exists
 // If an error occurred, the true/false value should be ignored, as only the error value is valid.
 func CheckDBExists(dbOwner string, dbFolder string, dbName string) (bool, error) {
@@ -263,41 +183,6 @@ func CheckEmailExists(email string) (bool, error) {
 	// Email address IS already in our system
 	return true, nil
 
-}
-
-// Checks if a given MinioID string is available for use by a user. Returns true if available, false if not.  Only
-// if err returns a non-nil value.
-func CheckMinioIDAvail(userName string, id string) (bool, error) {
-	// Check if an existing database for the user already uses the given MinioID
-	var dbVer int
-	dbQuery := `
-		WITH user_databases AS (
-			SELECT idnum
-			FROM sqlite_databases
-			WHERE username = $1)
-		SELECT ver.version
-		FROM database_versions AS ver, user_databases AS db
-		WHERE ver.db = db.idnum
-			AND ver.minioid = $2`
-	err := pdb.QueryRow(dbQuery, userName, id).Scan(&dbVer)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			// Not a real error, there just wasn't a matching row
-			return true, nil
-		}
-
-		// A real database error occurred
-		log.Printf("Error checking if a MinioID is already taken: %v\n", err)
-		return false, err
-	}
-
-	if dbVer == 0 {
-		// Nothing already using the MinioID, so it's available for use
-		return true, nil
-	}
-
-	// The MinioID is already in use
-	return false, nil
 }
 
 // Check if a user has access to a database.
@@ -594,54 +479,9 @@ func DBStars(dbOwner string, dbFolder string, dbName string) (starCount int, err
 	return starCount, nil
 }
 
-// Returns the list of all database versions available to the requesting user
-func DBVersions(loggedInUser string, dbOwner string, dbFolder string, dbName string) ([]string, error) {
-	dbQuery := `
-		SELECT jsonb_object_keys(commit_list) AS commits
-		FROM sqlite_databases
-		WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE user_name = $1)
-				AND folder = $2
-				AND db_name = $3`
-	if loggedInUser != dbOwner {
-		// The request is for another users database, so only return public versions
-		dbQuery += `
-				AND public is true`
-	}
-	dbQuery += `
-		ORDER BY commits DESC`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
-	if err != nil {
-		log.Printf("Database query failed: %v\n", err)
-		return nil, err
-	}
-	defer rows.Close()
-	var l []string
-	for rows.Next() {
-		var i string
-		err = rows.Scan(&i)
-		if err != nil {
-			log.Printf("Error retrieving commit list for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
-				err)
-			return nil, err
-		}
-		l = append(l, i)
-	}
-
-	// Safety checks
-	numResults := len(l)
-	if numResults == 0 {
-		return nil, errors.New("Empty list returned instead of commit list.  This shouldn't happen")
-	}
-
-	return l, nil
-}
-
 // Retrieve the default commit ID for a specific database
 func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, error) {
-	// If no commit ID was supplied, we retrieve the latest commit one from the default branch
+	// If no commit ID was supplied, we retrieve the latest commit ID from the default branch
 	dbQuery := `
 		SELECT branch_heads->default_branch->'commit' AS commit_id
 		FROM sqlite_databases
@@ -1535,46 +1375,13 @@ func GetUsernameFromEmail(email string) (userName string, err error) {
 	return userName, nil
 }
 
-// Retrieve the highest version number of a database (if any), available to a given user.
-// Use the empty string "" to retrieve the highest available public version.
-func HighestDBVersion(dbOwner string, dbName string, dbFolder string, loggedInUser string) (ver int, err error) {
-	dbQuery := `
-		SELECT version
-		FROM database_versions
-		WHERE db = (
-			SELECT idnum
-			FROM sqlite_databases
-			WHERE username = $1
-				AND dbname = $2
-				AND folder = $3`
-	if dbOwner != loggedInUser {
-		dbQuery += `
-				AND public = true`
-	}
-	dbQuery += `
-			)
-		ORDER BY version DESC
-		LIMIT 1`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbName, dbFolder).Scan(&ver)
-	if err != nil && err != pgx.ErrNoRows {
-		log.Printf("Error when retrieving highest database version # for '%s/%s'. Error: %v\n", dbOwner,
-			dbName, err)
-		return -1, err
-	}
-	if err == pgx.ErrNoRows {
-		// No database versions seem to be present
-		return 0, nil
-	}
-	return ver, nil
-}
-
 // Return the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from owner/folder/database URL
 // fragment, // loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
 // string ("") as the loggedInUser parameter if the true value isn't set or known.
 // If the requested database doesn't exist, or the loggedInUser doesn't have access to it, then an error will be
 // returned.
-func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (string,
-	string, error) {
+func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (minioBucket string,
+	minioID string, err error) {
 
 	// TODO: This will likely need updating to query the "database_files" table to retrieve the Minio server name
 
@@ -1583,7 +1390,7 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 		var err error
 		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
 		if err != nil {
-			return "", "", err
+			return minioBucket, minioID, err // Bucket and ID are still the initial default empty string
 		}
 	}
 
@@ -1608,18 +1415,20 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 	}
 
 	var sha256 string
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&sha256)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&sha256)
 	if err != nil {
 		log.Printf("Error retrieving MinioID for %s/%s version %v: %v\n", dbOwner, dbName, commitID, err)
-		return "", "", err
+		return minioBucket, minioID, err // Bucket and ID are still the initial default empty string
 	}
 
 	if sha256 == "" {
 		// The requested database doesn't exist, or the logged in user doesn't have access to it
-		return "", "", errors.New("The requested database wasn't found")
+		return minioBucket, minioID, errors.New("The requested database wasn't found") // Bucket and ID are still the initial default empty string
 	}
 
-	return sha256[:MinioFolderChars], sha256[MinioFolderChars:], nil
+	minioBucket = sha256[:MinioFolderChars]
+	minioID = sha256[MinioFolderChars:]
+	return minioBucket, minioID, nil
 }
 
 // Return the Minio bucket name for a given user.
