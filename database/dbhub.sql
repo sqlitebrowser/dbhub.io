@@ -108,7 +108,6 @@ CREATE TABLE sqlite_databases (
     forks bigint DEFAULT 0 NOT NULL,
     discussions bigint DEFAULT 0 NOT NULL,
     merge_requests bigint DEFAULT 0 NOT NULL,
-    commits bigint DEFAULT 1 NOT NULL,
     branches bigint DEFAULT 1 NOT NULL,
     releases bigint DEFAULT 0 NOT NULL,
     contributors bigint DEFAULT 1 NOT NULL,
