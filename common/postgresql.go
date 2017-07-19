@@ -1431,26 +1431,6 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 	return minioBucket, minioID, nil
 }
 
-// Return the Minio bucket name for a given user.
-func MinioUserBucket(userName string) (string, error) {
-	var minioBucket string
-	err := pdb.QueryRow(`
-		SELECT minio_bucket
-		FROM users
-		WHERE username = $1`, userName).Scan(&minioBucket)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			log.Printf("No known Minio bucket for user '%s'\n", userName)
-			return "", errors.New("No known Minio bucket for that user")
-		} else {
-			log.Printf("Error when looking up Minio bucket name for user '%v': %v\n", userName, err)
-			return "", err
-		}
-	}
-
-	return minioBucket, nil
-}
-
 // Return the user's preference for maximum number of SQLite rows to display.
 func PrefUserMaxRows(loggedInUser string) int {
 	// Retrieve the user preference data
@@ -1503,69 +1483,6 @@ func PublicUserDBs() ([]UserInfo, error) {
 	}
 
 	return list, nil
-}
-
-// Remove a database version from PostgreSQL.
-func RemoveDBVersion(dbOwner string, folder string, dbName string, dbVersion int) error {
-	dbQuery := `
-		DELETE from database_versions
-		WHERE db  = (	SELECT idnum
-				FROM sqlite_databases
-				WHERE username = $1
-					AND folder = $2
-					AND dbname = $3)
-			AND version = $4`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, folder, dbName, dbVersion)
-	if err != nil {
-		log.Printf("Removing database entry '%s' / '%s' / '%s' version %v failed: %v\n",
-			dbOwner, folder, dbName, dbVersion, err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong # of rows (%v) affected when removing database entry for '%s' / '%s' / '%s' version %v\n",
-			numRows, dbOwner, folder, dbName, dbVersion)
-		return nil
-	}
-
-	// Check if other versions of the database still exist
-	dbQuery = `
-		SELECT count(*) FROM database_versions
-		WHERE db  = (	SELECT idnum
-				FROM sqlite_databases
-				WHERE username = $1
-					AND folder = $2
-					AND dbname = $3)`
-	var numDBs int
-	err = pdb.QueryRow(dbQuery, dbOwner, folder, dbName).Scan(&numDBs)
-	if err != nil {
-		// A real database error occurred
-		log.Printf("Error checking if any further versions of database exist: %v\n", err)
-		return err
-	}
-
-	// The database still has other versions, so there's nothing further to do
-	if numDBs != 0 {
-		return nil
-	}
-
-	// We removed the last version of the database, so now clean up the entry in the sqlite_databases table
-	dbQuery = `
-		DELETE FROM sqlite_databases
-		WHERE username = $1
-			AND folder = $2
-			AND dbname = $3`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, folder, dbName)
-	if err != nil {
-		log.Printf("Removing main entry for '%s' / '%s' / '%s' failed: %v\n", dbOwner, folder,
-			dbName, err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong # of rows (%v) affected when removing main database entry for '%s' / '%s' / '%s'\n",
-			numRows, dbOwner, folder, dbName)
-	}
-
-	return nil
 }
 
 // Rename a SQLite database.
@@ -1694,42 +1611,6 @@ func SetPrefUserMaxRows(userName string, maxRows int, displayName string, email 
 		log.Printf("Wrong # of rows (%v) affected when updating user preferences. User: '%s'\n", numRows,
 			userName)
 	}
-	return nil
-}
-
-// Set the email address for a user.
-func SetUserEmail(userName string, email string) error {
-	dbQuery := `
-		UPDATE users
-		SET email = $1
-		WHERE user_name = $2`
-	commandTag, err := pdb.Exec(dbQuery, email, userName)
-	if err != nil {
-		log.Printf("Updating user email failed: %v\n", err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong # of rows affected (%v) when updating details for user '%v'\n", numRows, userName)
-	}
-
-	return nil
-}
-
-// Set the email address and password hash for a user.
-func SetUserEmailPHash(userName string, email string, pHash []byte) error {
-	dbQuery := `
-		UPDATE users
-		SET email = $1, password_hash = $2
-		WHERE username = $3`
-	commandTag, err := pdb.Exec(dbQuery, email, pHash, userName)
-	if err != nil {
-		log.Printf("Updating user email & password hash failed: %v\n", err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong # of rows affected (%v) when updating details for user '%v'\n", numRows, userName)
-	}
-
 	return nil
 }
 
@@ -2235,25 +2116,6 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	return list, nil
 }
 
-// Remove the user from the database.  This automatically removes their entries from sqlite_databases too, due
-// to the ON DELETE CASCADE referential integrity constraint.
-func UserDelete(userName string) error {
-	dbQuery := `
-		DELETE FROM users
-		WHERE username = $1`
-	commandTag, err := pdb.Exec(dbQuery, userName)
-	if err != nil {
-		log.Printf("Deleting user '%s' from the database failed: %v\n", userName, err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong # of rows affected (%v) when deleting user '%s'\n", numRows, userName)
-		return err
-	}
-
-	return nil
-}
-
 // Returns a list of all DBHub.io users.
 func UserList() ([]UserDetails, error) {
 	dbQuery := `
@@ -2303,18 +2165,6 @@ func UserNameFromAuth0ID(auth0id string) (string, error) {
 	}
 
 	return userName, nil
-}
-
-// Returns the password hash for a user.
-func UserPasswordHash(userName string) ([]byte, error) {
-	row := pdb.QueryRow("SELECT password_hash FROM public.users WHERE username = $1", userName)
-	var passHash []byte
-	err := row.Scan(&passHash)
-	if err != nil {
-		log.Printf("Error looking up password hash for username '%s'. Error: %v\n", userName, err)
-		return nil, err
-	}
-	return passHash, nil
 }
 
 // Returns the list of databases starred by a user.

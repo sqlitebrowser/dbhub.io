@@ -73,20 +73,6 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 	return
 }
 
-func MinioObjCopy(sourceBucket string, sourceID string, destBucket string) (string, error) {
-	// Generate a new name for the destination object
-	destID := RandomString(8) + ".db"
-
-	// Copy the SQLite database to the destination bucket
-	cpCond := minio.CopyConditions{}
-	err := minioClient.CopyObject(destBucket, destID, sourceBucket+"/"+sourceID, cpCond)
-	if err != nil {
-		return "", err
-	}
-
-	return destID, nil
-}
-
 // Retrieves a SQLite database from Minio, opens it, returns the connection handle.
 // Also returns the name of the temp file created, which the caller needs to delete (os.Remove()) when finished with it
 func OpenMinioObject(bucket string, id string) (*sqlite.Conn, string, error) {
@@ -130,57 +116,6 @@ func OpenMinioObject(bucket string, id string) (*sqlite.Conn, string, error) {
 		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
 	}
 	return sdb, tempFile, nil
-}
-
-// Removes a Minio bucket, and all files inside it.
-func RemoveMinioBucket(bucket string) error {
-	// Remove the users files
-	doneCh := make(chan struct{})
-	isRecursive := false
-	objectCh := minioClient.ListObjects(bucket, "", isRecursive, doneCh)
-	for object := range objectCh {
-		if object.Err != nil {
-			log.Printf("Error when listing objects: %v", object.Err)
-			return object.Err
-		}
-		err := minioClient.RemoveObject(bucket, object.Key)
-		if err != nil {
-			log.Printf("Error when removing objects: %v", err)
-			return err
-		}
-	}
-	defer close(doneCh)
-
-	// Remove the user's Minio bucket
-	err := minioClient.RemoveBucket(bucket)
-	if err != nil {
-		log.Printf("Error deleting bucket: %v\n", err)
-		return err
-	}
-
-	return nil
-}
-
-// Removes a file from Minio.
-func RemoveMinioFile(bucket string, id string) error {
-	err := minioClient.RemoveObject(bucket, id)
-	if err != nil {
-		fmt.Printf("Error when removing Minio file '%s/%s': %v", bucket, id, err)
-		return err
-	}
-
-	return nil
-}
-
-// Store a file in Minio.
-func StoreMinioObject(bucket string, id string, reader io.Reader, contentType string) (int, error) {
-	dbSize, err := minioClient.PutObject(bucket, id, reader, contentType)
-	if err != nil {
-		log.Printf("Storing file in Minio failed: %v\n", err)
-		return -1, err
-	}
-
-	return int(dbSize), nil
 }
 
 // Store a database file in Minio.
