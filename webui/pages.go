@@ -950,15 +950,23 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string)
 }
 
 // Render the page showing forks of the given database
-func forksPage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder string, dbName string) {
+func forksPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		Auth0 com.Auth0Set
 		Meta  com.MetaInfo
 		Forks []com.ForkEntry
 	}
 	pageData.Meta.Title = "Forks"
+
+	// Retrieve user and database name
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/forks/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
+	dbFolder := "/"
 
 	// Retrieve session data (if any)
 	var loggedInUser string

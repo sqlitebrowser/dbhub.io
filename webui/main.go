@@ -1381,19 +1381,6 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/"+loggedInUser+"/"+dbName, http.StatusTemporaryRedirect)
 }
 
-// Present the forks page to the user
-func forksHandler(w http.ResponseWriter, r *http.Request) {
-	// Retrieve user and database name
-	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/forks/" at the start of the URL
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Render the forks page
-	forksPage(w, r, dbOwner, "/", dbName)
-}
-
 // Generates a client certificate for the user and gives it to the browser.
 func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
@@ -1587,7 +1574,7 @@ func main() {
 	http.HandleFunc("/contributors/", logReq(contributorsPage))
 	http.HandleFunc("/createbranch/", logReq(createBranchPage))
 	http.HandleFunc("/createtag/", logReq(createTagPage))
-	http.HandleFunc("/forks/", logReq(forksHandler))
+	http.HandleFunc("/forks/", logReq(forksPage))
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))
 	http.HandleFunc("/register", logReq(createUserHandler))
