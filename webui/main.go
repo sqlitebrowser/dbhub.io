@@ -1744,10 +1744,10 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	sortCol := r.FormValue("sort")
 	sortDir := r.FormValue("dir")
 	offsetStr := r.FormValue("offset")
+
+	// If an offset was provided, validate it
 	var rowOffset int
-	if offsetStr == "" {
-		rowOffset = 0
-	} else {
+	if offsetStr != "" {
 		rowOffset, err = strconv.Atoi(offsetStr)
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
