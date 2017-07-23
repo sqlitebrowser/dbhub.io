@@ -1394,8 +1394,8 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate a new certificate
-	// TODO: Use 14 days for now.  Extend this when things work properly.
-	newCert, err := com.GenerateClientCert(loggedInUser, 14)
+	// TODO: Use 60 days for now.  Extend this when things are known to be working well.
+	newCert, err := com.GenerateClientCert(loggedInUser, 60)
 	if err != nil {
 		log.Printf("Error generating client certificate for user '%s': %s!\n", loggedInUser, err)
 		http.Error(w, fmt.Sprintf("Error generating client certificate for user '%s': %s!\n",
