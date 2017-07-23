@@ -450,6 +450,30 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If present, validate the users' full name
+	if displayName != "" {
+		err = com.Validate.Var(displayName, "required,displayname,min=1,max=80")
+		if err != nil {
+			log.Printf("Display name value failed validation: %s\n", err)
+			errorPage(w, r, http.StatusBadRequest, "Error when parsing full name value")
+			return
+		}
+	}
+
+	// Validate the email address
+	err = com.Validate.Var(email, "required,email")
+	if err != nil {
+		// Check for the special case of username@server, which may fail standard email validation checks
+		// eg username@localhost, won't validate as an email address, but should be accepted anyway
+		serverName := strings.Split(com.WebServer(), ":")
+		em := fmt.Sprintf("%s@%s", userName, serverName[0])
+		if email != em {
+			log.Printf("Email value failed validation: %s\n", err)
+			errorPage(w, r, http.StatusBadRequest, "Error when parsing email value")
+			return
+		}
+	}
+
 	// Add the user to the system
 	// NOTE: We generate a random password here (for now).  We may remove the password field itself from the
 	// database at some point, depending on whether we continue to support local database users
