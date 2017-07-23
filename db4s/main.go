@@ -202,6 +202,12 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
+	// Connect to the Memcached server
+	err = com.ConnectCache()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
 	certFile, err := ioutil.ReadFile(com.DB4SCAChain())
@@ -276,7 +282,7 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// TODO: Add support for folders, branches, licences, a commit message, and a source URL
 	targetFolder := "/"
 	branchName := "master"
-	licenceName := ""
+	licenceName := "Not specified"
 	commitMsg := ""
 	sourceURL := ""
 
