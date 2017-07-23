@@ -1579,8 +1579,8 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc
 func SetClientCert(newCert []byte, userName string) error {
 	SQLQuery := `
 		UPDATE users
-		SET client_certificate = $1
-		WHERE username = $2`
+		SET client_cert = $1
+		WHERE user_name = $2`
 	commandTag, err := pdb.Exec(SQLQuery, newCert, userName)
 	if err != nil {
 		log.Printf("Updating client certificate for '%s' failed: %v\n", userName, err)
