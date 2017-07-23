@@ -831,7 +831,7 @@ func DisconnectPostgreSQL() {
 }
 
 // Fork the PostgreSQL entry for a SQLite database from one user to another
-func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner string) (int, error) {
+func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner string) (newForkCount int, err error) {
 	// Copy the main database entry
 	dbQuery := `
 		WITH dst_u AS (
@@ -840,12 +840,10 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 			WHERE user_name = $1
 		)
 		INSERT INTO sqlite_databases (user_id, folder, db_name, public, forks, one_line_description, full_description,
-			commits,  branches, contributors,
-			root_database, default_table, source_url, commit_list, branch_heads, tags, default_branch,
-			forked_from)
-		SELECT dst_u.user_id, folder, db_name, public, forks, one_line_description, full_description,
-			commits,  branches, contributors,
-			root_database, default_table, source_url, commit_list, branch_heads, tags, default_branch,
+			branches, contributors, root_database, default_table, source_url, commit_list, branch_heads, tags,
+			default_branch, forked_from)
+		SELECT dst_u.user_id, folder, db_name, public, forks, one_line_description, full_description, branches,
+			contributors, root_database, default_table, source_url, commit_list, branch_heads, tags, default_branch,
 			db_id
 		FROM sqlite_databases, dst_u
 		WHERE sqlite_databases.user_id = (
@@ -881,13 +879,12 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 				AND db_name = $3
 			)
 		RETURNING forks`
-	var newForks int
-	err = pdb.QueryRow(dbQuery, dstOwner, dbFolder, dbName).Scan(&newForks)
+	err = pdb.QueryRow(dbQuery, dstOwner, dbFolder, dbName).Scan(&newForkCount)
 	if err != nil {
 		log.Printf("Updating fork count in PostgreSQL failed: %v\n", err)
 		return 0, err
 	}
-	return newForks, nil
+	return newForkCount, nil
 }
 
 // Checks if the given database was forked from another, and if so returns that one's owner, folder and database name

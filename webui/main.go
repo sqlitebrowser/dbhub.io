@@ -1293,19 +1293,17 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 // Forks a database for the logged in user.
 func forkDBHandler(w http.ResponseWriter, r *http.Request) {
-
-	// TODO: This function will need updating to support folders
-
-	// Retrieve user and database name
+	// Retrieve username, database name, and commit ID
 	dbOwner, dbName, commitID, err := com.GetODC(2, r) // 2 = Ignore "/x/forkdb/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
+	dbFolder := "/"
 
-	// Make sure a version number was given
+	// Make sure a database commit ID was given
 	if commitID == "" {
-		errorPage(w, r, http.StatusBadRequest, "No database version number given")
+		errorPage(w, r, http.StatusBadRequest, "No database commit ID given")
 		return
 	}
 
@@ -1331,13 +1329,13 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the user has access to the specific version of the source database requested
-	allowed, err := com.CheckUserDBAccess(dbOwner, "/", dbName, loggedInUser)
+	allowed, err := com.CheckUserDBAccess(dbOwner, dbFolder, dbName, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !allowed {
-		errorPage(w, r, http.StatusBadRequest, "You don't have access to the requested database version")
+		errorPage(w, r, http.StatusBadRequest, "You don't have access to the requested database")
 		return
 	}
 
@@ -1348,7 +1346,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the user doesn't have a database of the same name already
-	exists, err := com.CheckDBExists(loggedInUser, "/", dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1360,14 +1358,14 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the forked database info to PostgreSQL
-	_, err = com.ForkDatabase(dbOwner, "/", dbName, loggedInUser)
+	_, err = com.ForkDatabase(dbOwner, dbFolder, dbName, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Invalidate the old memcached entry for the database
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, "/", dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -1375,10 +1373,10 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the database fork
-	log.Printf("Database '%s/%s' forked to user '%s'\n", dbOwner, dbName, loggedInUser)
+	log.Printf("Database '%s%s%s' forked to user '%s'\n", dbOwner, dbFolder, dbName, loggedInUser)
 
 	// Bounce to the page of the forked database
-	http.Redirect(w, r, "/"+loggedInUser+"/"+dbName, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusTemporaryRedirect)
 }
 
 // Generates a client certificate for the user and gives it to the browser.
