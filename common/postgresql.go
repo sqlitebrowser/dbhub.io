@@ -299,13 +299,13 @@ func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 			WHERE user_name = $1
 		), user_db_list AS (
 			SELECT DISTINCT ON (db_id) db_id, last_modified
-			FROM sqlite_databases
-			WHERE user_id = u.user_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
 			AND is_deleted = false
 		), most_recent_user_db AS (
-			SELECT db_idm, last_modified
-			FROM user_db_list
-			ORDER BY last_modified DESC
+			SELECT udb.db_id, udb.last_modified
+			FROM user_db_list AS udb
+			ORDER BY udb.last_modified DESC
 			LIMIT 1
 		), public_dbs AS (
 			SELECT db_id, last_modified
@@ -319,9 +319,9 @@ func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 			WHERE db.db_id = pub.db_id OR db.db_id = usr.db_id
 			ORDER BY db.user_id, db.last_modified DESC
 		)
-		SELECT user_name, pu.last_modified
+		SELECT user_name, last_modified
 		FROM public_users AS pu, users
-		WHERE users.user_name = pu.user_id
+		WHERE users.user_id = pu.user_id
 		ORDER BY last_modified DESC`
 	rows, err := pdb.Query(dbQuery, loggedInUser)
 	if err != nil {
