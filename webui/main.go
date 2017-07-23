@@ -477,11 +477,10 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 // This is called from the username selection page, to check if a name is available.
 func checkNameHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the potential username from the URL
-	err := r.ParseForm()
 	userName := r.FormValue("name")
 
 	// Validate the user supplied username
-	err = com.ValidateUser(userName)
+	err := com.ValidateUser(userName)
 	if err != nil {
 		fmt.Fprint(w, "n")
 		return
