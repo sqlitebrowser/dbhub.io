@@ -2656,6 +2656,22 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If the branch being changed is the default branch, and it's being renamed, we need to update the default branch
+	// entry in the database with the new branch name
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if defBranch == branchName {
+		// Update the default branch name for the database
+		err = com.StoreDefaultBranchName(dbOwner, dbFolder, dbName, newName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
 	// Update the branch info
 	delete(branches, branchName)
 	branches[newName] = com.BranchEntry{
