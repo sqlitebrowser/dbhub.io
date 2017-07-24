@@ -977,27 +977,20 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure we have a valid logged in user
 	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// Extract the required form variables
-	dbFolder := r.PostFormValue("dbFolder")
-	dbName := r.PostFormValue("dbName")
-	dbOwner := r.PostFormValue("dbOwner")
-
-	// If any of the required values were empty, indicate failure
-	if dbFolder == "" || dbName == "" || dbOwner == "" {
+	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	dbOwner := strings.ToLower(u)
 
-	// TODO: Validate the variables
-
-	// Validate the database name
-	err := com.ValidateDB(dbName)
-	if err != nil {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+	// If any of the required values were empty, indicate failure
+	if dbFolder == "" || dbName == "" || dbOwner == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -1020,17 +1013,22 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = com.DeleteDatabase(dbOwner, dbFolder, dbName)
-	if err != err {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	// Invalidate the memcache data for the database, so the new branch count gets picked up
+	// Note - on one hand this is a race condition, as new cache data could get into memcache between this invalidation
+	// call and the delete.  On the other hand, once it's deleted the invalidation function would itself fail due to
+	// needing the database to be present so it can look up the commit list.  At least doing the invalidation here lets
+	// us clear stale data (hopefully) for the vast majority of the time
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Delete the database
+	err = com.DeleteDatabase(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
