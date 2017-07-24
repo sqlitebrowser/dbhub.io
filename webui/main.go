@@ -184,7 +184,18 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect branch name")
 		return
 	}
-	branchDesc := r.PostFormValue("branchdesc") // Optional
+	bd := r.PostFormValue("branchdesc") // Optional
+
+	// If given, validate the branch description field
+	var branchDesc string
+	if bd != "" {
+		err = com.Validate.Var(bd, "markdownsource")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Invalid characters in branch description")
+			return
+		}
+		branchDesc = bd
+	}
 
 	// Check if the requested database exists
 	dbFolder := "/"
