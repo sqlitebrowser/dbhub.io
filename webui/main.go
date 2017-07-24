@@ -575,34 +575,27 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure we have a valid logged in user
 	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// Extract the required form variables
-	dbFolder := r.PostFormValue("dbFolder")
-	dbName := r.PostFormValue("dbName")
-	dbOwner := r.PostFormValue("dbOwner")
+	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbOwner := strings.ToLower(u)
 
 	// Check if a branch name was requested
 	branchName, err := com.GetFormBranch(r)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// If any of the required values were empty, indicate failure
 	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// TODO: Validate the variables
-
-	// Validate the database name
-	err = com.ValidateDB(dbName)
-	if err != nil {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

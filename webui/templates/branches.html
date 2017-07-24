@@ -144,9 +144,9 @@
                 url: "/x/deletebranch/",
                 data: $httpParamSerializerJQLike({
                         "branch": branchName,
-                        "dbFolder": "/",
-                        "dbName": [[ .Meta.Database ]],
-                        "dbOwner": [[ .Meta.Owner ]]
+                        "folder": "/",
+                        "dbname": [[ .Meta.Database ]],
+                        "username": [[ .Meta.Owner ]]
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
