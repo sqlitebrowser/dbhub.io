@@ -1485,7 +1485,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, "")
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
