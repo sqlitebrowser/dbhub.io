@@ -306,7 +306,18 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect tag name")
 		return
 	}
-	tagMsg := r.PostFormValue("tagmsg") // Optional
+	tm := r.PostFormValue("tagmsg") // Optional
+
+	// If given, validate the tag message field
+	var tagMsg string
+	if tm != "" {
+		err = com.Validate.Var(tm, "markdownsource")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Invalid characters in tag message")
+			return
+		}
+		tagMsg = tm
+	}
 
 	// Check if the requested database exists
 	dbFolder := "/"
