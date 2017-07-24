@@ -143,11 +143,11 @@
                 url: "/x/updatetag/",
                 data: $httpParamSerializerJQLike({
                         "tag": tagName,
-                        "dbFolder": "/",
-                        "dbName": [[ .Meta.Database ]],
-                        "dbOwner": [[ .Meta.Owner ]],
-                        "newDesc": newDesc,
-                        "newName": newName
+                        "folder": "/",
+                        "dbname": [[ .Meta.Database ]],
+                        "username": [[ .Meta.Owner ]],
+                        "newmsg": newDesc,
+                        "newtag": newName
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
