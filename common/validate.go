@@ -13,7 +13,7 @@ var (
 	regexDisplayName    = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\ ]+$`)
 	regexFieldName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
 	regexFolder         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
-	regexMarkDownSource = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/,\(,\),\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\ ,\012,\015]+$`)
+	regexMarkDownSource = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/,\(,\),\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
 	regexPGTable        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
 	regexUsername       = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
@@ -68,7 +68,7 @@ func checkFolder(fl valid.FieldLevel) bool {
 }
 
 // Custom validation function for Markdown source text.
-// At the moment it allows Unicode alphanumeric, ".-_/()\#\!'"@$*%^&+=:;<>,? ", and "\r\n" chars.  Will probably need more characters added.
+// At the moment it allows Unicode alphanumeric, ".-_/()\#\!'"@$*%^&+=:;<>,?~| ", and "\r\n" chars.  Will probably need more characters added.
 func checkMarkDownSource(fl valid.FieldLevel) bool {
 	return regexMarkDownSource.MatchString(fl.Field().String())
 }
