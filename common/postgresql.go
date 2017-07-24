@@ -1670,7 +1670,7 @@ func SetClientCert(newCert []byte, userName string) error {
 }
 
 // Sets the user's preference for maximum number of SQLite rows to display.
-func SetPrefUserMaxRows(userName string, maxRows int, displayName string, email string) error {
+func SetUserPreferences(userName string, maxRows int, displayName string, email string) error {
 	dbQuery := `
 		UPDATE users
 		SET pref_max_rows = $2, display_name = $3, email = $4

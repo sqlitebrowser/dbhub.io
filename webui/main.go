@@ -1907,10 +1907,11 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Store previous email addresses in a database table that associates them with the username.  This will be
-	// TODO  needed so looking an old email finds the correct username, such as looking through historical commit data
+	// TODO  needed so looking up an old email finds the correct username.  For example when looking through historical
+	// TODO  commit data
 
 	// Update the preference data in the database
-	err = com.SetPrefUserMaxRows(loggedInUser, maxRowsNum, displayName, email)
+	err = com.SetUserPreferences(loggedInUser, maxRowsNum, displayName, email)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when updating preferences")
 		return
