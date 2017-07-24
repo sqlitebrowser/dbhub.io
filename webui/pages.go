@@ -366,8 +366,8 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Retrieve the database owner & name, and branch name
-	// TODO: Add folder support
+	// Retrieve the database owner & name
+	// TODO: Add folder and branch support
 	dbFolder := "/"
 	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/branches/" at the start of the URL
 	if err != nil {
