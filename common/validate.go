@@ -8,13 +8,14 @@ import (
 )
 
 var (
-	regexBraTagName  = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
-	regexDBName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
-	regexDisplayName = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\ ]+$`)
-	regexFieldName   = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
-	regexFolder      = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
-	regexPGTable     = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
-	regexUsername    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+	regexBraTagName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
+	regexDBName         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
+	regexDisplayName    = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\ ]+$`)
+	regexFieldName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
+	regexFolder         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
+	regexMarkDownSource = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/,\(,\),\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\ ,\012,\015]+$`)
+	regexPGTable        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
+	regexUsername       = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
 	// For input validation
 	Validate *valid.Validate
@@ -28,6 +29,7 @@ func init() {
 	Validate.RegisterValidation("displayname", checkDisplayName)
 	Validate.RegisterValidation("fieldname", checkFieldName)
 	Validate.RegisterValidation("folder", checkFolder)
+	Validate.RegisterValidation("markdownsource", checkMarkDownSource)
 	Validate.RegisterValidation("pgtable", checkPGTableName)
 	Validate.RegisterValidation("username", checkUsername)
 }
@@ -63,6 +65,12 @@ func checkFieldName(fl valid.FieldLevel) bool {
 // At the moment it allows alphanumeric and ".-_/" chars.  Will probably need more characters added.
 func checkFolder(fl valid.FieldLevel) bool {
 	return regexFolder.MatchString(fl.Field().String())
+}
+
+// Custom validation function for Markdown source text.
+// At the moment it allows Unicode alphanumeric, ".-_/()\#\!'"@$*%^&+=:;<>,? ", and "\r\n" chars.  Will probably need more characters added.
+func checkMarkDownSource(fl valid.FieldLevel) bool {
+	return regexMarkDownSource.MatchString(fl.Field().String())
 }
 
 // Custom validation function for PostgreSQL table names.
