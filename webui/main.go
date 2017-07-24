@@ -2581,36 +2581,45 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure we have a valid logged in user
 	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// Extract the required form variables
-	dbFolder := r.PostFormValue("dbFolder")
-	dbName := r.PostFormValue("dbName")
-	dbOwner := r.PostFormValue("dbOwner")
-	newDesc := r.PostFormValue("newDesc")
-	newName := r.PostFormValue("newName")
+	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbOwner := strings.ToLower(u)
 
-	// Check if a branch name was requested
+	// Validate new branch name
+	nb := r.PostFormValue("newbranch")
+	err = com.Validate.Var(nb, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	newName := nb
+
+	// Validate new branch description
+	nd := r.PostFormValue("newdesc")
+	err = com.Validate.Var(nd, "markdownsource")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	newDesc := nd
+
+	// Make sure a branch name was provided
 	branchName, err := com.GetFormBranch(r)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// If any of the required values were empty, indicate failure
 	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newDesc == "" || newName == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// TODO: Validate the variables
-
-	// Validate the database name
-	err = com.ValidateDB(dbName)
-	if err != nil {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

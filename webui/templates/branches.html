@@ -215,11 +215,11 @@
                 url: "/x/updatebranch/",
                 data: $httpParamSerializerJQLike({
                         "branch": branchName,
-                        "dbFolder": "/",
-                        "dbName": [[ .Meta.Database ]],
-                        "dbOwner": [[ .Meta.Owner ]],
-                        "newDesc": newDesc,
-                        "newName": newName
+                        "folder": "/",
+                        "dbname": [[ .Meta.Database ]],
+                        "username": [[ .Meta.Owner ]],
+                        "newdesc": newDesc,
+                        "newbranch": newName
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
