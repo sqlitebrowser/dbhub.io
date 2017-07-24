@@ -1977,7 +1977,16 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	defTable := r.PostFormValue("defaulttable") // TODO: Update the default table to be "per branch"
 	licences := r.PostFormValue("licences")
 
-	// TODO: Validate the sourceURL and licenceName fields
+	// TODO: Validate the licenceName field
+
+	// Validate the source URL
+	if sourceURL != "" {
+		err = com.Validate.Var(sourceURL, "url,min=5,max=255") // 255 seems like a reasonable first guess
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Validation failed for source URL field")
+			return
+		}
+	}
 
 	// Grab and validate the supplied default branch name
 	defBranch, err := com.GetFormBranch(r)
