@@ -1809,8 +1809,18 @@ func markdownPreview(w http.ResponseWriter, r *http.Request) {
 	// Extract the markdown text form value
 	mkDown := r.PostFormValue("mkdown")
 
+	// Validate the markdown source provided, just to be safe
+	var renderedText string
+	if mkDown != "" {
+		err := com.Validate.Var(mkDown, "markdownsource")
+		if err != nil {
+			fmt.Fprint(w, "Invalid characters in Markdown")
+			return
+		}
+		renderedText = commonmark.Md2Html(mkDown, commonmark.CMARK_OPT_DEFAULT)
+	}
+
 	// Send the rendered version back to the caller
-	renderedText := commonmark.Md2Html(mkDown, commonmark.CMARK_OPT_DEFAULT)
 	fmt.Fprint(w, renderedText)
 }
 
