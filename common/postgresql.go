@@ -541,6 +541,42 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 		// * There are no forks for this database, so we just remove it's entry from sqlite_databases.  The 'ON DELETE
 		// CASCADE' definition for the database_stars table/field should automatically remove any references to the
 		// now deleted entry *
+
+		// Update the fork count for the root database
+		dbQuery = `
+			WITH root_db AS (
+				SELECT root_database AS id
+				FROM sqlite_databases
+				WHERE user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
+					AND folder = $2
+					AND db_name = $3
+			), new_count AS (
+				SELECT count(*) AS forks
+				FROM sqlite_databases AS db, root_db
+				WHERE db.root_database = root_db.id
+				AND db.is_deleted = false
+			)
+			UPDATE sqlite_databases
+			SET forks = new_count.forks - 2
+			FROM new_count, root_db
+			WHERE sqlite_databases.db_id = root_db.id`
+		commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+		if err != nil {
+			log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", dbOwner, dbFolder, dbName,
+				err)
+			return err
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf("Wrong number of rows (%v) affected (spot 1) when updating fork count for database '%s%s%s'\n",
+				numRows, dbOwner, dbFolder, dbName)
+		}
+
+		// Do the database deletion in PostgreSQL (needs to come after the above fork count update, else the fork count
+		// won't be able to find the root database id)
 		dbQuery = `
 			DELETE
 			FROM sqlite_databases
@@ -551,7 +587,7 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 				)
 				AND folder = $2
 				AND db_name = $3`
-		commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
 		if err != nil {
 			log.Printf("Deleting database entry failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
 				err)
@@ -616,14 +652,47 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 			AND db_name = $3`
 	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, newName)
 	if err != nil {
-		log.Printf("Deleting (forked) database entry failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
-			err)
+		log.Printf("Deleting (forked) database entry failed for database '%s%s%s': %v\n", dbOwner, dbFolder,
+			dbName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
 			"Wrong number of rows (%v) affected when deleting (forked) database '%s%s%s'\n", numRows, dbOwner,
 			dbFolder, dbName)
+	}
+
+	// Update the fork count for the root database
+	dbQuery = `
+		WITH root_db AS (
+			SELECT root_database AS id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		), new_count AS (
+			SELECT count(*) AS forks
+			FROM sqlite_databases AS db, root_db
+			WHERE db.root_database = root_db.id
+			AND db.is_deleted = false
+		)
+		UPDATE sqlite_databases
+		SET forks = new_count.forks - 1
+		FROM new_count, root_db
+		WHERE sqlite_databases.db_id = root_db.id`
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, newName)
+	if err != nil {
+		log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", dbOwner, dbFolder, dbName,
+			err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected (spot 2) when updating fork count for database '%s%s%s'\n",
+			numRows, dbOwner, dbFolder, dbName)
 	}
 
 	// Commit the transaction
@@ -842,7 +911,7 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 		INSERT INTO sqlite_databases (user_id, folder, db_name, public, forks, one_line_description, full_description,
 			branches, contributors, root_database, default_table, source_url, commit_list, branch_heads, tags,
 			default_branch, forked_from)
-		SELECT dst_u.user_id, folder, db_name, public, forks, one_line_description, full_description, branches,
+		SELECT dst_u.user_id, folder, db_name, public, 0, one_line_description, full_description, branches,
 			contributors, root_database, default_table, source_url, commit_list, branch_heads, tags, default_branch,
 			db_id
 		FROM sqlite_databases, dst_u
@@ -863,12 +932,10 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 			"'%s%s%s' to '%s%s%s'\n", numRows, srcOwner, dbFolder, dbName, dstOwner, dbFolder, dbName)
 	}
 
-	// Increment the forks count for the root database
+	// Update the fork count for the root database
 	dbQuery = `
-		UPDATE sqlite_databases
-		SET forks = forks + 1
-		WHERE db_id = (
-			SELECT root_database
+		WITH root_db AS (
+			SELECT root_database AS id
 			FROM sqlite_databases
 			WHERE user_id = (
 					SELECT user_id
@@ -877,8 +944,17 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 				)
 				AND folder = $2
 				AND db_name = $3
-			)
-		RETURNING forks`
+		), new_count AS (
+			SELECT count(*) AS forks
+			FROM sqlite_databases AS db, root_db
+			WHERE db.root_database = root_db.id
+			AND db.is_deleted = false
+		)
+		UPDATE sqlite_databases
+		SET forks = new_count.forks - 1
+		FROM new_count, root_db
+		WHERE sqlite_databases.db_id = root_db.id
+		RETURNING new_count.forks - 1`
 	err = pdb.QueryRow(dbQuery, dstOwner, dbFolder, dbName).Scan(&newForkCount)
 	if err != nil {
 		log.Printf("Updating fork count in PostgreSQL failed: %v\n", err)
