@@ -1763,7 +1763,7 @@ func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[
 func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map[string]CommitEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET commit_list = $4, commits = $5
+		SET commit_list = $4
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
@@ -1771,7 +1771,7 @@ func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map
 				)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, commitList, len(commitList))
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, commitList)
 	if err != nil {
 		log.Printf("Updating commit list for database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
 		return err

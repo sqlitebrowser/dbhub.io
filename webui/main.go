@@ -2179,6 +2179,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			// database after the loop finishes
 			newBranchEntry := com.BranchEntry{
 				Commit:      c.ID,
+				CommitCount: bEntry.CommitCount + 1,
 				Description: bEntry.Description,
 			}
 			branchHeads[bName] = newBranchEntry
