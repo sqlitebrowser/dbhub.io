@@ -65,7 +65,7 @@ func GetFormFolder(r *http.Request) (string, error) {
 		return "", nil
 	}
 
-	// Validate the username
+	// Validate the folder name
 	err = ValidateFolder(folder)
 	if err != nil {
 		log.Printf("Validation failed for folder: '%s': %s", folder, err)
@@ -73,6 +73,28 @@ func GetFormFolder(r *http.Request) (string, error) {
 	}
 
 	return folder, nil
+}
+
+// Returns the source URL (if any) present in the form data
+func GetFormSourceURL(r *http.Request) (sourceURL string, err error) {
+	// Gather submitted form data (if any)
+	err = r.ParseForm()
+	if err != nil {
+		log.Printf("Error when parsing form data: %s\n", err)
+		return sourceURL, err
+	}
+
+	// Validate the source URL
+	su := r.PostFormValue("sourceurl")
+	if su != "" {
+		err = Validate.Var(su, "url,min=5,max=255") // 255 seems like a reasonable first guess
+		if err != nil {
+			return sourceURL, errors.New("Validation failed for source URL field")
+		}
+		sourceURL = su
+	}
+
+	return sourceURL, err
 }
 
 // Return the requested tag name, from get or post data.
