@@ -145,7 +145,7 @@ func AddDatabase(loggedInUser string, dbOwner string, dbFolder string, dbName st
 		}
 
 		// Generate a reasonable commit message if none was given
-		if !exists {
+		if !exists && commitMsg == "" {
 			commitMsg = fmt.Sprintf("Initial database upload, using licence %s.", licenceName)
 		}
 	}

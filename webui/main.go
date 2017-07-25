@@ -2843,10 +2843,12 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract the other form variables
-	licenceName := r.PostFormValue("licence")
-
-	// TODO: Validate the input fields
+	// Validate the licence value
+	licenceName, err := com.GetFormLicence(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for licence value")
+		return
+	}
 
 	// Validate the source URL
 	sourceURL, err := com.GetFormSourceURL(r)
@@ -2859,7 +2861,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	var commitMsg string
 	cm := r.PostFormValue("commitmsg")
 	if cm != "" {
-		err = com.Validate.Var(cm, "markdownsource")
+		err = com.Validate.Var(cm, "markdownsource,max=1024") // 1024 seems like a reasonable first guess
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, "Validation failed for the commit message")
 			return
@@ -2867,18 +2869,11 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		commitMsg = cm
 	}
 
-	// Add (optional) branch name field to the upload form
-	branchName, err := com.GetFormBranch(r) // Optional
+	// Validate the (optional) commit message
+	branchName, err := com.GetFormBranch(r)
 	if err != nil {
 		log.Printf("%s: Error when validating branch name '%s': %v\n", pageName, branchName, err)
 		errorPage(w, r, http.StatusBadRequest, "Branch name value failed validation")
-		return
-	}
-
-	// Ensure the one line description is 1024 chars or less.  1024 chars is probably a reasonable first guess as to a
-	// useful limit
-	if len(commitMsg) > 1024 {
-		errorPage(w, r, http.StatusBadRequest, "Commit message needs to be 1024 characters or less")
 		return
 	}
 
