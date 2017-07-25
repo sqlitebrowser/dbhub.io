@@ -2117,6 +2117,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	branchesUpdated := false
+	newBranchHeads := make(map[string]com.BranchEntry)
 	for bName, bEntry := range branchHeads {
 		// Get the previous licence entry for the branch
 		c, ok := commitList[bEntry.Commit]
@@ -2126,7 +2127,8 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 				bName, dbOwner, dbFolder, dbName))
 			return
 		}
-		licSHA := c.Tree.Entries[0].LicenceSHA
+		dbEntry := c.Tree.Entries[0]
+		licSHA := dbEntry.LicenceSHA
 		var oldLic string
 		if licSHA != "" {
 			oldLic, _, err = com.GetLicenceInfoFromSha256(loggedInUser, licSHA)
@@ -2147,43 +2149,60 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		// If the new licence given for a branch is different from the old one, generate a new commit, add it to the
 		// commit list, and update the branch with it
 		if oldLic != newLic {
-			// We reuse the existing commit retrieved previously, just updating the fields which need changing
-			c.AuthorName, c.AuthorEmail, err = com.GetUserDetails(loggedInUser)
-			if err != nil {
-				errorPage(w, r, http.StatusInternalServerError, err.Error())
-				return
-			}
-			c.CommitterName = c.AuthorName
-			c.CommitterEmail = c.AuthorEmail
-			c.Parent = bEntry.Commit
-			c.Timestamp = time.Now()
-			c.Message = fmt.Sprintf("Licence changed from '%s' to '%s'.", oldLic, newLic)
+			// Retrieve the SHA256 of the new licence
 			newLicSHA, err := com.GetLicenceSha256FromName(loggedInUser, newLic)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
 			}
-			c.Tree.Entries[0].LicenceSHA = newLicSHA
 
-			// Calculate new tree ID, which is a sha256 incorporating the sha256 of the new licence
-			c.Tree.ID = com.CreateDBTreeID(c.Tree.Entries)
+			// Create a new dbTree entry for the database file
+			var e com.DBTreeEntry
+			e.EntryType = com.DATABASE
+			e.Last_Modified = dbEntry.Last_Modified
+			e.LicenceSHA = newLicSHA
+			e.Name = dbEntry.Name
+			e.Sha256 = dbEntry.Sha256
+			e.Size = dbEntry.Size
 
-			// Calculate a new commit ID, which incorporates the updated tree ID (and thus the new licence sha256)
-			c.ID = ""
-			c.ID = com.CreateCommitID(c)
+			// Create a new dbTree structure for the new database entry
+			var t com.DBTree
+			t.Entries = append(t.Entries, e)
+			t.ID = com.CreateDBTreeID(t.Entries)
+
+			// Create a new commit for the new tree
+			newCom := com.CommitEntry{
+				CommitterName:  c.AuthorName,
+				CommitterEmail: c.AuthorEmail,
+				Message:        fmt.Sprintf("Licence changed from '%s' to '%s'.", oldLic, newLic),
+				Parent:         bEntry.Commit,
+				Timestamp:      time.Now(),
+				Tree:           t,
+			}
+			newCom.AuthorName, newCom.AuthorEmail, err = com.GetUserDetails(loggedInUser)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			// Calculate the new commit ID, which incorporates the updated tree ID (and thus the new licence sha256)
+			newCom.ID = com.CreateCommitID(newCom)
 
 			// Add the new commit to the commit list
-			commitList[c.ID] = c
+			commitList[newCom.ID] = newCom
 
-			// Update the branch heads list with the new commit, and set a flag indicating it needs to be stored to the
-			// database after the loop finishes
+			// Add the commit to the new branch heads list, and set a flag indicating it needs to be stored to the
+			// database after the licence processing finishes
 			newBranchEntry := com.BranchEntry{
-				Commit:      c.ID,
+				Commit:      newCom.ID,
 				CommitCount: bEntry.CommitCount + 1,
 				Description: bEntry.Description,
 			}
-			branchHeads[bName] = newBranchEntry
+			newBranchHeads[bName] = newBranchEntry
 			branchesUpdated = true
+		} else {
+			// Copy the old branch entry to the new list
+			newBranchHeads[bName] = branchHeads[bName]
 		}
 	}
 
@@ -2195,7 +2214,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = com.StoreBranches(dbOwner, dbFolder, dbName, branchHeads)
+		err = com.StoreBranches(dbOwner, dbFolder, dbName, newBranchHeads)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
