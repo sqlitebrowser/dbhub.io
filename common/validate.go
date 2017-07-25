@@ -13,6 +13,7 @@ var (
 	regexDisplayName    = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\ ]+$`)
 	regexFieldName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
 	regexFolder         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
+	regexLicence        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexMarkDownSource = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/,\(,\),\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
 	regexPGTable        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
 	regexUsername       = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
@@ -29,6 +30,7 @@ func init() {
 	Validate.RegisterValidation("displayname", checkDisplayName)
 	Validate.RegisterValidation("fieldname", checkFieldName)
 	Validate.RegisterValidation("folder", checkFolder)
+	Validate.RegisterValidation("licence", checkLicence)
 	Validate.RegisterValidation("markdownsource", checkMarkDownSource)
 	Validate.RegisterValidation("pgtable", checkPGTableName)
 	Validate.RegisterValidation("username", checkUsername)
@@ -65,6 +67,12 @@ func checkFieldName(fl valid.FieldLevel) bool {
 // At the moment it allows alphanumeric and ".-_/" chars.  Will probably need more characters added.
 func checkFolder(fl valid.FieldLevel) bool {
 	return regexFolder.MatchString(fl.Field().String())
+}
+
+// Custom validation function for licence names.
+// At the moment it allows alphanumeric and ".-_() " chars.  Will probably need more characters added.
+func checkLicence(fl valid.FieldLevel) bool {
+	return regexLicence.MatchString(fl.Field().String())
 }
 
 // Custom validation function for Markdown source text.

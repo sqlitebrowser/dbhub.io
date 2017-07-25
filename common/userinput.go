@@ -75,6 +75,25 @@ func GetFormFolder(r *http.Request) (string, error) {
 	return folder, nil
 }
 
+// Returns the licence name (if any) present in the form data
+func GetFormLicence(r *http.Request) (licenceName string, err error) {
+	// If no licence name given, return an empty string
+	l := r.PostFormValue("licence")
+	if l == "" {
+		return "", nil
+	}
+
+	// Validate the licence name
+	err = Validate.Var(l, "licence,min=3,max=13") // 12 is the length of our longest licence name (thus far)
+	if err != nil {
+		log.Printf("Validation failed for folder: '%s': %s", l, err)
+		return "", err
+	}
+	licenceName = l
+
+	return licenceName, nil
+}
+
 // Returns the source URL (if any) present in the form data
 func GetFormSourceURL(r *http.Request) (sourceURL string, err error) {
 	// Gather submitted form data (if any)
