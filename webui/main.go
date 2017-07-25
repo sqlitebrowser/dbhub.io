@@ -2603,13 +2603,17 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	newName := nb
 
 	// Validate new branch description
+	var newDesc string
 	nd := r.PostFormValue("newdesc")
-	err = com.Validate.Var(nd, "markdownsource")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if nd != "" {
+		err = com.Validate.Var(nd, "markdownsource")
+		if err != nil {
+			log.Println("Branch description failed validation")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		newDesc = nd
 	}
-	newDesc := nd
 
 	// Make sure a branch name was provided
 	branchName, err := com.GetFormBranch(r)
@@ -2619,7 +2623,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newDesc == "" || newName == "" {
+	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
