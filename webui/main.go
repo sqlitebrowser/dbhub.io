@@ -1973,19 +1973,16 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	oneLineDesc := r.PostFormValue("onelinedesc")
 	newName := r.PostFormValue("newname")
 	fullDesc := r.PostFormValue("fulldesc")
-	sourceURL := r.PostFormValue("sourceurl")   // Optional
 	defTable := r.PostFormValue("defaulttable") // TODO: Update the default table to be "per branch"
 	licences := r.PostFormValue("licences")
 
 	// TODO: Validate the licenceName field
 
 	// Validate the source URL
-	if sourceURL != "" {
-		err = com.Validate.Var(sourceURL, "url,min=5,max=255") // 255 seems like a reasonable first guess
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, "Validation failed for source URL field")
-			return
-		}
+	sourceURL, err := com.GetFormSourceURL(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for source URL value")
+		return
 	}
 
 	// Grab and validate the supplied default branch name
@@ -2847,11 +2844,28 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the other form variables
-	commitMsg := r.PostFormValue("commitmsg")
-	sourceURL := r.PostFormValue("sourceurl")
 	licenceName := r.PostFormValue("licence")
 
 	// TODO: Validate the input fields
+
+	// Validate the source URL
+	sourceURL, err := com.GetFormSourceURL(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for source URL value")
+		return
+	}
+
+	// Validate the commit message
+	var commitMsg string
+	cm := r.PostFormValue("commitmsg")
+	if cm != "" {
+		err = com.Validate.Var(cm, "markdownsource")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Validation failed for the commit message")
+			return
+		}
+		commitMsg = cm
+	}
 
 	// Add (optional) branch name field to the upload form
 	branchName, err := com.GetFormBranch(r) // Optional
