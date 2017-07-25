@@ -2401,13 +2401,14 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Table data handler"
 
-	// Retrieve user, database, and table name
+	// Retrieve user, database, table, and commit ID
 	// TODO: Add folder support
 	dbOwner, dbName, requestedTable, commitID, err := com.GetODTC(2, r) // 1 = Ignore "/x/table/" at the start of the URL
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	dbFolder := "/"
 
 	// Extract sort column, sort direction, and offset variables if present
 	sortCol := r.FormValue("sort")
@@ -2419,7 +2420,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		rowOffset, err = strconv.Atoi(offsetStr)
 		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
@@ -2437,7 +2438,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("Validation failed on requested sort field name '%v': %v\n", sortCol,
 				err.Error())
-			errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
@@ -2445,7 +2446,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	// If a sort direction was provided, validate it
 	if sortDir != "" {
 		if sortDir != "ASC" && sortDir != "DESC" {
-			errorPage(w, r, http.StatusBadRequest, "Invalid sort direction")
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
@@ -2463,17 +2464,17 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database
-	bucket, id, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
+	bucket, id, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Sanity check
 	if id == "" {
 		// The requested database wasn't found
-		log.Printf("%s: Requested database not found. Owner: '%s' Database: '%s'", pageName, dbOwner,
-			dbName)
+		log.Printf("%s: Requested database not found. Owner: '%s%s%s'", pageName, dbOwner, dbFolder, dbName)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -2483,13 +2484,13 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		// Retrieve the user preference data
 		maxRows = com.PrefUserMaxRows(loggedInUser)
 	} else {
-		// Not logged in, so default to 10 rows
+		// Not logged in, so use the default number of display rows
 		maxRows = com.DefaultNumDisplayRows
 	}
 
 	// If the data is available from memcached, use that instead of reading from the SQLite database itself
 	dataCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-		loggedInUser, dbOwner, "/", dbName, commitID, requestedTable, maxRows)
+		loggedInUser, dbOwner, dbFolder, dbName, commitID, requestedTable, maxRows)
 
 	// If a cached version of the page data exists, use it
 	var dataRows com.SQLiteRecordSet
@@ -2503,7 +2504,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		// Open the Minio database
 		sdb, tempFile, err := com.OpenMinioObject(bucket, id)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -2535,7 +2536,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if tablePresent == false {
 				// The requested table doesn't exist
-				errorPage(w, r, http.StatusBadRequest, "Requested table does not exist")
+				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		}
@@ -2551,7 +2552,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Printf("Error when reading column names for table '%s': %v\n", requestedTable,
 					err.Error())
-				errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			colExists := false
@@ -2570,21 +2571,22 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, maxRows, sortCol, sortDir, rowOffset)
 		if err != nil {
 			// Some kind of error when reading the database data
-			errorPage(w, r, http.StatusBadRequest, err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		// Count the total number of rows in the requested table
 		dataRows.TotalRows, err = com.GetSQLiteRowCount(sdb, requestedTable)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		// Cache the data in memcache
 		err = com.CacheData(dataCacheKey, dataRows, com.CacheTime)
 		if err != nil {
-			log.Printf("%s: Error when caching table data: %v\n", pageName, err)
+			log.Printf("%s: Error when caching table data for '%s%s%s': %v\n", pageName, dbOwner, dbFolder,
+				dbName, err)
 		}
 	}
 
