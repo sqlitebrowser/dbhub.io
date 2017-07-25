@@ -147,6 +147,16 @@ func ValidateFolder(folder string) error {
 	return nil
 }
 
+// Validate the provided licence name.
+func ValidateLicence(licence string) error {
+	err := Validate.Var(licence, "licence,min=3,max=13") // 13 is the length of our longest licence name (thus far)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Validate the provided PostgreSQL table name.
 func ValidatePGTable(table string) error {
 	// TODO: Improve this to work with all valid SQLite identifiers

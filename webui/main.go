@@ -1976,7 +1976,21 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	defTable := r.PostFormValue("defaulttable") // TODO: Update the default table to be "per branch"
 	licences := r.PostFormValue("licences")
 
-	// TODO: Validate the licenceName field
+	// Validate the licence names
+	branchLics := make(map[string]string)
+	err = json.Unmarshal([]byte(licences), &branchLics)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for bName, lName := range branchLics {
+		err = com.ValidateLicence(lName)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, fmt.Sprintf(
+				"Validation failed on licence name for branch '%s'", bName))
+			return
+		}
+	}
 
 	// Validate the source URL
 	sourceURL, err := com.GetFormSourceURL(r)
@@ -2010,9 +2024,21 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Ensure the description is 80 chars or less
-	if len(oneLineDesc) > 80 {
-		errorPage(w, r, http.StatusBadRequest, "Description line needs to be 80 characters or less")
+	// Validate characters and length of the one line description
+	if oneLineDesc != "" {
+		err = com.Validate.Var(oneLineDesc, "markdownsource,max=80")
+		if err != nil {
+			log.Printf("One line description '%s' failed validation", oneLineDesc)
+			errorPage(w, r, http.StatusBadRequest, "One line description failed validation")
+			return
+		}
+	}
+
+	// Validate the full description
+	err = com.Validate.Var(fullDesc, "markdownsource,max=8192") // 8192 seems reasonable.  Maybe too long?
+	if err != nil {
+		log.Printf("Full description '%s' failed validation", fullDesc)
+		errorPage(w, r, http.StatusBadRequest, "Full description failed validation")
 		return
 	}
 
@@ -2075,14 +2101,6 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
 			return
 		}
-	}
-
-	// Extract the new licence info for each of the branches
-	branchLics := make(map[string]string)
-	err = json.Unmarshal([]byte(licences), &branchLics)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
 	}
 
 	// Grab the complete commit list for the database

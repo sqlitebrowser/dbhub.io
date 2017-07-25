@@ -84,9 +84,9 @@ func GetFormLicence(r *http.Request) (licenceName string, err error) {
 	}
 
 	// Validate the licence name
-	err = Validate.Var(l, "licence,min=3,max=13") // 12 is the length of our longest licence name (thus far)
+	err = ValidateLicence(l)
 	if err != nil {
-		log.Printf("Validation failed for folder: '%s': %s", l, err)
+		log.Printf("Validation failed for licence: '%s': %s", l, err)
 		return "", err
 	}
 	licenceName = l
