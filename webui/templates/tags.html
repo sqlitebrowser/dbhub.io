@@ -19,6 +19,13 @@
             </h2>
         </div>
     </div>
+    <div class="row" ng-if="statusMessage != ''">
+        <div class="col-md-12">
+            <div style="text-align: center; padding-bottom: 8px;">
+                <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
+            </div>
+        </div>
+    </div>
     <div class="row">
         <div class="col-md-12">
             <table ng-if="numTags > 0" class="table table-bordered table-striped table-responsive">
@@ -65,14 +72,13 @@
                     <td style="border-style: none;" colspan="3">
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <uib-tabset>
-                                <uib-tab index="0" heading="Edit">
+                                <uib-tab index="0" heading="Message" select="getMarkdown(key)">
+                                    <div style="text-align: left; margin-top: 2px;" id="{{ key }}_mkdn"><span ng-bind-html="row.message_markdown"></span></div>
+                                </uib-tab>
+                                <uib-tab index="1" heading="Edit">
                                     <textarea id="{{ key }}_desc" name="{{ key }}_desc" cols="80" rows="10" style="margin-top: 2px;" placeholder="A description for this tag">{{ row.message }}</textarea>
                                 </uib-tab>
-                                <uib-tab index="1" heading="Preview" select="getMarkdown(key)">
-                                    <div style="text-align: left; margin-top: 2px;" id="{{ key }}_mkdn"></div>
-                                </uib-tab>
                             </uib-tabset>
-                            <span name="{{ key }}_msg" id="{{ key }}_msg"></span>
                         [[ else ]]
                             <span ng-bind-html="row.message_markdown"></span>
                         [[ end ]]
@@ -95,6 +101,8 @@
         $scope.numTags = [[ .NumTags ]];
 
         // Delete the tag
+        $scope.statusMessage = "";
+        $scope.statusMessageColour = "Red";
         $scope.deleteTag = function(tagName) {
             $http({
                 method: "POST",
@@ -115,9 +123,15 @@
             });
         };
 
+        // Retrieve and render markdown text
         $scope.getMarkdown = function(rowDesc) {
-            // Retrieve latest markdown text from the text area
-            var rawTxt = document.getElementById(rowDesc + "_desc").value;
+            var txtID = document.getElementById(rowDesc + "_desc");
+            if (txtID == null) {
+                // txtID is null when the page first renders (and we don't need it then anyway).  It's correctly set
+                // afterwards.
+                return;
+            }
+            var rawTxt = txtID.value;
             var mkdnID = document.getElementById(rowDesc + "_mkdn");
 
             // Call the server, asking for a rendered version of the markdown
@@ -134,7 +148,6 @@
         // Send the update details to the server
         $scope.updateTag = function(tagName){
             var descID = document.getElementById(tagName + "_desc");
-            var msgID = document.getElementById(tagName + "_msg");
             var nameID = document.getElementById(tagName + "_name");
             var newDesc = descID.value;
             var newName = nameID.value;
@@ -154,10 +167,16 @@
                 // Upon return, indicate success or failure
                 var status = response.status;
                 if (status == 200) {
-                    msgID.textContent = "Updated";
+                    $scope.statusMessageColour = "Green";
+                    $scope.statusMessage = "Tag updated";
                 } else {
-                    msgID.textContent = "Failed";
+                    $scope.statusMessageColour = "Red";
+                    $scope.statusMessage = "Tag update failed";
                 }
+            }, function failure(response) {
+                // The delete failed, so display an error message
+                $scope.statusMessageColour = "Red";
+                $scope.statusMessage = "Tag update failed";
             });
         };
 
