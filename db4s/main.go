@@ -234,7 +234,7 @@ func main() {
 		RootCAs:                  ourCAPool,
 	}
 	newServer := &http.Server{
-		Addr:         com.DB4SServer() + ":" + fmt.Sprint(com.DB4SServerPort()),
+		Addr:         ":" + fmt.Sprint(com.DB4SServerPort()),
 		Handler:      mux,
 		TLSConfig:    newTLSConfig,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
