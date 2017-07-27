@@ -28,14 +28,23 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            <table ng-if="numRels > 0" class="table table-bordered table-striped table-responsive">
+            <table ng-if="numRels > 0" class="table table-striped table-responsive">
                 <tr>
+                    <th style="background-color: #FFFFFF; border-left-style: none; border-top-style: none; border-bottom-style: none; border-right: 1px solid #ddd;">&nbsp;</th>
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                        <th>Actions</th>
+                        <th style="border-bottom: 1px solid #ddd;">Actions</th>
+                        <th style="border-bottom: 1px solid #ddd;">Name</th>
+                    [[ else ]]
+                        <th style="border-left: 1px solid #ddd;">Name</th>
                     [[ end ]]
-                    <th>Name</th><th>Release creator</th><th>Creation date</th><th>Commit ID</th>
+                    <th style="border-bottom: 1px solid #ddd;">Release creator</th>
+                    <th style="border-bottom: 1px solid #ddd;">Creation date</th>
+                    <th style="border-right: 1px solid #ddd;">Commit ID</th>
                 </tr>
                 <tr ng-repeat-start="(key, row) in Releases">
+                    <td style="background-color: #FFFFFF; border-left-style: none; border-top-style: none; border-bottom-style: none; border-right: 1px solid #ddd;">
+                        <button class="btn btn-success" ng-click="downloadDB(row.commit)">Download</button>
+                    </td>
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-style: none;">
                             <button class="btn btn-primary" ng-click="updateRelease(key)">Update</button>
@@ -44,7 +53,7 @@
                             <input type="text" name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}">
                         </td>
                     [[ else ]]
-                        <td style="border-style: none;">
+                        <td style="border-left: 1px solid #ddd;">
                             <div style="padding-top: 8px;">
                                 <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?release={{ key }}">{{ key }}</a>
                             </div>
@@ -56,22 +65,27 @@
                     <td style="border-style: none;">
                         <div style="padding-top: 8px;" ng-bind="row.date | date : 'd MMMM, y h:mm a' : 'UTC' "></div>
                     </td>
-                    <td style="border-style: none;">
+                    <td style="border-right: 1px solid #ddd;">
                         <div style="padding-top: 8px;">
                             <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}">{{ row.commit }}</a>
                         </div>
                     </td>
                 </tr>
-                <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
+                <tr ng-repeat-end style="border-left-style: none;">
+                    <td style="background-color: #FFFFFF; border-left-style: none; border-top-style: none; border-bottom-style: none; border-right: 1px solid #ddd;">&nbsp;</td>
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                        <td style="border-style: none;">
+                        <td style="border-bottom: 1px solid #ddd; border-top-style: none;">
                             <button class="btn btn-primary" ng-click="deleteRelease(key)">Delete</button>
                         </td>
+                        <td style="border-bottom: 1px solid #ddd; border-left: none; border-top-style: none; border-right-style: none;">
+                            &nbsp;
+                        </td>
+                    [[ else ]]
+                        <td style="border-bottom: 1px solid #ddd; border-left: 1px solid #ddd; border-top-style: none; border-right-style: none;">
+                            &nbsp;
+                        </td>
                     [[ end ]]
-                    <td style="border-style: none;">
-                        &nbsp;
-                    </td>
-                    <td style="border-style: none;" colspan="3">
+                    <td style="border-bottom: 1px solid #ddd; border-left-style: none; border-top-style: none; border-right: 1px solid #ddd;" colspan="3">
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <uib-tabset>
                                 <uib-tab index="0" heading="Description" select="getMarkdown(key)">
@@ -123,6 +137,11 @@
                     window.location = '/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
                 }
             });
+        };
+
+        // Download a release
+        $scope.downloadDB = function(commit) {
+            window.location = "/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=" + commit;
         };
 
         // Retrieve and render markdown text
