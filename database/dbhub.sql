@@ -109,7 +109,6 @@ CREATE TABLE sqlite_databases (
     discussions bigint DEFAULT 0 NOT NULL,
     merge_requests bigint DEFAULT 0 NOT NULL,
     branches bigint DEFAULT 1 NOT NULL,
-    releases bigint DEFAULT 0 NOT NULL,
     contributors bigint DEFAULT 1 NOT NULL,
     one_line_description text,
     full_description text,
@@ -122,7 +121,9 @@ CREATE TABLE sqlite_databases (
     tag_list jsonb,
     default_branch text,
     is_deleted boolean DEFAULT false NOT NULL,
-    tags integer DEFAULT 0 NOT NULL
+    tags integer DEFAULT 0 NOT NULL,
+    release_list jsonb,
+    release_count integer DEFAULT 0 NOT NULL
 );
 
 
