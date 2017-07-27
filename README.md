@@ -5,13 +5,13 @@
 An early stage (in development) "Cloud" for SQLite databases, with special
 integration for [DB Browser for SQLite](http://sqlitebrowser.org).
 
-You can try out our development server at [https://dev1.dbhub.io](https://dev1.dbhub.io/justinclift/Belfast%20Bikes%20Docking%20Stations.sqlite),
+You can try out our beta testing server at [https://db4s-beta.dbhub.io](https://db4s-beta.dbhub.io/justinclift/DB4S%20download%20stats.sqlite),
 or run it locally for your own users.
 
-**Note** - Don't store important data on the dev1 server.  It gets wiped now and again,
+**Note** - Don't store important data on the beta server.  It gets wiped now and again,
 when we're experimenting with things.
 
-When the core code is more fully featured (June/July 2017 target), we'll start putting
+When the core code is more fully featured (August 2017 target), we'll start putting
 "production" servers online for people to store their data.
 
 ### Requirements
