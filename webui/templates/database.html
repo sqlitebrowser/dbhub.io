@@ -12,6 +12,16 @@
     .colHeader:hover {
         text-decoration: underline;
     }
+
+    .notImplementedYet {
+        color: gray;
+        text-decoration: none;
+    }
+
+    .notImplementedYet:hover {
+        color: gray;
+        text-decoration: none;
+    }
 </style>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
@@ -58,13 +68,13 @@
         <div class="col-md-6">
             <div class="row">
                 <div class="col-md-2">
-                    Data
+                    <span style="font-weight: 700;">Data</span>
                 </div>
                 <div class="col-md-3">
-                    <label id="viewdiscuss"><a href="">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label>
+                    <label id="viewdiscuss"><a href="" class="notImplementedYet" title="Not yet implemented">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label>
                 </div>
                 <div class="col-md-4">
-                    <label id="viewmrs"><a href="">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label>
+                    <label id="viewmrs"><a href="" class="notImplementedYet" title="Not yet implemented">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label>
                 </div>
                 <div class="col-md-3">
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
