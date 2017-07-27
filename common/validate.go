@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	regexBraTagName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
+	regexBraTagName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\:,\ )]+$`)
 	regexDBName         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
 	regexDisplayName    = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\ ]+$`)
 	regexFieldName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
@@ -37,7 +37,7 @@ func init() {
 }
 
 // Custom validation function for branch and tag names.
-// At the moment it just allows alphanumeric and "^.-_/() " chars, though it should probably be extended to cover any
+// At the moment it just allows alphanumeric and "^.-_/(): " chars, though it should probably be extended to cover any
 // valid file name
 func checkBranchOrTagName(fl valid.FieldLevel) bool {
 	return regexBraTagName.MatchString(fl.Field().String())
