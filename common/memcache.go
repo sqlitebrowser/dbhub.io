@@ -100,9 +100,19 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 
 	// Loop around, invalidating the now outdated entries
 	for _, c := range commitList {
-		// Invalidate the meta info
+		// Invalidate the meta info, for private database versions
 		cacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, c)
 		err := memCache.Delete(cacheKey)
+		if err != nil {
+			if err != memcache.ErrCacheMiss {
+				// Cache miss is not an error we care about
+				return err
+			}
+		}
+
+		// Invalidate the meta info for public database versions
+		cacheKey = MetadataCacheKey("meta", "", dbOwner, dbFolder, dbName, c)
+		err = memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
 				// Cache miss is not an error we care about
