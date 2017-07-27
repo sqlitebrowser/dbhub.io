@@ -86,7 +86,7 @@
                 <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-style: none;">
-                            <button class="btn btn-primary" ng-click="createTag(row.id)">Create Tag</button>
+                            <button class="btn btn-primary" ng-click="createTag(row.id)">Create Tag or Release</button>
                             <span ng-if="(row.id == headCommit) && (row.id != lastCommit)">
                                 <br /><br />
                                 <button class="btn btn-danger" ng-click="deleteCommit(row.id)">Delete Commit</button>

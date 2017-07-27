@@ -116,14 +116,28 @@ func GetFormSourceURL(r *http.Request) (sourceURL string, err error) {
 	return sourceURL, err
 }
 
+// Return the requested release name, from get or post data.
+func GetFormRelease(r *http.Request) (release string, err error) {
+	// If no release was given in the input, returns an empty string
+	c := r.FormValue("release")
+	if c == "" {
+		return "", nil
+	}
+	err = Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Invalid release name: '%v'", c))
+	}
+	return c, nil
+}
+
 // Return the requested tag name, from get or post data.
-func GetFormTag(r *http.Request) (string, error) {
+func GetFormTag(r *http.Request) (tag string, err error) {
 	// If no tag was given in the input, returns an empty string
 	c := r.FormValue("tag")
 	if c == "" {
 		return "", nil
 	}
-	err := Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	err = Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Invalid tag name: '%v'", c))
 	}

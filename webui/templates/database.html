@@ -133,7 +133,7 @@
                     </td>
                     <td>
                         <div style="text-align: center;">
-                            <label id="viewreleases" ng-bind="'Releases: ' + meta.Releases"></label>
+                            <a href="/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewreleases" ng-bind="'Releases: ' + meta.Releases"></label></a>
                         </div>
                     </td>
                     <td>
@@ -161,7 +161,7 @@
                     </ul>
                 </div>
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
-                    <button id="viewtable" type="button" class="btn">{{ 'Branch: ' + meta.Branch }}</button>
+                    <button id="viewbranch" type="button" class="btn">{{ 'Branch: ' + meta.Branch }}</button>
 
                     <button type="button" uib-dropdown-toggle class="btn btn-default">
                         <span class="caret"></span>

@@ -1,6 +1,6 @@
-[[ define "tagsPage" ]]
+[[ define "releasesPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="tagsView">
+<html ng-app="DBHub" ng-controller="releasesView">
 [[ template "head" . ]]
 <body>
 <style>
@@ -13,7 +13,7 @@
     <div class="row">
         <div class="col-md-12">
             <h2 style="text-align: center;">
-                Tags for
+                Releases for
                 <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
                 <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
             </h2>
@@ -28,17 +28,17 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            <table ng-if="numTags > 0" class="table table-bordered table-striped table-responsive">
+            <table ng-if="numRels > 0" class="table table-bordered table-striped table-responsive">
                 <tr>
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <th>Actions</th>
                     [[ end ]]
-                    <th>Name</th><th>Tag creator</th><th>Creation date</th><th>Commit ID</th>
+                    <th>Name</th><th>Release creator</th><th>Creation date</th><th>Commit ID</th>
                 </tr>
-                <tr ng-repeat-start="(key, row) in Tags">
+                <tr ng-repeat-start="(key, row) in Releases">
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-style: none;">
-                            <button class="btn btn-primary" ng-click="updateTag(key)">Update</button>
+                            <button class="btn btn-primary" ng-click="updateRelease(key)">Update</button>
                         </td>
                         <td style="border-style: none;">
                             <input type="text" name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}">
@@ -46,12 +46,12 @@
                     [[ else ]]
                         <td style="border-style: none;">
                             <div style="padding-top: 8px;">
-                                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?tag={{ key }}">{{ key }}</a>
+                                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?release={{ key }}">{{ key }}</a>
                             </div>
                         </td>
                     [[ end ]]
                     <td style="border-style: none;">
-                        <div style="padding-top: 8px;"><a href="/{{ row.tagger_user_name }}">{{ row.tagger_display_name }}</a></div>
+                        <div style="padding-top: 8px;"><a href="/{{ row.releaser_user_name }}">{{ row.releaser_display_name }}</a></div>
                     </td>
                     <td style="border-style: none;">
                         <div style="padding-top: 8px;" ng-bind="row.date | date : 'd MMMM, y h:mm a' : 'UTC' "></div>
@@ -65,7 +65,7 @@
                 <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-style: none;">
-                            <button class="btn btn-primary" ng-click="deleteTag(key)">Delete</button>
+                            <button class="btn btn-primary" ng-click="deleteRelease(key)">Delete</button>
                         </td>
                     [[ end ]]
                     <td style="border-style: none;">
@@ -78,7 +78,7 @@
                                     <div style="text-align: left; margin-top: 2px;" id="{{ key }}_mkdn"><span ng-bind-html="row.description_markdown"></span></div>
                                 </uib-tab>
                                 <uib-tab index="1" heading="Edit">
-                                    <textarea id="{{ key }}_desc" name="{{ key }}_desc" cols="80" rows="10" style="margin-top: 2px;" placeholder="A description for this tag">{{ row.description }}</textarea>
+                                    <textarea id="{{ key }}_desc" name="{{ key }}_desc" cols="80" rows="10" style="margin-top: 2px;" placeholder="A description for this release">{{ row.description }}</textarea>
                                 </uib-tab>
                             </uib-tabset>
                         [[ else ]]
@@ -87,30 +87,30 @@
                     </td>
                 </tr>
             </table>
-            <div ng-if="numTags == 0" style="text-align: center; padding-bottom: 10px;"><i>This database doesn't have any tags yet</i></div>
+            <div ng-if="numRels == 0" style="text-align: center; padding-bottom: 10px;"><i>This database doesn't have any releases yet</i></div>
         </div>
     </div>
 </div>
 [[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('tagsView', function($scope, $http, $httpParamSerializerJQLike) {
-        $scope.Tags = [[ .TagList ]];
+    app.controller('releasesView', function($scope, $http, $httpParamSerializerJQLike) {
+        $scope.Releases = [[ .ReleaseList ]];
 
-        // We use the # of tags to decide whether or not we'll display a "No tags defined yet!" message
-        // TODO: Figure out why using $scope.Tags.length gives "undefined" here, but works perfectly fine for the
+        // We use the # of releases to decide whether or not we'll display a "No releases defined yet!" message
+        // TODO: Figure out why using $scope.Tags.Releases gives "undefined" here, but works perfectly fine for the
         // TODO  commits page.  We're forced to do dodgy crap like pass a counter from the backend until that's solved. ;)
-        $scope.numTags = [[ .NumTags ]];
+        $scope.numRels = [[ .NumRels ]];
 
-        // Delete the tag
+        // Delete the release
         $scope.statusMessage = "";
         $scope.statusMessageColour = "Red";
-        $scope.deleteTag = function(tagName) {
+        $scope.deleteRelease = function(relName) {
             $http({
                 method: "POST",
-                url: "/x/deletetag/",
+                url: "/x/deleterelease/",
                 data: $httpParamSerializerJQLike({
-                        "tag": tagName,
+                        "release": relName,
                         "folder": "/",
                         "dbname": [[ .Meta.Database ]],
                         "username": [[ .Meta.Owner ]]
@@ -120,7 +120,7 @@
                 // If successful, reload the page
                 var status = response.status;
                 if (status == 200) {
-                    window.location = '/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+                    window.location = '/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
                 }
             });
         };
@@ -148,21 +148,21 @@
         };
 
         // Send the update details to the server
-        $scope.updateTag = function(tagName){
-            var descID = document.getElementById(tagName + "_desc");
-            var nameID = document.getElementById(tagName + "_name");
+        $scope.updateRelease = function(relName){
+            var descID = document.getElementById(relName + "_desc");
+            var nameID = document.getElementById(relName + "_name");
             var newDesc = descID.value;
             var newName = nameID.value;
             $http({
                 method: "POST",
-                url: "/x/updatetag/",
+                url: "/x/updaterelease/",
                 data: $httpParamSerializerJQLike({
-                        "tag": tagName,
+                        "release": relName,
                         "folder": "/",
                         "dbname": [[ .Meta.Database ]],
                         "username": [[ .Meta.Owner ]],
                         "newmsg": newDesc,
-                        "newtag": newName
+                        "newrel": newName
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
@@ -170,15 +170,15 @@
                 var status = response.status;
                 if (status == 200) {
                     $scope.statusMessageColour = "Green";
-                    $scope.statusMessage = "Tag updated";
+                    $scope.statusMessage = "Release updated";
                 } else {
                     $scope.statusMessageColour = "Red";
-                    $scope.statusMessage = "Tag update failed";
+                    $scope.statusMessage = "Release update failed";
                 }
             }, function failure(response) {
                 // The delete failed, so display an error message
                 $scope.statusMessageColour = "Red";
-                $scope.statusMessage = "Tag update failed";
+                $scope.statusMessage = "Release update failed";
             });
         };
 

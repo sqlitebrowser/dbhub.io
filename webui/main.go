@@ -306,17 +306,24 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect tag name")
 		return
 	}
-	tm := r.PostFormValue("tagmsg") // Optional
 
-	// If given, validate the tag message field
-	var tagMsg string
-	if tm != "" {
-		err = com.Validate.Var(tm, "markdownsource")
+	// If given, validate the tag description field
+	td := r.PostFormValue("tagdesc") // Optional
+	var tagDesc string
+	if td != "" {
+		err = com.Validate.Var(td, "markdownsource")
 		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, "Invalid characters in tag message")
+			errorPage(w, r, http.StatusBadRequest, "Invalid characters in tag description")
 			return
 		}
-		tagMsg = tm
+		tagDesc = td
+	}
+
+	// Validate the tag type field
+	tagType := r.PostFormValue("tagtype")
+	if tagType != "tag" && tagType != "release" {
+		errorPage(w, r, http.StatusBadRequest, "Unknown tag type")
+		return
 	}
 
 	// Check if the requested database exists
@@ -338,7 +345,62 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read the branch heads list from the database
+	// Create a new tag or release as appropriate
+	if tagType == "release" {
+		// * It's a release *
+
+		// Read the releases list from the database
+		rels, err := com.GetReleases(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Ensure the release doesn't already exists
+		_, ok := rels[tagName]
+		if ok {
+			errorPage(w, r, http.StatusConflict, "A release of that name already exists!")
+			return
+		}
+
+		// Create the release
+		name, email, err := com.GetUserDetails(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusConflict, "An error occurred when retrieving user details")
+		}
+		newRel := com.TagEntry{
+			Commit:      commit,
+			Date:        time.Now(),
+			Description: tagDesc,
+			TaggerEmail: email,
+			TaggerName:  name,
+		}
+		rels[tagName] = newRel
+
+		// Store it in PostgreSQL
+		err = com.StoreReleases(dbOwner, dbFolder, dbName, rels)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Invalidate the memcache data for the database
+		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+		if err != nil {
+			// Something went wrong when invalidating memcached entries for the database
+			log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+			return
+		}
+
+		// Bounce to the releases page
+		http.Redirect(w, r, fmt.Sprintf("/releases/%s%s%s", loggedInUser, dbFolder, dbName),
+			http.StatusTemporaryRedirect)
+		return
+	}
+
+	// * It's a tag *
+
+	// Read the tags list from the database
 	tags, err := com.GetTags(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -360,7 +422,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	newTag := com.TagEntry{
 		Commit:      commit,
 		Date:        time.Now(),
-		Message:     tagMsg,
+		Description: tagDesc,
 		TaggerEmail: email,
 		TaggerName:  name,
 	}
@@ -1036,6 +1098,103 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// This function deletes a release.
+func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Delete Release handler"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Extract the required form variables
+	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbOwner := strings.ToLower(u)
+
+	// Ensure a release name was supplied
+	relName, err := com.GetFormRelease(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// If any of the required values were empty, indicate failure
+	if relName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
+	if dbOwner != loggedInUser {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Load the existing releases for the database
+	releases, err := com.GetReleases(loggedInUser, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the given tag exists
+	_, ok := releases[relName]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Delete the release
+	delete(releases, relName)
+	err = com.StoreReleases(dbOwner, dbFolder, dbName, releases)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Invalidate the memcache data for the database, so the new release count gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Update succeeded
+	w.WriteHeader(http.StatusOK)
+}
+
 // This function deletes a tag.
 func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete Tag handler"
@@ -1581,6 +1740,7 @@ func main() {
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))
 	http.HandleFunc("/register", logReq(createUserHandler))
+	http.HandleFunc("/releases/", logReq(releasesPage))
 	http.HandleFunc("/selectusername", logReq(selectUserNamePage))
 	http.HandleFunc("/settings/", logReq(settingsPage))
 	http.HandleFunc("/stars/", logReq(starsPage))
@@ -1593,6 +1753,7 @@ func main() {
 	http.HandleFunc("/x/deletebranch/", logReq(deleteBranchHandler))
 	http.HandleFunc("/x/deletecommit/", logReq(deleteCommitHandler))
 	http.HandleFunc("/x/deletedatabase/", logReq(deleteDatabaseHandler))
+	http.HandleFunc("/x/deleterelease/", logReq(deleteReleaseHandler))
 	http.HandleFunc("/x/deletetag/", logReq(deleteTagHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
 	http.HandleFunc("/x/downloadcert", logReq(downloadCertHandler))
@@ -1605,6 +1766,7 @@ func main() {
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))
 	http.HandleFunc("/x/updatebranch/", logReq(updateBranchHandler))
+	http.HandleFunc("/x/updaterelease/", logReq(updateReleaseHandler))
 	http.HandleFunc("/x/updatetag/", logReq(updateTagHandler))
 	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
 
@@ -2732,7 +2894,122 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// This function processes tag rename and message updates.
+// This function processes release rename and description updates.
+func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Update Release handler"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Extract the required form variables
+	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbOwner := strings.ToLower(u)
+
+	// Validate new release name
+	nr := r.PostFormValue("newrel")
+	err = com.Validate.Var(nr, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	newName := nr
+
+	// Validate new release description
+	nd := r.PostFormValue("newmsg")
+	err = com.Validate.Var(nd, "markdownsource")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	newDesc := nd
+
+	// Ensure a release name was supplied
+	relName, err := com.GetFormRelease(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// If any of the required values were empty, indicate failure
+	if relName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newDesc == "" || newName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
+	if dbOwner != loggedInUser {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Load the existing releases for the database
+	releases, err := com.GetReleases(loggedInUser, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the given release exists
+	oldInfo, ok := releases[relName]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Update the release info
+	delete(releases, relName)
+	releases[newName] = com.TagEntry{
+		Commit:      oldInfo.Commit,
+		Date:        oldInfo.Date,
+		Description: newDesc,
+		TaggerEmail: oldInfo.TaggerEmail,
+		TaggerName:  oldInfo.TaggerName,
+	}
+
+	err = com.StoreReleases(dbOwner, dbFolder, dbName, releases)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Update succeeded
+	w.WriteHeader(http.StatusOK)
+}
+
+// This function processes tag rename and description updates.
 func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Update Tag handler"
 
@@ -2773,7 +3050,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	newName := nt
 
-	// Validate new tag message
+	// Validate new tag description
 	nm := r.PostFormValue("newmsg")
 	err = com.Validate.Var(nm, "markdownsource")
 	if err != nil {
@@ -2832,7 +3109,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	tags[newName] = com.TagEntry{
 		Commit:      oldInfo.Commit,
 		Date:        oldInfo.Date,
-		Message:     newMsg,
+		Description: newMsg,
 		TaggerEmail: oldInfo.TaggerEmail,
 		TaggerName:  oldInfo.TaggerName,
 	}

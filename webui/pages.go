@@ -1158,6 +1158,127 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 }
 
+// Render the releases page, which displays the releases for a database.
+func releasesPage(w http.ResponseWriter, r *http.Request) {
+	// Structure to hold page data
+	type relEntry struct {
+		Commit              string    `json:"commit"`
+		Date                time.Time `json:"date"`
+		Description         string    `json:"description"`
+		DescriptionMarkdown string    `json:"description_markdown"`
+		ReleaserUserName    string    `json:"releaser_user_name"`
+		ReleaserDisplayName string    `json:"releaser_display_name"`
+	}
+	var pageData struct {
+		Auth0       com.Auth0Set
+		DB          com.SQLiteDBinfo
+		Meta        com.MetaInfo
+		ReleaseList map[string]relEntry
+		NumRels     int
+	}
+	pageData.Meta.Title = "Release list"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+
+	// Retrieve the database owner & name
+	// TODO: Add folder support
+	dbFolder := "/"
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/releases/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Validate the supplied information
+	if dbOwner == "" || dbName == "" {
+		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Retrieve the release list for the database
+	releases, err := com.GetReleases(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Create a small username/email lookup cache, so we don't have to query the database for usernames we've already
+	// looked up
+	userNameCache := make(map[string]string)
+
+	// Fill out the metadata
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+	pageData.ReleaseList = make(map[string]relEntry)
+	pageData.NumRels = len(releases)
+	if pageData.NumRels > 0 {
+		for i, j := range releases {
+			// If the username/email address entry is already in the username cache then use it, else grab it from the
+			// database (and put it in the cache)
+			_, ok := userNameCache[j.TaggerEmail]
+			if !ok {
+				userNameCache[j.TaggerEmail], err = com.GetUsernameFromEmail(j.TaggerEmail)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+			}
+
+			// Create the tag info we pass to the tag list rendering page
+			pageData.ReleaseList[i] = relEntry{
+				Commit:              j.Commit,
+				Date:                j.Date,
+				Description:         j.Description,
+				DescriptionMarkdown: commonmark.Md2Html(j.Description, commonmark.CMARK_OPT_DEFAULT),
+				ReleaserUserName:    userNameCache[j.TaggerEmail],
+				ReleaserDisplayName: j.TaggerName,
+			}
+		}
+	}
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
+	// Render the page
+	t := tmpl.Lookup("releasesPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 // Displays a web page for new users to choose their username.
 func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
@@ -1428,12 +1549,12 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 func tagsPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	type tgEntry struct {
-		Commit            string    `json:"commit"`
-		Date              time.Time `json:"date"`
-		Message           string    `json:"message"`
-		MarkDownMsg       string    `json:"message_markdown"`
-		TaggerUserName    string    `json:"tagger_user_name"`
-		TaggerDisplayName string    `json:"tagger_display_name"`
+		Commit              string    `json:"commit"`
+		Date                time.Time `json:"date"`
+		Description         string    `json:"description"`
+		DescriptionMarkdown string    `json:"description_markdown"`
+		TaggerUserName      string    `json:"tagger_user_name"`
+		TaggerDisplayName   string    `json:"tagger_display_name"`
 	}
 	var pageData struct {
 		Auth0   com.Auth0Set
@@ -1522,12 +1643,12 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 
 			// Create the tag info we pass to the tag list rendering page
 			pageData.TagList[i] = tgEntry{
-				Commit:            j.Commit,
-				Date:              j.Date,
-				Message:           j.Message,
-				MarkDownMsg:       commonmark.Md2Html(j.Message, commonmark.CMARK_OPT_DEFAULT),
-				TaggerUserName:    userNameCache[j.TaggerEmail],
-				TaggerDisplayName: j.TaggerName,
+				Commit:              j.Commit,
+				Date:                j.Date,
+				Description:         j.Description,
+				DescriptionMarkdown: commonmark.Md2Html(j.Description, commonmark.CMARK_OPT_DEFAULT),
+				TaggerUserName:      userNameCache[j.TaggerEmail],
+				TaggerDisplayName:   j.TaggerName,
 			}
 		}
 	}

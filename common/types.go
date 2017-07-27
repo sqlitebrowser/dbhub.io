@@ -270,7 +270,7 @@ type SQLiteRecordSet struct {
 type TagEntry struct {
 	Commit      string    `json:"commit"`
 	Date        time.Time `json:"date"`
-	Message     string    `json:"message"`
+	Description string    `json:"description"`
 	TaggerEmail string    `json:"email"`
 	TaggerName  string    `json:"name"`
 }

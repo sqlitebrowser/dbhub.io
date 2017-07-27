@@ -10,25 +10,35 @@
             &nbsp;
         </div>
         <div class="col-md-10">
-            <h2 style="text-align: center;">Create new tag</h2>
+            <h2 style="text-align: center;">Create new tag or release</h2>
             <form action="/x/createtag" method="post">
                 <div style="text-align: center;"><i>On commit: [[ .Commit ]]</i></div>
                 <table class="table table-striped table-responsive">
                     <tr>
-                        <th style="vertical-align: middle;" width="25%">Name for the new tag:</th>
+                        <th style="vertical-align: middle;" width="25%">Tag or release?</th>
+                        <td>
+                            <div class="btn-group">
+                                <label class="btn btn-default" ng-model="radioType" ng-click="typeClick('tag')" uib-btn-radio="'tag'">Tag</label>
+                                <label class="btn btn-default" ng-model="radioType" ng-click="typeClick('release')" uib-btn-radio="'release'">Release</label>
+                            </div>
+                            <span ng-bind-html="typeDesc"></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th style="vertical-align: middle;" width="25%">Name:</th>
                         <td>
                             <input type="text" id="tag" name="tag" size="50" maxlength="80"/>
                         </td>
                     </tr>
                     <tr>
                         <td style="vertical-align: top;">
-                            <b>Tag message</b><br /><br />
+                            <b>Description</b><br /><br />
                             <i>Markdown (<a href="http://commonmark.org">CommonMark</a> format) is supported</i></td>
                         <td>
                             <div>
                                 <uib-tabset active="active">
                                     <uib-tab index="0" heading="Edit">
-                                        <textarea id="tagmsg" name="tagmsg" cols="80" rows="10" style="margin-top: 2px;" placeholder="A message to display with this tag"></textarea>
+                                        <textarea id="tagdesc" name="tagdesc" cols="80" rows="10" style="margin-top: 2px;" placeholder="A description for this tag or release"></textarea>
                                     </uib-tab>
                                     <uib-tab index="1" heading="Preview" select="getMarkdown()">
                                         <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
@@ -43,6 +53,8 @@
                                 <input type="hidden" name="commit" value="[[ .Commit ]]">
                                 <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
                                 <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
+                                <input type="hidden" name="tagtype" value="{{ radioType }}">
+                                <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelCreate()">
                                 <input type="submit" class="btn btn-success" value="Create it">
                             </div>
                         </td>
@@ -59,11 +71,16 @@
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('createtagView', function($scope, $http, $httpParamSerializerJQLike) {
-        // Get rendered markdown from the server, for display in the Commit Message preview tab
+        // Handler for the cancel button.  Just bounces back to the commits page
+        $scope.cancelCreate = function() {
+            window.location = "/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]";
+        };
+
+        // Render markdown preview
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
             // Retrieve latest markdown text from the text area
-            var txt = document.getElementById("tagmsg").value;
+            var txt = document.getElementById("tagdesc").value;
 
             // Call the server, asking for a rendered version of the markdown
             $http({
@@ -72,6 +89,19 @@
                 data: $httpParamSerializerJQLike({"mkdown": txt}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.markDownPreview = response.data; });
+        };
+
+        // Set the type to tag by default
+        $scope.radioType = "tag";
+        $scope.typeDesc = "&nbsp; This will be a new <b>tag</b>.";
+
+        // Update the tag/release description text
+        $scope.typeClick = function(newValue) {
+            if (newValue === "tag") {
+                $scope.typeDesc = "&nbsp; This will be a new <b>tag</b>.";
+            } else {
+                $scope.typeDesc = "&nbsp; This will be a new <b>release</b>.";
+            }
         };
 
         // Auth0

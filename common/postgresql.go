@@ -358,7 +358,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	dbQuery := `
 		SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
 			$4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
-			db.branches, db.releases, db.contributors, db.one_line_description, db.full_description,
+			db.branches, db.release_count, db.contributors, db.one_line_description, db.full_description,
 			db.default_table, db.public, db.source_url, db.tags, db.default_branch
 		FROM sqlite_databases AS db
 		WHERE db.user_id = (
@@ -1382,6 +1382,30 @@ func GetLicenceSha256FromName(userName string, licenceName string) (sha256 strin
 	return sha256, nil
 }
 
+// Retrieve the list of releases for a database.
+func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[string]TagEntry, err error) {
+	dbQuery := `
+		SELECT release_list
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&releases)
+	if err != nil {
+		log.Printf("Error when retrieving releases for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		return nil, err
+	}
+	if releases == nil {
+		// If there aren't any releases yet, return an empty set instead of nil
+		releases = make(map[string]TagEntry)
+	}
+	return releases, nil
+}
+
 // Retrieve the tags for a database.
 func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]TagEntry, err error) {
 	dbQuery := `
@@ -1920,6 +1944,30 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 	return nil
 }
 
+// Store the releases for a database.
+func StoreReleases(dbOwner string, dbFolder string, dbName string, releases map[string]TagEntry) error {
+	dbQuery := `
+		UPDATE sqlite_databases
+		SET release_list = $4, release_count = $5
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, releases, len(releases))
+	if err != nil {
+		log.Printf("Storing releases for database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected when storing releases for database: '%s%s%s'\n", numRows,
+			dbOwner, dbFolder, dbName)
+	}
+	return nil
+}
+
 // Store the tags for a database.
 func StoreTags(dbOwner string, dbFolder string, dbName string, tags map[string]TagEntry) error {
 	dbQuery := `
@@ -2096,7 +2144,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			WHERE db.user_id = u.user_id
 		), dbs AS (
 			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
-				db.watchers, db.stars, db.discussions, db.merge_requests, db.branches, db.releases, db.tags,
+				db.watchers, db.stars, db.discussions, db.merge_requests, db.branches, db.release_count, db.tags,
 				db.contributors, db.one_line_description, default_commits.id,
 				db.commit_list->default_commits.id->'tree'->'entries'->0, db.source_url
 			FROM sqlite_databases AS db, default_commits
