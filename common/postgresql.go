@@ -289,10 +289,46 @@ func databaseID(dbOwner string, dbFolder string, dbName string) (dbID int, err e
 	return
 }
 
-// Return a list of 1) users with public databases, 2) along with the logged in user's most recently modified database,
-// including their private one(s).
-func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
+// Return a list of 1) users with public databases, 2) along with the logged in users' most recently modified database
+// (including their private one(s)).
+func DB4SDefaultList(loggedInUser string) (map[string]UserInfo, error) {
+	// Retrieve the list of all users with public databases
 	dbQuery := `
+		WITH public_dbs AS (
+			SELECT db_id, last_modified
+			FROM sqlite_databases
+			WHERE public = true
+			AND is_deleted = false
+			ORDER BY last_modified DESC
+		), public_users AS (
+			SELECT DISTINCT ON (db.user_id) db.user_id, db.last_modified
+			FROM public_dbs as pub, sqlite_databases AS db
+			WHERE db.db_id = pub.db_id
+			ORDER BY db.user_id, db.last_modified DESC
+		)
+		SELECT user_name, last_modified
+		FROM public_users AS pu, users
+		WHERE users.user_id = pu.user_id
+		ORDER BY last_modified DESC`
+	rows, err := pdb.Query(dbQuery)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return nil, err
+	}
+	defer rows.Close()
+	list := make(map[string]UserInfo)
+	for rows.Next() {
+		var oneRow UserInfo
+		err = rows.Scan(&oneRow.Username, &oneRow.LastModified)
+		if err != nil {
+			log.Printf("Error list of users with public databases: %v\n", err)
+			return nil, err
+		}
+		list[oneRow.Username] = oneRow
+	}
+
+	// Retrieve the last modified timestamp for the most recent database of the logged in user (if they have any)
+	dbQuery = `
 		WITH u AS (
 			SELECT user_id
 			FROM users
@@ -303,41 +339,27 @@ func DB4SDefaultList(loggedInUser string) ([]UserInfo, error) {
 			WHERE db.user_id = u.user_id
 			AND is_deleted = false
 		), most_recent_user_db AS (
-			SELECT udb.db_id, udb.last_modified
+			SELECT udb.last_modified
 			FROM user_db_list AS udb
 			ORDER BY udb.last_modified DESC
 			LIMIT 1
-		), public_dbs AS (
-			SELECT db_id, last_modified
-			FROM sqlite_databases
-			WHERE public = true
-			AND is_deleted = false
-			ORDER BY last_modified DESC
-		), public_users AS (
-			SELECT DISTINCT ON (db.user_id) db.user_id, db.last_modified
-			FROM public_dbs as pub, sqlite_databases AS db, most_recent_user_db AS usr
-			WHERE db.db_id = pub.db_id OR db.db_id = usr.db_id
-			ORDER BY db.user_id, db.last_modified DESC
 		)
-		SELECT user_name, last_modified
-		FROM public_users AS pu, users
-		WHERE users.user_id = pu.user_id
-		ORDER BY last_modified DESC`
-	rows, err := pdb.Query(dbQuery, loggedInUser)
+		SELECT last_modified
+		FROM most_recent_user_db`
+	rows, err = pdb.Query(dbQuery, loggedInUser)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
 	}
 	defer rows.Close()
-	var list []UserInfo
 	for rows.Next() {
-		var oneRow UserInfo
-		err = rows.Scan(&oneRow.Username, &oneRow.LastModified)
+		oneRow := UserInfo{Username: loggedInUser}
+		err = rows.Scan(&oneRow.LastModified)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err
 		}
-		list = append(list, oneRow)
+		list[oneRow.Username] = oneRow
 	}
 
 	return list, nil

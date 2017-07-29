@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -48,16 +49,37 @@ var (
 	server string
 )
 
+// For sorting a UserInfo list by Last Modified date descending
+type UserInfoSlice []com.UserInfo
+
+func (u UserInfoSlice) Len() int {
+	return len(u)
+}
+
+func (u UserInfoSlice) Less(i, j int) bool {
+	return u[i].LastModified.After(u[j].LastModified) // Swap to Before() for an ascending list
+}
+
+func (u UserInfoSlice) Swap(i, j int) {
+	u[i], u[j] = u[j], u[i]
+}
+
 func generateDefaultList(pageName string, userAcc string) (defaultList []byte, err error) {
 	pageName += ":generateDefaultList()"
 
-	// Generate list of most recently modified (available) databases
-	var userList []com.UserInfo
-	userList, err = com.DB4SDefaultList(userAcc)
+	// Retrieve the list of most recently modified (available) databases
+	unsorted, err := com.DB4SDefaultList(userAcc)
 	if err != nil {
 		// Return an empty set
 		return []byte{'{', '}'}, err
 	}
+
+	// Sort the list by last_modified order, from most recent to oldest
+	userList := make(UserInfoSlice, 0, len(unsorted))
+	for _, j := range unsorted {
+		userList = append(userList, j)
+	}
+	sort.Sort(userList)
 
 	// Ready the data for JSON Marshalling
 	type linkRow struct {
