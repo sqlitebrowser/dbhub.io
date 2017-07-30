@@ -554,17 +554,19 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Validate the email address
-	err = com.Validate.Var(email, "required,email")
-	if err != nil {
-		// Check for the special case of username@server, which may fail standard email validation checks
-		// eg username@localhost, won't validate as an email address, but should be accepted anyway
-		serverName := strings.Split(com.WebServer(), ":")
-		em := fmt.Sprintf("%s@%s", userName, serverName[0])
-		if email != em {
-			log.Printf("Email value failed validation: %s\n", err)
-			errorPage(w, r, http.StatusBadRequest, "Error when parsing email value")
-			return
+	// If present, validate the email address
+	if email != "" {
+		err = com.Validate.Var(email, "email")
+		if err != nil {
+			// Check for the special case of username@server, which may fail standard email validation checks
+			// eg username@localhost, won't validate as an email address, but should be accepted anyway
+			serverName := strings.Split(com.WebServer(), ":")
+			em := fmt.Sprintf("%s@%s", userName, serverName[0])
+			if email != em {
+				log.Printf("Email value failed validation: %s\n", err)
+				errorPage(w, r, http.StatusBadRequest, "Error when parsing email value")
+				return
+			}
 		}
 	}
 
