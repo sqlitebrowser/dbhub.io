@@ -1241,6 +1241,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		DescriptionMarkdown string    `json:"description_markdown"`
 		ReleaserUserName    string    `json:"releaser_user_name"`
 		ReleaserDisplayName string    `json:"releaser_display_name"`
+		Size                int       `json:"size"`
 	}
 	var pageData struct {
 		Auth0       com.Auth0Set
@@ -1318,9 +1319,9 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		for i, j := range releases {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
 			// database (and put it in the cache)
-			_, ok := userNameCache[j.TaggerEmail]
+			_, ok := userNameCache[j.ReleaserEmail]
 			if !ok {
-				userNameCache[j.TaggerEmail], err = com.GetUsernameFromEmail(j.TaggerEmail)
+				userNameCache[j.ReleaserEmail], err = com.GetUsernameFromEmail(j.ReleaserEmail)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -1333,8 +1334,9 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 				Date:                j.Date,
 				Description:         j.Description,
 				DescriptionMarkdown: commonmark.Md2Html(j.Description, commonmark.CMARK_OPT_DEFAULT),
-				ReleaserUserName:    userNameCache[j.TaggerEmail],
-				ReleaserDisplayName: j.TaggerName,
+				ReleaserUserName:    userNameCache[j.ReleaserEmail],
+				ReleaserDisplayName: j.ReleaserName,
+				Size:                j.Size,
 			}
 		}
 	}

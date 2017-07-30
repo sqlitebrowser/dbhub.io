@@ -1405,7 +1405,7 @@ func GetLicenceSha256FromName(userName string, licenceName string) (sha256 strin
 }
 
 // Retrieve the list of releases for a database.
-func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[string]TagEntry, err error) {
+func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[string]ReleaseEntry, err error) {
 	dbQuery := `
 		SELECT release_list
 		FROM sqlite_databases
@@ -1423,7 +1423,7 @@ func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[s
 	}
 	if releases == nil {
 		// If there aren't any releases yet, return an empty set instead of nil
-		releases = make(map[string]TagEntry)
+		releases = make(map[string]ReleaseEntry)
 	}
 	return releases, nil
 }
@@ -1967,7 +1967,7 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 }
 
 // Store the releases for a database.
-func StoreReleases(dbOwner string, dbFolder string, dbName string, releases map[string]TagEntry) error {
+func StoreReleases(dbOwner string, dbFolder string, dbName string, releases map[string]ReleaseEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET release_list = $4, release_count = $5

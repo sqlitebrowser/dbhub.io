@@ -248,6 +248,15 @@ type MetaInfo struct {
 	Title        string
 }
 
+type ReleaseEntry struct {
+	Commit        string    `json:"commit"`
+	Date          time.Time `json:"date"`
+	Description   string    `json:"description"`
+	ReleaserEmail string    `json:"email"`
+	ReleaserName  string    `json:"name"`
+	Size          int       `json:"size"`
+}
+
 type SQLiteDBinfo struct {
 	Info     DBInfo
 	MaxRows  int

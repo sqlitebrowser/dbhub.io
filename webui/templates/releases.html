@@ -43,7 +43,7 @@
                 </tr>
                 <tr ng-repeat-start="(key, row) in Releases">
                     <td style="background-color: #FFFFFF; border-left-style: none; border-top-style: none; border-bottom-style: none; border-right: 1px solid #ddd;">
-                        <button class="btn btn-success" ng-click="downloadDB(row.commit)">Download</button>
+                        <div style="text-align: center;"><button class="btn btn-success" ng-click="downloadDB(row.commit)">Download</button></div>
                     </td>
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-style: none;">
@@ -72,7 +72,9 @@
                     </td>
                 </tr>
                 <tr ng-repeat-end style="border-left-style: none;">
-                    <td style="background-color: #FFFFFF; border-left-style: none; border-top-style: none; border-bottom-style: none; border-right: 1px solid #ddd;">&nbsp;</td>
+                    <td style="background-color: #FFFFFF; border-left-style: none; border-top-style: none; border-bottom-style: none; border-right: 1px solid #ddd;">
+                        <div style="text-align: center;">{{ row.size / 1024 | number : 0 }} KB</div>
+                    </td>
                     [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <td style="border-bottom: 1px solid #ddd; border-top-style: none;">
                             <button class="btn btn-primary" ng-click="deleteRelease(key)">Delete</button>

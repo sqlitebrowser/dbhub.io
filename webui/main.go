@@ -356,24 +356,34 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Ensure the release doesn't already exists
+		// Ensure the release doesn't already exist
 		_, ok := rels[tagName]
 		if ok {
 			errorPage(w, r, http.StatusConflict, "A release of that name already exists!")
 			return
 		}
 
+		// Retrieve the size of the database for this release
+		var tmp com.SQLiteDBinfo
+		err = com.DBDetails(&tmp, loggedInUser, dbOwner, dbFolder, dbName, commit)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		size := tmp.Info.DBEntry.Size
+
 		// Create the release
 		name, email, err := com.GetUserDetails(loggedInUser)
 		if err != nil {
 			errorPage(w, r, http.StatusConflict, "An error occurred when retrieving user details")
 		}
-		newRel := com.TagEntry{
-			Commit:      commit,
-			Date:        time.Now(),
-			Description: tagDesc,
-			TaggerEmail: email,
-			TaggerName:  name,
+		newRel := com.ReleaseEntry{
+			Commit:        commit,
+			Date:          time.Now(),
+			Description:   tagDesc,
+			ReleaserEmail: email,
+			ReleaserName:  name,
+			Size:          size,
 		}
 		rels[tagName] = newRel
 
@@ -3000,12 +3010,12 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Update the release info
 	delete(releases, relName)
-	releases[newName] = com.TagEntry{
-		Commit:      oldInfo.Commit,
-		Date:        oldInfo.Date,
-		Description: newDesc,
-		TaggerEmail: oldInfo.TaggerEmail,
-		TaggerName:  oldInfo.TaggerName,
+	releases[newName] = com.ReleaseEntry{
+		Commit:        oldInfo.Commit,
+		Date:          oldInfo.Date,
+		Description:   newDesc,
+		ReleaserEmail: oldInfo.ReleaserEmail,
+		ReleaserName:  oldInfo.ReleaserName,
 	}
 
 	err = com.StoreReleases(dbOwner, dbFolder, dbName, releases)
