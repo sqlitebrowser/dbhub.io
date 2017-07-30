@@ -1040,6 +1040,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure we have a valid logged in user
 	if validSession != true {
 		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
 		return
 	}
 
@@ -1047,6 +1048,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	u, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Validation failed for owner or database name")
 		return
 	}
 	dbOwner := strings.ToLower(u)
@@ -1054,6 +1056,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	// If any of the required values were empty, indicate failure
 	if dbFolder == "" || dbName == "" || dbOwner == "" {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Owner, folder, or database name values() missing")
 		return
 	}
 
@@ -1061,17 +1064,21 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Internal server error")
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Missing database for '%s%s%s' when attempting deletion\n", pageName, dbOwner, dbFolder,
+			dbName)
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Internal server error")
 		return
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
 	if dbOwner != loggedInUser {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You don't have permission to delete that database")
 		return
 	}
 
@@ -1091,6 +1098,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.DeleteDatabase(dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Internal server error")
 		return
 	}
 
@@ -1733,6 +1741,7 @@ func main() {
 	http.HandleFunc("/about", logReq(aboutPage))
 	http.HandleFunc("/branches/", logReq(branchesPage))
 	http.HandleFunc("/commits/", logReq(commitsPage))
+	http.HandleFunc("/confirmdelete/", logReq(confirmDeletePage))
 	http.HandleFunc("/contributors/", logReq(contributorsPage))
 	http.HandleFunc("/createbranch/", logReq(createBranchPage))
 	http.HandleFunc("/createtag/", logReq(createTagPage))

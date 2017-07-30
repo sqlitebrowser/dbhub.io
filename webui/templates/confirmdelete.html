@@ -1,0 +1,82 @@
+[[ define "confirmDeletePage" ]]
+<!doctype html>
+<html ng-app="DBHub" ng-controller="confirmDeleteView">
+[[ template "head" . ]]
+<body>
+[[ template "header" . ]]
+<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row">
+        <div class="col-md-1">
+            &nbsp;
+        </div>
+        <div class="col-md-10">
+            <div style="text-align: center;">
+                <h2>[[ .Meta.Title ]]</h2>
+                <h3 style="color: red;">Are you sure you want to delete  [[ .Meta.Owner ]]/[[ .Meta.Database ]]?</h3>
+                <h3>There is no "undo" if you proceed.</h3>
+                <br />
+
+                <div class="row" ng-if="statusMessage != ''">
+                    <div class="col-md-12">
+                        <div style="text-align: center; padding-bottom: 8px;">
+                            <h4 style="color: red;">&nbsp;{{ statusMessage }}</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelDelete()">
+                <input type="submit" class="btn btn-danger" value="Yes, delete it" ng-click="deleteDatabase()">
+            </div>
+            <br /><br />
+        </div>
+        <div class="col-md-1">
+            &nbsp;
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('confirmDeleteView', function($scope, $http, $httpParamSerializerJQLike) {
+
+        // Handler for the cancel button.  Just bounces back to the database settings page
+        $scope.cancelDelete = function() {
+            window.location = "/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]";
+        };
+
+        // Delete the database
+        $scope.statusMessage = "";
+        $scope.deleteDatabase = function() {
+            $http({
+                method: "POST",
+                url: "/x/deletedatabase/",
+                data: $httpParamSerializerJQLike({
+                        "folder": "/",
+                        "dbname": [[ .Meta.Database ]],
+                        "username": [[ .Meta.Owner ]]
+                    }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // If successful, reload the page
+                var status = response.status;
+                if (status == 200) {
+                    window.location = '/[[ .Meta.Owner ]]';
+                }
+            }, function failure(response) {
+                // The delete failed, so display the returned error message
+                $scope.statusMessage = "Error: " + response.data;
+            });
+        };
+
+        // Auth0
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+        $scope.showLock = function() {
+            lock.show();
+        };
+    });
+</script>
+</body>
+</html>
+[[ end ]]

@@ -191,7 +191,7 @@
                 <br />
                 <form action="" method="post">
                     <div style="text-align: center;">
-                        <button type="button" class="btn btn-danger" ng-click="deleteDatabase()">Delete database</button>
+                        <button type="button" class="btn btn-danger" ng-click="confirmDelete()">Delete database</button>
                     </div>
                 </form>
             </div>
@@ -239,7 +239,7 @@
 
         // Handler for the cancel button.  Just bounces back to the database page
         $scope.cancelSettings = function() {
-            window.location = "/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+            window.location = "/[[ .Meta.Owner ]]/[[ .Meta.Database ]]";
         };
 
         // Update name of default branch in the drop down selector
@@ -259,24 +259,9 @@
             $scope.meta.DefaultTable = newtable;
         };
 
-        // Delete the database
-        $scope.deleteDatabase = function() {
-            $http({
-                method: "POST",
-                url: "/x/deletedatabase/",
-                data: $httpParamSerializerJQLike({
-                        "folder": "/",
-                        "dbname": [[ .Meta.Database ]],
-                        "username": [[ .Meta.Owner ]]
-                    }),
-                headers: { "Content-Type": "application/x-www-form-urlencoded" }
-            }).then(function (response) {
-                // If successful, reload the page
-                var status = response.status;
-                if (status == 200) {
-                    window.location = '/[[ .Meta.Owner ]]';
-                }
-            });
+        // Bounce to the database deletion page
+        $scope.confirmDelete = function() {
+            window.location = '/confirmdelete/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
         };
 
         // Returns the currently selected licence for a given branch

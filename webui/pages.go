@@ -336,6 +336,79 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Displays a web page asking the user to confirm deleting their database.
+func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		Auth0 com.Auth0Set
+		Meta  com.MetaInfo
+	}
+	pageData.Meta.Title = "Confirm database deletion"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess := session.Get(r)
+	if sess != nil {
+		u := sess.CAttr("UserName")
+		if u != nil {
+			loggedInUser = u.(string)
+			pageData.Meta.LoggedInUser = loggedInUser
+			validSession = true
+		} else {
+			session.Remove(sess, w)
+		}
+	}
+	if validSession != true {
+		// Display an error message
+		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
+		return
+	}
+
+	// Retrieve the owner and database name
+	var err error
+	dbOwner, dbName, err := com.GetOD(1, r) // "1" means skip the first URL word
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for owner or database value")
+		return
+	}
+	// TODO: Add folder support
+	dbFolder := "/"
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Make sure the database owner matches the logged in user
+	if loggedInUser != dbOwner {
+		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
+		return
+	}
+
+	// Fill out metadata for the page to be rendered
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
+	pageData.Auth0.ClientID = com.Auth0ClientID()
+	pageData.Auth0.Domain = com.Auth0Domain()
+
+	// Render the page
+	t := tmpl.Lookup("confirmDeletePage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 // Render the contributors page, which lists the contributors to a database.
 func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	// Structures to hold page data
