@@ -2903,11 +2903,20 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	delete(branches, branchName)
 	branches[newName] = com.BranchEntry{
 		Commit:      oldInfo.Commit,
+		CommitCount: oldInfo.CommitCount,
 		Description: newDesc,
 	}
 	err = com.StoreBranches(dbOwner, dbFolder, dbName, branches)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Invalidate the memcache data for the database, so the new branch name gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
 		return
 	}
 
