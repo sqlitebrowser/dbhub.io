@@ -2209,7 +2209,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate characters and length of the one line description
 	if oneLineDesc != "" {
-		err = com.Validate.Var(oneLineDesc, "markdownsource,max=80")
+		err = com.Validate.Var(oneLineDesc, "markdownsource,max=100")
 		if err != nil {
 			log.Printf("One line description '%s' failed validation", oneLineDesc)
 			errorPage(w, r, http.StatusBadRequest, "One line description failed validation")
