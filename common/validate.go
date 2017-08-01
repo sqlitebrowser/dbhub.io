@@ -9,7 +9,7 @@ import (
 
 var (
 	regexBraTagName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\:,\ )]+$`)
-	regexDBName         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
+	regexDBName         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexDisplayName    = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\ ]+$`)
 	regexFieldName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
 	regexFolder         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
@@ -44,7 +44,7 @@ func checkBranchOrTagName(fl valid.FieldLevel) bool {
 }
 
 // Custom validation function for SQLite database names.
-// At the moment it just allows alphanumeric and ".-_ " chars, though it should probably be extended to cover any
+// At the moment it just allows alphanumeric and ".-_() " chars, though it should probably be extended to cover any
 // valid file name
 func checkDBName(fl valid.FieldLevel) bool {
 	return regexDBName.MatchString(fl.Field().String())
