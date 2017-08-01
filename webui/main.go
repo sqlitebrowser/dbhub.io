@@ -1678,6 +1678,9 @@ func main() {
 		"ODbL-1.0": {DisplayOrder: 500,
 			Path: "ODbL-1.0.txt",
 			URL:  "https://opendatacommons.org/licenses/odbl/1.0/"},
+		"UK-OGL-3": {DisplayOrder: 600,
+			Path: "UK-OGL3.html",
+			URL:  "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"},
 	}
 
 	// Read server configuration
