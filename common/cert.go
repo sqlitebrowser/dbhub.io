@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func GenerateClientCert(userName string, daysValid int) (_ []byte, err error) {
+func GenerateClientCert(userName string) (_ []byte, err error) {
 	pageName := "Add user:generateClientCert()"
 
 	// Use a template approach, similar to:
@@ -29,7 +29,7 @@ func GenerateClientCert(userName string, daysValid int) (_ []byte, err error) {
 		BasicConstraintsValid: true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		IsCA:                  false,
-		NotAfter:              nowTime.AddDate(0, 0, daysValid),
+		NotAfter:              nowTime.AddDate(0, 0, CertDaysValid),
 		NotBefore:             nowTime,
 	}
 

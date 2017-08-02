@@ -54,7 +54,7 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 	}
 
 	// Generate a new HTTPS client certificate for the user
-	cert, err := GenerateClientCert(userName, 14) // 14 days validity while developing
+	cert, err := GenerateClientCert(userName)
 	if err != nil {
 		log.Printf("Error when generating client certificate for '%s': %v\n", userName, err)
 		return err

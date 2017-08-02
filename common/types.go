@@ -48,6 +48,10 @@ const MinioFolderChars = 6
 // Number of connections to PostgreSQL to use
 const PGConnections = 5
 
+// Number of days client certificates should be valid for
+// TODO: Using 60 days for now, but extend this when things are known to be working well.
+const CertDaysValid = 60
+
 // ************************
 // Configuration file types
 
