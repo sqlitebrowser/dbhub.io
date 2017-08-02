@@ -243,3 +243,8 @@ func WebServerCert() string {
 func WebServerCertKey() string {
 	return conf.Web.CertificateKey
 }
+
+// Return the password for the Web server session store.
+func WebServerSessionStorePassword() string {
+	return conf.Web.SessionStorePassword
+}

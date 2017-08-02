@@ -143,6 +143,11 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 	return nil
 }
 
+// Returns the Memcached handle
+func MemcacheHandle() *memcache.Client {
+	return memCache
+}
+
 // Generate a predictable cache key for metadata information
 func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) string {
 	var cacheString string

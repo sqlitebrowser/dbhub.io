@@ -120,11 +120,12 @@ type SigningInfo struct {
 }
 
 type WebInfo struct {
-	BindAddress    string `toml:"bind_address"`
-	Certificate    string
-	CertificateKey string `toml:"certificate_key"`
-	RequestLog     string `toml:"request_log"`
-	ServerName     string `toml:"server_name"`
+	BindAddress          string `toml:"bind_address"`
+	Certificate          string `toml:"certificate"`
+	CertificateKey       string `toml:"certificate_key"`
+	RequestLog           string `toml:"request_log"`
+	ServerName           string `toml:"server_name"`
+	SessionStorePassword string `toml:"session_store_password"`
 }
 
 // End of configuration file types

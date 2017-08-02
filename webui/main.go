@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/icza/session"
+	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	"github.com/rhinoman/go-commonmark"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"golang.org/x/oauth2"
@@ -28,6 +28,9 @@ var (
 
 	// Our parsed HTML templates
 	tmpl *template.Template
+
+	// Session cookie storage
+	store *gsm.MemcacheStore
 )
 
 // auth0CallbackHandler is called at the end of the Auth0 authentication process, whether successful or not.
@@ -129,24 +132,37 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		// Create a special session cookie, purely for the registration page
-		sess := session.NewSessionOptions(&session.SessOptions{
-			CAttrs: map[string]interface{}{
-				"registrationinprogress": true,
-				"auth0id":                auth0ID,
-				"email":                  email,
-				"nickname":               nickName},
-		})
-		session.Add(sess, w)
+		sess, err := store.Get(r, "user-reg")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		sess.Values["registrationinprogress"] = true
+		sess.Values["auth0id"] = auth0ID
+		sess.Values["email"] = email
+		sess.Values["nickname"] = nickName
+		err = sess.Save(r, w)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
 
 		// Bounce to a new page, for the user to select their preferred username
 		http.Redirect(w, r, "/selectusername", http.StatusTemporaryRedirect)
 	}
 
-	// Create session cookie for the user
-	sess := session.NewSessionOptions(&session.SessOptions{
-		CAttrs: map[string]interface{}{"UserName": userName},
-	})
-	session.Add(sess, w)
+	// Create a session cookie for the user
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	sess.Values["UserName"] = userName
+	sess.Save(r, w)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	// Login completed, so bounce to the users' profile page
 	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
@@ -156,15 +172,15 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -278,15 +294,15 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -460,14 +476,13 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Make sure this user creation session is valid
-	sess := session.Get(r)
-	if sess == nil {
-		// This isn't a valid username selection session, so abort
-		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+	sess, err := store.Get(r, "user-reg")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 	validRegSession := false
-	va := sess.CAttr("registrationinprogress")
+	va := sess.Values["registrationinprogress"]
 	if va == nil {
 		// This isn't a valid username selection session, so abort
 		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
@@ -482,14 +497,14 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the registration data
 	var auth0ID, email, displayName string
-	au := sess.CAttr("auth0id")
+	au := sess.Values["auth0id"]
 	if au != nil {
 		auth0ID = au.(string)
 	} else {
 		errorPage(w, r, http.StatusBadRequest, "Invalid user creation id")
 		return
 	}
-	em := sess.CAttr("email")
+	em := sess.Values["email"]
 	if em != nil {
 		email = em.(string)
 	} else {
@@ -498,7 +513,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Gather submitted form data (if any)
-	err := r.ParseForm()
+	err = r.ParseForm()
 	if err != nil {
 		log.Printf("Error when parsing user creation data: %s\n", err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing user creation data")
@@ -517,8 +532,18 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.ValidateUser(userName)
 	if err != nil {
 		log.Printf("Username failed validation: %s", err)
-		session.Remove(sess, w)
-		errorPage(w, r, http.StatusBadRequest, "Username failed validation")
+
+		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
+		sess.Options.MaxAge = -1
+		err = sess.Save(r, w)
+		if err != nil {
+			// Try to display both errors
+			errorPage(w, r, http.StatusInternalServerError, err.Error()+" Username failed validation")
+			return
+		}
+
+		// Alert the user to the validation problem
+		errorPage(w, r, http.StatusInternalServerError, "Username failed validation")
 		return
 	}
 
@@ -526,7 +551,17 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.ReservedUsernamesCheck(userName)
 	if err != nil {
 		log.Println(err)
-		session.Remove(sess, w)
+
+		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
+		sess.Options.MaxAge = -1
+		err2 := sess.Save(r, w)
+		if err != nil {
+			// Try to display both errors
+			errorPage(w, r, http.StatusInternalServerError, err2.Error()+" "+err.Error())
+			return
+		}
+
+		// Alert the user to the ReservedUsernamesCheck() failure
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -534,12 +569,30 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the username is already in our system
 	exists, err := com.CheckUserExists(userName)
 	if err != nil {
-		session.Remove(sess, w)
+		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
+		sess.Options.MaxAge = -1
+		err = sess.Save(r, w)
+		if err != nil {
+			// Try to display both errors
+			errorPage(w, r, http.StatusInternalServerError, err.Error()+" Username check failed")
+			return
+		}
+
+		// Alert the username check failure
 		errorPage(w, r, http.StatusInternalServerError, "Username check failed")
 		return
 	}
 	if exists {
-		session.Remove(sess, w)
+		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
+		sess.Options.MaxAge = -1
+		err = sess.Save(r, w)
+		if err != nil {
+			// Try to display both errors
+			errorPage(w, r, http.StatusInternalServerError, err.Error()+" That username is already taken")
+			return
+		}
+
+		// Let the user know their desired username is not available
 		errorPage(w, r, http.StatusConflict, "That username is already taken")
 		return
 	}
@@ -575,20 +628,40 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	// database at some point, depending on whether we continue to support local database users
 	err = com.AddUser(auth0ID, userName, com.RandomString(32), email, displayName)
 	if err != nil {
-		session.Remove(sess, w)
+		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
+		sess.Options.MaxAge = -1
+		err = sess.Save(r, w)
+		if err != nil {
+			// Try to display both errors
+			errorPage(w, r, http.StatusInternalServerError, err.Error()+" Something went wrong during user creation")
+			return
+		}
+
+		// Alert the user to the problem
 		errorPage(w, r, http.StatusInternalServerError, "Something went wrong during user creation")
 		return
 	}
 
 	// Remove the temporary username selection session data
-	session.Remove(sess, w)
+	sess.Options.MaxAge = -1
+	err = sess.Save(r, w)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	// Create normal session cookie for the user
-	// TODO: This may leak a small amount of memory, but it's "good enough" for now while getting things working
-	sess = session.NewSessionOptions(&session.SessOptions{
-		CAttrs: map[string]interface{}{"UserName": userName},
-	})
-	session.Add(sess, w)
+	sess, err = store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	sess.Values["UserName"] = userName
+	sess.Save(r, w)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	// User creation completed, so bounce to the user's profile page
 	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
@@ -636,15 +709,15 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -654,12 +727,12 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	dbOwner := strings.ToLower(usr)
 
 	// Check if a branch name was requested
 	branchName, err := com.GetFormBranch(r)
@@ -851,15 +924,15 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -869,12 +942,12 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	dbOwner := strings.ToLower(usr)
 
 	// Validate the supplied commit ID
 	commit, err := com.GetFormCommit(r)
@@ -1038,15 +1111,15 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -1057,13 +1130,13 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Validation failed for owner or database name")
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	dbOwner := strings.ToLower(usr)
 
 	// If any of the required values were empty, indicate failure
 	if dbFolder == "" || dbName == "" || dbOwner == "" {
@@ -1125,15 +1198,15 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -1143,12 +1216,12 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	dbOwner := strings.ToLower(usr)
 
 	// Ensure a release name was supplied
 	relName, err := com.GetFormRelease(r)
@@ -1222,15 +1295,15 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -1240,12 +1313,12 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	dbOwner := strings.ToLower(usr)
 
 	// Ensure a tag name was supplied
 	tagName, err := com.GetFormTag(r)
@@ -1317,15 +1390,15 @@ func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -1374,14 +1447,14 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
@@ -1432,14 +1505,14 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
@@ -1494,15 +1567,15 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -1568,15 +1641,15 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -1590,16 +1663,14 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	newCert, err := com.GenerateClientCert(loggedInUser)
 	if err != nil {
 		log.Printf("Error generating client certificate for user '%s': %s!\n", loggedInUser, err)
-		http.Error(w, fmt.Sprintf("Error generating client certificate for user '%s': %s!\n",
-			loggedInUser, err), http.StatusInternalServerError)
+		errorPage(w, r, http.StatusInternalServerError, "Error generating client certificate")
 		return
 	}
 
 	// Store the new certificate in the database
 	err = com.SetClientCert(newCert, loggedInUser)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Updating client certificate failed: %v", err),
-			http.StatusInternalServerError)
+		errorPage(w, r, http.StatusInternalServerError, "Storing the new client certificate failed")
 		return
 	}
 
@@ -1616,10 +1687,17 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 // Removes the logged in users session information.
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Remove session info
-	sess := session.Get(r)
-	if sess != nil {
-		// Session data was present, so remove it
-		session.Remove(sess, w)
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
+	sess.Options.MaxAge = -1
+	err = sess.Save(r, w)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	// Bounce to the front page
@@ -1632,14 +1710,14 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Check if user is logged in
 		var loggedInUser string
-		sess := session.Get(r)
-		if sess != nil {
-			u := sess.CAttr("UserName")
-			if u != nil {
-				loggedInUser = u.(string)
-			} else {
-				loggedInUser = "-"
-			}
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u := sess.Values["UserName"]
+		if u != nil {
+			loggedInUser = u.(string)
 		} else {
 			loggedInUser = "-"
 		}
@@ -1696,11 +1774,6 @@ func main() {
 	defer reqLog.Close()
 	log.Printf("Request log opened: %s\n", com.WebRequestLog())
 
-	// Setup session storage
-	session.Global.Close()
-	session.Global = session.NewCookieManagerOptions(session.NewInMemStore(),
-		&session.CookieMngrOptions{AllowHTTP: false})
-
 	// Parse our template files
 	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
 		filepath.Join("webui", "templates", "*.html")))
@@ -1749,6 +1822,9 @@ func main() {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
+
+	// Setup session storage
+	store = gsm.NewMemcacheStore(com.MemcacheHandle(), "dbhub_", []byte(com.WebServerSessionStorePassword()))
 
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
@@ -2007,23 +2083,23 @@ func markdownPreview(w http.ResponseWriter, r *http.Request) {
 func prefHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Preferences handler"
 
-	// Ensure user is logged in
+	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
 	if validSession != true {
-		// Display an error message
-		// TODO: Show the login dialog (also for the settings page)
-		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
 
@@ -2049,7 +2125,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate submitted form data
-	err := com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
+	err = com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
 	if err != nil {
 		log.Printf("%s: Maximum rows value failed validation: %s\n", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing maximum rows preference value")
@@ -2108,33 +2184,33 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 
 // Handler for the Database Settings page
 func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
-	// Ensure user is logged in
+	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
-	}
-	if validSession != true {
-		// Display an error message
-		// TODO: Show the login dialog (also for the preferences page)
-		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
-		return
-	}
-
-	// Extract the username, folder, and (current) database name form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	sess, err := store.Get(r, "dbhub-user")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract the username, folder, and (current) database name form variables
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	dbOwner := strings.ToLower(usr)
 
 	// Default to the root folder if none was given
 	if dbFolder == "" {
@@ -2446,15 +2522,15 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -2464,12 +2540,12 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	dbOwner := strings.ToLower(usr)
 
 	// Check if a branch name was requested
 	branchName, err := com.GetFormBranch(r)
@@ -2533,27 +2609,28 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add folder support
 	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/star/" at the start of the URL
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
 	if validSession != true {
 		// No logged in username, so nothing to update
+		// TODO: We should probably use a http status code instead of using -1
 		fmt.Fprint(w, "-1") // -1 tells the front end not to update the displayed star count
 		return
 	}
@@ -2638,14 +2715,14 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
 	}
 
 	// Check if the user has access to the requested database
@@ -2793,15 +2870,15 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -2811,12 +2888,12 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	dbOwner := strings.ToLower(usr)
 
 	// Validate new branch name
 	nb := r.PostFormValue("newbranch")
@@ -2933,15 +3010,15 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -2951,12 +3028,12 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	dbOwner := strings.ToLower(usr)
 
 	// Validate new release name
 	nr := r.PostFormValue("newrel")
@@ -3048,15 +3125,15 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -3066,12 +3143,12 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	u, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(u)
+	dbOwner := strings.ToLower(usr)
 
 	// Validate new tag name
 	nt := r.PostFormValue("newtag")
@@ -3163,15 +3240,15 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user

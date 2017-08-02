@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/icza/session"
 	"github.com/rhinoman/go-commonmark"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
@@ -22,15 +21,15 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	pageData.Meta.Title = "What is DBHub.io?"
@@ -42,7 +41,7 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 
 	// Render the page
 	t := tmpl.Lookup("aboutPage")
-	err := t.Execute(w, pageData)
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -68,15 +67,15 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Retrieve the database owner & name
@@ -179,15 +178,15 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Retrieve the database owner & name, and branch name
@@ -347,25 +346,25 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
 	if validSession != true {
-		// Display an error message
-		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
 
 	// Retrieve the owner and database name
-	var err error
 	dbOwner, dbName, err := com.GetOD(1, r) // "1" means skip the first URL word
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Validation failed for owner or database value")
@@ -428,15 +427,15 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Retrieve the database owner & name
@@ -542,25 +541,25 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
 	if validSession != true {
-		// Display an error message
-		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
 
 	// Retrieve the owner, database, and commit ID
-	var err error
 	dbOwner, dbName, commit, err := com.GetODC(1, r) // "1" means skip the first URL word
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Validation failed for commit value")
@@ -617,25 +616,25 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
 	if validSession != true {
-		// Display an error message
-		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
 
 	// Retrieve the owner, database, and commit ID
-	var err error
 	dbOwner, dbName, commit, err := com.GetODC(1, r) // "1" means skip the first URL word
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Validation failed for commit value")
@@ -694,15 +693,15 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// If a specific branch was requested, retrieve its latest commit
@@ -987,7 +986,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 }
 
 // General error display page.
-func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string) {
+func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string) {
 	var pageData struct {
 		Auth0   com.Auth0Set
 		Message string
@@ -997,15 +996,15 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string)
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		fmt.Fprintf(w, "An error occurred when calling errorPage(): %s", err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Add Auth0 info to the page data
@@ -1014,9 +1013,9 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpcode int, msg string)
 	pageData.Auth0.Domain = com.Auth0Domain()
 
 	// Render the page
-	w.WriteHeader(httpcode)
+	w.WriteHeader(httpCode)
 	t := tmpl.Lookup("errorPage")
-	err := t.Execute(w, pageData)
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -1043,15 +1042,15 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Check if the database exists
@@ -1098,19 +1097,18 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Retrieve list of users with public databases
-	var err error
 	pageData.List, err = com.PublicUserDBs()
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
@@ -1254,15 +1252,15 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Retrieve the database owner & name
@@ -1364,23 +1362,26 @@ func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Select your username"
 
 	// Retrieve session data (if any)
-	sess := session.Get(r)
-	if sess != nil {
-		validRegSession := false
-		va := sess.CAttr("registrationinprogress")
-		if va == nil {
-			// This isn't a valid username selection session, so abort
-			errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
-			return
-		}
-		validRegSession = va.(bool)
-
-		if validRegSession != true {
-			// For some reason this isn't a valid username selection session, so abort
-			errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
-			return
-		}
-	} else {
+	sess, err := store.Get(r, "user-reg")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if sess.IsNew {
+		// This isn't a valid username selection session, so abort
+		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+		return
+	}
+	validRegSession := false
+	rip := sess.Values["registrationinprogress"]
+	if rip == nil {
+		// This isn't a valid username selection session, so abort
+		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
+		return
+	}
+	validRegSession = rip.(bool)
+	if validRegSession != true {
+		// For some reason this isn't a valid username selection session, so abort
 		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
 		return
 	}
@@ -1391,14 +1392,14 @@ func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Auth0Domain()
 
 	// If the Auth0 profile included a nickname, we use that to pre-fill the input field
-	ni := sess.CAttr("nickname")
+	ni := sess.Values["nickname"]
 	if ni != nil {
 		pageData.Nick = ni.(string)
 	}
 
 	// Render the page
 	t := tmpl.Lookup("selectUserNamePage")
-	err := t.Execute(w, pageData)
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -1420,21 +1421,21 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
 	if validSession != true {
-		// Display an error message
-		// TODO: Show the login dialog (also for the preferences page)
-		errorPage(w, r, http.StatusForbidden, "Error: Must be logged in to view that page.")
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
 
@@ -1568,15 +1569,15 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Retrieve owner and database name
@@ -1642,15 +1643,15 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Retrieve the database owner & name
@@ -1756,15 +1757,16 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			validSession = true
-		} else {
-			session.Remove(sess, w)
-		}
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+		validSession = true
 	}
 
 	// Ensure we have a valid logged in user
@@ -1823,20 +1825,20 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess := session.Get(r)
-	if sess != nil {
-		u := sess.CAttr("UserName")
-		if u != nil {
-			loggedInUser = u.(string)
-			if loggedInUser == userName {
-				// The logged in user is looking at their own user page
-				profilePage(w, r, loggedInUser)
-				return
-			}
-			pageData.Meta.LoggedInUser = loggedInUser
-		} else {
-			session.Remove(sess, w)
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		if loggedInUser == userName {
+			// The logged in user is looking at their own user page
+			profilePage(w, r, loggedInUser)
+			return
 		}
+		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Check if the desired user exists
