@@ -24,7 +24,7 @@
         <div class="col-md-12">
             <table class="table table-bordered table-striped table-responsive">
                 <tr ng-repeat="user in users.List">
-                    <td><h4><a href="/{{ user.Username }}">{{ user.Username }}</a></h4>
+                    <td><h4><a class="blackLink" href="/{{ user.Username }}">{{ user.Username }}</a></h4>
                         <b>Last modified:</b> {{ user.LastModified | date : 'd MMMM, y h:mm a' : 'UTC' }}
                     </td>
                 </tr>
