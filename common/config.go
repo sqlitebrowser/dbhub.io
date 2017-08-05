@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/tls"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -201,7 +202,8 @@ func ReadConfig() error {
 	pgConfig.User = conf.Pg.Username
 	pgConfig.Password = conf.Pg.Password
 	pgConfig.Database = conf.Pg.Database
-	pgConfig.TLSConfig = nil
+	clientTLSConfig := tls.Config{InsecureSkipVerify: true}
+	pgConfig.TLSConfig = &clientTLSConfig
 
 	// TODO: Add environment variable overrides for memcached
 
