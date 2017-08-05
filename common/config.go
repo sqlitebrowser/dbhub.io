@@ -203,7 +203,11 @@ func ReadConfig() error {
 	pgConfig.Password = conf.Pg.Password
 	pgConfig.Database = conf.Pg.Database
 	clientTLSConfig := tls.Config{InsecureSkipVerify: true}
-	pgConfig.TLSConfig = &clientTLSConfig
+	if conf.Pg.SSL {
+		pgConfig.TLSConfig = &clientTLSConfig
+	} else {
+		pgConfig.TLSConfig = nil
+	}
 
 	// TODO: Add environment variable overrides for memcached
 

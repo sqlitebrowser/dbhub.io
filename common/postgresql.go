@@ -256,7 +256,7 @@ func ClientCert(userName string) ([]byte, error) {
 
 // Creates a connection pool to the PostgreSQL server.
 func ConnectPostgreSQL() (err error) {
-	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, PGConnections, nil, 2 * time.Second}
+	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, conf.Pg.NumConnections, nil, 2 * time.Second}
 	pdb, err = pgx.NewConnPool(pgPoolConfig)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Couldn't connect to PostgreSQL server: %v\n", err))

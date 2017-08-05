@@ -45,9 +45,6 @@ const DefaultNumDisplayRows = 25
 //        -> Minio filename: "5a737156147fbd0a44323a895d18ade79d4db521564d1b0dbb8764cbbc"
 const MinioFolderChars = 6
 
-// Number of connections to PostgreSQL to use
-const PGConnections = 5
-
 // Number of days client certificates should be valid for
 // TODO: Using 60 days for now, but extend this when things are known to be working well.
 const CertDaysValid = 60
@@ -106,11 +103,13 @@ type MinioInfo struct {
 
 // PostgreSQL connection parameters
 type PGInfo struct {
-	Database string
-	Port     int
-	Password string
-	Server   string
-	Username string
+	Database       string
+	NumConnections int `toml:"num_connections"`
+	Port           int
+	Password       string
+	Server         string
+	SSL            bool
+	Username       string
 }
 
 // Used for signing DB4S client certificates
