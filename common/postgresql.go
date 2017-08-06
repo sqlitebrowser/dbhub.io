@@ -1580,7 +1580,7 @@ func PublicUserDBs() ([]UserInfo, error) {
 			AND is_deleted = false
 			ORDER BY user_id, last_modified DESC
 		)
-		SELECT users.user_name, dbs.last_modified
+		SELECT users.user_name, users.display_name, dbs.last_modified
 		FROM public_dbs AS dbs, users
 		WHERE users.user_id = dbs.user_id
 		ORDER BY last_modified DESC`
@@ -1593,7 +1593,7 @@ func PublicUserDBs() ([]UserInfo, error) {
 	var list []UserInfo
 	for rows.Next() {
 		var oneRow UserInfo
-		err = rows.Scan(&oneRow.Username, &oneRow.LastModified)
+		err = rows.Scan(&oneRow.Username, &oneRow.FullName, &oneRow.LastModified)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err

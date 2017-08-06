@@ -295,6 +295,7 @@ type WhereClause struct {
 }
 
 type UserInfo struct {
+	FullName     string `json:"full_name"`
 	LastModified time.Time
 	Username     string
 }

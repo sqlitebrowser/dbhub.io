@@ -1815,9 +1815,10 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	// Structure to hold page data
 	var pageData struct {
-		Auth0  com.Auth0Set
-		DBRows []com.DBInfo
-		Meta   com.MetaInfo
+		Auth0    com.Auth0Set
+		DBRows   []com.DBInfo
+		FullName string
+		Meta     com.MetaInfo
 	}
 	pageData.Meta.Owner = userName
 	pageData.Meta.Title = userName
@@ -1851,6 +1852,13 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	// If the user doesn't exist, indicate that
 	if !userExists {
 		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown user: %s", userName))
+		return
+	}
+
+	// Retrieve the full name for the user
+	pageData.FullName, _, err = com.GetUserDetails(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
