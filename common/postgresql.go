@@ -1593,10 +1593,14 @@ func PublicUserDBs() ([]UserInfo, error) {
 	var list []UserInfo
 	for rows.Next() {
 		var oneRow UserInfo
-		err = rows.Scan(&oneRow.Username, &oneRow.FullName, &oneRow.LastModified)
+		var dnString pgx.NullString
+		err = rows.Scan(&oneRow.Username, &dnString, &oneRow.LastModified)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err
+		}
+		if dnString.Valid {
+			oneRow.FullName = dnString.String
 		}
 		list = append(list, oneRow)
 	}
