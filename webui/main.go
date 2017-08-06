@@ -17,6 +17,7 @@ import (
 	"time"
 
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
+	"github.com/gwenn/gosqlite"
 	"github.com/rhinoman/go-commonmark"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"golang.org/x/oauth2"
@@ -1465,20 +1466,23 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, tempFile, err := com.OpenMinioObject(bucket, id)
+	sdb, err := com.OpenMinioObject(bucket, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 
-	// Read the table data from the database object
-	resultSet, err := com.ReadSQLiteDBCSV(sdb, dbTable)
-
-	// Close the SQLite database and delete the temp file
+	// Automatically close the SQLite database when this function finishes
 	defer func() {
 		sdb.Close()
-		os.Remove(tempFile)
 	}()
+
+	// Read the table data from the database object
+	resultSet, err := com.ReadSQLiteDBCSV(sdb, dbTable)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Error reading table data from the database")
+		return
+	}
 
 	// Convert resultSet into CSV and send to the user
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", url.QueryEscape(dbTable)))
@@ -2324,16 +2328,15 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// Get a handle from Minio for the database object
 	bkt := dbSHA[:com.MinioFolderChars]
 	id := dbSHA[com.MinioFolderChars:]
-	sdb, tempFile, err := com.OpenMinioObject(bkt, id)
+	sdb, err := com.OpenMinioObject(bkt, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// Automatically close the SQLite database and delete the temp file when this function finishes running
+	// Automatically close the SQLite database when this function finishes
 	defer func() {
 		sdb.Close()
-		os.Remove(tempFile)
 	}()
 
 	// Retrieve the list of tables in the database
@@ -2764,23 +2767,40 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		// * Data wasn't in cache, so we gather it from the SQLite database *
 
 		// Open the Minio database
-		sdb, tempFile, err := com.OpenMinioObject(bucket, id)
+		sdb, err := com.OpenMinioObject(bucket, id)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		// Close the SQLite database and delete the temp file
+		// Automatically close the SQLite database when this function finishes
 		defer func() {
 			sdb.Close()
-			os.Remove(tempFile)
 		}()
 
 		// Retrieve the list of tables in the database
 		tables, err := sdb.Tables("")
 		if err != nil {
-			log.Printf("Error retrieving table names: %s", err)
-			return
+			// An error occurred, so get the extended error code
+			if cerr, ok := err.(sqlite.ConnError); ok {
+				// Check if the error was due to the table being locked
+				extCode := cerr.ExtendedCode()
+				if extCode == 5 { // Magic number which (in this case) means "database is locked"
+					// Wait 3 seconds then try again
+					time.Sleep(3 * time.Second)
+					tables, err = sdb.Tables("")
+					if err != nil {
+						log.Printf("Error retrieving table names: %s", err)
+						return
+					}
+				} else {
+					log.Printf("Error retrieving table names: %s", err)
+					return
+				}
+			} else {
+				log.Printf("Error retrieving table names: %s", err)
+				return
+			}
 		}
 		if len(tables) == 0 {
 			// No table names were returned, so abort
@@ -2833,6 +2853,8 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, maxRows, sortCol, sortDir, rowOffset)
 		if err != nil {
 			// Some kind of error when reading the database data
+			log.Printf("Error occurred when reading table data for '%s%s%s', commit '%s': %s\n", dbOwner,
+				dbFolder, dbName, commitID, err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

@@ -40,7 +40,7 @@ func CacheData(cacheKey string, cacheData interface{}, cacheSeconds int32) error
 
 func ConnectCache() error {
 	// Connect to memcached server
-	memCache = memcache.New(conf.Cache.Server)
+	memCache = memcache.New(conf.Memcache.Server)
 
 	// Test the memcached connection
 	cacheTest := memcache.Item{Key: "connecttext", Value: []byte("1"), Expiration: 10}
@@ -50,7 +50,7 @@ func ConnectCache() error {
 	}
 
 	// Log successful connection message for Memcached
-	log.Printf("Connected to Memcached: %v\n", conf.Cache.Server)
+	log.Printf("Connected to Memcached: %v\n", conf.Memcache.Server)
 
 	return nil
 }

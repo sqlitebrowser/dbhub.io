@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -827,7 +826,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, tempFile, err := com.OpenMinioObject(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
+	sdb, err := com.OpenMinioObject(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
 		pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:])
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -837,7 +836,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	// Close the SQLite database and delete the temp file
 	defer func() {
 		sdb.Close()
-		os.Remove(tempFile)
 	}()
 
 	// Retrieve the list of tables in the database
@@ -1468,16 +1466,15 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	// Get a handle from Minio for the database object
 	bkt := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
 	id := pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:]
-	sdb, tempFile, err := com.OpenMinioObject(bkt, id)
+	sdb, err := com.OpenMinioObject(bkt, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// Close the SQLite database and delete the temp file
+	// Automatically close the SQLite database when this function finishes
 	defer func() {
 		sdb.Close()
-		os.Remove(tempFile)
 	}()
 
 	// Retrieve the list of tables in the database

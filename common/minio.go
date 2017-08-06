@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/minio/minio-go"
@@ -75,47 +76,81 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 
 // Retrieves a SQLite database from Minio, opens it, returns the connection handle.
 // Also returns the name of the temp file created, which the caller needs to delete (os.Remove()) when finished with it
-func OpenMinioObject(bucket string, id string) (*sqlite.Conn, string, error) {
-	// Get a handle from Minio for the database object
-	userDB, err := MinioHandle(bucket, id)
-	if err != nil {
-		return nil, "", err
-	}
+func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 
-	// Close the object handle when this function finishes
-	defer func() {
-		MinioHandleClose(userDB)
-	}()
+	// Check if the database file already exists
+	newDB := filepath.Join(DiskCacheDir(), bucket, id)
+	if _, err := os.Stat(newDB); os.IsNotExist(err) {
+		// * The database doesn't yet exist locally, so fetch it from Minio
 
-	// Save the database locally to a temporary file
-	tempFileHandle, err := ioutil.TempFile("", "databaseViewHandler-")
-	if err != nil {
-		log.Printf("Error creating tempfile: %v\n", err)
-		return nil, "", errors.New("Internal server error")
+		// Check if a the database file is already being fetched from Minio by a different caller
+		//  eg check if there is a "<filename>.new" file already in the disk cache
+		if _, err := os.Stat(newDB + ".new"); os.IsNotExist(err) {
+			// * The database isn't already being fetched, so we're ok to proceed
+
+			// Get a handle from Minio for the database object
+			userDB, err := MinioHandle(bucket, id)
+			if err != nil {
+				return nil, err
+			}
+
+			// Close the object handle when this function finishes
+			defer func() {
+				MinioHandleClose(userDB)
+			}()
+
+			// Create the needed directory path in the disk cache
+			err = os.MkdirAll(filepath.Join(DiskCacheDir(), bucket), 0750)
+
+			// Save the database locally to the local disk cache, with ".new" on the end (will be renamed after file is
+			// finished writing)
+			f, err := os.OpenFile(newDB+".new", os.O_CREATE|os.O_WRONLY, 0750)
+			if err != nil {
+				log.Printf("Error creating new database file in the disk cache: %v\n", err)
+				return nil, errors.New("Internal server error")
+			}
+			bytesWritten, err := io.Copy(f, userDB)
+			if err != nil {
+				log.Printf("Error writing to new database file in the disk cache : %v\n", err)
+				return nil, errors.New("Internal server error")
+			}
+			if bytesWritten == 0 {
+				log.Printf("0 bytes written to the new SQLite database file: %s\n", newDB+".new")
+				return nil, errors.New("Internal server error")
+			}
+			f.Close()
+
+			// Now that the database file has been fully written to disk, remove the .new on the end of the name
+			err = os.Rename(newDB+".new", newDB)
+			if err != nil {
+				log.Printf("Error when renaming .new database file to final form in the disk cache: %s\n", err.Error())
+				return nil, errors.New("Internal server error")
+			}
+		} else {
+			// TODO: This is not a great approach, but should be ok for initial "get it working" code.
+			// TODO  Instead, it should probably loop around a few times checking for the file to be finished being
+			// TODO  created.
+			// TODO  Also, it's probably a decent idea to compare the file timestamp details os.Chtimes()? with the
+			// TODO  current system time, to detect and handle the case where the "<filename>.new" file is a stale one
+			// TODO  left over from some other (interrupted) process.  In which case nuke that and proceed to recreate
+			// TODO  it.
+			return nil, errors.New("Database retrieval in progress, try again in a few seconds")
+		}
 	}
-	tempFile := tempFileHandle.Name()
-	bytesWritten, err := io.Copy(tempFileHandle, userDB)
-	if err != nil {
-		log.Printf("Error writing database to temporary file: %v\n", err)
-		return nil, "", errors.New("Internal server error")
-	}
-	if bytesWritten == 0 {
-		log.Printf("0 bytes written to the SQLite temporary file. Minio object: %s/%s\n", bucket, id)
-		return nil, "", errors.New("Internal server error")
-	}
-	tempFileHandle.Close()
 
 	// Open database
-	sdb, err := sqlite.Open(tempFile, sqlite.OpenReadOnly)
+	// NOTE - OpenFullMutex seems like the right thing for ensuring multiple connections to a database file don't
+	// screw things up, but it wouldn't be a bad idea to keep it in mind if weirdness shows up
+	sdb, err := sqlite.Open(newDB, sqlite.OpenReadWrite|sqlite.OpenFullMutex)
 	if err != nil {
 		log.Printf("Couldn't open database: %s", err)
-		return nil, "", errors.New("Internal server error")
+		return nil, errors.New("Internal server error")
 	}
 	err = sdb.EnableExtendedResultCodes(true)
 	if err != nil {
 		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
 	}
-	return sdb, tempFile, nil
+	return sdb, nil
 }
 
 // Store a database file in Minio.

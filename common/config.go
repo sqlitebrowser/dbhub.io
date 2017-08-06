@@ -80,6 +80,11 @@ func DB4SServerPort() int {
 	return conf.DB4S.Port
 }
 
+// Return the disk cache directory.
+func DiskCacheDir() string {
+	return conf.DiskCache.Directory
+}
+
 // Return the Minio server access key.
 func MinioAccessKey() string {
 	return conf.Minio.AccessKey

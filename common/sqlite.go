@@ -37,6 +37,56 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 	var err error
 	var stmt *sqlite.Stmt
 
+	// If a sort column was given, we check if the database (in the local cache) has an index on that column.  If it
+	// doesn't, we create one
+	// TODO: If no sortCol was given, but a rowOffset was, it's likely useful having an index (on any column?) anyway
+	// TODO  It'd probably be good to check if that's the case, and add an index (on say the first column) if none are
+	// TODO  already present
+	if sortCol != "" {
+		// Grab the list of indexes in the database
+		idxList, err := sdb.Indexes("")
+		if err != nil {
+			return SQLiteRecordSet{}, err
+		}
+
+		// Look for indexes on the table we'll be querying
+		idxFound := false
+		for idx, tbl := range idxList {
+			if tbl == dbTable {
+				idxCol, err := sdb.IndexColumns("", idx)
+				if err != nil {
+					return SQLiteRecordSet{}, err
+				}
+
+				// Is the index on the column we're using
+				if idxCol[0].Name == sortCol {
+					idxFound = true
+					break
+				}
+			}
+		}
+
+		// If no matching index was found, create one
+		if !idxFound {
+			// TODO: Index creation locks the database while it's happening, which I've seen cause further query
+			// TODO  failures with "database is locked" errors (for a few seconds) in tableViewHandler().
+			// TODO  eg when clicking two or three times quickly on a column heading in the database view.  If the
+			// TODO  first click triggers index creation, then (on larger sized databases) index creation won't be
+			// TODO  finished by the time the next click comes in and triggers queries.  We'll probably need to add
+			// TODO  some detection/retry thing to the places where the failure shows up.
+			dbQuery := sqlite.Mprintf("CREATE INDEX `%w_", dbTable)
+			dbQuery += sqlite.Mprintf("%s_idx`", sortCol)
+			dbQuery += sqlite.Mprintf(" ON `%s`", dbTable)
+			dbQuery += sqlite.Mprintf(" (`%s`)", sortCol)
+			err = sdb.Exec(dbQuery)
+			if err != nil {
+				log.Printf("Error occurred when creating index: %s\n", err.Error())
+				return SQLiteRecordSet{}, err
+			}
+			sdb.Commit()
+		}
+	}
+
 	// Set the table name
 	dataRows.Tablename = dbTable
 

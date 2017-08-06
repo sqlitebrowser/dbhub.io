@@ -54,14 +54,15 @@ const CertDaysValid = 60
 
 // Configuration file
 type TomlConfig struct {
-	Admin AdminInfo
-	Auth0 Auth0Info
-	Cache CacheInfo
-	DB4S  DB4SInfo
-	Minio MinioInfo
-	Pg    PGInfo
-	Sign  SigningInfo
-	Web   WebInfo
+	Admin     AdminInfo
+	Auth0     Auth0Info
+	DB4S      DB4SInfo
+	DiskCache DiskCacheInfo
+	Memcache  MemcacheInfo
+	Minio     MinioInfo
+	Pg        PGInfo
+	Sign      SigningInfo
+	Web       WebInfo
 }
 
 // Config info for the admin server
@@ -79,11 +80,6 @@ type Auth0Info struct {
 	Domain       string
 }
 
-// Memcached connection parameters
-type CacheInfo struct {
-	Server string
-}
-
 // Configuration info for the DB4S end point
 type DB4SInfo struct {
 	CAChain        string `toml:"ca_chain"`
@@ -91,6 +87,16 @@ type DB4SInfo struct {
 	CertificateKey string `toml:"certificate_key"`
 	Port           int
 	Server         string
+}
+
+// Disk cache info
+type DiskCacheInfo struct {
+	Directory string
+}
+
+// Memcached connection parameters
+type MemcacheInfo struct {
+	Server string
 }
 
 // Minio connection parameters
