@@ -3259,6 +3259,16 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Upload DB handler"
 
+	// Check whether the uploaded database is too large
+	if r.ContentLength > com.MaxDatabaseSize {
+		errorPage(w, r, http.StatusBadRequest,
+			fmt.Sprintf("Maximum database size is 1GB.  Your upload is %d kB.", r.ContentLength/1024))
+		return
+	}
+
+	// Set the maximum accepted database size for uploading
+	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize)
+
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
