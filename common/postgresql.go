@@ -97,7 +97,7 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 
 // Check if a database exists
 // If an error occurred, the true/false value should be ignored, as only the error value is valid.
-func CheckDBExists(dbOwner string, dbFolder string, dbName string) (bool, error) {
+func CheckDBExists(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM sqlite_databases
@@ -109,6 +109,13 @@ func CheckDBExists(dbOwner string, dbFolder string, dbName string) (bool, error)
 			AND folder = $2
 			AND db_name = $3
 			AND is_deleted = false`
+
+	// If the request is from someone who's not logged in, or is for another users database, ensure we only consider
+	// public databases
+	if loggedInUser != dbOwner || loggedInUser == "" {
+		dbQuery += `
+			AND public = true`
+	}
 	var DBCount int
 	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DBCount)
 	if err != nil {
@@ -183,39 +190,6 @@ func CheckEmailExists(email string) (bool, error) {
 	// Email address IS already in our system
 	return true, nil
 
-}
-
-// Check if a user has access to a database.
-// Returns true if it's accessible to them, false if not.  If err returns as non-nil, the true/false value isn't valid.
-func CheckUserDBAccess(dbOwner string, dbFolder string, dbName string, loggedInUser string) (bool, error) {
-	dbQuery := `
-		SELECT count(*)
-		FROM sqlite_databases
-		WHERE user_id = (
-				SELECT user_id
-				FROM users
-				WHERE user_name = $1
-			)
-			AND folder = $2
-			AND db_name = $3
-			AND is_deleted = false`
-	if dbOwner != loggedInUser {
-		dbQuery += ` AND public = true `
-	}
-	var numRows int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&numRows)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			// The requested database version isn't available to the given user
-			return false, nil
-		}
-		log.Printf("Error when checking user's access to database '%s%s%s'. User: '%s' Error: %v\n",
-			dbOwner, dbFolder, dbName, loggedInUser, err.Error())
-		return false, err
-	}
-
-	// A row was returned, so the requested database IS available to the given user
-	return true, nil
 }
 
 // Check if a username already exists in our system.  Returns true if the username is already taken, false if not.

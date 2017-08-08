@@ -216,7 +216,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the requested database exists
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -345,7 +345,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the requested database exists
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -749,13 +749,13 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Validation failed for database to delete: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -971,7 +971,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1147,7 +1147,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
@@ -1238,7 +1238,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1335,7 +1335,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1590,7 +1590,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the user has access to the specific version of the source database requested
-	allowed, err := com.CheckUserDBAccess(dbOwner, dbFolder, dbName, loggedInUser)
+	allowed, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1607,7 +1607,8 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the user doesn't have a database of the same name already
-	exists, err := com.CheckDBExists(loggedInUser, dbFolder, dbName)
+	// Note the use of "loggedInUser" for the 2nd parameter in this call, unlike using "dbOwner" in the call above
+	exists, err := com.CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2564,7 +2565,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2953,7 +2954,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -3089,7 +3090,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -3204,7 +3205,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

@@ -60,7 +60,7 @@ func AddDatabase(loggedInUser string, dbOwner string, dbFolder string, dbName st
 	// Check if the database already exists in the system
 	needDefaultBranchCreated := false
 	var branches map[string]BranchEntry
-	exists, err := CheckDBExists(loggedInUser, dbFolder, dbName)
+	exists, err := CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
 	if err != err {
 		return numBytes, err
 	}

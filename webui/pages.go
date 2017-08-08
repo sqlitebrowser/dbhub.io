@@ -93,7 +93,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -209,7 +209,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -373,7 +373,7 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -453,7 +453,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -568,7 +568,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -643,7 +643,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -1052,7 +1052,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database exists
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
 		return
@@ -1277,7 +1277,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -1588,7 +1588,8 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the database exists
 	// TODO: Add folder support
-	exists, err := com.CheckDBExists(dbOwner, "/", dbName)
+	dbFolder := "/"
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
 		return
@@ -1667,7 +1668,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
