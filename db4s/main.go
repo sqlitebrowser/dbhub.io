@@ -180,6 +180,18 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	dbFolder := "/"
 	branchName := "master"
 
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(userAcc, dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName),
+			http.StatusNotFound)
+		return
+	}
+
 	// Extract the requested database commit id from the form data
 	commit, err := com.GetFormCommit(r)
 	if err != nil {
@@ -232,7 +244,7 @@ func main() {
 
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
-	certFile, err := ioutil.ReadFile(com.DB4SCAChain())
+	certFile, err := ioutil.ReadFile(com.Conf.DB4S.CAChain)
 	if err != nil {
 		fmt.Printf("Error opening Certificate Authority chain file: %v\n", err)
 		return
@@ -256,22 +268,22 @@ func main() {
 		RootCAs:                  ourCAPool,
 	}
 	newServer := &http.Server{
-		Addr:         ":" + fmt.Sprint(com.DB4SServerPort()),
+		Addr:         ":" + fmt.Sprint(com.Conf.DB4S.Port),
 		Handler:      mux,
 		TLSConfig:    newTLSConfig,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 
 	// Generate the formatted server string
-	if com.DB4SServerPort() == 443 {
-		server = fmt.Sprintf("https://%s", com.DB4SServer())
+	if com.Conf.DB4S.Port == 443 {
+		server = fmt.Sprintf("https://%s", com.Conf.DB4S.Server)
 	} else {
-		server = fmt.Sprintf("https://%s:%d", com.DB4SServer(), com.DB4SServerPort())
+		server = fmt.Sprintf("https://%s:%d", com.Conf.DB4S.Server, com.Conf.DB4S.Port)
 	}
 
 	// Start server
 	log.Printf("Starting DB4S end point on %s\n", server)
-	log.Fatal(newServer.ListenAndServeTLS(com.DB4SServerCert(), com.DB4SServerCertKey()))
+	log.Fatal(newServer.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey))
 }
 
 func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
@@ -282,7 +294,7 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// Ensure both a username and target database name were given
 	if len(pathStrings) <= 2 {
-		http.Error(w, fmt.Sprintf("Bad target database URL: https://%s%s", com.DB4SServer(),
+		http.Error(w, fmt.Sprintf("Bad target database URL: https://%s%s", com.Conf.DB4S.Server,
 			r.URL.Path), http.StatusBadRequest)
 		return
 	}
@@ -421,7 +433,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the running server matches the one in the certificate
-	runningServer := com.DB4SServer()
+	runningServer := com.Conf.DB4S.Server
 	if certServer != runningServer {
 		http.Error(w, fmt.Sprintf("Server name in certificate '%s' doesn't match running server '%s'\n",
 			certServer, runningServer), http.StatusBadRequest)
