@@ -22,13 +22,13 @@ var (
 // Note - this doesn't actually open a connection to the Minio server.
 func ConnectMinio() (err error) {
 	// Connect to the Minio server
-	minioClient, err = minio.New(MinioServer(), MinioAccessKey(), MinioSecret(), MinioHTTPS())
+	minioClient, err = minio.New(Conf.Minio.Server, Conf.Minio.AccessKey, Conf.Minio.Secret, Conf.Minio.HTTPS)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Problem with Minio server configuration: %v\n", err))
 	}
 
 	// Log Minio server end point
-	log.Printf("Minio server config ok. Address: %v\n", MinioServer())
+	log.Printf("Minio server config ok. Address: %v\n", Conf.Minio.Server)
 
 	return nil
 }
@@ -79,7 +79,7 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 
 	// Check if the database file already exists
-	newDB := filepath.Join(DiskCacheDir(), bucket, id)
+	newDB := filepath.Join(Conf.DiskCache.Directory, bucket, id)
 	if _, err := os.Stat(newDB); os.IsNotExist(err) {
 		// * The database doesn't yet exist locally, so fetch it from Minio
 
@@ -100,7 +100,7 @@ func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 			}()
 
 			// Create the needed directory path in the disk cache
-			err = os.MkdirAll(filepath.Join(DiskCacheDir(), bucket), 0750)
+			err = os.MkdirAll(filepath.Join(Conf.DiskCache.Directory, bucket), 0750)
 
 			// Save the database locally to the local disk cache, with ".new" on the end (will be renamed after file is
 			// finished writing)

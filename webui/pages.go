@@ -34,9 +34,9 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "What is DBHub.io?"
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("aboutPage")
@@ -138,9 +138,9 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("branchesPage")
@@ -322,9 +322,9 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("commitsPage")
@@ -395,9 +395,9 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Database = dbName
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("confirmDeletePage")
@@ -516,9 +516,9 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("contributorsPage")
@@ -591,9 +591,9 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Commit = commit
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("createBranchPage")
@@ -666,9 +666,9 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Commit = commit
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("createTagPage")
@@ -907,7 +907,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	// Fill out various metadata fields
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
-	pageData.Meta.Server = com.WebServer()
+	pageData.Meta.Server = com.Conf.Web.ServerName
 	pageData.Meta.Title = fmt.Sprintf("%s / %s", dbOwner, dbName)
 
 	// Fill out the branch info
@@ -936,9 +936,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	pageData.Meta.ForkDeleted = frkDel
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Update database star status for the logged in user
 	pageData.MyStar = myStar
@@ -947,7 +947,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	pageData.DB.Info.FullDesc = commonmark.Md2Html(pageData.DB.Info.FullDesc, commonmark.CMARK_OPT_DEFAULT)
 
 	// Cache the page metadata
-	err = com.CacheData(mdataCacheKey, pageData, com.CacheTime)
+	err = com.CacheData(mdataCacheKey, pageData, com.Conf.Memcache.DefaultCacheTime)
 	if err != nil {
 		log.Printf("%s: Error when caching page data: %v\n", pageName, err)
 	}
@@ -970,7 +970,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Cache the table row data
-	err = com.CacheData(rowCacheKey, pageData.Data, com.CacheTime)
+	err = com.CacheData(rowCacheKey, pageData.Data, com.Conf.Memcache.DefaultCacheTime)
 	if err != nil {
 		log.Printf("%s: Error when caching page data: %v\n", pageName, err)
 	}
@@ -1006,9 +1006,9 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	w.WriteHeader(httpCode)
@@ -1072,9 +1072,9 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("forksPage")
@@ -1115,9 +1115,9 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = `SQLite storage "in the cloud"`
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("rootPage")
@@ -1148,16 +1148,16 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	}
 
 	// Set the server name, used for the placeholder email address suggestion
-	serverName := strings.Split(com.WebServer(), ":")
+	serverName := strings.Split(com.Conf.Web.ServerName, ":")
 	pageData.Meta.Server = serverName[0]
 
 	// Retrieve the user preference data
 	pageData.MaxRows = com.PrefUserMaxRows(loggedInUser)
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("prefPage")
@@ -1177,7 +1177,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 	pageData.Meta.Owner = userName
 	pageData.Meta.Title = userName
-	pageData.Meta.Server = com.WebServer()
+	pageData.Meta.Server = com.Conf.Web.ServerName
 	pageData.Meta.LoggedInUser = userName
 
 	// Check if the desired user exists
@@ -1215,9 +1215,9 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("profilePage")
@@ -1338,9 +1338,9 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("releasesPage")
@@ -1385,9 +1385,9 @@ func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// If the Auth0 profile included a nickname, we use that to pre-fill the input field
 	ni := sess.Values["nickname"]
@@ -1543,9 +1543,9 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("settingsPage")
@@ -1606,9 +1606,9 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("starsPage")
@@ -1727,9 +1727,9 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("tagsPage")
@@ -1797,9 +1797,9 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.LoggedInUser = loggedInUser
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("uploadPage")
@@ -1819,7 +1819,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 	pageData.Meta.Owner = userName
 	pageData.Meta.Title = userName
-	pageData.Meta.Server = com.WebServer()
+	pageData.Meta.Server = com.Conf.Web.ServerName
 
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -1867,9 +1867,9 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.WebServer() + "/x/callback"
-	pageData.Auth0.ClientID = com.Auth0ClientID()
-	pageData.Auth0.Domain = com.Auth0Domain()
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
 	t := tmpl.Lookup("userPage")

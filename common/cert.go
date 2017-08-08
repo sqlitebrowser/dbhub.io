@@ -20,7 +20,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 	// Use a template approach, similar to:
 	//   https://github.com/driskell/log-courier/blob/master/lc-tlscert/lc-tlscert.go
 	nowTime := time.Now()
-	emailAddress := fmt.Sprintf("%s@%s", userName, DB4SServer())
+	emailAddress := fmt.Sprintf("%s@%s", userName, Conf.DB4S.Server)
 	newCert := x509.Certificate{
 		Subject: pkix.Name{
 			Organization: []string{"DB Browser for SQLite"},
@@ -29,7 +29,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 		BasicConstraintsValid: true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		IsCA:                  false,
-		NotAfter:              nowTime.AddDate(0, 0, CertDaysValid),
+		NotAfter:              nowTime.AddDate(0, 0, Conf.Sign.CertDaysValid),
 		NotBefore:             nowTime,
 	}
 
@@ -42,7 +42,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 	}
 
 	// Load the certificate used for signing (the intermediate certificate)
-	certFile, err := ioutil.ReadFile(SigningCert())
+	certFile, err := ioutil.ReadFile(Conf.Sign.IntermediateCert)
 	if err != nil {
 		log.Printf("%s: Error opening intermediate certificate file: %v\n", pageName, err)
 		return
@@ -59,7 +59,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 	}
 
 	// Load the private key for the intermediate certificate
-	intKeyFile, err := ioutil.ReadFile(SigningCertKey())
+	intKeyFile, err := ioutil.ReadFile(Conf.Sign.IntermediateKey)
 	if err != nil {
 		log.Printf("%s: Error opening intermediate certificate key: %v\n", pageName, err)
 		return

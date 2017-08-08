@@ -42,13 +42,13 @@ var (
 func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Auth0 login part, mostly copied from https://github.com/auth0-samples/auth0-golang-web-app (MIT License)
 	conf := &oauth2.Config{
-		ClientID:     com.Auth0ClientID(),
-		ClientSecret: com.Auth0ClientSecret(),
-		RedirectURL:  "https://" + com.WebServer() + "/x/callback",
+		ClientID:     com.Conf.Auth0.ClientID,
+		ClientSecret: com.Conf.Auth0.ClientSecret,
+		RedirectURL:  "https://" + com.Conf.Web.ServerName + "/x/callback",
 		Scopes:       []string{"openid", "profile"},
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://" + com.Auth0Domain() + "/authorize",
-			TokenURL: "https://" + com.Auth0Domain() + "/oauth/token",
+			AuthURL:  "https://" + com.Conf.Auth0.Domain + "/authorize",
+			TokenURL: "https://" + com.Conf.Auth0.Domain + "/oauth/token",
 		},
 	}
 	code := r.URL.Query().Get("code")
@@ -61,7 +61,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the user info (JSON format)
 	conn := conf.Client(oauth2.NoContext, token)
-	userInfo, err := conn.Get("https://" + com.Auth0Domain() + "/userinfo")
+	userInfo, err := conn.Get("https://" + com.Conf.Auth0.Domain + "/userinfo")
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -614,7 +614,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			// Check for the special case of username@server, which may fail standard email validation checks
 			// eg username@localhost, won't validate as an email address, but should be accepted anyway
-			serverName := strings.Split(com.WebServer(), ":")
+			serverName := strings.Split(com.Conf.Web.ServerName, ":")
 			em := fmt.Sprintf("%s@%s", userName, serverName[0])
 			if email != em {
 				log.Printf("Email value failed validation: %s\n", err)
@@ -1771,12 +1771,12 @@ func main() {
 	}
 
 	// Open the request log for writing
-	reqLog, err = os.OpenFile(com.WebRequestLog(), os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
+	reqLog, err = os.OpenFile(com.Conf.Web.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
 	if err != nil {
 		log.Fatalf("Error when opening request log: %s\n", err)
 	}
 	defer reqLog.Close()
-	log.Printf("Request log opened: %s\n", com.WebRequestLog())
+	log.Printf("Request log opened: %s\n", com.Conf.Web.RequestLog)
 
 	// Parse our template files
 	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
@@ -1828,7 +1828,7 @@ func main() {
 	}
 
 	// Setup session storage
-	store = gsm.NewMemcacheStore(com.MemcacheHandle(), "dbhub_", []byte(com.WebServerSessionStorePassword()))
+	store = gsm.NewMemcacheStore(com.MemcacheHandle(), "dbhub_", []byte(com.Conf.Web.SessionStorePassword))
 
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
@@ -1926,8 +1926,8 @@ func main() {
 	}))
 
 	// Start server
-	log.Printf("DBHub server starting on https://%s\n", com.WebServer())
-	err = http.ListenAndServeTLS(com.WebBindAddress(), com.WebServerCert(), com.WebServerCertKey(), nil)
+	log.Printf("DBHub server starting on https://%s\n", com.Conf.Web.ServerName)
+	err = http.ListenAndServeTLS(com.Conf.Web.BindAddress, com.Conf.Web.Certificate, com.Conf.Web.CertificateKey, nil)
 
 	// Shut down nicely
 	com.DisconnectPostgreSQL()
@@ -2151,7 +2151,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Check for the special case of username@server, which may fail standard email validation checks
 		// eg username@localhost, won't validate as an email address, but should be accepted anyway
-		serverName := strings.Split(com.WebServer(), ":")
+		serverName := strings.Split(com.Conf.Web.ServerName, ":")
 		em := fmt.Sprintf("%s@%s", loggedInUser, serverName[0])
 		if email != em {
 			log.Printf("%s: Email value failed validation: %s\n", pageName, err)
@@ -2867,7 +2867,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Cache the data in memcache
-		err = com.CacheData(dataCacheKey, dataRows, com.CacheTime)
+		err = com.CacheData(dataCacheKey, dataRows, com.Conf.Memcache.DefaultCacheTime)
 		if err != nil {
 			log.Printf("%s: Error when caching table data for '%s%s%s': %v\n", pageName, dbOwner, dbFolder,
 				dbName, err)

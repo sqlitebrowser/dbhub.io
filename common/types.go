@@ -33,9 +33,6 @@ const (
 	Float
 )
 
-// Store cached data in memcache for 30 days days (as a first guess, which will probably need tuning)
-const CacheTime = 2592000
-
 // Number of rows to display by default on the database page
 const DefaultNumDisplayRows = 25
 
@@ -49,10 +46,6 @@ const MaxDatabaseSize = 1024 * 1024 * 1024 // 1GB
 //        -> Minio folder: "34f425"
 //        -> Minio filename: "5a737156147fbd0a44323a895d18ade79d4db521564d1b0dbb8764cbbc"
 const MinioFolderChars = 6
-
-// Number of days client certificates should be valid for
-// TODO: Using 60 days for now, but extend this when things are known to be working well.
-const CertDaysValid = 60
 
 // ************************
 // Configuration file types
@@ -101,7 +94,8 @@ type DiskCacheInfo struct {
 
 // Memcached connection parameters
 type MemcacheInfo struct {
-	Server string
+	DefaultCacheTime int `toml:"default_cache_time"`
+	Server           string
 }
 
 // Minio connection parameters
@@ -125,6 +119,7 @@ type PGInfo struct {
 
 // Used for signing DB4S client certificates
 type SigningInfo struct {
+	CertDaysValid    int    `toml:"cert_days_valid"`
 	IntermediateCert string `toml:"intermediate_cert"`
 	IntermediateKey  string `toml:"intermediate_key"`
 }

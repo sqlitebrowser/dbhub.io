@@ -256,14 +256,14 @@ func ClientCert(userName string) ([]byte, error) {
 
 // Creates a connection pool to the PostgreSQL server.
 func ConnectPostgreSQL() (err error) {
-	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, conf.Pg.NumConnections, nil, 2 * time.Second}
+	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, Conf.Pg.NumConnections, nil, 2 * time.Second}
 	pdb, err = pgx.NewConnPool(pgPoolConfig)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Couldn't connect to PostgreSQL server: %v\n", err))
 	}
 
 	// Log successful connection
-	log.Printf("Connected to PostgreSQL server: %v:%v\n", conf.Pg.Server, uint16(conf.Pg.Port))
+	log.Printf("Connected to PostgreSQL server: %v:%v\n", Conf.Pg.Server, uint16(Conf.Pg.Port))
 
 	return nil
 }
@@ -471,7 +471,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	}
 
 	// Cache the database details
-	err = CacheData(mdataCacheKey, DB, 120)
+	err = CacheData(mdataCacheKey, DB, Conf.Memcache.DefaultCacheTime)
 	if err != nil {
 		log.Printf("Error when caching page data: %v\n", err)
 	}
@@ -918,7 +918,7 @@ func DisconnectPostgreSQL() {
 	pdb.Close()
 
 	// Log successful disconnection
-	log.Printf("Disconnected from PostgreSQL server: %v:%v\n", conf.Pg.Server, uint16(conf.Pg.Port))
+	log.Printf("Disconnected from PostgreSQL server: %v:%v\n", Conf.Pg.Server, uint16(Conf.Pg.Port))
 }
 
 // Fork the PostgreSQL entry for a SQLite database from one user to another

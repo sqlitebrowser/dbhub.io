@@ -19,7 +19,7 @@ var (
 )
 
 // Caches data in Memcached
-func CacheData(cacheKey string, cacheData interface{}, cacheSeconds int32) error {
+func CacheData(cacheKey string, cacheData interface{}, cacheSeconds int) error {
 	// Encode the data
 	var encodedData bytes.Buffer
 	enc := gob.NewEncoder(&encodedData)
@@ -29,7 +29,7 @@ func CacheData(cacheKey string, cacheData interface{}, cacheSeconds int32) error
 	}
 
 	// Send the data to memcached
-	cachedData := memcache.Item{Key: cacheKey, Value: encodedData.Bytes(), Expiration: cacheSeconds}
+	cachedData := memcache.Item{Key: cacheKey, Value: encodedData.Bytes(), Expiration: int32(cacheSeconds)}
 	err = memCache.Set(&cachedData)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func CacheData(cacheKey string, cacheData interface{}, cacheSeconds int32) error
 
 func ConnectCache() error {
 	// Connect to memcached server
-	memCache = memcache.New(conf.Memcache.Server)
+	memCache = memcache.New(Conf.Memcache.Server)
 
 	// Test the memcached connection
 	cacheTest := memcache.Item{Key: "connecttext", Value: []byte("1"), Expiration: 10}
@@ -50,7 +50,7 @@ func ConnectCache() error {
 	}
 
 	// Log successful connection message for Memcached
-	log.Printf("Connected to Memcached: %v\n", conf.Memcache.Server)
+	log.Printf("Connected to Memcached: %v\n", Conf.Memcache.Server)
 
 	return nil
 }
