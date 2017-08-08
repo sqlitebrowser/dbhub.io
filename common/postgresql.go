@@ -42,17 +42,6 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 		return err
 	}
 
-	// Generate a unique bucket name for the user
-	var bucket string
-	newBucket := true
-	for newBucket == true {
-		bucket = RandomString(16) + ".bkt"
-		newBucket, err = MinioBucketExists(bucket) // Drops out of the loop when the name hasn't been used yet
-		if err != nil {
-			return err
-		}
-	}
-
 	// Generate a new HTTPS client certificate for the user
 	cert, err := GenerateClientCert(userName)
 	if err != nil {
@@ -80,13 +69,6 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows affected when creating user: %v, username: %v\n", numRows, userName)
-	}
-
-	// Create a new bucket for the user in Minio
-	err = CreateMinioBucket(bucket)
-	if err != nil {
-		log.Printf("Error creating new bucket: %v\n", err)
-		return err
 	}
 
 	// Log the user registration

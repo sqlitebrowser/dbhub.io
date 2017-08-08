@@ -33,27 +33,6 @@ func ConnectMinio() (err error) {
 	return nil
 }
 
-// Create a bucket in Minio.
-func CreateMinioBucket(bucket string) error {
-	err := minioClient.MakeBucket(bucket, "us-east-1")
-	if err != nil {
-		log.Printf("Error creating new bucket: %v\n", err)
-		return err
-	}
-
-	return nil
-}
-
-// Check if a given Minio bucket exists.
-func MinioBucketExists(bucket string) (bool, error) {
-	found, err := minioClient.BucketExists(bucket)
-	if err != nil {
-		log.Printf("Error when checking if Minio bucket '%s' already exists: %v\n", bucket, err)
-		return false, err
-	}
-	return found, nil
-}
-
 // Get a handle from Minio for a SQLite database object.
 func MinioHandle(bucket string, id string) (*minio.Object, error) {
 	userDB, err := minioClient.GetObject(bucket, id)
