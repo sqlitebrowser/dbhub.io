@@ -218,11 +218,11 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
@@ -347,11 +347,11 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
@@ -756,7 +756,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		log.Printf("%s: Validation failed for database to delete: %s", pageName, err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -978,7 +978,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -1156,7 +1156,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		log.Printf("%s: Missing database for '%s%s%s' when attempting deletion\n", pageName, dbOwner, dbFolder,
 			dbName)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "Internal server error")
 		return
 	}
@@ -1245,7 +1245,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -1342,7 +1342,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -1596,7 +1596,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !allowed {
-		errorPage(w, r, http.StatusBadRequest, "You don't have access to the requested database")
+		errorPage(w, r, http.StatusNotFound, "You don't have access to the requested database")
 		return
 	}
 
@@ -1615,7 +1615,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if exists {
 		// Database of the same name already exists
-		errorPage(w, r, http.StatusBadRequest, "You already have a database of this name")
+		errorPage(w, r, http.StatusNotFound, "You already have a database of this name")
 		return
 	}
 
@@ -1981,7 +1981,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 	// * A specific database was requested *
 
-	// Check if a version number was also requested
+	// Check if a specific database commit ID was given
 	commitID, err := com.GetFormCommit(r)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Invalid database version number")
@@ -2572,7 +2572,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -2961,7 +2961,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -3097,7 +3097,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -3212,7 +3212,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 

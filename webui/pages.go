@@ -95,11 +95,11 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
@@ -211,11 +211,11 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
@@ -375,11 +375,11 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
@@ -455,11 +455,11 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
@@ -570,11 +570,11 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
@@ -645,11 +645,11 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
@@ -703,13 +703,27 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
-	// If a specific branch was requested, retrieve its latest commit
+	// Check if the database exists and the user has access to view it
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, "/", dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, "/",
+			dbName))
+		return
+	}
+
+	// Load the branch info for the database
 	branchHeads, err := com.GetBranches(dbOwner, "/", dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve branch information for database")
 		return
 	}
-	if branchName != "" {
+
+	// If a specific branch was requested and no commit ID was given, use the latest commit for the branch
+	if commitID == "" && branchName != "" {
 		c, ok := branchHeads[branchName]
 		if !ok {
 			errorPage(w, r, http.StatusInternalServerError, "Unknown branch requested for this database")
@@ -718,10 +732,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		commitID = c.Commit
 	}
 
-	// If a specific tag was requested, retrieve its commit
+	// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
 	// TODO: If we need to reduce database calls, we can probably make a function merging this and the GetBranches()
 	// TODO  one above.  Potentially also the DBDetails() call below too.
-	if tagName != "" {
+	if commitID == "" && tagName != "" {
 		tags, err := com.GetTags(dbOwner, "/", dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for database")
@@ -1058,7 +1072,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, "That database doesn't seem to exist")
+		errorPage(w, r, http.StatusNotFound, "That database doesn't seem to exist")
 		return
 	}
 
@@ -1279,11 +1293,11 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
@@ -1595,7 +1609,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, "That database doesn't seem to exist")
+		errorPage(w, r, http.StatusNotFound, "That database doesn't seem to exist")
 		return
 	}
 
@@ -1670,11 +1684,11 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
