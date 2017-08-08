@@ -2301,11 +2301,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the full description
-	err = com.Validate.Var(fullDesc, "markdownsource,max=8192") // 8192 seems reasonable.  Maybe too long?
-	if err != nil {
-		log.Printf("Full description '%s' failed validation", fullDesc)
-		errorPage(w, r, http.StatusBadRequest, "Full description failed validation")
-		return
+	if fullDesc != "" {
+		err = com.Validate.Var(fullDesc, "markdownsource,max=8192") // 8192 seems reasonable.  Maybe too long?
+		if err != nil {
+			log.Printf("Full description '%s' failed validation", fullDesc)
+			errorPage(w, r, http.StatusBadRequest, "Full description failed validation")
+			return
+		}
 	}
 
 	// Validate the name of the default table
