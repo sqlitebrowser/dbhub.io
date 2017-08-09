@@ -595,7 +595,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ** By this point we have a validated user, and know their username (in userAcc) **
+	// The handler to use depends upon the request type
 	reqType := r.Method
 	switch reqType {
 	case "GET":
@@ -615,14 +615,15 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 
 	// Structure to hold the results, to apply JSON marshalling to
 	type linkRow struct {
-		Type         string `json:"type"`
-		Name         string `json:"name"`
 		CommitID     string `json:"commit_id"`
-		URL          string `json:"url"`
-		Size         int    `json:"size"`
-		SHA256       string `json:"sha256"`
-		Public       bool   `json:"public"`
 		LastModified string `json:"last_modified"`
+		Licence      string `json:"licence"`
+		Name         string `json:"name"`
+		Public       bool   `json:"public"`
+		SHA256       string `json:"sha256"`
+		Size         int    `json:"size"`
+		Type         string `json:"type"`
+		URL          string `json:"url"`
 	}
 
 	// Retrieve the list of databases for the requested username.  Only include those accessible to the logged
@@ -649,6 +650,7 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 	for _, j := range pubDBs {
 		tempRow.Type = "database"
 		tempRow.CommitID = j.CommitID
+		tempRow.Licence = j.Licence
 		if j.Folder == "/" {
 			tempRow.Name = j.Database
 			tempRow.URL = fmt.Sprintf("%s/%s/%s?commit=%v", server, user,

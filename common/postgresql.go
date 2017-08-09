@@ -2188,6 +2188,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			oneRow.SourceURL = source.String
 		}
 		oneRow.Size = oneRow.DBEntry.Size
+		oneRow.SHA256 = oneRow.DBEntry.Sha256
 
 		// Work out the licence name and url for the database entry
 		licSHA := oneRow.DBEntry.LicenceSHA
@@ -2228,34 +2229,6 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	}
 
 	return list, nil
-}
-
-// Returns a list of all DBHub.io users.
-func UserList() ([]UserDetails, error) {
-	dbQuery := `
-		SELECT username, email, password_hash, date_joined
-		FROM users
-		ORDER BY username ASC`
-	rows, err := pdb.Query(dbQuery)
-	if err != nil {
-		log.Printf("Database query failed: %v\n", err)
-		return nil, err
-	}
-	defer rows.Close()
-
-	// Assemble the row data into a list
-	var userList []UserDetails
-	for rows.Next() {
-		var u UserDetails
-		err = rows.Scan(&u.Username, &u.Email, &u.PHash, &u.DateJoined)
-		if err != nil {
-			log.Printf("Error retrieving user list from database: %v\n", err)
-			return nil, err
-		}
-		userList = append(userList, u)
-	}
-
-	return userList, nil
 }
 
 // Returns the username for a given Auth0 ID.
