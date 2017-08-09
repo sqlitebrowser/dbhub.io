@@ -1222,7 +1222,7 @@ func GetLicence(userName string, licenceName string) (txt string, err error) {
 // Returns the list of licences available to a user.
 func GetLicences(user string) (map[string]LicenceEntry, error) {
 	dbQuery := `
-		SELECT friendly_name, lic_sha256, licence_url, display_order
+		SELECT friendly_name, full_name, lic_sha256, licence_url, display_order
 		FROM database_licences
 		WHERE user_id = (
 				SELECT user_id
@@ -1244,7 +1244,7 @@ func GetLicences(user string) (map[string]LicenceEntry, error) {
 	for rows.Next() {
 		var name string
 		var oneRow LicenceEntry
-		err = rows.Scan(&name, &oneRow.Sha256, &oneRow.URL, &oneRow.Order)
+		err = rows.Scan(&name, &oneRow.FullName, &oneRow.Sha256, &oneRow.URL, &oneRow.Order)
 		if err != nil {
 			log.Printf("Error retrieving licence list: %v\n", err)
 			return nil, err
@@ -1896,7 +1896,7 @@ func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branch
 }
 
 // Store a licence.
-func StoreLicence(userName string, licenceName string, txt []byte, url string, orderNum int) error {
+func StoreLicence(userName string, licenceName string, txt []byte, url string, orderNum int, fullName string) error {
 	// Store the licence in PostgreSQL
 	sha := sha256.Sum256(txt)
 	dbQuery := `
@@ -1905,8 +1905,8 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 		FROM users
 		WHERE user_name = $1
 	)
-	INSERT INTO database_licences (user_id, friendly_name, lic_sha256, licence_text, licence_url, display_order)
-	SELECT (SELECT user_id FROM u), $2, $3, $4, $5, $6
+	INSERT INTO database_licences (user_id, friendly_name, lic_sha256, licence_text, licence_url, display_order, full_name)
+	SELECT (SELECT user_id FROM u), $2, $3, $4, $5, $6, $7
 	ON CONFLICT (user_id, friendly_name)
 		DO UPDATE
 		SET friendly_name = $2,
@@ -1914,8 +1914,9 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 			licence_text = $4,
 			licence_url = $5,
 			user_id = (SELECT user_id FROM u),
-			display_order = $6`
-	commandTag, err := pdb.Exec(dbQuery, userName, licenceName, hex.EncodeToString(sha[:]), txt, url, orderNum)
+			display_order = $6,
+			full_name = $7`
+	commandTag, err := pdb.Exec(dbQuery, userName, licenceName, hex.EncodeToString(sha[:]), txt, url, orderNum, fullName)
 	if err != nil {
 		log.Printf("Inserting licence '%v' in database failed: %v\n", licenceName, err)
 		return err

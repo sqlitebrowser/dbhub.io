@@ -64,6 +64,39 @@ func (u UserInfoSlice) Swap(i, j int) {
 	u[i], u[j] = u[j], u[i]
 }
 
+func extractUserAndServer(w http.ResponseWriter, r *http.Request) (userAcc string, certServer string, err error) {
+	// Extract the account name and associated server from the validated client certificate
+	cn := r.TLS.PeerCertificates[0].Subject.CommonName
+	if cn == "" {
+		// Common name is empty
+		err = errors.New("Common name is blank in client certificate")
+		return
+	}
+	s := strings.Split(cn, "@")
+	if len(s) < 2 {
+		err = errors.New("Missing information in client certificate")
+		return
+	}
+	userAcc = s[0]
+	certServer = s[1]
+	if userAcc == "" || certServer == "" {
+		// Missing details in common name field
+		err = errors.New("Missing information in client certificate")
+		return
+	}
+
+	// Verify the running server matches the one in the certificate
+	runningServer := com.Conf.DB4S.Server
+	if certServer != runningServer {
+		err = fmt.Errorf("Server name in certificate '%s' doesn't match running server '%s'\n", certServer,
+			runningServer)
+		return
+	}
+
+	// Everything is ok, so return
+	return
+}
+
 func generateDefaultList(pageName string, userAcc string) (defaultList []byte, err error) {
 	pageName += ":generateDefaultList()"
 
@@ -217,6 +250,48 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 }
 
+// Returns the list of licences known to the server
+func licenceListHandler(w http.ResponseWriter, r *http.Request) {
+	type licEntry struct {
+		FullName string `json:"full_name"`
+		SHA256   string `json:"sha256"`
+		URL      string `json:"url"`
+	}
+
+	// Extract the account name and associated server from the validated client certificate
+	userAcc, _, err := extractUserAndServer(w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Create the list of licences, ready for JSON formatting
+	rawLicenceList, err := com.GetLicences(userAcc)
+	licList := make(map[string]licEntry)
+	for name, details := range rawLicenceList {
+		if name == "Not specified" {
+			// No need to include an entry for "Not specified"
+			continue
+		}
+		licList[name] = licEntry{
+			FullName: details.FullName,
+			SHA256:   details.Sha256,
+			URL:      details.URL,
+		}
+	}
+
+	// Return the list as JSON
+	jsonLicList, err := json.MarshalIndent(licList, "", "  ")
+	if err != nil {
+		errMsg := fmt.Sprintf("Error when JSON marshalling the licence list: %v\n", err)
+		log.Print(errMsg)
+		http.Error(w, errMsg, http.StatusBadRequest)
+		return
+	}
+	fmt.Fprintf(w, string(jsonLicList))
+	return
+}
+
 func main() {
 	// Read server configuration
 	var err error
@@ -242,6 +317,19 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
+	// Add the default user to the system
+	// Note - we don't check for an error here on purpose.  If we were to fail on an error, then subsequent runs after
+	// the first would barf with PG errors about trying to insert multiple "default" users violating unique
+	// constraints.  It would be solvable by creating a special purpose PL/pgSQL function just for this one use case...
+	// or we could just ignore failures here. ;)
+	com.AddDefaultUser()
+
+	// Add the default licences to PostgreSQL
+	err = com.AddDefaultLicences()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
 	certFile, err := ioutil.ReadFile(com.Conf.DB4S.CAChain)
@@ -258,6 +346,7 @@ func main() {
 	// URL handler
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", rootHandler)
+	mux.HandleFunc("/licences", licenceListHandler)
 
 	// Load our self signed CA Cert chain, request client certificates, and set TLS1.2 as minimum
 	newTLSConfig := &tls.Config{
@@ -412,31 +501,9 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Main page"
 
 	// Extract the account name and associated server from the validated client certificate
-	var certServer string
-	cn := r.TLS.PeerCertificates[0].Subject.CommonName
-	if cn == "" {
-		// Common name is empty
-		http.Error(w, "Common name is blank in client certificate", http.StatusBadRequest)
-		return
-	}
-	s := strings.Split(cn, "@")
-	if len(s) < 2 {
-		http.Error(w, "Missing information in client certificate", http.StatusBadRequest)
-		return
-	}
-	userAcc := s[0]
-	certServer = s[1]
-	if userAcc == "" || certServer == "" {
-		// Missing details in common name field
-		http.Error(w, "Missing information in client certificate", http.StatusBadRequest)
-		return
-	}
-
-	// Verify the running server matches the one in the certificate
-	runningServer := com.Conf.DB4S.Server
-	if certServer != runningServer {
-		http.Error(w, fmt.Sprintf("Server name in certificate '%s' doesn't match running server '%s'\n",
-			certServer, runningServer), http.StatusBadRequest)
+	userAcc, _, err := extractUserAndServer(w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

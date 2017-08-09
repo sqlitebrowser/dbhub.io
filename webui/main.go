@@ -1738,33 +1738,6 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	// The default licences to load into the system
-	type licenceInfo struct {
-		DisplayOrder int
-		Path         string
-		URL          string
-	}
-	licences := map[string]licenceInfo{
-		"Not specified": {DisplayOrder: 100,
-			Path: "",
-			URL:  ""},
-		"CC0": {DisplayOrder: 200,
-			Path: "CC0-1.0.txt",
-			URL:  "https://creativecommons.org/publicdomain/zero/1.0/"},
-		"CC-BY-4.0": {DisplayOrder: 300,
-			Path: "CC-BY-4.0.txt",
-			URL:  "https://creativecommons.org/licenses/by/4.0/"},
-		"CC-BY-SA-4.0": {DisplayOrder: 400,
-			Path: "CC-BY-SA-4.0.txt",
-			URL:  "https://creativecommons.org/licenses/by-sa/4.0/"},
-		"ODbL-1.0": {DisplayOrder: 500,
-			Path: "ODbL-1.0.txt",
-			URL:  "https://opendatacommons.org/licenses/odbl/1.0/"},
-		"UK-OGL-3": {DisplayOrder: 600,
-			Path: "UK-OGL3.html",
-			URL:  "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"},
-	}
-
 	// Read server configuration
 	var err error
 	if err = com.ReadConfig(); err != nil {
@@ -1802,25 +1775,11 @@ func main() {
 	// or we could just ignore failures here. ;)
 	com.AddDefaultUser()
 
-	// Add the initial default licences to the system
-	// TODO: Probably better to move this into a function call
-	for lName, l := range licences {
-		txt := []byte{}
-		if l.Path != "" {
-			// Read the file contents
-			txt, err = ioutil.ReadFile(filepath.Join("default_licences", l.Path))
-			if err != nil {
-				log.Fatalf(err.Error())
-			}
-		}
-
-		// Save the licence text, sha256, and friendly name in the database
-		err = com.StoreLicence("default", lName, txt, l.URL, l.DisplayOrder)
-		if err != nil {
-			log.Fatalf(err.Error())
-		}
+	// Add the default licences to PostgreSQL
+	err = com.AddDefaultLicences()
+	if err != nil {
+		log.Fatalf(err.Error())
 	}
-	log.Println("Default licences added")
 
 	// Connect to the Memcached server
 	err = com.ConnectCache()

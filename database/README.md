@@ -8,7 +8,7 @@ from the postgres superuser:
 
     $ createuser -d dbhub
     $ createdb -O dbhub dbhub
-    $ psql < dbhub.sql
+    $ psql dbhub < dbhub.sql
 
 It should finish with no errors.
 

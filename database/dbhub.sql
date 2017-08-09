@@ -57,7 +57,8 @@ CREATE TABLE database_licences (
     licence_url text,
     licence_text text NOT NULL,
     display_order integer,
-    lic_id integer NOT NULL
+    lic_id integer NOT NULL,
+    full_name text
 );
 
 
