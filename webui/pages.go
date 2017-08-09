@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -105,7 +106,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, "")
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -221,7 +222,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, "")
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -465,7 +466,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, "")
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -678,8 +679,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string, commitID string,
-	dbTable string, sortCol string, sortDir string, rowOffset int, branchName string, tagName string) {
+func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder string, dbName string) {
 	pageName := "Render database page"
 
 	var pageData struct {
@@ -703,20 +703,109 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
+	// Check if a specific database commit ID was given
+	commitID, err := com.GetFormCommit(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Invalid database commit ID")
+		return
+	}
+
+	// If a table name was supplied, validate it
+	dbTable := r.FormValue("table")
+	if dbTable != "" {
+		err = com.ValidatePGTable(dbTable)
+		if err != nil {
+			// Validation failed, so don't pass on the table name
+			log.Printf("%s: Validation failed for table name: %s", pageName, err)
+			dbTable = ""
+		}
+	}
+
+	// Check if a branch name was requested
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		return
+	}
+
+	// Check if a named tag was requested
+	tagName, err := com.GetFormTag(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for tag name")
+		return
+	}
+
+	// Extract sort column, sort direction, and offset variables if present
+	sortCol := r.FormValue("sort")
+	sortDir := r.FormValue("dir")
+	offsetStr := r.FormValue("offset")
+
+	// If an offset was provided, validate it
+	var rowOffset int
+	if offsetStr != "" {
+		rowOffset, err = strconv.Atoi(offsetStr)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		// Ensure the row offset isn't negative
+		if rowOffset < 0 {
+			rowOffset = 0
+		}
+	}
+
+	// Sanity check the sort column name
+	if sortCol != "" {
+		// Validate the sort column text, as we use it in string smashing SQL queries so need to be even more
+		// careful than usual
+		err = com.ValidateFieldName(sortCol)
+		if err != nil {
+			log.Printf("Validation failed on requested sort field name '%v': %v\n", sortCol,
+				err.Error())
+			errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
+			return
+		}
+	}
+
+	// If a sort direction was provided, validate it
+	if sortDir != "" {
+		if sortDir != "ASC" && sortDir != "DESC" {
+			errorPage(w, r, http.StatusBadRequest, "Invalid sort direction")
+			return
+		}
+	}
+
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, "/", dbName)
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, "/",
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
 		return
 	}
 
+	// If a specific commit was requested, make sure it exists in the database commit history
+	if commitID != "" {
+		commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		_, ok := commitList[commitID]
+		if !ok {
+			// The requested commit isn't one in the database commit history so error out
+			errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for database '%s%s%s'", dbOwner,
+				dbFolder, dbName))
+			return
+		}
+	}
+
 	// Load the branch info for the database
-	branchHeads, err := com.GetBranches(dbOwner, "/", dbName)
+	branchHeads, err := com.GetBranches(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve branch information for database")
 		return
@@ -733,10 +822,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
-	// TODO: If we need to reduce database calls, we can probably make a function merging this and the GetBranches()
-	// TODO  one above.  Potentially also the DBDetails() call below too.
+	// TODO: If we need to reduce database calls, we can probably make a function merging this, GetBranches(), and
+	// TODO  GetCommitList() above.  Potentially also the DBDetails() call below too.
 	if commitID == "" && tagName != "" {
-		tags, err := com.GetTags(dbOwner, "/", dbName)
+		tags, err := com.GetTags(dbOwner, dbFolder, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for database")
 			return
@@ -750,8 +839,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	// TODO: Add proper folder support
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, commitID)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -772,7 +860,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Check if the database was starred by the logged in user
-	myStar, err := com.CheckDBStarred(loggedInUser, dbOwner, "/", dbName)
+	myStar, err := com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
@@ -795,10 +883,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Generate predictable cache keys for the metadata and sqlite table rows
-	mdataCacheKey := com.MetadataCacheKey("dwndb-meta", loggedInUser, dbOwner, "/", dbName,
+	mdataCacheKey := com.MetadataCacheKey("dwndb-meta", loggedInUser, dbOwner, dbFolder, dbName,
 		commitID)
 	rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-		loggedInUser, dbOwner, "/", dbName, commitID, dbTable, pageData.DB.MaxRows)
+		loggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
 
 	// If a cached version of the page data exists, use it
 	ok, err := com.GetCachedData(mdataCacheKey, &pageData)
@@ -819,7 +907,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		pageData.Meta.LoggedInUser = loggedInUser
 
 		// Get latest star and fork count
-		_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, "/", dbName)
+		_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -871,8 +959,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		}
 		if tablePresent == false {
 			// The requested table doesn't exist in the database
-			log.Printf("%s: Requested table not present in database. DB: '%s/%s', Table: '%s'\n",
-				pageName, dbOwner, dbName, dbTable)
+			log.Printf("%s: Requested table not present in database. DB: '%s%s%s', Table: '%s'\n",
+				pageName, dbOwner, dbFolder, dbName, dbTable)
 			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
 			return
 		}
@@ -922,14 +1010,14 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = com.Conf.Web.ServerName
-	pageData.Meta.Title = fmt.Sprintf("%s / %s", dbOwner, dbName)
+	pageData.Meta.Title = fmt.Sprintf("%s %s %s", dbOwner, dbFolder, dbName)
 
 	// Fill out the branch info
 	for i := range branchHeads {
 		pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
 	}
 	if branchName == "" {
-		branchName, err = com.GetDefaultBranchName(dbOwner, "/", dbName)
+		branchName, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
 			return
@@ -939,7 +1027,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	pageData.DB.Info.Commits = branchHeads[branchName].CommitCount
 
 	// Retrieve the "forked from" information
-	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, "/", dbName)
+	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
 		return
@@ -1453,6 +1541,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the database owner, database name
 	// TODO: Add folder support
+	dbFolder := "/"
 	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/settings/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
@@ -1471,7 +1560,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, "/", dbName, "")
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -1492,7 +1581,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Retrieve the list of tables in the database
-	pageData.DB.Info.Tables, err = com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, "/", dbName))
+	pageData.DB.Info.Tables, err = com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
 	defer sdb.Close()
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -1500,14 +1589,14 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of branches
-	branchHeads, err := com.GetBranches(dbOwner, "/", dbName)
+	branchHeads, err := com.GetBranches(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Retrieve all of the commits for the database
-	commitList, err := com.GetCommitList(dbOwner, "/", dbName)
+	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1520,7 +1609,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
 				"Couldn't retrieve branch '%s' head commit '%s' for database '%s%s%s'\n", bName, bEntry.Commit,
-				dbOwner, "/", dbName))
+				dbOwner, dbFolder, dbName))
 			return
 		}
 		licSHA := c.Tree.Entries[0].LicenceSHA
@@ -1614,7 +1703,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve list of users who starred the database
-	pageData.Stars, err = com.UsersStarredDB(dbOwner, "/", dbName)
+	pageData.Stars, err = com.UsersStarredDB(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return

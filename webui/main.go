@@ -1939,8 +1939,6 @@ func main() {
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Main handler"
-
 	// Split the request URL into path components
 	pathStrings := strings.Split(r.URL.Path, "/")
 
@@ -1979,89 +1977,11 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// * A specific database was requested *
-
-	// Check if a specific database commit ID was given
-	commitID, err := com.GetFormCommit(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Invalid database version number")
-		return
-	}
-
-	// Check if a table name was also requested
-	err = r.ParseForm()
-	if err != nil {
-		log.Printf("%s: Error with ParseForm() in main handler: %s\n", pageName, err)
-	}
-	dbTable := r.FormValue("table")
-
-	// If a table name was supplied, validate it
-	if dbTable != "" {
-		err = com.ValidatePGTable(dbTable)
-		if err != nil {
-			// Validation failed, so don't pass on the table name
-			log.Printf("%s: Validation failed for table name: %s", pageName, err)
-			dbTable = ""
-		}
-	}
-
-	// Check if a branch name was requested
-	branchName, err := com.GetFormBranch(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
-		return
-	}
-
-	// Check if a named tag was requested
-	tagName, err := com.GetFormTag(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for tag name")
-		return
-	}
-
-	// Extract sort column, sort direction, and offset variables if present
-	sortCol := r.FormValue("sort")
-	sortDir := r.FormValue("dir")
-	offsetStr := r.FormValue("offset")
-
-	// If an offset was provided, validate it
-	var rowOffset int
-	if offsetStr != "" {
-		rowOffset, err = strconv.Atoi(offsetStr)
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		// Ensure the row offset isn't negative
-		if rowOffset < 0 {
-			rowOffset = 0
-		}
-	}
-
-	// Sanity check the sort column name
-	if sortCol != "" {
-		// Validate the sort column text, as we use it in string smashing SQL queries so need to be even more
-		// careful than usual
-		err = com.ValidateFieldName(sortCol)
-		if err != nil {
-			log.Printf("Validation failed on requested sort field name '%v': %v\n", sortCol,
-				err.Error())
-			errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
-			return
-		}
-	}
-
-	// If a sort direction was provided, validate it
-	if sortDir != "" {
-		if sortDir != "ASC" && sortDir != "DESC" {
-			errorPage(w, r, http.StatusBadRequest, "Invalid sort direction")
-			return
-		}
-	}
-
 	// TODO: Add support for folders and sub-folders in request paths
-	databasePage(w, r, userName, dbName, commitID, dbTable, sortCol, sortDir, rowOffset, branchName, tagName)
+	dbFolder := "/"
+
+	// A specific database was requested
+	databasePage(w, r, userName, dbFolder, dbName)
 }
 
 // Returns HTML rendered content from a given markdown string, for the settings page README preview tab.
