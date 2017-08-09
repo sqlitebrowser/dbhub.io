@@ -735,6 +735,16 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		return
 	}
 
+	// Check if a specific release was requested
+	releaseName := r.FormValue("release")
+	if releaseName != "" {
+		err = com.Validate.Var(releaseName, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Validation failed for release name")
+			return
+		}
+	}
+
 	// Extract sort column, sort direction, and offset variables if present
 	sortCol := r.FormValue("sort")
 	sortDir := r.FormValue("dir")
@@ -802,6 +812,21 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 				dbFolder, dbName))
 			return
 		}
+	}
+
+	// If a specific release was requested, and no commit ID was given, retrieve the commit ID matching the release
+	if commitID == "" && releaseName != "" {
+		releases, err := com.GetReleases(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve releases for database")
+			return
+		}
+		rls, ok := releases[releaseName]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, "Unknown release requested for this database")
+			return
+		}
+		commitID = rls.Commit
 	}
 
 	// Load the branch info for the database
