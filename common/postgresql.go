@@ -1196,33 +1196,39 @@ func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]C
 }
 
 // Returns the text for a given licence.
-func GetLicence(userName string, licenceName string) (txt string, err error) {
+func GetLicence(userName string, licenceName string) (txt string, format string, err error) {
 	dbQuery := `
-		SELECT licence_text
+		SELECT licence_text, file_format
 		FROM database_licences
 		WHERE friendly_name = $2
-		AND (user_id IS NULL
-				OR user_id = (
+		AND (
+				user_id = (
 					SELECT user_id
 					FROM users
 					WHERE user_name = $1
-				)`
-	err = pdb.QueryRow(dbQuery, userName, licenceName).Scan(&txt)
+				) OR
+				user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = 'default'
+				)
+			)`
+	err = pdb.QueryRow(dbQuery, userName, licenceName).Scan(&txt, &format)
 	if err != nil {
 		log.Printf("Error when retrieving licence '%s', user '%s': %v\n", licenceName, userName, err)
-		return "", err
+		return "", "", err
 	}
 	if txt == "" {
 		// The requested licence text wasn't found
-		return "", errors.New("Licence text not found")
+		return "", "", errors.New("Licence text not found")
 	}
-	return txt, nil
+	return txt, format, nil
 }
 
 // Returns the list of licences available to a user.
 func GetLicences(user string) (map[string]LicenceEntry, error) {
 	dbQuery := `
-		SELECT friendly_name, full_name, lic_sha256, licence_url, display_order
+		SELECT friendly_name, full_name, lic_sha256, licence_url, file_format, display_order
 		FROM database_licences
 		WHERE user_id = (
 				SELECT user_id
@@ -1244,7 +1250,7 @@ func GetLicences(user string) (map[string]LicenceEntry, error) {
 	for rows.Next() {
 		var name string
 		var oneRow LicenceEntry
-		err = rows.Scan(&name, &oneRow.FullName, &oneRow.Sha256, &oneRow.URL, &oneRow.Order)
+		err = rows.Scan(&name, &oneRow.FullName, &oneRow.Sha256, &oneRow.URL, &oneRow.FileFormat, &oneRow.Order)
 		if err != nil {
 			log.Printf("Error retrieving licence list: %v\n", err)
 			return nil, err
@@ -1896,7 +1902,8 @@ func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branch
 }
 
 // Store a licence.
-func StoreLicence(userName string, licenceName string, txt []byte, url string, orderNum int, fullName string) error {
+func StoreLicence(userName string, licenceName string, txt []byte, url string, orderNum int, fullName string,
+	fileFormat string) error {
 	// Store the licence in PostgreSQL
 	sha := sha256.Sum256(txt)
 	dbQuery := `
@@ -1905,8 +1912,9 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 		FROM users
 		WHERE user_name = $1
 	)
-	INSERT INTO database_licences (user_id, friendly_name, lic_sha256, licence_text, licence_url, display_order, full_name)
-	SELECT (SELECT user_id FROM u), $2, $3, $4, $5, $6, $7
+	INSERT INTO database_licences (user_id, friendly_name, lic_sha256, licence_text, licence_url, display_order,
+		full_name, file_format)
+	SELECT (SELECT user_id FROM u), $2, $3, $4, $5, $6, $7, $8
 	ON CONFLICT (user_id, friendly_name)
 		DO UPDATE
 		SET friendly_name = $2,
@@ -1915,8 +1923,10 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 			licence_url = $5,
 			user_id = (SELECT user_id FROM u),
 			display_order = $6,
-			full_name = $7`
-	commandTag, err := pdb.Exec(dbQuery, userName, licenceName, hex.EncodeToString(sha[:]), txt, url, orderNum, fullName)
+			full_name = $7,
+			file_format = $8`
+	commandTag, err := pdb.Exec(dbQuery, userName, licenceName, hex.EncodeToString(sha[:]), txt, url, orderNum,
+		fullName, fileFormat)
 	if err != nil {
 		log.Printf("Inserting licence '%v' in database failed: %v\n", licenceName, err)
 		return err

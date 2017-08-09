@@ -240,10 +240,11 @@ type ForkEntry struct {
 }
 
 type LicenceEntry struct {
-	FullName string `json:"full_name"`
-	Order    int    `json:"order"`
-	Sha256   string `json:"sha256"`
-	URL      string `json:"url"`
+	FileFormat string `json:"file_format"`
+	FullName   string `json:"full_name"`
+	Order      int    `json:"order"`
+	Sha256     string `json:"sha256"`
+	URL        string `json:"url"`
 }
 
 type MetaInfo struct {

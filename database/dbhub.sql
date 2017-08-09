@@ -58,7 +58,8 @@ CREATE TABLE database_licences (
     licence_text text NOT NULL,
     display_order integer,
     lic_id integer NOT NULL,
-    full_name text
+    full_name text,
+    file_format text DEFAULT 'text'::text NOT NULL
 );
 
 

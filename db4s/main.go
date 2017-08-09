@@ -197,6 +197,9 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	dbOwner := pathStrings[1]
 	dbName := pathStrings[2]
 
+	// TODO: Add support for folders
+	dbFolder := "/"
+
 	// Validate the dbOwner and dbName inputs
 	err := com.ValidateUser(dbOwner)
 	if err != nil {
@@ -208,10 +211,6 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// TODO: Add support for folders and branch names
-	dbFolder := "/"
-	branchName := "master"
 
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(userAcc, dbOwner, dbFolder, dbName)
@@ -232,14 +231,37 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		return
 	}
 
-	// If no commit ID was given, we grab the commit ID of the latest database from the default branch
-	if commit == "" {
-		if branchName == "" {
-			commit, err = com.DefaultCommit(dbOwner, dbFolder, dbName)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+	// If a branch name was provided use it, else default to "master"
+	branchName := "master"
+	bn, err := com.GetFormBranch(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if bn != "" {
+		branchName = bn
+	}
+
+	// If no commit ID was given, but a branch name was, we use the latest commit in the branch
+	if commit == "" && branchName != "" {
+		branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		branch, ok := branchList[branchName]
+		if !ok {
+			http.Error(w, "Unknown branch name", http.StatusNotFound)
+		}
+		commit = branch.Commit
+	}
+
+	// If neither a commit ID nor branch was given, we use the commit ID of the latest database from the default branch
+	if commit == "" && branchName == "" {
+		commit, err = com.DefaultCommit(dbOwner, dbFolder, dbName)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 	}
 
@@ -250,11 +272,75 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 }
 
+// Returns the text or html document for a specific licence
+func getLicenceHandler(w http.ResponseWriter, r *http.Request) {
+	// Extract the account name and associated server from the validated client certificate
+	userAcc, _, err := extractUserAndServer(w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Make sure a licence name was provided
+	l := r.FormValue("licence")
+	if l == "" {
+		http.Error(w, "No licence name supplied", http.StatusBadRequest)
+		return
+	}
+
+	// Validate the licence name
+	err = com.ValidateLicence(l)
+	if err != nil {
+		log.Printf("Validation failed for licence name: '%s': %s", l, err)
+		http.Error(w, "Validation of licence name failed", http.StatusBadRequest)
+		return
+	}
+	licenceName := l
+
+	// Retrieve the licence from our database
+	lic, format, err := com.GetLicence(userAcc, licenceName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Determine file extension and mime type
+	var fileExt, mimeType string
+	switch format {
+	case "text":
+		fileExt = "txt"
+		mimeType = "text/plain"
+	case "html":
+		fileExt = "html"
+		mimeType = "text/html"
+	default:
+		// Unknown licence file format
+		http.Error(w, fmt.Sprintf("Unknown licence format '%s'", format), http.StatusInternalServerError)
+		return
+	}
+
+	// Send the licence file to the user
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s",
+		url.QueryEscape(licenceName+"."+fileExt)))
+	w.Header().Set("Content-Type", mimeType)
+	bytesWritten, err := fmt.Fprint(w, lic)
+	if err != nil {
+		log.Printf("Error returning licence file: %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Log the transfer
+	log.Printf("Licence '%s' downloaded by user '%v', %d bytes\n", licenceName, userAcc, bytesWritten)
+	return
+}
+
 // Returns the list of licences known to the server
 func licenceListHandler(w http.ResponseWriter, r *http.Request) {
 	type licEntry struct {
 		FullName string `json:"full_name"`
 		SHA256   string `json:"sha256"`
+		Type     string `json:"type"`
 		URL      string `json:"url"`
 	}
 
@@ -276,6 +362,7 @@ func licenceListHandler(w http.ResponseWriter, r *http.Request) {
 		licList[name] = licEntry{
 			FullName: details.FullName,
 			SHA256:   details.Sha256,
+			Type:     "licence",
 			URL:      details.URL,
 		}
 	}
@@ -346,7 +433,8 @@ func main() {
 	// URL handler
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", rootHandler)
-	mux.HandleFunc("/licences", licenceListHandler)
+	mux.HandleFunc("/licence/get", getLicenceHandler)
+	mux.HandleFunc("/licence/list", licenceListHandler)
 
 	// Load our self signed CA Cert chain, request client certificates, and set TLS1.2 as minimum
 	newTLSConfig := &tls.Config{
