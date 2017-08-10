@@ -490,25 +490,83 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		return
 	}
 
-	// TODO: Add support for folders, branches, licences, a commit message, and a source URL
+	// TODO: Add support for folders
 	targetFolder := "/"
-	branchName := "master"
-	licenceName := "Not specified"
-	commitMsg := ""
-	sourceURL := ""
 
-	// Get public/private setting for the database
+	// If a branch name was provided then use it, else default to "master"
+	branchName := "master"
+	bn := r.Header.Get("branch")
+	if bn != "" {
+		err := com.Validate.Var(bn, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid branch name value: '%v'", bn), http.StatusBadRequest)
+			return
+		}
+		branchName = bn
+	}
+
+	// If a licence name was provided then use it, else default to "Not specified"
+	licenceName := "Not specified"
+	ln := r.Header.Get("licence")
+	if ln != "" {
+		// Validate the licence name
+		err = com.ValidateLicence(ln)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Validation failed for licence name value: '%s': %s", ln, err),
+				http.StatusBadRequest)
+			return
+		}
+
+		// Make sure the licence is one that's known to us
+		licenceList, err := com.GetLicences(userAcc)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		_, ok := licenceList[ln]
+		if !ok {
+			http.Error(w, fmt.Sprintf("Unknown licence: '%s'", ln), http.StatusBadRequest)
+			return
+		}
+		licenceName = ln
+	}
+
+	// If a source URL was provided then use it
+	var sourceURL string
+	su := r.Header.Get("sourceurl")
+	if su != "" {
+		// Validate the source URL
+		err = com.Validate.Var(su, "url,min=5,max=255") // 255 seems like a reasonable first guess
+		if err != nil {
+			http.Error(w, "Validation failed for source URL value", http.StatusBadRequest)
+			return
+		}
+		sourceURL = su
+	}
+
+	// If a commit message was provided then use it
+	var commitMsg string
+	cm := r.Header.Get("commitmsg")
+	if cm != "" {
+		// Validate the commit message
+		err = com.Validate.Var(cm, "markdownsource,max=1024") // 1024 seems like a reasonable first guess
+		if err != nil {
+			http.Error(w, "Validation failed for the commit message", http.StatusBadRequest)
+			return
+		}
+		commitMsg = cm
+	}
+
+	// If a public/private setting was provided then use it
 	var public bool
-	val := r.Header.Get("public")
-	if val == "" {
-		// No public/private variable found, so default to private
-		public = false
-	} else {
-		public, err = strconv.ParseBool(val)
+	pub := r.Header.Get("public")
+	if pub != "" {
+		public, err = strconv.ParseBool(pub)
 		if err != nil {
 			// Public/private value couldn't be parsed, so default to private
-			log.Printf("Error when converting public value to boolean: %v\n", err)
-			public = false
+			http.Error(w, fmt.Sprintf("Error when converting public value to boolean: %v\n", err),
+				http.StatusBadRequest)
+			return
 		}
 	}
 
