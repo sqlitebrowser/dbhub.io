@@ -3213,7 +3213,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		commitMsg = cm
 	}
 
-	// Validate the (optional) commit message
+	// Validate the (optional) branch name
 	branchName, err := com.GetFormBranch(r)
 	if err != nil {
 		log.Printf("%s: Error when validating branch name '%s': %v\n", pageName, branchName, err)
