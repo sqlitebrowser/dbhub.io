@@ -1858,11 +1858,11 @@ func main() {
 	http.HandleFunc("/js/angular-sanitize.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.5.11.min.js.map"))
 	}))
-	http.HandleFunc("/js/lock-10.11.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.11.min.js"))
+	http.HandleFunc("/js/lock-10.20.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.20.min.js"))
 	}))
 	http.HandleFunc("/js/lock.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.11.min.js.map"))
+		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.20.min.js.map"))
 	}))
 	http.HandleFunc("/js/ui-bootstrap-tpls-2.2.0.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "js", "ui-bootstrap-tpls-2.2.0.min.js"))
