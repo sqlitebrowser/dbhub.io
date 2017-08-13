@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strconv"
 
 	"github.com/bradfitz/gomemcache/memcache"
 )
@@ -76,6 +77,62 @@ func GetCachedData(cacheKey string, cacheData interface{}) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// Retrieves the view count in memcached for a database
+func GetViewCount(dbOwner string, dbFolder string, dbName string) (count int, err error) {
+	// Generate the cache key
+	cacheString := fmt.Sprintf("viewcount-%s-%s-%s", dbOwner, dbFolder, dbName)
+	tempArr := md5.Sum([]byte(cacheString))
+	cacheKey := hex.EncodeToString(tempArr[:])
+
+	// Retrieve the view count
+	data, err := memCache.Get(cacheKey)
+	if err != nil {
+		if err != memcache.ErrCacheMiss {
+			// A real error occurred
+			return -1, err
+		}
+
+		// There isn't a cached value for the database
+		return -1, nil
+	}
+
+	// Convert the string value to int, and return it
+	count, err = strconv.Atoi(string(data.Value))
+	if err != nil {
+		return -1, err
+	}
+	return count, nil
+}
+
+// Increments the view counter in memcached for a database
+func IncrementViewCount(dbOwner string, dbFolder string, dbName string) error {
+	// Generate the cache key
+	cacheString := fmt.Sprintf("viewcount-%s-%s-%s", dbOwner, dbFolder, dbName)
+	tempArr := md5.Sum([]byte(cacheString))
+	cacheKey := hex.EncodeToString(tempArr[:])
+
+	// Attempt to directly increment the counter
+	_, err := memCache.Increment(cacheKey, 1)
+	if err != nil {
+		if err != memcache.ErrCacheMiss {
+			// A real error occurred
+			return err
+		}
+
+		// The cached value didn't exist, so we create it now
+		cachedData := memcache.Item{
+			Key:        cacheKey,
+			Value:      []byte(fmt.Sprintf("%d", 1)),
+			Expiration: int32(Conf.Memcache.DefaultCacheTime),
+		}
+		err = memCache.Set(&cachedData)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Invalidate memcache data for a database entry or entries

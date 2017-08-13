@@ -638,6 +638,15 @@ func retrieveDatabase(w http.ResponseWriter, pageName string, userAcc string, db
 		return
 	}
 
+	// If downloaded by someone other than the owner, increment the download count for the database
+	if userAcc != dbOwner {
+		err = com.IncrementDownloadCount(dbOwner, dbFolder, dbName)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	// Log the transfer
 	log.Printf("'%s%s%s' downloaded by user '%v', %v bytes", dbOwner, dbFolder, dbName, userAcc, bytesWritten)
 	return nil

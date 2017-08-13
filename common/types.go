@@ -12,6 +12,15 @@ const (
 	DB_PUBLIC
 )
 
+type ActivityRange string
+
+const (
+	TODAY      ActivityRange = "today"
+	THIS_WEEK                = "week"
+	THIS_MONTH               = "month"
+	ALL_TIME                 = "all"
+)
+
 type ForkType int
 
 const (
@@ -94,8 +103,9 @@ type DiskCacheInfo struct {
 
 // Memcached connection parameters
 type MemcacheInfo struct {
-	DefaultCacheTime int `toml:"default_cache_time"`
-	Server           string
+	DefaultCacheTime    int           `toml:"default_cache_time"`
+	Server              string        `toml:"server"`
+	ViewCountFlushDelay time.Duration `toml:"view_count_flush_delay"`
 }
 
 // Minio connection parameters
@@ -135,6 +145,20 @@ type WebInfo struct {
 
 // End of configuration file types
 // *******************************
+
+type ActivityRow struct {
+	Count  int    `json:"count"`
+	DBName string `json:"dbname"`
+	Owner  string `json:"owner"`
+}
+
+type ActivityStats struct {
+	Downloads []ActivityRow
+	Forked    []ActivityRow
+	Starred   []ActivityRow
+	Uploads   []UploadRow
+	Viewed    []ActivityRow
+}
 
 type Auth0Set struct {
 	CallbackURL string
@@ -294,6 +318,12 @@ type TagEntry struct {
 	Description string    `json:"description"`
 	TaggerEmail string    `json:"email"`
 	TaggerName  string    `json:"name"`
+}
+
+type UploadRow struct {
+	DBName     string    `json:"dbname"`
+	Owner      string    `json:"owner"`
+	UploadDate time.Time `json:"upload_date"`
 }
 
 type WhereClause struct {

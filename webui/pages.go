@@ -798,6 +798,15 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		return
 	}
 
+	// Increment the view counter for the database (excluding people viewing their own databases)
+	if loggedInUser != dbOwner {
+		err = com.IncrementViewCount(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	// If a specific commit was requested, make sure it exists in the database commit history
 	if commitID != "" {
 		commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
@@ -1216,8 +1225,8 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	var pageData struct {
 		Auth0 com.Auth0Set
-		List  []com.UserInfo
 		Meta  com.MetaInfo
+		Stats map[com.ActivityRange]com.ActivityStats
 	}
 
 	// Retrieve session data (if any)
@@ -1233,12 +1242,16 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
-	// Retrieve list of users with public databases
-	pageData.List, err = com.PublicUserDBs()
+	// Retrieve the list of most forked and starred databases
+	pageData.Stats = make(map[com.ActivityRange]com.ActivityStats)
+	statsAll, err := com.GetActivityStats()
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
+	pageData.Stats[com.ALL_TIME] = statsAll
+
+	// Set other relevant metadata
 	pageData.Meta.Title = `SQLite storage "in the cloud"`
 
 	// Add Auth0 info to the page data

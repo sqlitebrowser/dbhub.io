@@ -3,32 +3,127 @@
 <html ng-app="DBHub" ng-controller="rootView">
 [[ template "head" . ]]
 <body>
+<style>
+    h4 {
+        text-decoration: underline;
+    }
+</style>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row" style="margin-bottom: 10px;">
-        <div class="col-md-12">
-            <h2 id="viewuser" style="margin-top: 10px;">
-                <div class="pull-left">Users with public databases</div>
-            </h2>
-        </div>
-    </div>
-    <div class="row" style="margin-bottom: 10px">
-        <div class="col-md-2">
-            <button class="btn btn-success" ng-click="uploadForm()">Upload database</button>
-        </div>
-        <div class="col-md-10">
-            &nbsp;
+        <div class="col-md-12" style="text-align: center;">
+            <h1 style="margin-top: 10px;">DBHub.io</h1>
+            <h3 style="margin-top: 10px;">An Open Source data sharing, versioning, and collaboration platform</h3>
+            <h3>for SQLite databases, with special integration for <a class="blackLink" href="https://github.com/sqlitebrowser/sqlitebrowser/releases">DB Browser for SQLite.</a></h3>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-success" ng-click="uploadForm()">Upload a database now!</button>&nbsp; &nbsp; &nbsp;
+                <button class="btn btn-primary" ng-click="downloadDB4S()">Download DB Browser for SQLite</button>
+            </div>
+            <h4 style="color: red;">This platform is in active development, so please ensure you have your own backups of anything you upload :)</h4>
         </div>
     </div>
     <div class="row">
         <div class="col-md-12">
-            <table class="table table-bordered table-striped table-responsive">
-                <tr ng-repeat="user in users.List">
-                    <td><h4><a class="blackLink" href="/{{ user.Username }}">{{ user.Username }}</a><span ng-if="user.full_name != ''"> : {{ user.full_name }}</span></h4>
-                        <b>Last modified:</b> {{ user.LastModified | date : 'd MMMM, y h:mm a' : 'UTC' }}
-                    </td>
-                </tr>
-            </table>
+            <table class="table table-bordered table-striped table-responsive" style="margin-top: 10px;"><tr><td>
+                <div style="text-align: center;">
+                    <h2 style="margin-top: 5px; color: gray;" title="Not yet implemented">Explore uploaded data sets</h2>
+                    <h5>( this section isn't yet implemented )</h5>
+                </div>
+                <div class="row">
+                    <div class="col-md-4" style="text-align: center;"><h4 style="color: gray;" title="Not yet implemented">Bio-Tech</h4></div>
+                    <div class="col-md-4" style="text-align: center;"><h4 style="color: gray;" title="Not yet implemented">Data.gov.uk</h4></div>
+                    <div class="col-md-4" style="text-align: center;"><h4 style="color: gray;" title="Not yet implemented">Medical</h4></div>
+                </div>
+                <div style="text-align: center;">
+                    <a style="color: gray;" title="Not yet implemented" href="#">More...</a>
+                </div>
+            </td></tr></table>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div style="text-align: center;">
+                <h2 style="margin-top: 5px;">Activity</h2>
+            </div>
+            <div class="row">
+                <div class="col-md-4" style="text-align: center;">
+                    <h4>Most downloaded</h4>
+                    <table class="table table-striped table-bordered table-responsive">
+                        <tr>
+                            <th>Database</th>
+                            <th style="text-align: center;">Downloads</th>
+                        </tr>
+                        <tr ng-repeat="row in stats.Stats['all'].Downloads">
+                            <td style="text-align: left;">
+                                <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.owner + '/' + row.dbname }}</a>
+                            </td>
+                            <td>{{ row.count }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-4" style="text-align: center;">
+                    <h4>Most starred</h4>
+                    <table class="table table-striped table-bordered table-responsive">
+                        <tr>
+                            <th>Database</th>
+                            <th style="text-align: center;">Stars</th>
+                        </tr>
+                        <tr ng-repeat="row in stats.Stats['all'].Starred">
+                            <td style="text-align: left;">
+                                <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.owner + '/' + row.dbname }}</a>
+                            </td>
+                            <td>{{ row.count }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-4" style="text-align: center;">
+                    <h4>Most viewed</h4>
+                    <table class="table table-striped table-bordered table-responsive">
+                        <tr>
+                            <th>Database</th>
+                            <th style="text-align: center;">Views</th>
+                        </tr>
+                        <tr ng-repeat="row in stats.Stats['all'].Viewed">
+                            <td style="text-align: left;">
+                                <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.owner + '/' + row.dbname }}</a>
+                            </td>
+                            <td>{{ row.count }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6" style="text-align: center;">
+                    <h4>Most forked</h4>
+                    <table class="table table-striped table-bordered table-responsive">
+                        <tr>
+                            <th>Database</th>
+                            <th style="text-align: center;">Forks</th>
+                        </tr>
+                        <tr ng-repeat="row in stats.Stats['all'].Forked">
+                            <td style="text-align: left;">
+                                <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.owner + '/' + row.dbname }}</a>
+                            </td>
+                            <td>{{ row.count }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6" style="text-align: center;">
+                    <h4>Most recent uploads</h4>
+                    <table class="table table-striped table-bordered table-responsive">
+                        <tr>
+                            <th>Database</th>
+                            <th style="text-align: center;">Uploaded</th>
+                        </tr>
+                        <tr ng-repeat="row in stats.Stats['all'].Uploads">
+                            <td style="text-align: left;">
+                                <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.owner + '/' + row.dbname }}</a>
+                            </td>
+                            <td>{{ row.upload_date | date : 'd MMM y h:mm a' : 'UTC' }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -36,15 +131,14 @@
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('rootView', function($scope) {
-        $scope.users = { List: [[ .List ]] }
+        // Activity stats
+        $scope.stats = {
+            Stats: [[ .Stats ]],
+        };
 
-        // Auth0 pieces
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
-            redirectUrl: "[[ .Auth0.CallbackURL]]"
-        }});
-
-        $scope.showLock = function() {
-            lock.show();
+        // Open a window to the DB4S download page
+        $scope.downloadDB4S = function() {
+            window.open('https://github.com/sqlitebrowser/sqlitebrowser/releases');
         };
 
         // Switch to the upload database page
@@ -55,6 +149,14 @@
             } else {
                 window.location = '/upload/';
             }
+        };
+
+        // Auth0
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+        $scope.showLock = function() {
+            lock.show();
         };
     });
 </script>

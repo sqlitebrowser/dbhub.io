@@ -129,6 +129,12 @@ func ReadConfig() error {
 		Conf.Memcache.DefaultCacheTime = 2592000
 	}
 
+	// Warn if the view count flush delay isn't set in the config file
+	if Conf.Memcache.ViewCountFlushDelay == 0 {
+		log.Printf("WARN: Memcache view count flush delay isn't set in the config file. Defaulting to 2 minutes.\n")
+		Conf.Memcache.ViewCountFlushDelay = 120
+	}
+
 	// Set the PostgreSQL configuration values
 	pgConfig.Host = Conf.Pg.Server
 	pgConfig.Port = uint16(Conf.Pg.Port)

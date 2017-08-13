@@ -877,6 +877,93 @@ func DisconnectPostgreSQL() {
 	log.Printf("Disconnected from PostgreSQL server: %v:%v\n", Conf.Pg.Server, uint16(Conf.Pg.Port))
 }
 
+// Periodically flushes the database view count from memcache to PostgreSQL
+func FlushViewCount() {
+	type dbEntry struct {
+		Owner  string
+		Folder string
+		Name   string
+	}
+
+	// Log the start of the loop
+	log.Printf("Periodic view count flushing loop started.  %d second refresh.\n",
+		Conf.Memcache.ViewCountFlushDelay)
+
+	// Start the endless flush loop
+	var rows *pgx.Rows
+	var err error
+	for true {
+		// Retrieve the list of all public databases
+		dbQuery := `
+			SELECT users.user_name, db.folder, db.db_name
+			FROM sqlite_databases AS db, users
+			WHERE db.public = true
+				AND db.is_deleted = false
+				AND db.user_id = users.user_id`
+		rows, err = pdb.Query(dbQuery)
+		if err != nil {
+			log.Printf("Database query failed: %v\n", err)
+			return
+		}
+		var dbList []dbEntry
+		for rows.Next() {
+			var oneRow dbEntry
+			err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.Name)
+			if err != nil {
+				log.Printf("Error retrieving database list for view count flush thread: %v\n", err)
+				rows.Close()
+				return
+			}
+			dbList = append(dbList, oneRow)
+		}
+		rows.Close()
+
+		// For each public database, retrieve the latest view count from memcache and save it back to PostgreSQL
+		for _, db := range dbList {
+			dbOwner := db.Owner
+			dbFolder := db.Folder
+			dbName := db.Name
+
+			// Retrieve the view count from Memcached
+			newValue, err := GetViewCount(dbOwner, dbFolder, dbName)
+			if err != nil {
+				log.Printf("Error when getting memcached view count for %s%s%s: %s\n", dbOwner, dbFolder, dbName,
+					err.Error())
+				continue
+			}
+
+			// We use a value of -1 to indicate there wasn't an entry in memcache for the database
+			if newValue != -1 {
+				// Update the view count in PostgreSQL
+				dbQuery = `
+					UPDATE sqlite_databases
+					SET page_views = $4
+					WHERE user_id = (
+							SELECT user_id
+							FROM users
+							WHERE user_name = $1
+						)
+						AND folder = $2
+						AND db_name = $3`
+				commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, newValue)
+				if err != nil {
+					log.Printf("Flushing view count for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+					continue
+				}
+				if numRows := commandTag.RowsAffected(); numRows != 1 {
+					log.Printf("Wrong number of rows affected (%v) when flushing view count for '%s%s%s'\n",
+						numRows, dbOwner, dbFolder, dbName)
+					continue
+				}
+			}
+		}
+
+		// Wait before running the loop again
+		time.Sleep(Conf.Memcache.ViewCountFlushDelay * time.Second)
+	}
+	return
+}
+
 // Fork the PostgreSQL entry for a SQLite database from one user to another
 func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner string) (newForkCount int, err error) {
 	// Copy the main database entry
@@ -1117,6 +1204,145 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 	}
 
 	return outputList, nil
+}
+
+func GetActivityStats() (stats ActivityStats, err error) {
+	// Retrieve a list of which databases are the most starred
+	dbQuery := `
+		WITH most_starred AS (
+			SELECT s.db_id, COUNT(s.db_id), max(s.date_starred)
+			FROM database_stars AS s, sqlite_databases AS db
+			WHERE s.db_id = db.db_id
+				AND db.public = true
+				AND db.is_deleted = false
+			GROUP BY s.db_id
+			ORDER BY count DESC
+			LIMIT 5
+		)
+		SELECT users.user_name, db.db_name, stars.count
+		FROM most_starred AS stars, sqlite_databases AS db, users
+		WHERE stars.db_id = db.db_id
+			AND users.user_id = db.user_id
+		ORDER BY count DESC, max ASC`
+	starRows, err := pdb.Query(dbQuery)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return
+	}
+	defer starRows.Close()
+	for starRows.Next() {
+		var oneRow ActivityRow
+		err = starRows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.Count)
+		if err != nil {
+			log.Printf("Error retrieving list of most starred databases: %v\n", err)
+			return
+		}
+		stats.Starred = append(stats.Starred, oneRow)
+	}
+
+	// Retrieve a list of which databases are the most forked
+	dbQuery = `
+		SELECT users.user_name, db.db_name, db.forks
+		FROM sqlite_databases AS db, users
+		WHERE db.forks > 0
+			AND db.public = true
+			AND db.is_deleted = false
+			AND db.user_id = users.user_id
+		ORDER BY db.forks DESC, db.last_modified
+		LIMIT 5`
+	forkRows, err := pdb.Query(dbQuery)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return
+	}
+	defer forkRows.Close()
+	for forkRows.Next() {
+		var oneRow ActivityRow
+		err = forkRows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.Count)
+		if err != nil {
+			log.Printf("Error retrieving list of most forked databases: %v\n", err)
+			return
+		}
+		stats.Forked = append(stats.Forked, oneRow)
+	}
+
+	// Retrieve a list of the most recent uploads
+	dbQuery = `
+		SELECT user_name, db.db_name, db.date_created
+		FROM sqlite_databases AS db, users
+		WHERE db.forked_from IS NULL
+			AND db.public = true
+			AND db.is_deleted = false
+			AND db.user_id = users.user_id
+		ORDER BY db.date_created DESC, db.last_modified
+		LIMIT 5`
+	upRows, err := pdb.Query(dbQuery)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return
+	}
+	defer upRows.Close()
+	for upRows.Next() {
+		var oneRow UploadRow
+		err = upRows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.UploadDate)
+		if err != nil {
+			log.Printf("Error retrieving list of most recent uploads: %v\n", err)
+			return
+		}
+		stats.Uploads = append(stats.Uploads, oneRow)
+	}
+
+	// Retrieve a list of which databases have been downloaded the most times by someone other than their owner
+	dbQuery = `
+		SELECT users.user_name, db.db_name, db.download_count
+		FROM sqlite_databases AS db, users
+		WHERE db.download_count > 0
+			AND db.public = true
+			AND db.is_deleted = false
+			AND db.user_id = users.user_id
+		ORDER BY db.download_count DESC, db.last_modified
+		LIMIT 5`
+	dlRows, err := pdb.Query(dbQuery)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return
+	}
+	defer dlRows.Close()
+	for dlRows.Next() {
+		var oneRow ActivityRow
+		err = dlRows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.Count)
+		if err != nil {
+			log.Printf("Error retrieving list of most downloaded databases: %v\n", err)
+			return
+		}
+		stats.Downloads = append(stats.Downloads, oneRow)
+	}
+
+	// Retrieve the list of databases which have been viewed the most times
+	dbQuery = `
+		SELECT users.user_name, db.db_name, db.page_views
+		FROM sqlite_databases AS db, users
+		WHERE db.public = true
+			AND db.is_deleted = false
+			AND db.user_id = users.user_id
+		ORDER BY db.page_views DESC, db.last_modified
+		LIMIT 5`
+	viewRows, err := pdb.Query(dbQuery)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return
+	}
+	defer viewRows.Close()
+	for viewRows.Next() {
+		var oneRow ActivityRow
+		err = viewRows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.Count)
+		if err != nil {
+			log.Printf("Error retrieving list of most viewed databases: %v\n", err)
+			return
+		}
+		stats.Viewed = append(stats.Viewed, oneRow)
+	}
+	return
 }
 
 // Load the branch heads for a database.
@@ -1456,6 +1682,33 @@ func GetUsernameFromEmail(email string) (userName string, err error) {
 	return userName, nil
 }
 
+// Increments the download count for a database
+func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) error {
+	dbQuery := `
+		UPDATE sqlite_databases
+		SET download_count = download_count + 1
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Increment download count for '%s%s%s' failed: %v\n", dbOwner, dbFolder,
+			dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when incrementing download count for '%s%s%s'\n",
+			numRows, dbOwner, dbFolder, dbName)
+		log.Printf(errMsg)
+		return errors.New(errMsg)
+	}
+	return nil
+}
+
 // Return the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from owner/folder/database URL
 // fragment, // loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
 // string ("") as the loggedInUser parameter if the true value isn't set or known.
@@ -1532,57 +1785,18 @@ func PrefUserMaxRows(loggedInUser string) int {
 	return maxRows
 }
 
-// Return a list of users with public databases.
-func PublicUserDBs() ([]UserInfo, error) {
-	dbQuery := `
-		WITH public_dbs AS (
-			SELECT DISTINCT ON (user_id) user_id, last_modified
-			FROM sqlite_databases
-			WHERE public = true
-			AND is_deleted = false
-			ORDER BY user_id, last_modified DESC
-		)
-		SELECT users.user_name, users.display_name, dbs.last_modified
-		FROM public_dbs AS dbs, users
-		WHERE users.user_id = dbs.user_id
-		ORDER BY last_modified DESC`
-	rows, err := pdb.Query(dbQuery)
-	if err != nil {
-		log.Printf("Database query failed: %v\n", err)
-		return nil, err
-	}
-	defer rows.Close()
-	var list []UserInfo
-	for rows.Next() {
-		var oneRow UserInfo
-		var dnString pgx.NullString
-		err = rows.Scan(&oneRow.Username, &dnString, &oneRow.LastModified)
-		if err != nil {
-			log.Printf("Error retrieving database list for user: %v\n", err)
-			return nil, err
-		}
-		if dnString.Valid {
-			oneRow.FullName = dnString.String
-		}
-		list = append(list, oneRow)
-	}
-
-	return list, nil
-}
-
 // Rename a SQLite database.
 func RenameDatabase(userName string, dbFolder string, dbName string, newName string) error {
 	// Save the database settings
-	SQLQuery := `
+	dbQuery := `
 		UPDATE sqlite_databases
 		SET dbname = $4
 		WHERE username = $1
 			AND folder = $2
 			AND dbname = $3`
-	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, newName)
+	commandTag, err := pdb.Exec(dbQuery, userName, dbFolder, dbName, newName)
 	if err != nil {
-		log.Printf("Renaming database '%s%s%s' failed: %v\n", userName, dbFolder,
-			dbName, err)
+		log.Printf("Renaming database '%s%s%s' failed: %v\n", userName, dbFolder, dbName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
@@ -1593,8 +1807,8 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 	}
 
 	// Log the rename
-	log.Printf("Database renamed from '%s%s%s' to '%s%s%s'\n", userName, dbFolder, dbName, userName,
-		dbFolder, newName)
+	log.Printf("Database renamed from '%s%s%s' to '%s%s%s'\n", userName, dbFolder, dbName, userName, dbFolder,
+		newName)
 
 	return nil
 }

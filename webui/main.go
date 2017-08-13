@@ -1506,6 +1506,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
+	dbFolder := "/"
 
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -1520,7 +1521,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
-	bucket, id, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
+	bucket, id, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1546,6 +1547,15 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s: Error returning DB file: %v\n", pageName, err)
 		fmt.Fprintf(w, "%s: Error returning DB file: %v\n", pageName, err)
 		return
+	}
+
+	// If downloaded by someone other than the owner, increment the download count for the database
+	if loggedInUser != dbOwner {
+		err = com.IncrementDownloadCount(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	// Log the number of bytes written
@@ -1790,6 +1800,9 @@ func main() {
 	// Setup session storage
 	store = gsm.NewMemcacheStore(com.MemcacheHandle(), "dbhub_", []byte(com.Conf.Web.SessionStorePassword))
 
+	// Start the view count flushing routine in the background
+	go com.FlushViewCount()
+
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
 	http.HandleFunc("/about", logReq(aboutPage))
@@ -1885,7 +1898,7 @@ func main() {
 		http.ServeFile(w, r, filepath.Join("webui", "robots.txt"))
 	}))
 
-	// Start server
+	// Start webUI server
 	log.Printf("DBHub server starting on https://%s\n", com.Conf.Web.ServerName)
 	err = http.ListenAndServeTLS(com.Conf.Web.BindAddress, com.Conf.Web.Certificate, com.Conf.Web.CertificateKey, nil)
 
