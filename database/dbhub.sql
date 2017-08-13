@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 9.6.3
--- Dumped by pg_dump version 9.6.3
+-- Dumped from database version 9.6.4
+-- Dumped by pg_dump version 9.6.4
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -125,7 +125,9 @@ CREATE TABLE sqlite_databases (
     is_deleted boolean DEFAULT false NOT NULL,
     tags integer DEFAULT 0 NOT NULL,
     release_list jsonb,
-    release_count integer DEFAULT 0 NOT NULL
+    release_count integer DEFAULT 0 NOT NULL,
+    download_count bigint DEFAULT 0,
+    page_views bigint DEFAULT 0
 );
 
 
