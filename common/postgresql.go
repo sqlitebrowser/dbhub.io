@@ -1322,7 +1322,8 @@ func GetActivityStats() (stats ActivityStats, err error) {
 	dbQuery = `
 		SELECT users.user_name, db.db_name, db.page_views
 		FROM sqlite_databases AS db, users
-		WHERE db.public = true
+		WHERE db.page_views > 0
+			AND db.public = true
 			AND db.is_deleted = false
 			AND db.user_id = users.user_id
 		ORDER BY db.page_views DESC, db.last_modified
