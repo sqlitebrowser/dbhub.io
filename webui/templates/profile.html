@@ -1,7 +1,7 @@
 [[ define "profilePage" ]]
 <!doctype html>
 <html ng-app="DBHub" ng-controller="profileView">
-[[ template "head" . ]]
+[[ template "headawesome" . ]]
 <body>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
@@ -42,7 +42,7 @@
             [[ if .PublicDBs ]]
                 <table class="table table-bordered table-striped table-responsive">
                     <tr ng-repeat="row in pubdb.Databases">
-                        <td><h4><a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.OneLineDesc }}</h4>
+                        <td><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.OneLineDesc }}</h4>
                             <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
                             <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
                             <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
@@ -76,7 +76,7 @@
             [[ if .PrivateDBs ]]
                 <table class="table table-bordered table-striped table-responsive">
                     <tr ng-repeat="row in privdb.Databases">
-                        <td><h4><a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.OneLineDesc }}</h4>
+                        <td><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.OneLineDesc }}</h4>
                             <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
                             <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
                             <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
