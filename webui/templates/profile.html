@@ -44,7 +44,7 @@
                     <tr ng-repeat="row in pubdb.Databases">
                         <td><h4><a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.OneLineDesc }}</h4>
                             <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
-                            <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' : 'UTC' }} &nbsp;
+                            <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
                             <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
                             <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
                             <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
@@ -78,7 +78,7 @@
                     <tr ng-repeat="row in privdb.Databases">
                         <td><h4><a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.OneLineDesc }}</h4>
                             <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
-                            <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' : 'UTC' }} &nbsp;
+                            <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
                             <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
                             <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
                             <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
@@ -118,7 +118,7 @@
                                 <a class="blackLink" href="/{{ row.Owner }}">{{ row.Owner }}</a> /
                                 <a class="blackLink" href="/{{ row.Owner + '/' + row.DBName }}">{{ row.DBName }}</a>
                             </h4>
-                            <b>Date starred:</b> {{ row.DateEntry | date : 'd MMMM, y h:mm a' : 'UTC' }}
+                            <b>Date starred:</b> {{ row.DateEntry | date : 'd MMMM, y h:mm a' }}
                         </td>
                     </tr>
                 </table>

@@ -77,7 +77,7 @@
                     </td>
                     <td width="10%" style="border-style: none;">&nbsp;</td>
                     <td style="border-style: none;">
-                        {{ row.timestamp | date : 'd MMMM, y h:mm a' : 'UTC' }}
+                        {{ row.timestamp | date : 'd MMMM, y h:mm a' }}
                     </td>
                     <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
                         <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}&commit={{ row.id }}">{{ row.id }}</a>
