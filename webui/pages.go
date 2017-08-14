@@ -1291,6 +1291,12 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	serverName := strings.Split(com.Conf.Web.ServerName, ":")
 	pageData.Meta.Server = serverName[0]
 
+	// If the user's email address is empty, use username@server by default.  This mirrors the suggestion on the
+	// rendered HTML, so the user doesn't have to manually type it in
+	if pageData.Email == "" {
+		pageData.Email = fmt.Sprintf("%s@%s", loggedInUser, pageData.Meta.Server)
+	}
+
 	// Retrieve the user preference data
 	pageData.MaxRows = com.PrefUserMaxRows(loggedInUser)
 
