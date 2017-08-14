@@ -152,12 +152,14 @@
                 </div>
                 <div>
                     <uib-tabset active="active">
-                        <uib-tab index="0" heading="Edit">
+                        <uib-tab index="0">
+                            <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
                             <div style="text-align: center;">
                                 <textarea id="fulldesc" name="fulldesc" cols="113" rows="18" style="margin-top: 2px;" ng-bind="meta.FullDesc"></textarea>
                             </div>
                         </uib-tab>
-                        <uib-tab index="1" heading="Preview" select="getMarkdown()">
+                        <uib-tab index="1" select="getMarkdown()">
+                            <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
                             <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
                         </uib-tab>
                     </uib-tabset>
