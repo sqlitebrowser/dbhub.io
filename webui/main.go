@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -1418,8 +1417,7 @@ func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send the client certificate to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s",
-		loggedInUser+".cert.pem"))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.cert.pem"`, loggedInUser))
 	// Note, don't use "application/x-x509-user-cert", otherwise the browser may try to install it!
 	// Useful reference info: https://pki-tutorial.readthedocs.io/en/latest/mime.html
 	w.Header().Set("Content-Type", "application/x-pem-file")
@@ -1485,7 +1483,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert resultSet into CSV and send to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.csv", url.QueryEscape(dbTable)))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.csv"`, dbTable))
 	w.Header().Set("Content-Type", "text/csv")
 	csvFile := csv.NewWriter(w)
 	err = csvFile.WriteAll(resultSet)
@@ -1540,7 +1538,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Send the database to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", url.QueryEscape(dbName)))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, dbName))
 	w.Header().Set("Content-Type", "application/x-sqlite3")
 	bytesWritten, err := io.Copy(w, userDB)
 	if err != nil {
@@ -1690,8 +1688,7 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send the client certificate to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s",
-		loggedInUser+".cert.pem"))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.cert.pem"`, loggedInUser))
 	// Note, don't use "application/x-x509-user-cert", otherwise the browser may try to install it!
 	// Useful reference info: https://pki-tutorial.readthedocs.io/en/latest/mime.html
 	w.Header().Set("Content-Type", "application/x-pem-file")
