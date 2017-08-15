@@ -463,27 +463,37 @@ func main() {
 	log.Fatal(newServer.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey))
 }
 
-func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
-	pageName := "PUT request handler"
+func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
+	pageName := "POST request handler"
 
 	// Split the request URL into path components
 	pathStrings := strings.Split(r.URL.Path, "/")
 
-	// Ensure both a username and target database name were given
-	if len(pathStrings) <= 2 {
-		http.Error(w, fmt.Sprintf("Bad target database URL: https://%s%s", com.Conf.DB4S.Server,
-			r.URL.Path), http.StatusBadRequest)
+	// Ensure a target username was given
+	targetUser := pathStrings[1]
+	if targetUser == "" {
+		http.Error(w, "Missing target user", http.StatusBadRequest)
 		return
 	}
-	targetUser := pathStrings[1]
-	targetDB := pathStrings[2]
 
-	// Validate the targetUser and targetDB inputs
+	// Validate the target user
 	err := com.ValidateUser(targetUser)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Grab the uploaded file and form variables
+	tempFile, handler, err := r.FormFile("file")
+	if err != nil {
+		log.Printf("%s: Uploading file failed: %v\n", pageName, err)
+		http.Error(w, fmt.Sprintf("Something went wrong when grabbing the file data: '%s'", err.Error()), http.StatusBadRequest)
+		return
+	}
+	defer tempFile.Close()
+
+	// Validate the database name
+	targetDB := handler.Filename
 	err = com.ValidateDB(targetDB)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -495,7 +505,7 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// If a branch name was provided then use it, else default to "master"
 	branchName := "master"
-	bn := r.Header.Get("branch")
+	bn := r.FormValue("branch")
 	if bn != "" {
 		err := com.Validate.Var(bn, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
 		if err != nil {
@@ -507,7 +517,7 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// If a licence name was provided then use it, else default to "Not specified"
 	licenceName := "Not specified"
-	ln := r.Header.Get("licence")
+	ln := r.FormValue("licence")
 	if ln != "" {
 		// Validate the licence name
 		err = com.ValidateLicence(ln)
@@ -533,7 +543,7 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// If a source URL was provided then use it
 	var sourceURL string
-	su := r.Header.Get("sourceurl")
+	su := r.FormValue("sourceurl")
 	if su != "" {
 		// Validate the source URL
 		err = com.Validate.Var(su, "url,min=5,max=255") // 255 seems like a reasonable first guess
@@ -546,7 +556,7 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// If a commit message was provided then use it
 	var commitMsg string
-	cm := r.Header.Get("commitmsg")
+	cm := r.FormValue("commitmsg")
 	if cm != "" {
 		// Validate the commit message
 		err = com.Validate.Var(cm, "markdownsource,max=1024") // 1024 seems like a reasonable first guess
@@ -559,7 +569,7 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// If a public/private setting was provided then use it
 	var public bool
-	pub := r.Header.Get("public")
+	pub := r.FormValue("public")
 	if pub != "" {
 		public, err = strconv.ParseBool(pub)
 		if err != nil {
@@ -568,14 +578,6 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 				http.StatusBadRequest)
 			return
 		}
-	}
-
-	// Validate the database name
-	err = com.ValidateDB(targetDB)
-	if err != nil {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
-		http.Error(w, fmt.Sprintf("Invalid database name: %s", err), http.StatusBadRequest)
-		return
 	}
 
 	// Verify the user is uploading to a location they have write access for
@@ -589,7 +591,7 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// Sanity check the uploaded database, and if ok then add it to the system
 	numBytes, err := com.AddDatabase(userAcc, targetUser, targetFolder, targetDB, branchName, public, licenceName,
-		commitMsg, sourceURL, r.Body)
+		commitMsg, sourceURL, tempFile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -599,7 +601,8 @@ func putHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	log.Printf("Database uploaded: '%s%s%s', bytes: %v\n", userAcc, targetFolder, targetDB, numBytes)
 
 	// Indicate success back to DB4S
-	http.Error(w, fmt.Sprintf("Database created: %s", r.URL.Path), http.StatusCreated)
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintf(w, "Database created: %s\n", targetDB)
 }
 
 func retrieveDatabase(w http.ResponseWriter, pageName string, userAcc string, dbOwner string, dbFolder string,
@@ -667,8 +670,8 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	switch reqType {
 	case "GET":
 		getHandler(w, r, userAcc)
-	case "PUT":
-		putHandler(w, r, userAcc)
+	case "POST":
+		postHandler(w, r, userAcc)
 	default:
 		log.Printf("%s: Unknown request method received from '%v\n", pageName, userAcc)
 		http.Error(w, fmt.Sprintf("Unknown request type: %v\n", reqType), http.StatusBadRequest)
