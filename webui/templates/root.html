@@ -49,46 +49,58 @@
                 <div class="col-md-4" style="text-align: center;">
                     <h4>Most downloaded</h4>
                     <table class="table table-striped table-bordered table-responsive">
-                        <tr>
-                            <th>Database</th>
-                            <th style="text-align: center;">Downloads</th>
-                        </tr>
-                        <tr ng-repeat="row in stats.Stats['all'].Downloads">
-                            <td style="text-align: left;">
-                                <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
-                            </td>
-                            <td>{{ row.count }}</td>
-                        </tr>
+                        <thead>
+                            <tr>
+                                <th>Database</th>
+                                <th style="text-align: center;">Downloads</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="row in stats.Stats['all'].Downloads">
+                                <td style="text-align: left;">
+                                    <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
+                                </td>
+                                <td>{{ row.count }}</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
                 <div class="col-md-4" style="text-align: center;">
                     <h4>Most starred</h4>
                     <table class="table table-striped table-bordered table-responsive">
-                        <tr>
-                            <th>Database</th>
-                            <th style="text-align: center;">Stars</th>
-                        </tr>
-                        <tr ng-repeat="row in stats.Stats['all'].Starred">
-                            <td style="text-align: left;">
-                                <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
-                            </td>
-                            <td>{{ row.count }}</td>
-                        </tr>
+                        <thead>
+                            <tr>
+                                <th>Database</th>
+                                <th style="text-align: center;">Stars</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="row in stats.Stats['all'].Starred">
+                                <td style="text-align: left;">
+                                    <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
+                                </td>
+                                <td>{{ row.count }}</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
                 <div class="col-md-4" style="text-align: center;">
                     <h4>Most viewed</h4>
                     <table class="table table-striped table-bordered table-responsive">
-                        <tr>
-                            <th>Database</th>
-                            <th style="text-align: center;">Views</th>
-                        </tr>
-                        <tr ng-repeat="row in stats.Stats['all'].Viewed">
-                            <td style="text-align: left;">
-                                <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
-                            </td>
-                            <td>{{ row.count }}</td>
-                        </tr>
+                        <thead>
+                            <tr>
+                                <th>Database</th>
+                                <th style="text-align: center;">Views</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="row in stats.Stats['all'].Viewed">
+                                <td style="text-align: left;">
+                                    <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
+                                </td>
+                                <td>{{ row.count }}</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -96,31 +108,39 @@
                 <div class="col-md-6" style="text-align: center;">
                     <h4>Most forked</h4>
                     <table class="table table-striped table-bordered table-responsive">
-                        <tr>
-                            <th>Database</th>
-                            <th style="text-align: center;">Forks</th>
-                        </tr>
-                        <tr ng-repeat="row in stats.Stats['all'].Forked">
-                            <td style="text-align: left;">
-                                <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
-                            </td>
-                            <td>{{ row.count }}</td>
-                        </tr>
+                        <thead>
+                            <tr>
+                                <th>Database</th>
+                                <th style="text-align: center;">Forks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="row in stats.Stats['all'].Forked">
+                                <td style="text-align: left;">
+                                    <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
+                                </td>
+                                <td>{{ row.count }}</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
                 <div class="col-md-6" style="text-align: center;">
                     <h4>Most recent uploads</h4>
                     <table class="table table-striped table-bordered table-responsive">
-                        <tr>
-                            <th>Database</th>
-                            <th style="text-align: center;">Uploaded</th>
-                        </tr>
-                        <tr ng-repeat="row in stats.Stats['all'].Uploads">
-                            <td style="text-align: left;">
-                                <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
-                            </td>
-                            <td>{{ row.upload_date | date : 'd MMM y h:mm a' }}</td>
-                        </tr>
+                        <thead>
+                            <tr>
+                                <th>Database</th>
+                                <th style="text-align: center;">Uploaded</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="row in stats.Stats['all'].Uploads">
+                                <td style="text-align: left;">
+                                    <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
+                                </td>
+                                <td>{{ row.upload_date | date : 'd MMM y h:mm a' }}</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>

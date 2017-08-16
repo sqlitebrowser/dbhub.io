@@ -29,63 +29,67 @@
     <div class="row">
         <div class="col-md-12">
             <table ng-if="numTags > 0" class="table table-bordered table-striped table-responsive">
-                <tr>
-                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                        <th>Actions</th>
-                    [[ end ]]
-                    <th>Name</th><th>Tag creator</th><th>Creation date</th><th>Commit ID</th>
-                </tr>
-                <tr ng-repeat-start="(key, row) in Tags">
-                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                <thead>
+                    <tr>
+                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            <th>Actions</th>
+                        [[ end ]]
+                        <th>Name</th><th>Tag creator</th><th>Creation date</th><th>Commit ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat-start="(key, row) in Tags">
+                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            <td style="border-style: none;">
+                                <button class="btn btn-primary" ng-click="updateTag(key)">Update</button>
+                            </td>
+                            <td style="border-style: none;">
+                                <input type="text" name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}">
+                            </td>
+                        [[ else ]]
+                            <td style="border-style: none;">
+                                <div style="padding-top: 8px;">
+                                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?tag={{ key }}">{{ key }}</a>
+                                </div>
+                            </td>
+                        [[ end ]]
                         <td style="border-style: none;">
-                            <button class="btn btn-primary" ng-click="updateTag(key)">Update</button>
+                            <div style="padding-top: 8px;"><a href="/{{ row.tagger_user_name }}">{{ row.tagger_display_name }}</a></div>
                         </td>
                         <td style="border-style: none;">
-                            <input type="text" name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}">
+                            <div style="padding-top: 8px;" ng-bind="row.date | date : 'd MMMM, y h:mm a'"></div>
                         </td>
-                    [[ else ]]
                         <td style="border-style: none;">
                             <div style="padding-top: 8px;">
-                                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?tag={{ key }}">{{ key }}</a>
+                                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}">{{ row.commit }}</a>
                             </div>
                         </td>
-                    [[ end ]]
-                    <td style="border-style: none;">
-                        <div style="padding-top: 8px;"><a href="/{{ row.tagger_user_name }}">{{ row.tagger_display_name }}</a></div>
-                    </td>
-                    <td style="border-style: none;">
-                        <div style="padding-top: 8px;" ng-bind="row.date | date : 'd MMMM, y h:mm a'"></div>
-                    </td>
-                    <td style="border-style: none;">
-                        <div style="padding-top: 8px;">
-                            <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}">{{ row.commit }}</a>
-                        </div>
-                    </td>
-                </tr>
-                <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
-                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                        <td style="border-style: none;">
-                            <button class="btn btn-primary" ng-click="deleteTag(key)">Delete</button>
-                        </td>
-                    [[ end ]]
-                    <td style="border-style: none;">
-                        &nbsp;
-                    </td>
-                    <td style="border-style: none;" colspan="3">
+                    </tr>
+                    <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                            <uib-tabset>
-                                <uib-tab index="0" heading="Description" select="getMarkdown(key)">
-                                    <div style="text-align: left; margin-top: 2px;" id="{{ key }}_mkdn"><span ng-bind-html="row.description_markdown"></span></div>
-                                </uib-tab>
-                                <uib-tab index="1" heading="Edit">
-                                    <textarea id="{{ key }}_desc" name="{{ key }}_desc" cols="80" rows="10" style="margin-top: 2px;" placeholder="A description for this tag">{{ row.description }}</textarea>
-                                </uib-tab>
-                            </uib-tabset>
-                        [[ else ]]
-                            <span ng-bind-html="row.description_markdown"></span>
+                            <td style="border-style: none;">
+                                <button class="btn btn-primary" ng-click="deleteTag(key)">Delete</button>
+                            </td>
                         [[ end ]]
-                    </td>
-                </tr>
+                        <td style="border-style: none;">
+                            &nbsp;
+                        </td>
+                        <td style="border-style: none;" colspan="3">
+                            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                                <uib-tabset>
+                                    <uib-tab index="0" heading="Description" select="getMarkdown(key)">
+                                        <div style="text-align: left; margin-top: 2px;" id="{{ key }}_mkdn"><span ng-bind-html="row.description_markdown"></span></div>
+                                    </uib-tab>
+                                    <uib-tab index="1" heading="Edit">
+                                        <textarea id="{{ key }}_desc" name="{{ key }}_desc" cols="80" rows="10" style="margin-top: 2px;" placeholder="A description for this tag">{{ row.description }}</textarea>
+                                    </uib-tab>
+                                </uib-tabset>
+                            [[ else ]]
+                                <span ng-bind-html="row.description_markdown"></span>
+                            [[ end ]]
+                        </td>
+                    </tr>
+                </tbody>
             </table>
             <div ng-if="numTags == 0" style="text-align: center; padding-bottom: 10px;"><i>This database doesn't have any tags yet</i></div>
         </div>

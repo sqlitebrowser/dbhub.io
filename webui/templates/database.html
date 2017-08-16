@@ -210,23 +210,25 @@
         <div class="col-md-12">
             <div style="max-width: 100%; overflow: auto; border: 1px solid rgb(221, 221, 221);">
                 <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0px;">
-                    <tr>
+                    <thead>
                         <th ng-repeat="header in db.ColNames" width="{{ 100 / db.ColCount }}%">
                             <a href="" class="colHeader" ng-click="sortOrder(header)"><span id="col{{ header }}" ng-bind="addArrow(header)"></span></a>
                         </th>
-                    </tr>
-                    <tr ng-repeat="row in db.Records">
-                        <td ng-repeat="val in row" dir="auto"><span ng-bind-html="val.Value | fixSpaces"></span></td>
-                    </tr>
-                    <tr>
-                        <td colspan="{{ db.ColCount }}" style="text-align: center;">
-                            <span id="tbltop" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToTop()">⏫</a></span>
-                            <span id="tblup" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageBack()">▲</a></span>
-                            <span style="vertical-align: middle;" ng-bind-html="totalRowCount()"></span>
-                            <span id="tbldown" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageForward()">▼</a></span>
-                            <span id="tblbottom" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToBottom()">⏬</a></span>
-                        </td>
-                    </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="row in db.Records">
+                            <td ng-repeat="val in row" dir="auto"><span ng-bind-html="val.Value | fixSpaces"></span></td>
+                        </tr>
+                        <tr>
+                            <td colspan="{{ db.ColCount }}" style="text-align: center;">
+                                <span id="tbltop" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToTop()">⏫</a></span>
+                                <span id="tblup" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageBack()">▲</a></span>
+                                <span style="vertical-align: middle;" ng-bind-html="totalRowCount()"></span>
+                                <span id="tbldown" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageForward()">▼</a></span>
+                                <span id="tblbottom" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToBottom()">⏬</a></span>
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>

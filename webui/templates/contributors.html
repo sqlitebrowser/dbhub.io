@@ -22,17 +22,21 @@
     <div class="row">
         <div class="col-md-12">
             <table class="table table-bordered table-striped table-responsive">
-                <tr>
-                    <th>Contributor</th><th># of Commits</th>
-                </tr>
-                <tr ng-repeat="row in Contributors">
-                    <td style="border-style: none;">
-                        <div style="padding-top: 8px;"><a class="blackLink" href="/{{ row.author_user_name }}">{{ row.author_name }}</a></div>
-                    </td>
-                    <td style="border-style: none;">
-                        <div style="padding-top: 8px;" ng-bind="row.num_commits"></div>
-                    </td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Contributor</th><th># of Commits</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="row in Contributors">
+                        <td style="border-style: none;">
+                            <div style="padding-top: 8px;"><a class="blackLink" href="/{{ row.author_user_name }}">{{ row.author_name }}</a></div>
+                        </td>
+                        <td style="border-style: none;">
+                            <div style="padding-top: 8px;" ng-bind="row.num_commits"></div>
+                        </td>
+                    </tr>
+                </tbody>
             </table>
         </div>
     </div>

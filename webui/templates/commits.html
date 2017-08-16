@@ -60,44 +60,48 @@
     <div class="row">
         <div class="col-md-12">
             <table class="table table-bordered table-striped table-responsive">
-                <tr>
-                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                        <th>Actions</th>
-                    [[ end ]]
-                    <th width="25%" colspan="2">Author</th><th>Date</th><th>Commit ID</th>
-                </tr>
-                <tr ng-repeat-start="row in meta.History">
-                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                        <td style="border-style: none;">
-                            <button class="btn btn-primary" ng-click="createBranch(row.id)">Create Branch</button>
+                <thead>
+                    <tr>
+                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            <th>Actions</th>
+                        [[ end ]]
+                        <th width="25%" colspan="2">Author</th><th>Date</th><th>Commit ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat-start="row in meta.History">
+                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            <td style="border-style: none;">
+                                <button class="btn btn-primary" ng-click="createBranch(row.id)">Create Branch</button>
+                            </td>
+                        [[ end ]]
+                        <td width="15%" style="border-style: none;">
+                            <a class="blackLink" href="/{{ row.author_user_name }}">{{ row.author_name }}</a>
                         </td>
-                    [[ end ]]
-                    <td width="15%" style="border-style: none;">
-                        <a class="blackLink" href="/{{ row.author_user_name }}">{{ row.author_name }}</a>
-                    </td>
-                    <td width="10%" style="border-style: none;">&nbsp;</td>
-                    <td style="border-style: none;">
-                        {{ row.timestamp | date : 'd MMMM, y h:mm a' }}
-                    </td>
-                    <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
-                        <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}&commit={{ row.id }}">{{ row.id }}</a>
-                    </td>
-                </tr>
-                <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
-                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                        <td width="10%" style="border-style: none;">&nbsp;</td>
                         <td style="border-style: none;">
-                            <button class="btn btn-primary" ng-click="createTag(row.id)">Create Tag or Release</button>
-                            <span ng-if="(row.id == headCommit) && (row.id != lastCommit)">
-                                <br /><br />
-                                <button class="btn btn-danger" ng-click="deleteCommit(row.id)">Delete Commit</button>
-                            </span>&nbsp;
+                            {{ row.timestamp | date : 'd MMMM, y h:mm a' }}
                         </td>
-                    [[ end ]]
-                    <td width="15%" style="border-style: none;">&nbsp;</td>
-                    <td colspan="3" style="border-style: none; vertical-align: top;">
-                        <span ng-bind-html="row.message"></span>
-                    </td>
-                </tr>
+                        <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
+                            <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}&commit={{ row.id }}">{{ row.id }}</a>
+                        </td>
+                    </tr>
+                    <tr ng-repeat-end style="border-bottom: 1px solid #ddd;">
+                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            <td style="border-style: none;">
+                                <button class="btn btn-primary" ng-click="createTag(row.id)">Create Tag or Release</button>
+                                <span ng-if="(row.id == headCommit) && (row.id != lastCommit)">
+                                        <br /><br />
+                                        <button class="btn btn-danger" ng-click="deleteCommit(row.id)">Delete Commit</button>
+                                    </span>&nbsp;
+                            </td>
+                        [[ end ]]
+                        <td width="15%" style="border-style: none;">&nbsp;</td>
+                        <td colspan="3" style="border-style: none; vertical-align: top;">
+                            <span ng-bind-html="row.message"></span>
+                        </td>
+                    </tr>
+                </tbody>
             </table>
         </div>
     </div>

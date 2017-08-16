@@ -14,5 +14,5 @@
 .table > thead > tr > th {
     background-color: #dcdcdc;
     border-bottom: 2px solid #ddd;
-    vertical-align: bottom;
+    vertical-align: middle;
 }
