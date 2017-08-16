@@ -2395,7 +2395,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		if !desc.Valid {
 			oneRow.OneLineDesc = ""
 		} else {
-			oneRow.OneLineDesc = fmt.Sprintf(": %s", desc.String)
+			oneRow.OneLineDesc = desc.String
 		}
 		if !source.Valid {
 			oneRow.SourceURL = ""

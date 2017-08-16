@@ -11,6 +11,9 @@
                 <div class="pull-left">
                     [[ .Meta.Owner ]] : [[ .FullName ]]'s public databases
                 </div>
+                <div class="pull-right">
+                    <button type="button" class="btn btn-default" ng-click="toggleCollapsed()">{{ titleCollapsed }}</button>
+                </div>
             </h2>
         </div>
     </div>
@@ -18,23 +21,29 @@
         <div class="col-md-12">
             <table class="table table-bordered table-striped table-responsive">
                 <tr ng-repeat="row in db.Databases">
-                    <td><h4><a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a>{{ row.OneLineDesc }}</h4>
-                        <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
+                    <td>
+                        <div style="padding-bottom: 5px;">
+                            <h4 style="display: inline; font-size: large;"><a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
+                            <h5 style="display: inline; font-size: larger;" ng-if="row.OneLineDesc != ''"> : {{ row.OneLineDesc }}</h5>
+                        </div>
                         <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
+                        <b>Licence:</b>
+                        <span ng-if="row.LicenceURL == ''">{{ row.Licence }}</span>
+                        <span ng-if="row.LicenceURL != ''"><a class="blackLink" href="{{ row.LicenceURL }}">{{ row.Licence }}</a></span> &nbsp;
                         <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
-                        <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
-                        <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
-                        <b>Licence:</b> <span ng-if="row.LicenceURL == ''">{{ row.Licence }}</span><span ng-if="row.LicenceURL != ''">
-                            <a class="blackLink" href="{{ row.LicenceURL }}">{{ row.Licence }}</a></span> &nbsp;
-                        <b>Watchers:</b> {{ row.Watchers }} &nbsp;
-                        <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
-                        <br />
-                        <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
-                        <b>Discussions:</b> {{ row. Discussions }} &nbsp;
-                        <b>MRs:</b> {{ row.MRs }} &nbsp;
-                        <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
-                        <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
-                        <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
+                        <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a></span>
+                        <div uib-collapse="isCollapsed" style="padding-top: 5px;">
+                            <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
+                            <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}</a>
+                            <b>Watchers:</b> {{ row.Watchers }} &nbsp;
+                            <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
+                            <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
+                            <b>Discussions:</b> {{ row. Discussions }} &nbsp;
+                            <b>MRs:</b> {{ row.MRs }} &nbsp;
+                            <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
+                            <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
+                            <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
+                        </div>
                     </td>
                 </tr>
             </table>
@@ -48,8 +57,17 @@
         $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
         $scope.db = { Databases: [[ .DBRows ]] };
 
-        $scope.uploadForm = function(newtable) {
-            window.location = '/upload/'
+        // Toggle whether to show databases collapsed or not
+        $scope.isCollapsed = true;
+        $scope.titleCollapsed = "Expand all";
+        $scope.toggleCollapsed = function() {
+            if ($scope.isCollapsed === true) {
+                $scope.isCollapsed = false;
+                $scope.titleCollapsed = "Collapse all";
+            } else {
+                $scope.isCollapsed = true;
+                $scope.titleCollapsed = "Expand all";
+            }
         };
 
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
