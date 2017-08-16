@@ -8,11 +8,11 @@ integration for [DB Browser for SQLite](http://sqlitebrowser.org).
 You can try out our beta testing server at [https://db4s-beta.dbhub.io](https://db4s-beta.dbhub.io/justinclift/DB4S%20download%20stats.sqlite),
 or run it locally for your own users.
 
-**Note** - Don't store important data on the beta server.  It gets wiped now and again,
-when we're experimenting with things.
+**Note** - Don't store important data on the beta server.  We're still changing things
+around on it quite often, and haven't yet put time into setting up backups (etc).
 
-When the core code is more fully featured (August 2017 target), we'll start putting
-"production" servers online for people to store their data.
+When the core code is more fully featured (end of August 2017 target), we'll start
+putting "production" servers online for people to store their data.
 
 ### Screenshot
 
