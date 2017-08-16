@@ -1,0 +1,18 @@
+.nav, .pagination, .carousel, .panel-title a {
+    cursor: pointer;
+}
+
+.blackLink {
+    color: #181818;
+}
+
+.blackLink:hover {
+    color: #23527c;
+    text-decoration: underline;
+}
+
+.table > thead > tr > th {
+    background-color: #dcdcdc;
+    border-bottom: 2px solid #ddd;
+    vertical-align: bottom;
+}
