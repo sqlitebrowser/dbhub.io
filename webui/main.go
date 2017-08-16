@@ -17,7 +17,7 @@ import (
 
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	"github.com/gwenn/gosqlite"
-	"github.com/rhinoman/go-commonmark"
+	gfm "github.com/justinclift/github_flavored_markdown"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"golang.org/x/oauth2"
 )
@@ -1856,17 +1856,20 @@ func main() {
 	http.HandleFunc("/css/fontawesome-webfont.woff2", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "css", "fontawesome-webfont-4.7.0.woff2"))
 	}))
-	http.HandleFunc("/js/angular-1.5.11.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.5.11.min.js"))
+	http.HandleFunc("/css/local.css", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "css", "local.css"))
+	}))
+	http.HandleFunc("/js/angular-1.6.5.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.6.5.min.js"))
 	}))
 	http.HandleFunc("/js/angular.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.5.11.min.js.map"))
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.6.5.min.js.map"))
 	}))
-	http.HandleFunc("/js/angular-sanitize-1.5.11.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.5.11.min.js"))
+	http.HandleFunc("/js/angular-sanitize-1.6.5.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.6.5.min.js"))
 	}))
 	http.HandleFunc("/js/angular-sanitize.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.5.11.min.js.map"))
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.6.5.min.js.map"))
 	}))
 	http.HandleFunc("/js/lock-10.20.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.20.min.js"))
@@ -1959,18 +1962,18 @@ func markdownPreview(w http.ResponseWriter, r *http.Request) {
 	mkDown := r.PostFormValue("mkdown")
 
 	// Validate the markdown source provided, just to be safe
-	var renderedText string
+	var renderedText []byte
 	if mkDown != "" {
 		err := com.Validate.Var(mkDown, "markdownsource")
 		if err != nil {
 			fmt.Fprint(w, "Invalid characters in Markdown")
 			return
 		}
-		renderedText = commonmark.Md2Html(mkDown, commonmark.CMARK_OPT_DEFAULT)
+		renderedText = gfm.Markdown([]byte(mkDown))
 	}
 
 	// Send the rendered version back to the caller
-	fmt.Fprint(w, renderedText)
+	fmt.Fprint(w, string(renderedText))
 }
 
 // This handles incoming requests for the preferences page by logged in users.

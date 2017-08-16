@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rhinoman/go-commonmark"
+	gfm "github.com/justinclift/github_flavored_markdown"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
@@ -128,11 +128,13 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	// Fill out the metadata
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
+
 	for i, j := range branches {
+		// Create a branch entry
 		k := brEntry{
 			Commit:       j.Commit,
 			Description:  j.Description,
-			MarkDownDesc: commonmark.Md2Html(j.Description, commonmark.CMARK_OPT_DEFAULT),
+			MarkDownDesc: string(gfm.Markdown([]byte(j.Description))),
 			Name:         i,
 		}
 		pageData.Branches = append(pageData.Branches, k)
@@ -273,6 +275,8 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// Create the history entry
 	pageData.History = []HistEntry{
 		{
 			AuthorEmail:    rawList[headID].AuthorEmail,
@@ -281,7 +285,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 			CommitterEmail: rawList[headID].CommitterEmail,
 			CommitterName:  rawList[headID].CommitterName,
 			ID:             rawList[headID].ID,
-			Message:        commonmark.Md2Html(rawList[headID].Message, commonmark.CMARK_OPT_DEFAULT),
+			Message:        string(gfm.Markdown([]byte(rawList[headID].Message))),
 			Parent:         rawList[headID].Parent,
 			Timestamp:      rawList[headID].Timestamp,
 			Tree:           rawList[headID].Tree,
@@ -299,6 +303,8 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
+
+		// Create a history entry
 		newEntry := HistEntry{
 			AuthorEmail:    commitData.AuthorEmail,
 			AuthorName:     commitData.AuthorName,
@@ -306,7 +312,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 			CommitterEmail: commitData.CommitterEmail,
 			CommitterName:  commitData.CommitterName,
 			ID:             commitData.ID,
-			Message:        commonmark.Md2Html(commitData.Message, commonmark.CMARK_OPT_DEFAULT),
+			Message:        string(gfm.Markdown([]byte(commitData.Message))),
 			Parent:         commitData.Parent,
 			Timestamp:      commitData.Timestamp,
 			Tree:           commitData.Tree,
@@ -1079,8 +1085,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// Update database star status for the logged in user
 	pageData.MyStar = myStar
 
-	// Render the full description as markdown / CommonMark
-	pageData.DB.Info.FullDesc = commonmark.Md2Html(pageData.DB.Info.FullDesc, commonmark.CMARK_OPT_DEFAULT)
+	// Render the full description as markdown
+	pageData.DB.Info.FullDesc = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
 
 	// Cache the page metadata
 	err = com.CacheData(mdataCacheKey, pageData, com.Conf.Memcache.DefaultCacheTime)
@@ -1475,7 +1481,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 				Commit:              j.Commit,
 				Date:                j.Date,
 				Description:         j.Description,
-				DescriptionMarkdown: commonmark.Md2Html(j.Description, commonmark.CMARK_OPT_DEFAULT),
+				DescriptionMarkdown: string(gfm.Markdown([]byte(j.Description))),
 				ReleaserUserName:    userNameCache[j.ReleaserEmail],
 				ReleaserDisplayName: j.ReleaserName,
 				Size:                j.Size,
@@ -1867,7 +1873,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 				Commit:              j.Commit,
 				Date:                j.Date,
 				Description:         j.Description,
-				DescriptionMarkdown: commonmark.Md2Html(j.Description, commonmark.CMARK_OPT_DEFAULT),
+				DescriptionMarkdown: string(gfm.Markdown([]byte(j.Description))),
 				TaggerUserName:      userNameCache[j.TaggerEmail],
 				TaggerDisplayName:   j.TaggerName,
 			}
