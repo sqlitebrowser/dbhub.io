@@ -190,10 +190,11 @@ type DataValue struct {
 type DataRow []DataValue
 
 type DBEntry struct {
-	Folder    string
-	DateEntry time.Time
-	DBName    string
-	Owner     string
+	Folder           string
+	DateEntry        time.Time
+	DBName           string
+	Owner            string
+	OwnerDisplayName string `json:"display_name"`
 }
 
 type DBTreeEntryType string

@@ -3,16 +3,6 @@
 <html ng-app="DBHub" ng-controller="starsView">
 [[ template "head" . ]]
 <body>
-<style>
-    .blackLink {
-        color: black;
-    }
-
-    .blackLink:hover {
-        color: #23527c;
-        text-decoration: underline;
-    }
-</style>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
@@ -28,7 +18,7 @@
             <table class="table table-bordered table-striped table-responsive">
                 <tr ng-repeat="row in stars.Stars">
                     <td>
-                        <h4><a href="/{{ row.Owner }}">{{ row.Owner}}</a></h4>
+                        <h4>• <a class="blackLink" href="/{{ row.Owner }}">{{ row.display_name}}</a></h4>
                         Starred on: {{ row.DateEntry | date : 'd MMMM, y h:mm a' }}
                     </td>
                 </tr>

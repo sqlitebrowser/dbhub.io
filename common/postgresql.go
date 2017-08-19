@@ -2529,7 +2529,7 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 					AND is_deleted = false
 				)
 		)
-		SELECT users.user_name, star_users.date_starred
+		SELECT users.user_name, users.display_name, star_users.date_starred
 		FROM users, star_users
 		WHERE users.user_id = star_users.user_id`
 	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
@@ -2540,10 +2540,18 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 	defer rows.Close()
 	for rows.Next() {
 		var oneRow DBEntry
-		err = rows.Scan(&oneRow.Owner, &oneRow.DateEntry)
+		var dn pgx.NullString
+		err = rows.Scan(&oneRow.Owner, &dn, &oneRow.DateEntry)
 		if err != nil {
 			log.Printf("Error retrieving list of stars for %s/%s: %v\n", dbOwner, dbName, err)
 			return nil, err
+		}
+
+		// If the user hasn't filled out their display name, use their username instead
+		if dn.Valid {
+			oneRow.OwnerDisplayName = dn.String
+		} else {
+			oneRow.OwnerDisplayName = oneRow.Owner
 		}
 		list = append(list, oneRow)
 	}
