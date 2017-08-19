@@ -22,16 +22,13 @@
             <table class="table table-bordered table-striped table-responsive">
                 <tr ng-repeat="row in db.Databases">
                     <td>
-                        <div style="padding-bottom: 5px;">
-                            <h4 style="display: inline; font-size: large;"><a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
-                            <h5 style="display: inline; font-size: larger;" ng-if="row.OneLineDesc != ''"> : {{ row.OneLineDesc }}</h5>
-                        </div>
+                        <h4>•<a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
+                        <div ng-if="row.OneLineDesc != ''" style="padding-bottom: 5px;">{{ row.OneLineDesc }}</div>
                         <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
                         <b>Licence:</b>
                         <span ng-if="row.LicenceURL == ''">{{ row.Licence }}</span>
                         <span ng-if="row.LicenceURL != ''"><a class="blackLink" href="{{ row.LicenceURL }}">{{ row.Licence }}</a></span> &nbsp;
                         <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
-                        <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a></span>
                         <div uib-collapse="isCollapsed" style="padding-top: 5px;">
                             <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
                             <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}</a>
@@ -42,7 +39,8 @@
                             <b>MRs:</b> {{ row.MRs }} &nbsp;
                             <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
                             <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
-                            <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
+                            <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a><br />
+                            <div ng-if="row.SourceURL != ''" style="padding-top: 5px;"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a></div>
                         </div>
                     </td>
                 </tr>
