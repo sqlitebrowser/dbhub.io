@@ -129,6 +129,41 @@ CREATE TABLE database_stars (
 
 
 --
+-- Name: database_uploads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE database_uploads (
+    up_id bigint NOT NULL,
+    db_id bigint NOT NULL,
+    user_id bigint,
+    ip_addr text NOT NULL,
+    server_sw text NOT NULL,
+    user_agent text NOT NULL,
+    upload_date timestamp with time zone NOT NULL,
+    db_sha256 text NOT NULL
+);
+
+
+--
+-- Name: database_uploads_up_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE database_uploads_up_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: database_uploads_up_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE database_uploads_up_id_seq OWNED BY database_uploads.up_id;
+
+
+--
 -- Name: sqlite_databases; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -238,6 +273,13 @@ ALTER TABLE ONLY database_licences ALTER COLUMN lic_id SET DEFAULT nextval('data
 
 
 --
+-- Name: database_uploads up_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY database_uploads ALTER COLUMN up_id SET DEFAULT nextval('database_uploads_up_id_seq'::regclass);
+
+
+--
 -- Name: sqlite_databases db_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -281,6 +323,14 @@ ALTER TABLE ONLY database_licences
 
 ALTER TABLE ONLY database_stars
     ADD CONSTRAINT database_stars_pkey PRIMARY KEY (db_id, user_id);
+
+
+--
+-- Name: database_uploads database_uploads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY database_uploads
+    ADD CONSTRAINT database_uploads_pkey PRIMARY KEY (up_id);
 
 
 --
@@ -359,6 +409,20 @@ CREATE INDEX fki_database_downloads_user_id_fkey ON database_downloads USING btr
 
 
 --
+-- Name: fki_database_uploads_db_id_fkey; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fki_database_uploads_db_id_fkey ON database_uploads USING btree (db_id);
+
+
+--
+-- Name: fki_database_uploads_user_id_fkey; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fki_database_uploads_user_id_fkey ON database_uploads USING btree (user_id);
+
+
+--
 -- Name: users_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -410,6 +474,22 @@ ALTER TABLE ONLY database_stars
 
 ALTER TABLE ONLY database_stars
     ADD CONSTRAINT database_stars_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: database_uploads database_uploads_db_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY database_uploads
+    ADD CONSTRAINT database_uploads_db_id_fkey FOREIGN KEY (db_id) REFERENCES sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: database_uploads database_uploads_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY database_uploads
+    ADD CONSTRAINT database_uploads_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

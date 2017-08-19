@@ -1738,12 +1738,52 @@ func LogDownload(dbOwner string, dbFolder string, dbName string, loggedInUser st
 	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, downloader, ipAddr, serverSw, userAgent,
 		downloadDate, sha)
 	if err != nil {
-		log.Printf("Storing database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Storing record of download '%s%s%s', sha '%s' by '%s' failed: %v\n", dbOwner, dbFolder,
+			dbName, sha, downloader, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while storing database '%s%s%s'\n", numRows, dbOwner,
-			dbFolder, dbName)
+		log.Printf("Wrong number of rows (%v) affected while storing download record for '%s%s%s'\n", numRows,
+			dbOwner, dbFolder, dbName)
+	}
+	return nil
+}
+
+// Create an upload log entry
+func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser string, ipAddr string, serverSw string,
+	userAgent string, uploadDate time.Time, sha string) error {
+	// If the uploader isn't a logged in user, use a NULL value for that column
+	var uploader pgx.NullString
+	if loggedInUser != "" {
+		uploader.String = loggedInUser
+		uploader.Valid = true
+	}
+
+	// Store the upload details
+	dbQuery := `
+		WITH d AS (
+			SELECT db.db_id, db.folder, db.db_name
+			FROM sqlite_databases AS db
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND db.folder = $2
+				AND db.db_name = $3
+		)
+		INSERT INTO database_uploads (db_id, user_id, ip_addr, server_sw, user_agent, upload_date, db_sha256)
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE user_name = $4), $5, $6, $7, $8, $9`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, uploader, ipAddr, serverSw, userAgent,
+		uploadDate, sha)
+	if err != nil {
+		log.Printf("Storing record of upload '%s%s%s', sha '%s' by '%s' failed: %v\n", dbOwner, dbFolder,
+			dbName, sha, uploader, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected while storing upload record for '%s%s%s'\n", numRows,
+			dbOwner, dbFolder, dbName)
 	}
 	return nil
 }

@@ -3273,8 +3273,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Sanity check the uploaded database, and if ok then add it to the system
-	numBytes, err := com.AddDatabase(loggedInUser, loggedInUser, dbFolder, dbName, branchName, public, licenceName,
-		commitMsg, sourceURL, tempFile)
+	numBytes, err := com.AddDatabase(r, loggedInUser, loggedInUser, dbFolder, dbName, branchName, public, licenceName,
+		commitMsg, sourceURL, tempFile, "webui")
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

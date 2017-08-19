@@ -11,13 +11,15 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"time"
 )
 
 // The main function which handles database upload processing for both the webUI and DB4S end points
-func AddDatabase(loggedInUser string, dbOwner string, dbFolder string, dbName string, branchName string,
-	public bool, licenceName string, commitMsg string, sourceURL string, newDB io.Reader) (numBytes int64, err error) {
+func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder string, dbName string,
+	branchName string, public bool, licenceName string, commitMsg string, sourceURL string, newDB io.Reader,
+	serverSw string) (numBytes int64, err error) {
 
 	// Write the temporary file locally, so we can try opening it with SQLite to verify it's ok
 	var buf bytes.Buffer
@@ -226,6 +228,19 @@ func AddDatabase(loggedInUser string, dbOwner string, dbFolder string, dbName st
 		if err != nil {
 			return numBytes, err
 		}
+	}
+
+	// Was a user agent part of the request?
+	var userAgent string
+	ua, ok := r.Header["User-Agent"]
+	if ok {
+		userAgent = ua[0]
+	}
+
+	// Make a record of the upload
+	err = LogUpload(loggedInUser, dbFolder, dbName, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now(), sha)
+	if err != nil {
+		return 0, err
 	}
 
 	// Invalidate the memcached entry for the database (only really useful if we're updating an existing database)

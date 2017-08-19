@@ -603,8 +603,8 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Sanity check the uploaded database, and if ok then add it to the system
-	numBytes, err := com.AddDatabase(userAcc, targetUser, targetFolder, targetDB, branchName, public, licenceName,
-		commitMsg, sourceURL, tempFile)
+	numBytes, err := com.AddDatabase(r, userAcc, targetUser, targetFolder, targetDB, branchName, public, licenceName,
+		commitMsg, sourceURL, tempFile, "db4s")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
