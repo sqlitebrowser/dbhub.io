@@ -3154,15 +3154,8 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Upload DB handler"
 
-	// Check whether the uploaded database is too large
-	if r.ContentLength > com.MaxDatabaseSize {
-		errorPage(w, r, http.StatusBadRequest,
-			fmt.Sprintf("Maximum database size is 1GB.  Your upload is %d kB.", r.ContentLength/1024))
-		return
-	}
-
 	// Set the maximum accepted database size for uploading
-	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize)
+	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
 
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -3181,6 +3174,16 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure we have a valid logged in user
 	if validSession != true {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Check whether the uploaded database is too large
+	if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+		errorPage(w, r, http.StatusBadRequest,
+			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
+				com.MaxDatabaseSize, r.ContentLength/1024/1024))
+		log.Println(fmt.Sprintf("'%s' attempted to upload an oversided database %d MB in size.  Limit is %d MB\n",
+			loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
 		return
 	}
 

@@ -45,10 +45,8 @@ const (
 // Number of rows to display by default on the database page
 const DefaultNumDisplayRows = 25
 
-// The maximum database size accepted for upload (in bytes)
-// NOTE - When changing this value, also change the human readable version of the number in the error message at the
-//        start of uploadDataHandler()
-const MaxDatabaseSize = 1024 * 1024 * 1024 // 1GB
+// The maximum database size accepted for upload (in MB)
+const MaxDatabaseSize = 100
 
 // The number of leading characters of a files' sha256 used as the Minio folder name
 // eg: When set to 6, then "34f4255a737156147fbd0a44323a895d18ade79d4db521564d1b0dbb8764cbbc"

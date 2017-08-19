@@ -466,6 +466,9 @@ func main() {
 func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	pageName := "POST request handler"
 
+	// Set the maximum accepted database size for uploading
+	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+
 	// Split the request URL into path components
 	pathStrings := strings.Split(r.URL.Path, "/")
 
@@ -480,6 +483,16 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	err := com.ValidateUser(targetUser)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Check whether the uploaded database is too large
+	if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+		http.Error(w,
+			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
+				com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
+		log.Println(fmt.Sprintf("'%s' attempted to upload an oversided database %d MB in size.  Limit is %d MB\n",
+			userAcc, r.ContentLength/1024/1024, com.MaxDatabaseSize))
 		return
 	}
 
