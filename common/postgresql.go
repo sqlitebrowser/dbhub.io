@@ -2549,3 +2549,23 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 	}
 	return list, nil
 }
+
+// Returns the view counter for a specific database
+func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, err error) {
+	dbQuery := `
+		SELECT page_views
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&viewCount)
+	if err != nil {
+		log.Printf("Retrieving view count for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		return 0, err
+	}
+	return
+}

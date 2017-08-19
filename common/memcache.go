@@ -121,10 +121,17 @@ func IncrementViewCount(dbOwner string, dbFolder string, dbName string) error {
 			return err
 		}
 
-		// The cached value didn't exist, so we create it now
+		// The cached value didn't exist, so we check if it has an entry in PostgreSQL already
+		// NOTE: This function returns 0 if there's no existing entry, so we can just increment whatever it gives us
+		cnt, err := ViewCount(dbOwner, dbFolder, dbName)
+		if err != nil {
+			return err
+		}
+
+		// It doesn't so we create a new memcached entry for it
 		cachedData := memcache.Item{
 			Key:        cacheKey,
-			Value:      []byte(fmt.Sprintf("%d", 1)),
+			Value:      []byte(fmt.Sprintf("%d", cnt+1)),
 			Expiration: int32(Conf.Memcache.DefaultCacheTime),
 		}
 		err = memCache.Set(&cachedData)
