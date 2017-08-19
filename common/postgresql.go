@@ -1710,6 +1710,44 @@ func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) erro
 	return nil
 }
 
+// Create a download log entry
+func LogDownload(dbOwner string, dbFolder string, dbName string, loggedInUser string, ipAddr string, serverSw string,
+	userAgent string, downloadDate time.Time, sha string) error {
+	// If the downloader isn't a logged in user, use a NULL value for that column
+	var downloader pgx.NullString
+	if loggedInUser != "" {
+		downloader.String = loggedInUser
+		downloader.Valid = true
+	}
+
+	// Store the download details
+	dbQuery := `
+		WITH d AS (
+			SELECT db.db_id, db.folder, db.db_name
+			FROM sqlite_databases AS db
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND db.folder = $2
+				AND db.db_name = $3
+		)
+		INSERT INTO database_downloads (db_id, user_id, ip_addr, server_sw, user_agent, download_date, db_sha256)
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE user_name = $4), $5, $6, $7, $8, $9`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, downloader, ipAddr, serverSw, userAgent,
+		downloadDate, sha)
+	if err != nil {
+		log.Printf("Storing database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected while storing database '%s%s%s'\n", numRows, dbOwner,
+			dbFolder, dbName)
+	}
+	return nil
+}
+
 // Return the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from owner/folder/database URL
 // fragment, // loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
 // string ("") as the loggedInUser parameter if the true value isn't set or known.

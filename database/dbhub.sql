@@ -35,6 +35,41 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
+-- Name: database_downloads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE database_downloads (
+    dl_id bigint NOT NULL,
+    db_id bigint NOT NULL,
+    user_id bigint,
+    ip_addr text NOT NULL,
+    server_sw text NOT NULL,
+    user_agent text NOT NULL,
+    download_date timestamp with time zone NOT NULL,
+    db_sha256 text NOT NULL
+);
+
+
+--
+-- Name: database_downloads_dl_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE database_downloads_dl_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: database_downloads_dl_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE database_downloads_dl_id_seq OWNED BY database_downloads.dl_id;
+
+
+--
 -- Name: database_files; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -189,6 +224,13 @@ ALTER SEQUENCE users_user_id_seq OWNED BY users.user_id;
 
 
 --
+-- Name: database_downloads dl_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY database_downloads ALTER COLUMN dl_id SET DEFAULT nextval('database_downloads_dl_id_seq'::regclass);
+
+
+--
 -- Name: database_licences lic_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -207,6 +249,14 @@ ALTER TABLE ONLY sqlite_databases ALTER COLUMN db_id SET DEFAULT nextval('sqlite
 --
 
 ALTER TABLE ONLY users ALTER COLUMN user_id SET DEFAULT nextval('users_user_id_seq'::regclass);
+
+
+--
+-- Name: database_downloads database_downloads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY database_downloads
+    ADD CONSTRAINT database_downloads_pkey PRIMARY KEY (dl_id);
 
 
 --
@@ -295,6 +345,20 @@ CREATE INDEX database_licences_user_id_friendly_name_idx ON database_licences US
 
 
 --
+-- Name: fki_database_downloads_db_id_fkey; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fki_database_downloads_db_id_fkey ON database_downloads USING btree (db_id);
+
+
+--
+-- Name: fki_database_downloads_user_id_fkey; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fki_database_downloads_user_id_fkey ON database_downloads USING btree (user_id);
+
+
+--
 -- Name: users_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -306,6 +370,22 @@ CREATE INDEX users_user_id_idx ON users USING btree (user_id);
 --
 
 CREATE INDEX users_user_name_idx ON users USING btree (user_name);
+
+
+--
+-- Name: database_downloads database_downloads_db_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY database_downloads
+    ADD CONSTRAINT database_downloads_db_id_fkey FOREIGN KEY (db_id) REFERENCES sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: database_downloads database_downloads_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY database_downloads
+    ADD CONSTRAINT database_downloads_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

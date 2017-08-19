@@ -266,7 +266,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// A specific database was requested, so send it to the user
-	err = retrieveDatabase(w, pageName, userAcc, dbOwner, dbFolder, dbName, commit)
+	err = retrieveDatabase(w, r, pageName, userAcc, dbOwner, dbFolder, dbName, commit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -618,8 +618,8 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	fmt.Fprintf(w, "Database created: %s\n", targetDB)
 }
 
-func retrieveDatabase(w http.ResponseWriter, pageName string, userAcc string, dbOwner string, dbFolder string,
-	dbName string, commit string) (err error) {
+func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, userAcc string, dbOwner string,
+	dbFolder string, dbName string, commit string) (err error) {
 	pageName += ":retrieveDatabase()"
 
 	// Retrieve the Minio details for the requested database
@@ -643,6 +643,21 @@ func retrieveDatabase(w http.ResponseWriter, pageName string, userAcc string, db
 			log.Printf("%s: Error closing object handle: %v\n", pageName, err)
 		}
 	}()
+
+	// Was a user agent part of the request?
+	var userAgent string
+	ua, ok := r.Header["User-Agent"]
+	if ok {
+		userAgent = ua[0]
+	}
+
+	// Make a record of the download
+	err = com.LogDownload(dbOwner, dbFolder, dbName, userAcc, r.RemoteAddr, "db4s", userAgent, time.Now(),
+		bucket+id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Send the database to the user
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", url.QueryEscape(dbName)))

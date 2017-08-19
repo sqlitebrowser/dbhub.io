@@ -1537,6 +1537,21 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		com.MinioHandleClose(userDB)
 	}()
 
+	// Was a user agent part of the request?
+	var userAgent string
+	ua, ok := r.Header["User-Agent"]
+	if ok {
+		userAgent = ua[0]
+	}
+
+	// Make a record of the download
+	err = com.LogDownload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent,
+		time.Now(), bucket+id)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	// Send the database to the user
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, dbName))
 	w.Header().Set("Content-Type", "application/x-sqlite3")
