@@ -79,7 +79,7 @@
                                 <td style="text-align: left;">
                                     <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
                                 </td>
-                                <td>{{ row.count }}</td>
+                                <td><a class="blackLink" href="/stars/{{ row.owner + '/' + row.dbname }}">{{ row.count }}</a></td>
                             </tr>
                         </tbody>
                     </table>
@@ -119,7 +119,7 @@
                                 <td style="text-align: left;">
                                     <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
                                 </td>
-                                <td>{{ row.count }}</td>
+                                <td><a class="blackLink" href="/forks/{{ row.owner + '/' + row.dbname }}">{{ row.count }}</a></td>
                             </tr>
                         </tbody>
                     </table>
