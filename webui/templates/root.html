@@ -163,7 +163,7 @@
 
         // Switch to the upload database page
         $scope.uploadForm = function() {
-            if ("[[ .Meta.LoggedInUser ]]" != "true") {
+            if ("[[ .Meta.LoggedInUser ]]" == "") {
                 // User needs to be logged in
                 lock.show();
             } else {
