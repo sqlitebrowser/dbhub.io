@@ -66,24 +66,12 @@
     </div>
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
         <div class="col-md-6">
-            <div class="row">
-                <div class="col-md-2">
-                    <span style="font-weight: 700;">Data</span>
-                </div>
-                <div class="col-md-3">
-                    <label id="viewdiscuss"><a href="" class="notImplementedYet" title="Not yet implemented">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label>
-                </div>
-                <div class="col-md-4">
-                    <label id="viewmrs"><a href="" class="notImplementedYet" title="Not yet implemented">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label>
-                </div>
-                <div class="col-md-3">
-                    [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                        <label id="settings"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">Settings</a></label>
-                    [[ else ]]
-                        &nbsp;
-                    [[ end ]]
-                </div>
-            </div>
+            <span style="font-weight: 600; font-family: 'arial black';">Data</span> &nbsp; &nbsp; &nbsp;
+            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="" class="notImplementedYet" title="Not yet implemented">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
+            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="" class="notImplementedYet" title="Not yet implemented">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
+            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                <label id="settings" style="font-weight: 600; font-family: 'arial black';"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">Settings</a></label>
+            [[ end ]]
         </div>
         <div class="col-md-6">
             <div class="pull-right">
