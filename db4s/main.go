@@ -644,6 +644,13 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 		}
 	}()
 
+	// Get the file details
+	stat, err := userDB.Stat()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Was a user agent part of the request?
 	var userAgent string
 	ua, ok := r.Header["User-Agent"]
@@ -661,6 +668,7 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 
 	// Send the database to the user
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", url.QueryEscape(dbName)))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", stat.Size))
 	w.Header().Set("Content-Type", "application/x-sqlite3")
 	bytesWritten, err := io.Copy(w, userDB)
 	if err != nil {
