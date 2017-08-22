@@ -201,7 +201,7 @@
                     <thead>
                         <tr>
                             <th ng-repeat="header in db.ColNames" width="{{ 100 / db.ColCount }}%">
-                                <a href="" class="colHeader" ng-click="sortOrder(header)"><span id="col{{ header }}" ng-bind="addArrow(header)"></span></a>
+                                <a href="" class="colHeader" ng-click="sortOrder(header)"><span id="col{{ header }}" ng-bind-html="addArrow(header)"></span></a>
                             </th>
                         </tr>
                     </thead>
@@ -317,9 +317,9 @@
         $scope.addArrow = function(header) {
             if (header == $scope.db.SortCol) {
                 if ($scope.db.SortDir == "ASC") {
-                    return header + " ▲";
+                    return header + " <i class=\"fa fa-sort-amount-asc\"></i>";
                 }  else {
-                    return header + " ▼";
+                    return header + " <i class=\"fa fa-sort-amount-desc\"></i>";
                 }
             } else {
                 return header;
@@ -511,9 +511,9 @@
             // Add a direction arrow (▲/▼) to the new sort column heading, showing the sort direction
             var newHeader = document.getElementById("col" + newSortCol);
             if ($scope.db.SortDir == "ASC") {
-                newHeader.textContent = newSortCol + " ▲";
+                newHeader.textContent = newSortCol + " <i class=\"fa fa-sort-amount-asc\"></i>";
             } else {
-                newHeader.textContent = newSortCol + " ▼";
+                newHeader.textContent = newSortCol + " <i class=\"fa fa-sort-amount-desc\"></i>";
             }
         };
 
