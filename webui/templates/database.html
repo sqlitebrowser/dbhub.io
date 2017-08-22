@@ -45,18 +45,18 @@
                 </div>
                 <div class="pull-right">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-disabled="true" ng-click="toggleWatch()">Watch</button>
+                        <button type="button" class="btn btn-default" ng-disabled="true" ng-click="toggleWatch()"><i class="fa fa-eye"></i> Watch</button>
                         <button type="button" class="btn btn-default" ng-bind="meta.Watchers"></button>
                     </div>
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-bind="starsText" ng-click="toggleStars()"></button>
+                        <button type="button" class="btn btn-default" ng-bind-html="starsText" ng-click="toggleStars()"></button>
                         <button type="button" class="btn btn-default" ng-bind="meta.Stars" ng-click="starsPage()"></button>
                     </div>
                     <div class="btn-group">
                         [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
-                            <button type="button" class="btn btn-default" ng-click="forkDB()">Fork</button>
+                            <button type="button" class="btn btn-default" ng-click="forkDB()"><i class="fa fa-cubes"></i> Fork</button>
                         [[ else ]]
-                            <button type="button" class="btn btn-default" ng-disabled="true">Fork</button>
+                            <button type="button" class="btn btn-default" ng-disabled="true"><i class="fa fa-cubes"></i> Fork</button>
                         [[ end ]]
                         <button type="button" class="btn btn-default" ng-bind="meta.Forks" ng-click="forksPage()"></button>
                     </div>
@@ -573,12 +573,12 @@
         };
 
         // Update star button text to say "Stars" or "Unstar"
-        $scope.starsText = "Star";
+        $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
         $scope.updateStarsText = function() {
             if ($scope.meta.MyStar != "true") {
-                $scope.starsText = "Star";
+                $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
             } else {
-                $scope.starsText = "Unstar";
+                $scope.starsText = "<i class=\"fa fa-star\"></i> Unstar";
             }
         };
         $scope.updateStarsText();
