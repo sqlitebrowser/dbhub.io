@@ -1,7 +1,7 @@
 [[ define "databasePage" ]]
 <!doctype html>
 <html ng-app="DBHub" ng-controller="databaseView">
-[[ template "head" . ]]
+[[ template "headawesome" . ]]
 <body>
 <style>
     .colHeader {
@@ -66,11 +66,11 @@
     </div>
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
         <div class="col-md-6">
-            <span style="font-weight: 600; font-family: 'arial black';">Data</span> &nbsp; &nbsp; &nbsp;
-            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="" class="notImplementedYet" title="Not yet implemented">{{ 'Discussions: ' }}</a>{{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
-            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="" class="notImplementedYet" title="Not yet implemented">{{ 'Merge Requests: ' }}</a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
+            <span style="font-weight: 600; font-family: 'arial black';"><i class="fa fa-database"></i> Data</span> &nbsp; &nbsp; &nbsp;
+            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="" class="notImplementedYet" title="Not yet implemented"><i class="fa fa-commenting"></i> Discussions: </a>{{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
+            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="" class="notImplementedYet" title="Not yet implemented"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                <label id="settings" style="font-weight: 600; font-family: 'arial black';"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">Settings</a></label>
+            <label id="settings" style="font-weight: 600; font-family: 'arial black';"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><i class="fa fa-cog"></i> Settings</a></label>
             [[ end ]]
         </div>
         <div class="col-md-6">
