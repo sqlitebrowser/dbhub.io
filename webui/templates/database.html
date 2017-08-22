@@ -54,9 +54,9 @@
                     </div>
                     <div class="btn-group">
                         [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
-                            <button type="button" class="btn btn-default" ng-click="forkDB()"><i class="fa fa-cubes"></i> Fork</button>
+                            <button type="button" class="btn btn-default" ng-click="forkDB()"><i class="fa fa-sitemap"></i> Fork</button>
                         [[ else ]]
-                            <button type="button" class="btn btn-default" ng-disabled="true"><i class="fa fa-cubes"></i> Fork</button>
+                            <button type="button" class="btn btn-default" ng-disabled="true"><i class="fa fa-sitemap"></i> Fork</button>
                         [[ end ]]
                         <button type="button" class="btn btn-default" ng-bind="meta.Forks" ng-click="forksPage()"></button>
                     </div>
