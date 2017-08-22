@@ -2059,7 +2059,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = com.Validate.Var(displayName, "required,displayname,min=1,max=80")
 	if err != nil {
-		log.Printf("%s: Display name value failed validation: %s\n", pageName, err)
+		log.Printf("%s: Display name '%s' failed validation: %s\n", pageName, displayName, err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing full name value")
 		return
 	}
