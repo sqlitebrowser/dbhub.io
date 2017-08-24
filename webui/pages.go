@@ -610,6 +610,73 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Displays a web page to input information needed for creating a new discussion.
+func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		Auth0 com.Auth0Set
+		Meta  com.MetaInfo
+	}
+	pageData.Meta.Title = "Create new discussion"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Retrieve the owner, database name
+	dbOwner, dbName, err := com.GetOD(1, r) // "1" means skip the first URL word
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	// TODO: Add folder support
+	dbFolder := "/"
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Fill out metadata for the page to be rendered
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+
+	// Render the page
+	t := tmpl.Lookup("createDiscussionPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 // Displays a web page asking for the new tag details.
 func createTagPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
@@ -1119,6 +1186,132 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// Render the page
 	t := tmpl.Lookup("databasePage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+func discussPage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		Auth0          com.Auth0Set
+		CommentList    []com.DiscussionCommentEntry
+		DB             com.SQLiteDBinfo
+		DiscussionList []com.DiscussionEntry
+		Meta           com.MetaInfo
+		SelectedID     int
+		MyStar         bool
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+	}
+
+	// Retrieve the database owner & name
+	// TODO: Add folder support
+	dbFolder := "/"
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/discuss/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if a discussion id was provided
+	a := r.FormValue("id") // Optional
+	if a != "" {
+		pageData.SelectedID, err = strconv.Atoi(a)
+		if err != nil {
+			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+				com.GetCurrentFunctionName(), err)
+			errorPage(w, r, http.StatusBadRequest, "Error when parsing discussion id value")
+			return
+		}
+	}
+
+	// Validate the supplied information
+	if dbOwner == "" || dbName == "" {
+		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get latest star and fork count
+	_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Retrieve the list of discussions for this database
+	pageData.DiscussionList, err = com.Discussions(dbOwner, dbFolder, dbName, pageData.SelectedID)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Fill out the metadata
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Database = dbName
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+
+	// If a specific discussion ID was given, then we display the discussion comments page
+	if pageData.SelectedID != 0 {
+		// Load the comments for the requested discussion
+		pageData.CommentList, err = com.DiscussionComments(dbOwner, dbFolder, dbName, pageData.SelectedID)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Render the discussion comments page
+		t := tmpl.Lookup("discussCommentsPage")
+		err = t.Execute(w, pageData)
+		if err != nil {
+			log.Printf("Error: %s", err)
+		}
+		return
+	}
+
+	// Render the main discussion list page
+	t := tmpl.Lookup("discussListPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)

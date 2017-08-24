@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx"
+	gfm "github.com/justinclift/github_flavored_markdown"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -875,6 +876,103 @@ func DisconnectPostgreSQL() {
 
 	// Log successful disconnection
 	log.Printf("Disconnected from PostgreSQL server: %v:%v\n", Conf.Pg.Server, uint16(Conf.Pg.Port))
+}
+
+// Returns the list of discussions for a given database.
+// If a non-0 discID value is passed, it will only return the details for that specific discussion.  Otherwise it will
+// return a list of all discussions for a given database
+// Note - This returns a slice of DiscussionEntry, instead of a map.  We use a slice because it lets us use an ORDER
+//        BY clause in the SQL and preserve the returned order (maps don't preserve order).  If in future we no longer
+//        need to preserve the order, it might be useful to switch to using a map instead since they're often simpler
+//        to work with.
+func Discussions(dbOwner string, dbFolder string, dbName string, discID int) (list []DiscussionEntry, err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND db.folder = $2
+				AND db.db_name = $3)
+		SELECT disc.disc_id, disc.title, disc.open, disc.date_created, users.user_name, disc.description,
+			last_modified, comment_count
+		FROM discussions AS disc, d, users
+		WHERE disc.db_id = d.db_id
+			AND disc.creator = users.user_id`
+	if discID != 0 {
+		dbQuery += fmt.Sprintf(`
+			AND disc_id = %d`, discID)
+	}
+	dbQuery += `
+		ORDER BY last_modified DESC`
+	var rows *pgx.Rows
+	rows, err = pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return
+	}
+	for rows.Next() {
+		var oneRow DiscussionEntry
+		err = rows.Scan(&oneRow.ID, &oneRow.Title, &oneRow.Open, &oneRow.Date_created, &oneRow.Creator, &oneRow.Body,
+			&oneRow.Last_modified, &oneRow.CommentCount)
+		if err != nil {
+			log.Printf("Error retrieving discussion list for database '%s%s%s': %v\n", dbOwner, dbFolder,
+				dbName, err)
+			rows.Close()
+			return
+		}
+		oneRow.BodyRendered = string(gfm.Markdown([]byte(oneRow.Body)))
+		list = append(list, oneRow)
+	}
+	rows.Close()
+	return
+}
+
+// Returns the list of comments for a given discussion.
+// Note - This returns a slice instead of a map.  We use a slice because it lets us use an ORDER BY clause in the SQL
+//        and preserve the returned order (maps don't preserve order).  If in future we no longer need to preserve the
+//        order, it might be useful to switch to using a map instead since they're often simpler to work with.
+func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID int) (list []DiscussionCommentEntry, err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND db.folder = $2
+				AND db.db_name = $3)
+		SELECT com.com_id, users.user_name, com.date_created, com.body
+		FROM discussion_comments AS com, d, users
+		WHERE com.db_id = d.db_id
+			AND com.disc_id = $4
+			AND com.commenter = users.user_id
+		ORDER BY date_created ASC`
+	var rows *pgx.Rows
+	rows, err = pdb.Query(dbQuery, dbOwner, dbFolder, dbName, discID)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return
+	}
+	for rows.Next() {
+		var oneRow DiscussionCommentEntry
+		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &oneRow.Date_created, &oneRow.Body)
+		if err != nil {
+			log.Printf("Error retrieving comment list for database '%s%s%s', discussion '%d': %v\n", dbOwner,
+				dbFolder, dbName, discID, err)
+			rows.Close()
+			return
+		}
+		oneRow.BodyRendered = string(gfm.Markdown([]byte(oneRow.Body)))
+		list = append(list, oneRow)
+	}
+	rows.Close()
+	return
 }
 
 // Periodically flushes the database view count from memcache to PostgreSQL
@@ -2064,6 +2162,92 @@ func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[
 	return nil
 }
 
+// Adds a comment to a discussion.
+func StoreComment(dbOwner string, dbFolder string, dbName string, commenter string, discID int, comText string,
+	discClose bool) error {
+	// Begin a transaction
+	tx, err := pdb.Begin()
+	if err != nil {
+		return err
+	}
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// If comment text was provided, insert it into the database
+	var dbQuery string
+	var commandTag pgx.CommandTag
+	if comText != "" {
+		dbQuery = `
+		WITH d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db
+			WHERE db.user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		)
+		INSERT INTO discussion_comments (db_id, disc_id, commenter, body)
+		SELECT (SELECT db_id FROM d), $5, (SELECT user_id FROM users WHERE user_name = $4), $6`
+		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, comText)
+		if err != nil {
+			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
+				dbName, discID, err)
+			return err
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf(
+				"Wrong number of rows (%v) affected when adding a comment to database '%s%s%s', discussion '%d'\n",
+				numRows, dbOwner, dbFolder, dbName, discID)
+		}
+	}
+
+	// Update the last_modified date for the parent discussion
+	dbQuery = `
+		UPDATE discussions
+		SET last_modified = now()`
+	if discClose == true {
+		dbQuery += `, open = false`
+	}
+	if comText != "" {
+		dbQuery += `, comment_count = comment_count + 1`
+	}
+	dbQuery += `
+		WHERE db_id = (
+				SELECT db.db_id
+				FROM sqlite_databases AS db
+				WHERE db.user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
+					AND folder = $2
+					AND db_name = $3
+			)
+			AND disc_id = $4`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, discID)
+	if err != nil {
+		log.Printf("Updating last modified date for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner,
+			dbFolder, dbName, discID, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when updating last_modified date for database '%s%s%s', discussion '%d'\n",
+			numRows, dbOwner, dbFolder, dbName, discID)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Updates the commit list for a database.
 func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map[string]CommitEntry) error {
 	dbQuery := `
@@ -2190,6 +2374,70 @@ func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branch
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected during update: database: %v, new branch name: '%v'\n",
 			numRows, dbName, branchName)
+	}
+	return nil
+}
+
+// Stores a new discussion for a database.
+func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, title string, text string) error {
+	// Begin a transaction
+	tx, err := pdb.Begin()
+	if err != nil {
+		return err
+	}
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// Add the discussion details to PostgreSQL
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		), d AS (
+			SELECT db.db_id, db.discussions + 1 AS new_disc_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND db.folder = $2
+				AND db.db_name = $3)
+		INSERT INTO discussions (db_id, disc_id, creator, title, description, open)
+		SELECT (SELECT db_id FROM d), (SELECT new_disc_id FROM d), (SELECT user_id FROM users WHERE user_name = $4), $5, $6, true`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text)
+	if err != nil {
+		log.Printf("Adding new discussion '%s' for '%s%s%s' failed: %v\n", title, dbOwner, dbFolder, dbName,
+			err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected when adding new discussion '%s' to database '%s%s%s'\n",
+			numRows, title, dbOwner, dbFolder, dbName)
+	}
+
+	// Increment the discussion counter for the database
+	dbQuery = `
+		UPDATE sqlite_databases
+		SET discussions = discussions + 1
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND folder = $2
+			AND db_name = $3`
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Updating discussion counter for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected when updating discussion counter for '%s%s%s'\n",
+			numRows, dbOwner, dbFolder, dbName)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
 	}
 	return nil
 }

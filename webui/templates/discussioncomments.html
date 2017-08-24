@@ -1,0 +1,325 @@
+[[ define "discussCommentsPage" ]]
+<!doctype html>
+<html ng-app="DBHub" ng-controller="discussCommentsView">
+[[ template "headawesome" . ]]
+<body>
+<style>
+    .notImplementedYet {
+        color: gray;
+        text-decoration: none;
+    }
+
+    .notImplementedYet:hover {
+        color: gray;
+        text-decoration: none;
+    }
+
+    tbody > tr > td > div.ng-binding > h1 {
+        margin-top: 0;
+    }
+
+    tbody > tr > td > div.ng-binding > h2 {
+        margin-top: 0;
+    }
+
+    tbody > tr > td > div.ng-binding > h3 {
+        margin-top: 0;
+    }
+
+    tbody > tr > td > div.ng-binding > h4 {
+        margin-top: 0;
+    }
+</style>
+[[ template "header" . ]]
+<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 id="viewdb" style="margin-top: 10px;">
+                <div class="pull-left">
+                    <div>
+                        <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> / [[ .Meta.Database ]]
+                    </div>
+                    [[ if .Meta.ForkOwner ]]
+                    <div style="font-size: small">
+                        forked from <a href="/[[ .Meta.ForkOwner ]]">[[ .Meta.ForkOwner ]]</a> /
+                        [[ if not .Meta.ForkDeleted ]]
+                            <a href="/[[ .Meta.ForkOwner ]]/[[ .Meta.ForkDatabase ]]">[[ .Meta.ForkDatabase ]]</a>
+                        [[ else ]]
+                            deleted database
+                        [[ end ]]
+                    </div>
+                    [[ end ]]
+                </div>
+                <div class="pull-right">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-disabled="true" ng-click="toggleWatch()"><i class="fa fa-eye"></i> Watch</button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Watchers"></button>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-bind-html="starsText" ng-click="toggleStars()"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Stars" ng-click="starsPage()"></button>
+                    </div>
+                    <div class="btn-group">
+                        [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
+                        <button type="button" class="btn btn-default" ng-click="forkDB()"><i class="fa fa-sitemap"></i> Fork</button>
+                        [[ else ]]
+                        <button type="button" class="btn btn-default" ng-disabled="true"><i class="fa fa-sitemap"></i> Fork</button>
+                        [[ end ]]
+                        <button type="button" class="btn btn-default" ng-bind="meta.Forks" ng-click="forksPage()"></button>
+                    </div>
+                </div>
+            </h2>
+        </div>
+    </div>
+    <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
+        <div class="col-md-12">
+            <label id="viewdata" style="font-weight: 600; font-family: 'arial black';"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data"><i class="fa fa-database"></i> Data</a></label> &nbsp; &nbsp; &nbsp;
+            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
+            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="" class="notImplementedYet" title="Not yet implemented"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
+            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                <label id="settings" style="font-weight: 600; font-family: 'arial black';"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><i class="fa fa-cog"></i> Settings</a></label>
+            [[ end ]]
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="pull-left">
+                <button class="btn btn-success" ng-click="createDiscussion()">Start a new discussion</button>
+            </div>
+            <br /><br />
+        </div>
+    </div>
+    <div class="row" ng-if="statusMessage != ''">
+        <div class="col-md-12">
+            <div style="text-align: center; padding-bottom: 8px;">
+                <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <span ng-if="DiscussionList != ''">
+                <span ng-repeat="row in DiscussionList">
+                    <table class="table table-responsive" style="margin-bottom: 0px;">
+                        <tbody>
+                            <tr style="border: none;">
+                                <td width="10%" style="text-align: center; vertical-align: text-top; border-top: none;">
+                                    <div style="font-size: x-large; color: #333;"># {{ row.disc_id }}</div>
+                                    <div ng-if="row.open == true" class="btn btn-success" style="font-size: medium;"><i class="fa fa-minus-square-o"></i> Open</div>
+                                    <div ng-if="row.open != true" class="btn btn-danger" style="font-size: medium;"><i class="fa fa-check-square-o"></i> Closed</div>
+                                </td>
+                                <td style="border: none;">
+                                    <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
+                                        <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ row.disc_id }}" style="font-size: x-large; color: #333;">{{ row.title }}</a><br />
+                                        Opened on {{ row.creation_date | date : 'd MMM y h:mm a' }} by <a class="blackLink" href="/{{ row.creator }}">{{ row.creator }}</a>
+                                    </div>
+                                    <div style="padding-left: 10px; padding-top: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;" ng-bind-html="row.body_rendered"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </span>
+                <span ng-repeat="row in CommentList">
+                    <table class="table table-responsive" style="margin-bottom: 0px;">
+                        <tbody>
+                            <tr>
+                                <td style="border: none;" width="10%">&nbsp;</td>
+                                <td style="border: none;">
+                                    <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
+                                        <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> commented on {{ row.creation_date | date : 'd MMM y h:mm a' }}
+                                    </div>
+                                    <div style="padding-left: 10px; padding-top: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;" ng-bind-html="row.body_rendered"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </span>
+                [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                    <div class="row">
+                        <div class="col-md-2">&nbsp;</div>
+                        <div class="col-md-9">
+                            <div style="text-align: center; padding: 10px; border: 1px #EEE solid; margin-bottom: 10px;">
+                                <uib-tabset active="active">
+                                    <uib-tab index="0">
+                                        <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
+                                        <textarea id="comtext" name="comtext" cols="110" rows="10" style="margin-top: 2px;" placeholder="Add your comment here..." ng-keyup="updateCloseButton()"></textarea>
+                                    </uib-tab>
+                                    <uib-tab index="1" select="getMarkdown()">
+                                        <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
+                                        <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
+                                    </uib-tab>
+                                </uib-tabset>
+                                <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
+                                <input type="hidden" name="folder" value="/">
+                                <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
+                                <input type="hidden" name="discid" value="[[ .SelectedID ]]">
+                                <input type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
+                                <input type="submit" class="btn btn-success" value="Add comment" style="margin-top: 10px;" ng-click="addComment(false)">
+                            </div>
+                        </div>
+                        <div class="col-md-1">&nbsp;</div>
+                    </div>
+                [[ else ]]
+                    <div class="row">
+                        <div class="col-md-2">&nbsp;</div>
+                        <div class="col-md-9">
+                            <div style="text-align: center; padding: 10px; border: 1px #EEE solid; margin-bottom: 10px; border-radius: 7px;">
+                                <a href="#" ng-click="signIn()">Sign in</a> to join the discussion
+                            </div>
+                        </div>
+                        <div class="col-md-1">&nbsp;</div>
+                    </div>
+                [[ end ]]
+            </span>
+            <div ng-if="DiscussionList == ''" style="text-align: center; padding-bottom: 10px;"><i>This database doesn't have any discussions yet</i></div>
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('discussCommentsView', function($scope, $http, $httpParamSerializerJQLike) {
+        // Pre-filled data
+        $scope.meta = {
+            Database: "[[ .Meta.Database ]]",
+            Discussions: "[[ .DB.Info.Discussions ]]",
+            Forks: "[[ .DB.Info.Forks ]]",
+            MRs: "[[ .DB.Info.MRs ]]",
+            MyStar: "[[  .MyStar ]]",
+            Owner: "[[ .Meta.Owner ]]",
+            SelectedID: "[[ .SelectedID ]]",
+            Stars: "[[ .DB.Info.Stars ]]",
+            Watchers: "[[ .DB.Info.Watchers ]]",
+            [[ if .Meta.LoggedInUser ]]
+                Loggedin: "true",
+            [[ else ]]
+                Loggedin: "false",
+            [[ end ]]
+        }
+        $scope.DiscussionList = [[ .DiscussionList ]];
+        $scope.CommentList = [[ .CommentList ]];
+
+        // Add a comment to the discussion
+        $scope.statusMessage = "";
+        $scope.statusMessageColour = "green";
+        $scope.addComment = function(alsoClose) {
+            // Retrieve the comment text
+            var txt = document.getElementById("comtext").value;
+            // Send the comment to the server
+            $http({
+                method: "POST",
+                url: "/x/createcomment/",
+                data: $httpParamSerializerJQLike({
+                    "comtext": txt,
+                    "close": alsoClose,
+                    "folder": "/",
+                    "discid": [[ .SelectedID ]],
+                    "dbname": [[ .Meta.Database ]],
+                    "username": [[ .Meta.Owner ]],
+                    }),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // Adding the comment succeeded, so display it in the list (we cheat for now by just reloading the page)
+                window.location = '/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
+            }, function failure(response) {
+                // Adding the comment failed, so display an error message
+                $scope.statusMessageColour = "Red";
+                $scope.statusMessage = "Adding comment failed";
+            });
+        };
+
+        // Switch to the create discussion page
+        $scope.createDiscussion = function() {
+            if ($scope.meta.Loggedin != "true") {
+                // User needs to be logged in
+                lock.show();
+            } else {
+                window.location = '/creatediscuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+            }
+        };
+
+        // Render markdown preview
+        $scope.markDownPreview = "";
+        $scope.getMarkdown = function() {
+            // Retrieve latest markdown text from the text area
+            var txt = document.getElementById("comtext").value;
+
+            // Call the server, asking for a rendered version of the markdown
+            $http({
+                method: "POST",
+                url: "/x/markdownpreview/",
+                data: $httpParamSerializerJQLike({"mkdown": txt}),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) { $scope.markDownPreview = response.data; });
+        };
+
+        // Displays the Auth0 dialog
+        $scope.signIn = function() {
+            // User needs to be logged in
+            lock.show();
+        };
+
+        // Sends the user to the stars page for the database
+        $scope.starsPage = function() {
+            window.location = "/stars/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+        };
+
+        // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
+        $scope.toggleStars = function() {
+            if ($scope.meta.Loggedin != "true") {
+                // User needs to be logged in
+                lock.show();
+            } else {
+                $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
+                    .then(function (response) {
+                        var tempval = response.data;
+                        if (tempval != "-1") {
+                            // Update star button text
+                            if ($scope.meta.MyStar != "true") {
+                                $scope.meta.MyStar = "true";
+                            } else {
+                                $scope.meta.MyStar = "false";
+                            }
+                            $scope.updateStarsText();
+
+                            // Update displayed star count
+                            $scope.meta.Stars = tempval;
+                        }
+                    })
+            }
+        };
+
+        // Update the close button label as appropriate for text area content
+        $scope.closeLabel = "Close discussion";
+        $scope.updateCloseButton = function() {
+            var txt = document.getElementById("comtext").value;
+            if (txt.length > 0) {
+                $scope.closeLabel = "Add comment and close discussion";
+            } else {
+                $scope.closeLabel = "Close discussion";
+            }
+        };
+
+        // Update star button text to say "Stars" or "Unstar"
+        $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
+        $scope.updateStarsText = function() {
+            if ($scope.meta.MyStar != "true") {
+                $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
+            } else {
+                $scope.starsText = "<i class=\"fa fa-star\"></i> Unstar";
+            }
+        };
+        $scope.updateStarsText();
+
+        // Auth0
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+        $scope.showLock = function() {
+            lock.show();
+        };
+    });
+</script>
+</body>
+</html>
+[[ end ]]

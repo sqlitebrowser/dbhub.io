@@ -164,6 +164,76 @@ ALTER SEQUENCE database_uploads_up_id_seq OWNED BY database_uploads.up_id;
 
 
 --
+-- Name: discussion_comments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE discussion_comments (
+    com_id bigint NOT NULL,
+    disc_id bigint NOT NULL,
+    commenter bigint NOT NULL,
+    date_created timestamp with time zone DEFAULT now() NOT NULL,
+    body text NOT NULL,
+    db_id bigint
+);
+
+
+--
+-- Name: discussion_comments_com_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE discussion_comments_com_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: discussion_comments_com_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE discussion_comments_com_id_seq OWNED BY discussion_comments.com_id;
+
+
+--
+-- Name: discussions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE discussions (
+    internal_id bigint NOT NULL,
+    db_id bigint NOT NULL,
+    creator bigint NOT NULL,
+    date_created timestamp with time zone DEFAULT now() NOT NULL,
+    title text NOT NULL,
+    description text NOT NULL,
+    open boolean DEFAULT true NOT NULL,
+    disc_id integer DEFAULT 1 NOT NULL,
+    last_modified timestamp with time zone DEFAULT now() NOT NULL,
+    comment_count integer DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: discussions_disc_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE discussions_disc_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: discussions_disc_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE discussions_disc_id_seq OWNED BY discussions.internal_id;
+
+
+--
 -- Name: sqlite_databases; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -280,6 +350,20 @@ ALTER TABLE ONLY database_uploads ALTER COLUMN up_id SET DEFAULT nextval('databa
 
 
 --
+-- Name: discussion_comments com_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussion_comments ALTER COLUMN com_id SET DEFAULT nextval('discussion_comments_com_id_seq'::regclass);
+
+
+--
+-- Name: discussions internal_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussions ALTER COLUMN internal_id SET DEFAULT nextval('discussions_disc_id_seq'::regclass);
+
+
+--
 -- Name: sqlite_databases db_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -331,6 +415,22 @@ ALTER TABLE ONLY database_stars
 
 ALTER TABLE ONLY database_uploads
     ADD CONSTRAINT database_uploads_pkey PRIMARY KEY (up_id);
+
+
+--
+-- Name: discussion_comments discussion_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussion_comments
+    ADD CONSTRAINT discussion_comments_pkey PRIMARY KEY (com_id);
+
+
+--
+-- Name: discussions discussions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussions
+    ADD CONSTRAINT discussions_pkey PRIMARY KEY (internal_id);
 
 
 --
@@ -423,6 +523,13 @@ CREATE INDEX fki_database_uploads_user_id_fkey ON database_uploads USING btree (
 
 
 --
+-- Name: fki_discussion_comments_db_id_fkey; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fki_discussion_comments_db_id_fkey ON discussion_comments USING btree (db_id);
+
+
+--
 -- Name: users_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -490,6 +597,46 @@ ALTER TABLE ONLY database_uploads
 
 ALTER TABLE ONLY database_uploads
     ADD CONSTRAINT database_uploads_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: discussion_comments discussion_comments_commenter_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussion_comments
+    ADD CONSTRAINT discussion_comments_commenter_fkey FOREIGN KEY (commenter) REFERENCES users(user_id);
+
+
+--
+-- Name: discussion_comments discussion_comments_db_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussion_comments
+    ADD CONSTRAINT discussion_comments_db_id_fkey FOREIGN KEY (db_id) REFERENCES sqlite_databases(db_id);
+
+
+--
+-- Name: discussion_comments discussion_comments_disc_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussion_comments
+    ADD CONSTRAINT discussion_comments_disc_id_fkey FOREIGN KEY (disc_id) REFERENCES discussions(internal_id);
+
+
+--
+-- Name: discussions discussions_db_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussions
+    ADD CONSTRAINT discussions_db_id_fkey FOREIGN KEY (db_id) REFERENCES sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: discussions discussions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussions
+    ADD CONSTRAINT discussions_user_id_fkey FOREIGN KEY (creator) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

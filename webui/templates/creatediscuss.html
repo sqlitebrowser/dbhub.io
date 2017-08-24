@@ -1,0 +1,95 @@
+[[ define "createDiscussionPage" ]]
+<!doctype html>
+<html ng-app="DBHub" ng-controller="createDiscussionView">
+[[ template "head" . ]]
+<body>
+[[ template "header" . ]]
+<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row">
+        <div class="col-md-1">
+            &nbsp;
+        </div>
+        <div class="col-md-10">
+            <h2 style="text-align: center;">Create a new discussion</h2>
+            <form action="/x/creatediscuss" method="post">
+                <table class="table table-striped table-responsive">
+                    <tr>
+                        <th style="vertical-align: middle;" width="25%">Title:</th>
+                        <td>
+                            <input id="title" name="title" size="50" maxlength="80"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top;">
+                            <b>Description</b><br /><br />
+                            <i>Markdown (<a href="http://commonmark.org" target="_blank">CommonMark</a> format) is supported</i></td>
+                        <td>
+                            <div>
+                                <uib-tabset active="active">
+                                    <uib-tab index="0">
+                                        <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
+                                        <textarea id="disctxt" name="disctxt" cols="80" rows="10" style="margin-top: 2px;" placeholder="Type in the discussion details then click the 'Create it' button"></textarea>
+                                    </uib-tab>
+                                    <uib-tab index="1" select="getMarkdown()">
+                                        <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
+                                        <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
+                                    </uib-tab>
+                                </uib-tabset>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div style="text-align: center;">
+                                <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
+                                <input type="hidden" name="folder" value="/">
+                                <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
+                                <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelCreate()">
+                                <input type="submit" class="btn btn-success" value="Create it">
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        <div class="col-md-1">
+            &nbsp;
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('createDiscussionView', function($scope, $http, $httpParamSerializerJQLike) {
+        // Handler for the cancel button.  Just bounces back to the commits page
+        $scope.cancelCreate = function() {
+            window.location = "/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]";
+        };
+
+        // Render markdown preview
+        $scope.markDownPreview = "";
+        $scope.getMarkdown = function() {
+            // Retrieve latest markdown text from the text area
+            var txt = document.getElementById("disctxt").value;
+
+            // Call the server, asking for a rendered version of the markdown
+            $http({
+                method: "POST",
+                url: "/x/markdownpreview/",
+                data: $httpParamSerializerJQLike({"mkdown": txt}),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) { $scope.markDownPreview = response.data; });
+        };
+
+        // Auth0
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+        $scope.showLock = function() {
+            lock.show();
+        };
+    });
+</script>
+</body>
+</html>
+[[ end ]]

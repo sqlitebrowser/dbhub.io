@@ -290,6 +290,178 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		http.StatusTemporaryRedirect)
 }
 
+// Receives incoming info for adding a comment to an existing discussion
+func createCommentHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract and validate the form variables
+	dbOwner, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
+		return
+	}
+
+	// Ensure a discussion ID was given
+	a := r.PostFormValue("discid") // Optional
+	var discID int
+	if a != "" {
+		discID, err = strconv.Atoi(a)
+		if err != nil {
+			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+				com.GetCurrentFunctionName(), err)
+			errorPage(w, r, http.StatusBadRequest, "Error when parsing discussion id value")
+			return
+		}
+	}
+
+	// Check if the discussion should also be closed
+	discClose := false
+	c := r.PostFormValue("close")
+	if c == "true" {
+		discClose = true
+	}
+
+	// If comment text was provided, then validate it.  Note that if the flag for closing the discussion has been set,
+	// then comment text isn't required.  In all other situations it is
+	txt := r.PostFormValue("comtext")
+	if txt == "" && discClose == false {
+		errorPage(w, r, http.StatusBadRequest, "Comment can't be empty!")
+		return
+	}
+	var comText string
+	if discClose == false || (discClose == true && txt != "") {
+		err = com.Validate.Var(txt, "markdownsource")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Invalid characters in the new discussions' main text field")
+			return
+		}
+		comText = txt
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Add the comment to PostgreSQL
+	err = com.StoreComment(dbOwner, dbFolder, dbName, loggedInUser, discID, comText, discClose)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Bounce to the discussions page
+	http.Redirect(w, r, fmt.Sprintf("/discuss/%s%s%s", dbOwner, dbFolder, dbName), http.StatusTemporaryRedirect)
+}
+
+// Receives incoming info from the "Create a new discussion" page, adds the discussion to PostgreSQL,
+// then bounces to the discussion page
+func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Extract and validate the form variables
+	dbOwner, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
+		return
+	}
+
+	// Validate the discussions' title
+	tl := r.PostFormValue("title")
+	err = com.Validate.Var(tl, "markdownsource,max=120") // 120 seems a reasonable first guess.
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Invalid characters in the new discussions' title")
+		return
+	}
+	discTitle := tl
+
+	// Validate the discussions' text
+	txt := r.PostFormValue("disctxt")
+	if txt == "" {
+		errorPage(w, r, http.StatusBadRequest, "Discussion body can't be empty!")
+		return
+	}
+	err = com.Validate.Var(txt, "markdownsource")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Invalid characters in the new discussions' main text field")
+		return
+	}
+	discText := txt
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Add the discussion detail to PostgreSQL
+	err = com.StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, discTitle, discText)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Invalidate the memcache data for the database, so the new discussion count gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Bounce to the discussions page
+	http.Redirect(w, r, fmt.Sprintf("/discuss/%s%s%s", dbOwner, dbFolder, dbName), http.StatusTemporaryRedirect)
+}
+
 func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -1831,7 +2003,9 @@ func main() {
 	http.HandleFunc("/confirmdelete/", logReq(confirmDeletePage))
 	http.HandleFunc("/contributors/", logReq(contributorsPage))
 	http.HandleFunc("/createbranch/", logReq(createBranchPage))
+	http.HandleFunc("/creatediscuss/", logReq(createDiscussionPage))
 	http.HandleFunc("/createtag/", logReq(createTagPage))
+	http.HandleFunc("/discuss/", logReq(discussPage))
 	http.HandleFunc("/forks/", logReq(forksPage))
 	http.HandleFunc("/logout", logReq(logoutHandler))
 	http.HandleFunc("/pref", logReq(prefHandler))
@@ -1845,6 +2019,8 @@ func main() {
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
 	http.HandleFunc("/x/createbranch", logReq(createBranchHandler))
+	http.HandleFunc("/x/createcomment/", logReq(createCommentHandler))
+	http.HandleFunc("/x/creatediscuss", logReq(createDiscussHandler))
 	http.HandleFunc("/x/createtag", logReq(createTagHandler))
 	http.HandleFunc("/x/deletebranch/", logReq(deleteBranchHandler))
 	http.HandleFunc("/x/deletecommit/", logReq(deleteCommitHandler))

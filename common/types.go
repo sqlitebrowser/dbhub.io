@@ -250,6 +250,26 @@ type DBInfo struct {
 	Watchers      int
 }
 
+type DiscussionEntry struct {
+	Body          string    `json:"body"`
+	BodyRendered  string    `json:"body_rendered"`
+	CommentCount  int       `json:"comment_count"`
+	Creator       string    `json:"creator"`
+	Date_created  time.Time `json:"creation_date"`
+	ID            int       `json:"disc_id"`
+	Last_modified time.Time `json:"last_modified"`
+	Open          bool      `json:"open"`
+	Title         string    `json:"title"`
+}
+
+type DiscussionCommentEntry struct {
+	Body         string    `json:"body"`
+	BodyRendered string    `json:"body_rendered"`
+	Commenter    string    `json:"commenter"`
+	Date_created time.Time `json:"creation_date"`
+	ID           int       `json:"com_id"`
+}
+
 type ForkEntry struct {
 	DBName     string
 	Folder     string
