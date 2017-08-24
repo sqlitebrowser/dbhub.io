@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -302,6 +303,14 @@ func CreateDBTreeID(entries []DBTreeEntry) string {
 	}
 	s := sha256.Sum256(b.Bytes())
 	return hex.EncodeToString(s[:])
+}
+
+// Returns the name of the function this was called from
+func GetCurrentFunctionName() (FuncName string) {
+	stk := make([]uintptr, 1)
+	runtime.Callers(2, stk[:])
+	FuncName = runtime.FuncForPC(stk[0]).Name() + "()"
+	return
 }
 
 // Look for the next child fork in a fork tree
