@@ -297,7 +297,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	validSession := false
 	sess, err := store.Get(r, "dbhub-user")
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	u := sess.Values["UserName"]
@@ -308,28 +308,33 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure we have a valid logged in user
 	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
 		return
 	}
 
 	// Extract and validate the form variables
 	dbOwner, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing or incorrect data supplied")
 		return
 	}
 
 	// Ensure a discussion ID was given
-	a := r.PostFormValue("discid") // Optional
-	var discID int
-	if a != "" {
-		discID, err = strconv.Atoi(a)
-		if err != nil {
-			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
-				com.GetCurrentFunctionName(), err)
-			errorPage(w, r, http.StatusBadRequest, "Error when parsing discussion id value")
-			return
-		}
+	a := r.PostFormValue("discid")
+	if a == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing discussion id")
+		return
+	}
+	discID, err := strconv.Atoi(a)
+	if err != nil {
+		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+			com.GetCurrentFunctionName(), err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error when parsing discussion id value")
+		return
 	}
 
 	// Check if the discussion should also be closed
@@ -343,14 +348,16 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// then comment text isn't required.  In all other situations it is
 	txt := r.PostFormValue("comtext")
 	if txt == "" && discClose == false {
-		errorPage(w, r, http.StatusBadRequest, "Comment can't be empty!")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Comment can't be empty!")
 		return
 	}
 	var comText string
 	if discClose == false || (discClose == true && txt != "") {
 		err = com.Validate.Var(txt, "markdownsource")
 		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, "Invalid characters in the new discussions' main text field")
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Invalid characters in the new discussions' main text field")
 			return
 		}
 		comText = txt
@@ -359,24 +366,26 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
-			dbName))
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
 		return
 	}
 
 	// Add the comment to PostgreSQL
 	err = com.StoreComment(dbOwner, dbFolder, dbName, loggedInUser, discID, comText, discClose)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
-	// Bounce to the discussions page
-	http.Redirect(w, r, fmt.Sprintf("/discuss/%s%s%s", dbOwner, dbFolder, dbName), http.StatusTemporaryRedirect)
+	// Send a success message
+	w.WriteHeader(http.StatusOK)
 }
 
 // Receives incoming info from the "Create a new discussion" page, adds the discussion to PostgreSQL,
@@ -883,7 +892,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	validSession := false
 	sess, err := store.Get(r, "dbhub-user")
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	u := sess.Values["UserName"]
@@ -1086,6 +1095,116 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update succeeded
+	w.WriteHeader(http.StatusOK)
+}
+
+// This function deletes a given comment from a discussion.
+func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
+		return
+	}
+
+	// Extract and validate the form variables
+	dbOwner, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing or incorrect data supplied")
+		return
+	}
+
+	// Ensure a discussion ID was given
+	a := r.PostFormValue("discid")
+	if a == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing discussion id")
+		return
+	}
+	discID, err := strconv.Atoi(a)
+	if err != nil {
+		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+			com.GetCurrentFunctionName(), err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error when parsing discussion id value")
+		return
+	}
+
+	// Ensure a comment ID was given
+	a = r.PostFormValue("comid")
+	if a == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing comment id")
+		return
+	}
+	comID, err := strconv.Atoi(a)
+	if err != nil {
+		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+			com.GetCurrentFunctionName(), err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error when parsing comment id value")
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if !exists {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		return
+	}
+
+	// Check if the logged in user is allowed to delete the requested comment
+	deleteAllowed := false
+	if dbOwner == loggedInUser {
+		// The database owner can delete any discussion comment on their databases
+		deleteAllowed = true
+	} else {
+		// Retrieve the details for the requested comment, so we can check if the logged in user is the comment creator
+		rq, err := com.DiscussionComments(dbOwner, dbFolder, dbName, discID, comID)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+		if rq[0].Commenter == loggedInUser {
+			deleteAllowed = true
+		}
+	}
+
+	// If the logged in user isn't allowed to delete the requested comment, then reject the request
+	if !deleteAllowed {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Delete the comment from PostgreSQL
+	err = com.DeleteComment(dbOwner, dbFolder, dbName, discID, comID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -2023,6 +2142,7 @@ func main() {
 	http.HandleFunc("/x/creatediscuss", logReq(createDiscussHandler))
 	http.HandleFunc("/x/createtag", logReq(createTagHandler))
 	http.HandleFunc("/x/deletebranch/", logReq(deleteBranchHandler))
+	http.HandleFunc("/x/deletecomment/", logReq(deleteCommentHandler))
 	http.HandleFunc("/x/deletecommit/", logReq(deleteCommitHandler))
 	http.HandleFunc("/x/deletedatabase/", logReq(deleteDatabaseHandler))
 	http.HandleFunc("/x/deleterelease/", logReq(deleteReleaseHandler))

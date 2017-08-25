@@ -1295,7 +1295,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	// If a specific discussion ID was given, then we display the discussion comments page
 	if pageData.SelectedID != 0 {
 		// Load the comments for the requested discussion
-		pageData.CommentList, err = com.DiscussionComments(dbOwner, dbFolder, dbName, pageData.SelectedID)
+		pageData.CommentList, err = com.DiscussionComments(dbOwner, dbFolder, dbName, pageData.SelectedID, 0)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return

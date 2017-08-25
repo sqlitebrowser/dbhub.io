@@ -481,6 +481,37 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 	return commitID, nil
 }
 
+// Delete a specific comment from a discussion
+func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, comID int) error {
+	// Update the fork count for the root database
+	dbQuery := `
+		DELETE FROM discussion_comments
+		WHERE db_id = (
+				SELECT db.db_id
+				FROM sqlite_databases AS db
+				WHERE db.user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
+					AND folder = $2
+					AND db_name = $3
+			)
+			AND disc_id = $4
+			AND com_id = $5`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID)
+	if err != nil {
+		log.Printf("Deleting comment '%d' from '%s%s%s', discussion '%d' failed: %v\n", comID, dbOwner,
+			dbFolder, dbName, discID, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected when deleting comment '%d' from database '%s%s%s, discussion '%d''\n",
+			numRows, comID, dbOwner, dbFolder, dbName, discID)
+	}
+	return nil
+}
+
 // Deletes a database from PostgreSQL.
 func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 	// TODO: At some point we'll need to figure out a garbage collection approach to remove databases from Minio which
@@ -932,10 +963,12 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discID int) (li
 }
 
 // Returns the list of comments for a given discussion.
+// If a non-0 comID value is passed, it will only return the details for that specific comment in the discussion.
+// Otherwise it will return a list of all comments for a given discussion
 // Note - This returns a slice instead of a map.  We use a slice because it lets us use an ORDER BY clause in the SQL
 //        and preserve the returned order (maps don't preserve order).  If in future we no longer need to preserve the
 //        order, it might be useful to switch to using a map instead since they're often simpler to work with.
-func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID int) (list []DiscussionCommentEntry, err error) {
+func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID int, comID int) (list []DiscussionCommentEntry, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -951,7 +984,12 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 		FROM discussion_comments AS com, d, users
 		WHERE com.db_id = d.db_id
 			AND com.disc_id = $4
-			AND com.commenter = users.user_id
+			AND com.commenter = users.user_id`
+	if comID != 0 {
+		dbQuery += fmt.Sprintf(`
+			AND com.com_id = %d`, comID)
+	}
+	dbQuery += `
 		ORDER BY date_created ASC`
 	var rows *pgx.Rows
 	rows, err = pdb.Query(dbQuery, dbOwner, dbFolder, dbName, discID)

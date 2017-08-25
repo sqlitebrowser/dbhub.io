@@ -99,26 +99,26 @@
     <div class="row">
         <div class="col-md-12">
             <span ng-if="DiscussionList != ''">
-                <span ng-repeat="row in DiscussionList">
-                    <table class="table table-responsive" style="margin-bottom: 0px;">
-                        <tbody>
-                            <tr style="border: none;">
-                                <td width="10%" style="text-align: center; vertical-align: text-top; border-top: none;">
-                                    <div style="font-size: x-large; color: #333;"># {{ row.disc_id }}</div>
-                                    <div ng-if="row.open == true" class="btn btn-success" style="font-size: medium;"><i class="fa fa-minus-square-o"></i> Open</div>
-                                    <div ng-if="row.open != true" class="btn btn-danger" style="font-size: medium;"><i class="fa fa-check-square-o"></i> Closed</div>
-                                </td>
-                                <td style="border: none;">
-                                    <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
-                                        <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ row.disc_id }}" style="font-size: x-large; color: #333;">{{ row.title }}</a><br />
-                                        Opened on {{ row.creation_date | date : 'd MMM y h:mm a' }} by <a class="blackLink" href="/{{ row.creator }}">{{ row.creator }}</a>
+                <table class="table table-responsive" style="margin-bottom: 0px;">
+                    <tbody>
+                        <tr style="border: none;">
+                            <td width="10%" style="text-align: center; vertical-align: text-top; border-top: none;">
+                                <div style="font-size: x-large; color: #333;"># {{ Disc.disc_id }}</div>
+                                <div ng-if="Disc.open == true" class="btn btn-success" style="font-size: medium;"><i class="fa fa-minus-square-o"></i> Open</div>
+                                <div ng-if="Disc.open != true" class="btn btn-danger" style="font-size: medium;"><i class="fa fa-check-square-o"></i> Closed</div>
+                            </td>
+                            <td style="border: none;">
+                                <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
+                                    <div>
+                                        <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ Disc.disc_id }}" style="font-size: x-large; color: #333;">{{ Disc.title }}</a>
                                     </div>
-                                    <div style="padding-left: 10px; padding-top: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;" ng-bind-html="row.body_rendered"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </span>
+                                    <div>Opened on {{ Disc.creation_date | date : 'd MMM y h:mm a' }} by <a class="blackLink" href="/{{ Disc.creator }}">{{ Disc.creator }}</a></div>
+                                </div>
+                                <div style="padding-left: 10px; padding-top: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;" ng-bind-html="Disc.body_rendered"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
                 <span ng-repeat="row in CommentList">
                     <table class="table table-responsive" style="margin-bottom: 0px;">
                         <tbody>
@@ -127,6 +127,9 @@
                                 <td style="border: none;">
                                     <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
                                         <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> commented on {{ row.creation_date | date : 'd MMM y h:mm a' }}
+                                        <span ng-if="row.commenter == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
+                                            <a class="blackLink" ng-click="deleteComment(row.com_id)"><i class="fa fa-trash-o fa-fw"></i></a>
+                                        </span>
                                     </div>
                                     <div style="padding-left: 10px; padding-top: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;" ng-bind-html="row.body_rendered"></div>
                                 </td>
@@ -153,7 +156,7 @@
                                 <input type="hidden" name="folder" value="/">
                                 <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
                                 <input type="hidden" name="discid" value="[[ .SelectedID ]]">
-                                <input type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
+                                <input ng-if="Disc.open === true" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
                                 <input type="submit" class="btn btn-success" value="Add comment" style="margin-top: 10px;" ng-click="addComment(false)">
                             </div>
                         </div>
@@ -196,8 +199,15 @@
                 Loggedin: "false",
             [[ end ]]
         }
-        $scope.DiscussionList = [[ .DiscussionList ]];
+        $scope.Disc = [[ .DiscussionList ]][0];
         $scope.CommentList = [[ .CommentList ]];
+
+        // Set the initial Close button label according to the discussion open/closed state
+        if ($scope.Disc.open === true) {
+            $scope.closeLabel = "Close discussion";
+        } else {
+            $scope.closeLabel = "Reopen discussion";
+        }
 
         // Add a comment to the discussion
         $scope.statusMessage = "";
@@ -205,6 +215,7 @@
         $scope.addComment = function(alsoClose) {
             // Retrieve the comment text
             var txt = document.getElementById("comtext").value;
+
             // Send the comment to the server
             $http({
                 method: "POST",
@@ -236,6 +247,30 @@
             } else {
                 window.location = '/creatediscuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
             }
+        };
+
+        // Deletes a comment
+        $scope.deleteComment = function(comID) {
+            // Send the comment to the server
+            $http({
+                method: "POST",
+                url: "/x/deletecomment/",
+                data: $httpParamSerializerJQLike({
+                    "comid": comID,
+                    "folder": "/",
+                    "discid": [[ .SelectedID ]],
+                    "dbname": [[ .Meta.Database ]],
+                    "username": [[ .Meta.Owner ]],
+                    }),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // Deleting the comment succeeded, so reload the page
+                window.location = '/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
+            }, function failure(response) {
+                // Deleting the comment failed, so display an error message
+                $scope.statusMessageColour = "Red";
+                $scope.statusMessage = "Deleting comment failed";
+            });
         };
 
         // Render markdown preview
@@ -290,13 +325,20 @@
         };
 
         // Update the close button label as appropriate for text area content
-        $scope.closeLabel = "Close discussion";
         $scope.updateCloseButton = function() {
             var txt = document.getElementById("comtext").value;
             if (txt.length > 0) {
-                $scope.closeLabel = "Add comment and close discussion";
+                if ($scope.Disc.open === true) {
+                    $scope.closeLabel = "Add comment and close discussion";
+                } else {
+                    $scope.closeLabel = "Add comment and reopen discussion";
+                }
             } else {
-                $scope.closeLabel = "Close discussion";
+                if ($scope.Disc.open === true) {
+                    $scope.closeLabel = "Close discussion";
+                } else {
+                    $scope.closeLabel = "Reopen discussion";
+                }
             }
         };
 
