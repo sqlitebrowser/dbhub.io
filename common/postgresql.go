@@ -863,22 +863,22 @@ func DeleteLatestBranchCommit(dbOwner string, dbFolder string, dbName string, br
 	delete(commitList, commitID)
 	if !foundElsewhere {
 		dbQuery = `
-		WITH our_db AS (
-			SELECT db_id
-			FROM sqlite_databases
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE user_name = $1
-				)
-				AND folder = $2
-				AND db_name = $3
-				AND is_deleted = false
-		)
-		UPDATE sqlite_databases AS db
-		SET commit_list = $4
-		FROM our_db
-		WHERE db.db_id = our_db.db_id`
+			WITH our_db AS (
+				SELECT db_id
+				FROM sqlite_databases
+				WHERE user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
+					AND folder = $2
+					AND db_name = $3
+					AND is_deleted = false
+			)
+			UPDATE sqlite_databases AS db
+			SET commit_list = $4
+			FROM our_db
+			WHERE db.db_id = our_db.db_id`
 		commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commitList)
 		if err != nil {
 			log.Printf("Removing commit '%s' failed for database '%s%s%s': %v\n", commitID, dbOwner, dbFolder, dbName,
@@ -980,7 +980,7 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 			WHERE db.user_id = u.user_id
 				AND db.folder = $2
 				AND db.db_name = $3)
-		SELECT com.com_id, users.user_name, com.date_created, com.body
+		SELECT com.com_id, users.user_name, com.date_created, com.body, com.entry_type
 		FROM discussion_comments AS com, d, users
 		WHERE com.db_id = d.db_id
 			AND com.disc_id = $4
@@ -999,7 +999,7 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 	}
 	for rows.Next() {
 		var oneRow DiscussionCommentEntry
-		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &oneRow.Date_created, &oneRow.Body)
+		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &oneRow.Date_created, &oneRow.Body, &oneRow.EntryType)
 		if err != nil {
 			log.Printf("Error retrieving comment list for database '%s%s%s', discussion '%d': %v\n", dbOwner,
 				dbFolder, dbName, discID, err)
@@ -2216,20 +2216,85 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 	var commandTag pgx.CommandTag
 	if comText != "" {
 		dbQuery = `
-		WITH d AS (
-			SELECT db.db_id
-			FROM sqlite_databases AS db
-			WHERE db.user_id = (
-					SELECT user_id
-					FROM users
-					WHERE user_name = $1
+			WITH d AS (
+				SELECT db.db_id
+				FROM sqlite_databases AS db
+				WHERE db.user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
+					AND folder = $2
+					AND db_name = $3
+			)
+			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
+			SELECT (SELECT db_id FROM d), $5, (SELECT user_id FROM users WHERE user_name = $4), $6, 'txt'`
+		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, comText)
+		if err != nil {
+			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
+				dbName, discID, err)
+			return err
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf(
+				"Wrong number of rows (%v) affected when adding a comment to database '%s%s%s', discussion '%d'\n",
+				numRows, dbOwner, dbFolder, dbName, discID)
+		}
+	}
+
+	// If the discussion is to be closed or reopened, insert a close or reopen record as appropriate
+	var discState bool
+	if discClose == true {
+		// Find out if the discussion is presently open or closed
+		dbQuery := `
+			SELECT open
+			FROM discussions
+			WHERE db_id = (
+					SELECT db.db_id
+					FROM sqlite_databases AS db
+					WHERE db.user_id = (
+							SELECT user_id
+							FROM users
+							WHERE user_name = $1
+						)
+						AND folder = $2
+						AND db_name = $3
 				)
-				AND folder = $2
-				AND db_name = $3
-		)
-		INSERT INTO discussion_comments (db_id, disc_id, commenter, body)
-		SELECT (SELECT db_id FROM d), $5, (SELECT user_id FROM users WHERE user_name = $4), $6`
-		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, comText)
+				AND disc_id = $4`
+		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState)
+		if err != nil {
+			log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", dbOwner,
+				dbFolder, dbName, discID, err)
+			return err
+		}
+
+		var eventTxt, eventType string
+		if discState {
+			// Discussion is open, so a close event should be inserted
+			eventTxt = "close"
+			eventType = "cls"
+		} else {
+			// Discussion is closed, so a re-open event should be inserted
+			eventTxt = "reopen"
+			eventType = "rop"
+		}
+
+		// Insert the appropriate close or reopen record
+		dbQuery = `
+			WITH d AS (
+				SELECT db.db_id
+				FROM sqlite_databases AS db
+				WHERE db.user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
+					AND folder = $2
+					AND db_name = $3
+			)
+			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
+			SELECT (SELECT db_id FROM d), $5, (SELECT user_id FROM users WHERE user_name = $4), $6, $7`
+		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, eventTxt, eventType)
 		if err != nil {
 			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
 				dbName, discID, err)
@@ -2247,7 +2312,13 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 		UPDATE discussions
 		SET last_modified = now()`
 	if discClose == true {
-		dbQuery += `, open = false`
+		if discState {
+			// Discussion is open, so set it to closed
+			dbQuery += `, open = false`
+		} else {
+			// Discussion is closed, so set it to open
+			dbQuery += `, open = true`
+		}
 	}
 	if comText != "" {
 		dbQuery += `, comment_count = comment_count + 1`
@@ -2265,7 +2336,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 					AND db_name = $3
 			)
 			AND disc_id = $4`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, discID)
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID)
 	if err != nil {
 		log.Printf("Updating last modified date for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner,
 			dbFolder, dbName, discID, err)
@@ -2486,24 +2557,24 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 	// Store the licence in PostgreSQL
 	sha := sha256.Sum256(txt)
 	dbQuery := `
-	WITH u AS (
-		SELECT user_id
-		FROM users
-		WHERE user_name = $1
-	)
-	INSERT INTO database_licences (user_id, friendly_name, lic_sha256, licence_text, licence_url, display_order,
-		full_name, file_format)
-	SELECT (SELECT user_id FROM u), $2, $3, $4, $5, $6, $7, $8
-	ON CONFLICT (user_id, friendly_name)
-		DO UPDATE
-		SET friendly_name = $2,
-			lic_sha256 = $3,
-			licence_text = $4,
-			licence_url = $5,
-			user_id = (SELECT user_id FROM u),
-			display_order = $6,
-			full_name = $7,
-			file_format = $8`
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		)
+		INSERT INTO database_licences (user_id, friendly_name, lic_sha256, licence_text, licence_url, display_order,
+			full_name, file_format)
+		SELECT (SELECT user_id FROM u), $2, $3, $4, $5, $6, $7, $8
+		ON CONFLICT (user_id, friendly_name)
+			DO UPDATE
+			SET friendly_name = $2,
+				lic_sha256 = $3,
+				licence_text = $4,
+				licence_url = $5,
+				user_id = (SELECT user_id FROM u),
+				display_order = $6,
+				full_name = $7,
+				file_format = $8`
 	commandTag, err := pdb.Exec(dbQuery, userName, licenceName, hex.EncodeToString(sha[:]), txt, url, orderNum,
 		fullName, fileFormat)
 	if err != nil {

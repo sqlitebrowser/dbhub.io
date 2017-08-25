@@ -337,15 +337,15 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the discussion should also be closed
+	// Check if the discussion should also be closed or reopened
 	discClose := false
 	c := r.PostFormValue("close")
 	if c == "true" {
 		discClose = true
 	}
 
-	// If comment text was provided, then validate it.  Note that if the flag for closing the discussion has been set,
-	// then comment text isn't required.  In all other situations it is
+	// If comment text was provided, then validate it.  Note that if the flag for closing/reopening the discussion has
+	// been set, then comment text isn't required.  In all other situations it is
 	txt := r.PostFormValue("comtext")
 	if txt == "" && discClose == false {
 		w.WriteHeader(http.StatusBadRequest)

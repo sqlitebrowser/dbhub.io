@@ -120,7 +120,7 @@
                     </tbody>
                 </table>
                 <span ng-repeat="row in CommentList">
-                    <table class="table table-responsive" style="margin-bottom: 0px;">
+                    <table ng-if="row.entry_type == 'txt'" class="table table-responsive" style="margin-bottom: 0px;">
                         <tbody>
                             <tr>
                                 <td style="border: none;" width="10%">&nbsp;</td>
@@ -136,6 +136,8 @@
                             </tr>
                         </tbody>
                     </table>
+                    <div ng-if="row.entry_type == 'cls'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-ban text-danger fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">closed this on</span> {{ row.creation_date | date : 'd MMM y @ h:mm a' }}.</div>
+                    <div ng-if="row.entry_type == 'rop'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-recycle text-success fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">reopened this on</span> {{ row.creation_date | date : 'd MMM y @ h:mm a' }}.</div>
                 </span>
                 [[ if .Meta.LoggedInUser ]]
                     <div class="row">
@@ -156,7 +158,7 @@
                                 <input type="hidden" name="folder" value="/">
                                 <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
                                 <input type="hidden" name="discid" value="[[ .SelectedID ]]">
-                                <input ng-if="Disc.open === true" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
+                                <input type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
                                 <input type="submit" class="btn btn-success" value="Add comment" style="margin-top: 10px;" ng-click="addComment(false)">
                             </div>
                         </div>
@@ -235,7 +237,7 @@
             }, function failure(response) {
                 // Adding the comment failed, so display an error message
                 $scope.statusMessageColour = "Red";
-                $scope.statusMessage = "Adding comment failed";
+                $scope.statusMessage = "Adding comment failed: " + response.data;
             });
         };
 

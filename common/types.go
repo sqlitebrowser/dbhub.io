@@ -262,12 +262,21 @@ type DiscussionEntry struct {
 	Title         string    `json:"title"`
 }
 
+type DiscussionCommentType string
+
+const (
+	TEXT   DiscussionCommentType = "txt"
+	CLOSE                        = "cls"
+	REOPEN                       = "rop"
+)
+
 type DiscussionCommentEntry struct {
-	Body         string    `json:"body"`
-	BodyRendered string    `json:"body_rendered"`
-	Commenter    string    `json:"commenter"`
-	Date_created time.Time `json:"creation_date"`
-	ID           int       `json:"com_id"`
+	Body         string                `json:"body"`
+	BodyRendered string                `json:"body_rendered"`
+	Commenter    string                `json:"commenter"`
+	Date_created time.Time             `json:"creation_date"`
+	EntryType    DiscussionCommentType `json:"entry_type"`
+	ID           int                   `json:"com_id"`
 }
 
 type ForkEntry struct {

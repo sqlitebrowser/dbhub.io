@@ -173,7 +173,8 @@ CREATE TABLE discussion_comments (
     commenter bigint NOT NULL,
     date_created timestamp with time zone DEFAULT now() NOT NULL,
     body text NOT NULL,
-    db_id bigint
+    db_id bigint,
+    entry_type text DEFAULT 'txt'::text NOT NULL
 );
 
 
