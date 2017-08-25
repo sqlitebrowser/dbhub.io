@@ -4,6 +4,7 @@
 
 .blackLink {
     color: #181818;
+    cursor: pointer;
 }
 
 .blackLink:hover {
