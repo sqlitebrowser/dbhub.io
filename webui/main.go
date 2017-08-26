@@ -2162,7 +2162,7 @@ func main() {
 	http.HandleFunc("/x/updatetag/", logReq(updateTagHandler))
 	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
 
-	// Javascript, CSS, and related files
+	// CSS
 	http.HandleFunc("/css/bootstrap-3.3.7.min.css", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "css", "bootstrap-3.3.7.min.css"))
 	}))
@@ -2172,12 +2172,31 @@ func main() {
 	http.HandleFunc("/css/font-awesome-4.7.0.min.css", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "css", "font-awesome-4.7.0.min.css"))
 	}))
-	http.HandleFunc("/css/fontawesome-webfont.woff2", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "css", "fontawesome-webfont-4.7.0.woff2"))
-	}))
 	http.HandleFunc("/css/local.css", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "css", "local.css"))
 	}))
+
+	// Fonts
+	http.HandleFunc("/css/FontAwesome.otf", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "fonts", "FontAwesome-4.7.0.otf"))
+	}))
+	http.HandleFunc("/css/fontawesome-webfont.eot", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.eot"))
+	}))
+	http.HandleFunc("/css/fontawesome-webfont.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.svg"))
+	}))
+	http.HandleFunc("/css/fontawesome-webfont.ttf", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.ttf"))
+	}))
+	http.HandleFunc("/css/fontawesome-webfont.woff", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.woff"))
+	}))
+	http.HandleFunc("/css/fontawesome-webfont.woff2", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.woff2"))
+	}))
+
+	// Javascript
 	http.HandleFunc("/js/angular-1.6.5.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.6.5.min.js"))
 	}))
