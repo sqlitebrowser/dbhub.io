@@ -223,7 +223,7 @@
                 method: "POST",
                 url: "/x/createcomment/",
                 data: $httpParamSerializerJQLike({
-                    "comtext": txt,
+                    "comtext": encodeURIComponent(txt),
                     "close": alsoClose,
                     "folder": "/",
                     "discid": [[ .SelectedID ]],
@@ -285,7 +285,7 @@
             $http({
                 method: "POST",
                 url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": txt}),
+                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.markDownPreview = response.data; });
         };

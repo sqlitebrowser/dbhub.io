@@ -125,7 +125,7 @@
                 method: "POST",
                 url: "/x/deleterelease/",
                 data: $httpParamSerializerJQLike({
-                        "release": relName,
+                        "release": encodeURIComponent(relName),
                         "folder": "/",
                         "dbname": [[ .Meta.Database ]],
                         "username": [[ .Meta.Owner ]]
@@ -160,7 +160,7 @@
             $http({
                 method: "POST",
                 url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": rawTxt}),
+                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(rawTxt)}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 mkdnID.innerHTML = response.data;
@@ -177,12 +177,12 @@
                 method: "POST",
                 url: "/x/updaterelease/",
                 data: $httpParamSerializerJQLike({
-                        "release": relName,
+                        "release": encodeURIComponent(relName),
                         "folder": "/",
                         "dbname": [[ .Meta.Database ]],
                         "username": [[ .Meta.Owner ]],
-                        "newmsg": newDesc,
-                        "newrel": newName
+                        "newmsg": encodeURIComponent(newDesc),
+                        "newrel": encodeURIComponent(newName)
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {

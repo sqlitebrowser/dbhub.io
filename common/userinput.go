@@ -14,15 +14,21 @@ import (
 // Return the requested branch name, from get or post data.
 func GetFormBranch(r *http.Request) (string, error) {
 	// If no branch was given in the input, returns an empty string
-	c := r.FormValue("branch")
-	if c == "" {
+	a := r.FormValue("branch")
+	if a == "" {
 		return "", nil
 	}
-	err := Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+
+	// Unescape, then validate the branch name
+	b, err := url.QueryUnescape(a)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Invalid branch name: '%v'", c))
+		return "", err
 	}
-	return c, nil
+	err = Validate.Var(b, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Invalid branch name: '%v'", b))
+	}
+	return b, nil
 }
 
 // Return the requested database commit, from form data.
@@ -119,9 +125,15 @@ func GetFormSourceURL(r *http.Request) (sourceURL string, err error) {
 // Return the requested release name, from get or post data.
 func GetFormRelease(r *http.Request) (release string, err error) {
 	// If no release was given in the input, returns an empty string
-	c := r.FormValue("release")
-	if c == "" {
+	a := r.FormValue("release")
+	if a == "" {
 		return "", nil
+	}
+
+	// Unescape, then validate the release name
+	c, err := url.QueryUnescape(a)
+	if err != nil {
+		return "", err
 	}
 	err = Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
 	if err != nil {
@@ -133,9 +145,15 @@ func GetFormRelease(r *http.Request) (release string, err error) {
 // Return the requested tag name, from get or post data.
 func GetFormTag(r *http.Request) (tag string, err error) {
 	// If no tag was given in the input, returns an empty string
-	c := r.FormValue("tag")
-	if c == "" {
+	a := r.FormValue("tag")
+	if a == "" {
 		return "", nil
+	}
+
+	// Unescape, then validate the tag name
+	c, err := url.QueryUnescape(a)
+	if err != nil {
+		return "", err
 	}
 	err = Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
 	if err != nil {

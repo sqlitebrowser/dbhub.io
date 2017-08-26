@@ -142,28 +142,6 @@
             }
         };
 
-        // Retrieve and render markdown text
-        $scope.getMarkdown = function(rowDesc) {
-            var txtID = document.getElementById(rowDesc + "_desc");
-            if (txtID == null) {
-                // txtID is null when the page first renders (and we don't need it then anyway).  It's correctly set
-                // afterwards.
-                return;
-            }
-            var rawTxt = txtID.value;
-            var mkdnID = document.getElementById(rowDesc + "_mkdn");
-
-            // Call the server, asking for a rendered version of the markdown
-            $http({
-                method: "POST",
-                url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": rawTxt}),
-                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
-            }).then(function (response) {
-                mkdnID.innerHTML = response.data;
-            });
-        };
-
         // Switch between showing open vs closed discussions
         $scope.radioOpen = true;
         $scope.openClick = function(newValue) {

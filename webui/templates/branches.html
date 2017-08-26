@@ -142,7 +142,7 @@
                 method: "POST",
                 url: "/x/deletebranch/",
                 data: $httpParamSerializerJQLike({
-                        "branch": branchName,
+                        "branch": encodeURIComponent(branchName),
                         "folder": "/",
                         "dbname": [[ .Meta.Database ]],
                         "username": [[ .Meta.Owner ]]
@@ -180,7 +180,7 @@
             $http({
                 method: "POST",
                 url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": rawTxt}),
+                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(rawTxt)}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 mkdnID.innerHTML = response.data;
@@ -193,7 +193,7 @@
                 method: "POST",
                 url: "/x/setdefaultbranch/",
                 data: $httpParamSerializerJQLike({
-                        "branch": branchName,
+                        "branch": encodeURIComponent(branchName),
                         "folder": "/",
                         "dbname": [[ .Meta.Database ]],
                         "username": [[ .Meta.Owner ]]
@@ -218,12 +218,12 @@
                 method: "POST",
                 url: "/x/updatebranch/",
                 data: $httpParamSerializerJQLike({
-                        "branch": branchName,
+                        "branch": encodeURIComponent(branchName),
                         "folder": "/",
                         "dbname": [[ .Meta.Database ]],
                         "username": [[ .Meta.Owner ]],
-                        "newdesc": newDesc,
-                        "newbranch": newName
+                        "newdesc": encodeURIComponent(newDesc),
+                        "newbranch": encodeURIComponent(newName)
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -346,21 +347,28 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If comment text was provided, then validate it.  Note that if the flag for closing/reopening the discussion has
 	// been set, then comment text isn't required.  In all other situations it is
-	txt := r.PostFormValue("comtext")
-	if txt == "" && discClose == false {
+	rawTxt := r.PostFormValue("comtext")
+	if rawTxt == "" && discClose == false {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Comment can't be empty!")
 		return
 	}
 	var comText string
-	if discClose == false || (discClose == true && txt != "") {
-		err = com.Validate.Var(txt, "markdownsource")
+	if discClose == false || (discClose == true && rawTxt != "") {
+		// Unescape and validate the comment text
+		t, err := url.QueryUnescape(rawTxt)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Error when unescaping comment field value")
+			return
+		}
+		err = com.Validate.Var(t, "markdownsource")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprint(w, "Invalid characters in the new discussions' main text field")
 			return
 		}
-		comText = txt
+		comText = t
 	}
 
 	// Check if the requested database exists
@@ -2305,8 +2313,13 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 // Returns HTML rendered content from a given markdown string, for the settings page README preview tab.
 func markdownPreview(w http.ResponseWriter, r *http.Request) {
-	// Extract the markdown text form value
-	mkDown := r.PostFormValue("mkdown")
+	// Extract and unescape the markdown text form value
+	a := r.PostFormValue("mkdown")
+	mkDown, err := url.QueryUnescape(a)
+	if err != nil {
+		fmt.Fprint(w, "Something went wrong when unescaping provided value")
+		return
+	}
 
 	// Validate the markdown source provided, just to be safe
 	var renderedText []byte
@@ -3159,8 +3172,13 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	dbOwner := strings.ToLower(usr)
 
-	// Validate new branch name
-	nb := r.PostFormValue("newbranch")
+	// Unescape, then validate the new branch name
+	a := r.PostFormValue("newbranch")
+	nb, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	err = com.Validate.Var(nb, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -3170,11 +3188,15 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate new branch description
 	var newDesc string
-	nd := r.PostFormValue("newdesc")
+	b := r.PostFormValue("newdesc")
+	nd, err := url.QueryUnescape(b)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	if nd != "" {
 		err = com.Validate.Var(nd, "markdownsource")
 		if err != nil {
-			log.Println("Branch description failed validation")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -3300,7 +3322,12 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	dbOwner := strings.ToLower(usr)
 
 	// Validate new release name
-	nr := r.PostFormValue("newrel")
+	a := r.PostFormValue("newrel")
+	nr, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	err = com.Validate.Var(nr, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -3309,7 +3336,12 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	newName := nr
 
 	// Validate new release description
-	nd := r.PostFormValue("newmsg")
+	b := r.PostFormValue("newmsg")
+	nd, err := url.QueryUnescape(b)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	err = com.Validate.Var(nd, "markdownsource")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -3415,7 +3447,12 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	dbOwner := strings.ToLower(usr)
 
 	// Validate new tag name
-	nt := r.PostFormValue("newtag")
+	a := r.PostFormValue("newtag")
+	nt, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	err = com.Validate.Var(nt, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -3424,7 +3461,12 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	newName := nt
 
 	// Validate new tag description
-	nm := r.PostFormValue("newmsg")
+	b := r.PostFormValue("newmsg")
+	nm, err := url.QueryUnescape(b)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	err = com.Validate.Var(nm, "markdownsource")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
