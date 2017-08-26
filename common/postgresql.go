@@ -2261,7 +2261,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 						AND db_name = $3
 				)
 				AND disc_id = $4`
-		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState)
+		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState)
 		if err != nil {
 			log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", dbOwner,
 				dbFolder, dbName, discID, err)
@@ -2346,6 +2346,39 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating last_modified date for database '%s%s%s', discussion '%d'\n",
 			numRows, dbOwner, dbFolder, dbName, discID)
+	}
+
+	// Update the counter of open discussions for the database
+	dbQuery = `
+		WITH d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db
+			WHERE db.user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		)
+		UPDATE sqlite_databases
+		SET discussions = (
+				SELECT count(disc.*)
+				FROM discussions AS disc, d
+				WHERE disc.db_id = d.db_id
+					AND open = true
+			)
+		WHERE db_id = (SELECT db_id FROM d)`
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Updating discussion count for database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName,
+			err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when updating discussion count for database '%s%s%s'\n",
+			numRows, dbOwner, dbFolder, dbName)
 	}
 
 	// Commit the transaction

@@ -384,6 +384,15 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Invalidate the memcache data for the database, so if the discussion counter for the database was changed it
+	// gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
 	// Send a success message
 	w.WriteHeader(http.StatusOK)
 }
