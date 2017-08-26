@@ -158,7 +158,7 @@
                                 <input type="hidden" name="folder" value="/">
                                 <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
                                 <input type="hidden" name="discid" value="[[ .SelectedID ]]">
-                                <input type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
+                                <input ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
                                 <input type="submit" class="btn btn-success" value="Add comment" style="margin-top: 10px;" ng-click="addComment(false)">
                             </div>
                         </div>

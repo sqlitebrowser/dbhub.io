@@ -2211,8 +2211,42 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 	// Set up an automatic transaction roll back if the function exits without committing
 	defer tx.Rollback()
 
-	// If comment text was provided, insert it into the database
+	// If the discussion is to be closed or reopened, ensure the person doing so is either the database owner or the
+	// person who started the discussion
 	var dbQuery string
+	var discState bool
+	if discClose == true {
+		// Get the current details for the discussion
+		var discCreator string
+		dbQuery := `
+			SELECT open, creator
+			FROM discussions
+			WHERE db_id = (
+					SELECT db.db_id
+					FROM sqlite_databases AS db
+					WHERE db.user_id = (
+							SELECT user_id
+							FROM users
+							WHERE user_name = $1
+						)
+						AND folder = $2
+						AND db_name = $3
+				)
+				AND disc_id = $4`
+		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState, &discCreator)
+		if err != nil {
+			log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", dbOwner,
+				dbFolder, dbName, discID, err)
+			return err
+		}
+
+		// Ensure only the database owner or discussion starter can close/reopen databases
+		if (commenter != dbOwner) && (commenter != discCreator) {
+			return errors.New("Not authorised")
+		}
+	}
+
+	// If comment text was provided, insert it into the database
 	var commandTag pgx.CommandTag
 	if comText != "" {
 		dbQuery = `
@@ -2243,31 +2277,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 	}
 
 	// If the discussion is to be closed or reopened, insert a close or reopen record as appropriate
-	var discState bool
 	if discClose == true {
-		// Find out if the discussion is presently open or closed
-		dbQuery := `
-			SELECT open
-			FROM discussions
-			WHERE db_id = (
-					SELECT db.db_id
-					FROM sqlite_databases AS db
-					WHERE db.user_id = (
-							SELECT user_id
-							FROM users
-							WHERE user_name = $1
-						)
-						AND folder = $2
-						AND db_name = $3
-				)
-				AND disc_id = $4`
-		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState)
-		if err != nil {
-			log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", dbOwner,
-				dbFolder, dbName, discID, err)
-			return err
-		}
-
 		var eventTxt, eventType string
 		if discState {
 			// Discussion is open, so a close event should be inserted
