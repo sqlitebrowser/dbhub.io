@@ -2219,9 +2219,9 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 		// Get the current details for the discussion
 		var discCreator string
 		dbQuery := `
-			SELECT open, creator
-			FROM discussions
-			WHERE db_id = (
+			SELECT disc.open, u.user_name
+			FROM discussions AS disc, users AS u
+			WHERE disc.db_id = (
 					SELECT db.db_id
 					FROM sqlite_databases AS db
 					WHERE db.user_id = (
@@ -2232,7 +2232,8 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 						AND folder = $2
 						AND db_name = $3
 				)
-				AND disc_id = $4`
+				AND disc.disc_id = $4
+				AND disc.creator = u.user_id`
 		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState, &discCreator)
 		if err != nil {
 			log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", dbOwner,
