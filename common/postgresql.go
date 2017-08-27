@@ -2554,7 +2554,7 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 				AND db.folder = $2
 				AND db.db_name = $3
 		), next_id AS (
-			SELECT max(disc.disc_id) + 1 AS id
+			SELECT count(disc.disc_id) + 1 AS id
 			FROM discussions AS disc, d
 			WHERE disc.db_id = d.db_id
 		)
