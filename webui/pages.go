@@ -871,6 +871,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		return
 	}
 
+	// * Execution can only get here if the user has access to the requested database *
+
 	// Increment the view counter for the database (excluding people viewing their own databases)
 	if loggedInUser != dbOwner {
 		err = com.IncrementViewCount(dbOwner, dbFolder, dbName)
@@ -945,14 +947,12 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		commitID = tg.Commit
 	}
 
-	// Check if the user has access to the requested database (and get it's details if available)
+	// Retrieve the database details
 	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// * Execution can only get here if the user has access to the requested database *
 
 	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
 	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
@@ -975,7 +975,16 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// If a specific table wasn't requested, use the user specified default (if present)
 	if dbTable == "" {
-		dbTable = pageData.DB.Info.DefaultTable
+		// Ensure the default table name validates.  This catches a case where a database was uploaded with an invalid
+		// table name and somehow because selected as the default
+		a := pageData.DB.Info.DefaultTable
+		if a != "" {
+			err = com.ValidatePGTable(a)
+			if err == nil {
+				// The database table name is acceptable, so use it
+				dbTable = pageData.DB.Info.DefaultTable
+			}
+		}
 	}
 
 	// Determine the number of rows to display
@@ -1073,9 +1082,18 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		}
 	}
 
-	// If a specific table wasn't requested, use the first table in the database
+	// If a specific table wasn't requested, use the first table in the database that passes validation
 	if dbTable == "" {
-		dbTable = pageData.DB.Info.Tables[0]
+		for _, i := range pageData.DB.Info.Tables {
+			if i != "" {
+				err = com.ValidatePGTable(i)
+				if err == nil {
+					// The database table name is acceptable, so use it
+					dbTable = pageData.DB.Info.DefaultTable
+					break
+				}
+			}
+		}
 	}
 
 	// If a sort column was requested, verify it exists
@@ -1100,17 +1118,19 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Validate the table name, just to be careful
-	err = com.ValidatePGTable(dbTable)
-	if err != nil {
-		// Validation failed, so don't pass on the table name
+	if dbTable != "" {
+		err = com.ValidatePGTable(dbTable)
+		if err != nil {
+			// Validation failed, so don't pass on the table name
 
-		// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
-		// bot picking up AngularJS in a string and doing a request with it
-		if dbTable != "{{ db.Tablename }}" {
-			log.Printf("%s: Validation failed for table name: '%s': %s", pageName, dbTable, err)
+			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
+			// bot picking up AngularJS in a string and doing a request with it
+			if dbTable != "{{ db.Tablename }}" {
+				log.Printf("%s: Validation failed for table name: '%s': %s", pageName, dbTable, err)
+			}
+			errorPage(w, r, http.StatusBadRequest, "Validation failed for table name")
+			return
 		}
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for table name")
-		return
 	}
 
 	// Fill out various metadata fields
