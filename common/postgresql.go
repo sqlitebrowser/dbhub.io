@@ -2800,6 +2800,83 @@ func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
 	return nil
 }
 
+// Updates the text for a discussion
+func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, discID int, newText string) error {
+	// Begin a transaction
+	tx, err := pdb.Begin()
+	if err != nil {
+		return err
+	}
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// Retrieve the name of the discussion creator
+	var discCreator string
+	dbQuery := `
+		SELECT u.user_name
+		FROM discussions AS disc, users AS u
+		WHERE disc.db_id = (
+				SELECT db.db_id
+				FROM sqlite_databases AS db
+				WHERE db.user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
+					AND folder = $2
+					AND db_name = $3
+			)
+			AND disc.disc_id = $4
+			AND disc.creator = u.user_id`
+	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discCreator)
+	if err != nil {
+		log.Printf("Error retrieving name of discussion creator for '%s%s%s', discussion '%d': %v\n",
+			dbOwner, dbFolder, dbName, discID, err)
+		return err
+	}
+
+	// Ensure only the database owner or discussion starter can update the discussion
+	if (loggedInUser != dbOwner) && (loggedInUser != discCreator) {
+		return errors.New("Not authorised")
+	}
+
+	// Update the discussion body
+	dbQuery = `
+		WITH d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db
+			WHERE db.user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		)
+		UPDATE discussions AS disc
+		SET description = $5, last_modified = now()
+		WHERE disc.db_id = (SELECT db_id FROM d)
+			AND disc.disc_id = $4`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, newText)
+	if err != nil {
+		log.Printf("Updating discussion for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner,
+			dbFolder, dbName, discID, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when updating discussion for database '%s%s%s', discussion '%d'\n",
+			numRows, dbOwner, dbFolder, dbName, discID)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Returns details for a user.
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `

@@ -394,11 +394,13 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Invalidate the memcache data for the database, so if the discussion counter for the database was changed it
 	// gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
-	if err != nil {
-		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
-		return
+	if discClose {
+		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+		if err != nil {
+			// Something went wrong when invalidating memcached entries for the database
+			log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+			return
+		}
 	}
 
 	// Send a success message
@@ -2175,6 +2177,7 @@ func main() {
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))
 	http.HandleFunc("/x/updatebranch/", logReq(updateBranchHandler))
+	http.HandleFunc("/x/updatediscuss/", logReq(updateDiscussHandler))
 	http.HandleFunc("/x/updaterelease/", logReq(updateReleaseHandler))
 	http.HandleFunc("/x/updatetag/", logReq(updateTagHandler))
 	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
@@ -3287,6 +3290,103 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Update succeeded
 	w.WriteHeader(http.StatusOK)
+}
+
+// This function processes discussion body text updates.
+func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Update Discussion handler"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Extract the required form variables
+	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbOwner := strings.ToLower(usr)
+
+	// Ensure a discussion ID was given
+	a := r.PostFormValue("discid")
+	if a == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing discussion id")
+		return
+	}
+	discID, err := strconv.Atoi(a)
+	if err != nil {
+		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+			com.GetCurrentFunctionName(), err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error when parsing discussion id value")
+		return
+	}
+
+	// Unescape, then validate the new discussion text
+	var newTxt string
+	b := r.PostFormValue("disctext")
+	nt, err := url.QueryUnescape(b)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if nt != "" {
+		err = com.Validate.Var(nt, "markdownsource")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		newTxt = nt
+	}
+
+	// If any of the required values were empty, indicate failure
+	if dbOwner == "" || dbFolder == "" || dbName == "" || discID == 0 || newTxt == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Required values missing!")
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Update the discussion text
+	err = com.UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser, discID, newTxt)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Update succeeded
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, string(gfm.Markdown([]byte(newTxt))))
 }
 
 // This function processes release rename and description updates.

@@ -112,10 +112,29 @@
                                 <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
                                     <div>
                                         <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ Disc.disc_id }}" style="font-size: x-large; color: #333;">{{ Disc.title }}</a>
+                                        <span ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
+                                            <a class="blackLink" ng-click="editDiscussion()"><i class="fa fa-pencil fa-fw"></i></a>
+                                        </span>
                                     </div>
                                     <div>Opened on {{ Disc.creation_date | date : 'd MMM y h:mm a' }} by <a class="blackLink" href="/{{ Disc.creator }}">{{ Disc.creator }}</a></div>
                                 </div>
-                                <div style="padding-left: 10px; padding-top: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;" ng-bind-html="Disc.body_rendered"></div>
+                                <div style="padding: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;">
+                                    <div ng-show="editDisc === true" style="text-align: center;">
+                                        <uib-tabset active="activeDisc">
+                                            <uib-tab index="0">
+                                                <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
+                                                <textarea id="disctext" name="disctext" rows="10" style="margin-top: 2px; width: 100%;" ng-bind-html="editDiscBody"></textarea>
+                                            </uib-tab>
+                                            <uib-tab index="1" select="getMarkdownDisc()">
+                                                <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
+                                                <div style="text-align: left; margin-top: 2px; min-height: 80px;" ng-bind-html="editDiscBodyPreview"></div>
+                                            </uib-tab>
+                                        </uib-tabset>
+                                        <input type="submit" class="btn btn-default" value="Cancel" style="margin-top: 10px;" ng-click="editDiscussion()">
+                                        <input type="submit" class="btn btn-success" value="Save" style="margin-top: 10px;" ng-click="updateDiscussion()">
+                                    </div>
+                                    <div ng-hide="editDisc === true" ng-bind-html="Disc.body_rendered"></div>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -129,6 +148,7 @@
                                     <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
                                         <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> commented on {{ row.creation_date | date : 'd MMM y h:mm a' }}
                                         <span ng-if="row.commenter == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
+                                            <!-- <a class="blackLink" ng-click="editComment(row.com_id)"><i class="fa fa-pencil fa-fw"></i></a> -->
                                             <a class="blackLink" ng-click="deleteComment(row.com_id)"><i class="fa fa-trash-o fa-fw"></i></a>
                                         </span>
                                     </div>
@@ -141,30 +161,35 @@
                     <div ng-if="row.entry_type == 'rop'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-recycle text-success fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">reopened this on</span> {{ row.creation_date | date : 'd MMM y @ h:mm a' }}.</div>
                 </span>
                 [[ if .Meta.LoggedInUser ]]
-                    <div class="row">
-                        <div class="col-md-2">&nbsp;</div>
-                        <div class="col-md-9">
-                            <div style="text-align: center; padding: 10px; border: 1px #EEE solid; margin-bottom: 10px;">
-                                <uib-tabset active="active">
-                                    <uib-tab index="0">
-                                        <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                        <textarea id="comtext" name="comtext" cols="110" rows="10" style="margin-top: 2px;" placeholder="Add your comment here..." ng-keyup="updateCloseButton()"></textarea>
-                                    </uib-tab>
-                                    <uib-tab index="1" select="getMarkdown()">
-                                        <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
-                                        <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
-                                    </uib-tab>
-                                </uib-tabset>
-                                <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
-                                <input type="hidden" name="folder" value="/">
-                                <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
-                                <input type="hidden" name="discid" value="[[ .SelectedID ]]">
-                                <input ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
-                                <input type="submit" class="btn btn-success" value="Add comment" style="margin-top: 10px;" ng-click="addComment(false)">
-                            </div>
-                        </div>
-                        <div class="col-md-1">&nbsp;</div>
-                    </div>
+                    <span>
+                        <table class="table table-responsive" style="margin-bottom: 0px;">
+                            <tbody>
+                                <tr>
+                                    <td style="border: none;" width="10%">&nbsp;</td>
+                                    <td style="border: none;">
+                                        <div style="text-align: center; padding: 10px; border: 1px #EEE solid; margin-bottom: 10px; border-radius: 7px;">
+                                            <uib-tabset active="activeComm">
+                                                <uib-tab index="0">
+                                                    <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
+                                                    <textarea id="comtext" name="comtext" rows="10" style="margin-top: 2px; width: 100%;" placeholder="Add your comment here..." ng-keyup="updateCloseButton()"></textarea>
+                                                </uib-tab>
+                                                <uib-tab index="1" select="getMarkdown()">
+                                                    <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
+                                                    <div style="text-align: left; margin-top: 2px; min-height: 80px;" ng-bind-html="markDownPreview"></div>
+                                                </uib-tab>
+                                            </uib-tabset>
+                                            <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
+                                            <input type="hidden" name="folder" value="/">
+                                            <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
+                                            <input type="hidden" name="discid" value="[[ .SelectedID ]]">
+                                            <input ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
+                                            <input type="submit" class="btn btn-success" value="Add comment" style="margin-top: 10px;" ng-click="addComment(false)">
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </span>
                 [[ else ]]
                     <div class="row">
                         <div class="col-md-2">&nbsp;</div>
@@ -276,6 +301,19 @@
             });
         };
 
+        // Changes the static discussion text display into an edit/preview box
+        $scope.editDisc = false;
+        $scope.editDiscBody = "";
+        $scope.editDiscAlready = false;
+        $scope.editDiscussion = function() {
+            // Only grab the saved body content the first time the edit button is pressed
+            if ($scope.editDiscAlready === false) {
+                $scope.editDiscBody = $scope.Disc.body;
+                $scope.editDiscAlready = true;
+            }
+            $scope.editDisc = !$scope.editDisc;
+        };
+
         // Render markdown preview
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
@@ -289,6 +327,21 @@
                 data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.markDownPreview = response.data; });
+        };
+
+        // Render markdown preview for the discussion edit box
+        $scope.editDiscBodyPreview = "";
+        $scope.getMarkdownDisc = function() {
+            // Retrieve text from the discussion edit area
+            var txt = document.getElementById("disctext").value;
+
+            // Call the server, asking for a markdown rendered version of the text
+            $http({
+                method: "POST",
+                url: "/x/markdownpreview/",
+                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) { $scope.editDiscBodyPreview = response.data; });
         };
 
         // Displays the Auth0 dialog
@@ -343,6 +396,35 @@
                     $scope.closeLabel = "Reopen discussion";
                 }
             }
+        };
+
+        // Send the updated discussion values to the server
+        $scope.updateDiscussion = function() {
+            // Retrieve text from the discussion edit area
+            var txt = document.getElementById("disctext").value;
+
+            // Send the new discussion text to the server
+            $http({
+                method: "POST",
+                url: "/x/updatediscuss/",
+                data: $httpParamSerializerJQLike({
+                    "disctext": encodeURIComponent(txt),
+                    "folder": "/",
+                    "discid": [[ .SelectedID ]],
+                    "dbname": [[ .Meta.Database ]],
+                    "username": [[ .Meta.Owner ]],
+                    }),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // Updating the discussion text succeeded, so switch back to the static view
+                $scope.Disc.body = txt;
+                $scope.Disc.body_rendered = response.data;
+                $scope.editDisc = false;
+            }, function failure(response) {
+                // Adding the comment failed, so display an error message
+                $scope.statusMessageColour = "Red";
+                $scope.statusMessage = "Updating discussion failed: " + response.data;
+            });
         };
 
         // Update star button text to say "Stars" or "Unstar"
