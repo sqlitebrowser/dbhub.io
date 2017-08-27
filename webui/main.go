@@ -3191,13 +3191,13 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate new branch description
 	var newDesc string
-	b := r.PostFormValue("newdesc")
-	nd, err := url.QueryUnescape(b)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	if nd != "" {
+	b := r.PostFormValue("newdesc") // Optional
+	if b != "" {
+		nd, err := url.QueryUnescape(b)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		err = com.Validate.Var(nd, "markdownsource")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -3436,18 +3436,21 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	newName := nr
 
 	// Validate new release description
-	b := r.PostFormValue("newmsg")
-	nd, err := url.QueryUnescape(b)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	var newDesc string
+	b := r.PostFormValue("newmsg") // Optional
+	if b != "" {
+		nd, err := url.QueryUnescape(b)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		err = com.Validate.Var(nd, "markdownsource")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		newDesc = nd
 	}
-	err = com.Validate.Var(nd, "markdownsource")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	newDesc := nd
 
 	// Ensure a release name was supplied
 	relName, err := com.GetFormRelease(r)
@@ -3457,7 +3460,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if relName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newDesc == "" || newName == "" {
+	if relName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -3560,19 +3563,22 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	newName := nt
 
-	// Validate new tag description
-	b := r.PostFormValue("newmsg")
-	nm, err := url.QueryUnescape(b)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	// If given, validate new tag description
+	var newMsg string
+	b := r.PostFormValue("newmsg") // Optional
+	if b != "" {
+		nm, err := url.QueryUnescape(b)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		err = com.Validate.Var(nm, "markdownsource")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		newMsg = nm
 	}
-	err = com.Validate.Var(nm, "markdownsource")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	newMsg := nm
 
 	// Ensure a tag name was supplied
 	tagName, err := com.GetFormTag(r)
@@ -3582,7 +3588,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if tagName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newMsg == "" || newName == "" {
+	if tagName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
