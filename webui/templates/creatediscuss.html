@@ -28,11 +28,11 @@
                                 <uib-tabset active="active">
                                     <uib-tab index="0">
                                         <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                        <textarea id="disctxt" name="disctxt" cols="80" rows="10" style="margin-top: 2px;" placeholder="Type in the discussion details then click the 'Create it' button"></textarea>
+                                        <textarea id="disctxt" name="disctxt" rows="10" style="margin-top: 2px; width: 100%;" placeholder="Type in the discussion details then click the 'Create it' button"></textarea>
                                     </uib-tab>
                                     <uib-tab index="1" select="getMarkdown()">
                                         <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
-                                        <div style="text-align: left; margin-top: 2px;" ng-bind-html="markDownPreview"></div>
+                                        <div style="text-align: left; margin-top: 2px; min-height: 80px;" ng-bind-html="markDownPreview"></div>
                                     </uib-tab>
                                 </uib-tabset>
                             </div>

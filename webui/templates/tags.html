@@ -73,10 +73,10 @@
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                 <uib-tabset>
                                     <uib-tab index="0" heading="Description" select="getMarkdown(key)">
-                                        <div style="text-align: left; margin-top: 2px;" id="{{ key }}_mkdn"><span ng-bind-html="row.description_markdown"></span></div>
+                                        <div style="text-align: left; margin-top: 2px; min-height: 40px;" id="{{ key }}_mkdn"><span ng-bind-html="row.description_markdown"></span></div>
                                     </uib-tab>
                                     <uib-tab index="1" heading="Edit">
-                                        <textarea id="{{ key }}_desc" name="{{ key }}_desc" cols="80" rows="10" style="margin-top: 2px;" placeholder="A description for this tag">{{ row.description }}</textarea>
+                                        <textarea id="{{ key }}_desc" name="{{ key }}_desc" rows="10" style="margin-top: 2px; width: 100%;" placeholder="A description for this tag">{{ row.description }}</textarea>
                                     </uib-tab>
                                 </uib-tabset>
                             [[ else ]]
