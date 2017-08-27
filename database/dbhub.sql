@@ -427,6 +427,14 @@ ALTER TABLE ONLY discussion_comments
 
 
 --
+-- Name: discussions discussions_db_id_disc_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussions
+    ADD CONSTRAINT discussions_db_id_disc_id_unique UNIQUE (db_id, disc_id);
+
+
+--
 -- Name: discussions discussions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 

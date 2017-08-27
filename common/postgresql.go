@@ -2548,13 +2548,18 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 			FROM users
 			WHERE user_name = $1
 		), d AS (
-			SELECT db.db_id, db.discussions + 1 AS new_disc_id
+			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
 				AND db.folder = $2
-				AND db.db_name = $3)
+				AND db.db_name = $3
+		), next_id AS (
+			SELECT max(disc.disc_id) + 1 AS id
+			FROM discussions AS disc, d
+			WHERE disc.db_id = d.db_id
+		)
 		INSERT INTO discussions (db_id, disc_id, creator, title, description, open)
-		SELECT (SELECT db_id FROM d), (SELECT new_disc_id FROM d), (SELECT user_id FROM users WHERE user_name = $4), $5, $6, true`
+		SELECT (SELECT db_id FROM d), (SELECT id FROM next_id), (SELECT user_id FROM users WHERE user_name = $4), $5, $6, true`
 	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text)
 	if err != nil {
 		log.Printf("Adding new discussion '%s' for '%s%s%s' failed: %v\n", title, dbOwner, dbFolder, dbName,
