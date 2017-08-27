@@ -1227,7 +1227,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if a discussion id was provided
 	a := r.FormValue("id") // Optional
-	if a != "" {
+	if a != "" && a != "{{ row.disc_id }}" { // Search engines have a habit of passing AngularJS tags, so we ignore when the field has the AngularJS tag in it
 		pageData.SelectedID, err = strconv.Atoi(a)
 		if err != nil {
 			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
