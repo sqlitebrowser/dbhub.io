@@ -2801,7 +2801,7 @@ func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
 }
 
 // Updates the text for a discussion
-func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, discID int, newText string) error {
+func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, discID int, newTitle string, newText string) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -2854,10 +2854,10 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 				AND db_name = $3
 		)
 		UPDATE discussions AS disc
-		SET description = $5, last_modified = now()
+		SET title = $5, description = $6, last_modified = now()
 		WHERE disc.db_id = (SELECT db_id FROM d)
 			AND disc.disc_id = $4`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, newText)
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, newTitle, newText)
 	if err != nil {
 		log.Printf("Updating discussion for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner,
 			dbFolder, dbName, discID, err)

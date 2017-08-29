@@ -111,10 +111,17 @@
                             <td style="border: none;">
                                 <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
                                     <div>
-                                        <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ Disc.disc_id }}" style="font-size: x-large; color: #333;">{{ Disc.title }}</a>
-                                        <span ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
-                                            <a class="blackLink" ng-click="editDiscussion()"><i class="fa fa-pencil fa-fw"></i></a>
-                                        </span>
+                                        <div ng-switch="editDiscTitle">
+                                            <div ng-switch-when="title">
+                                                <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ Disc.disc_id }}" style="font-size: x-large; color: #333;">{{ Disc.title }}</a>
+                                                <span ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
+                                                    <a class="blackLink" ng-click="editDiscussion()"><i class="fa fa-pencil fa-fw"></i></a>
+                                                </span>
+                                            </div>
+                                            <div ng-switch-when="edit">
+                                                <input style="font-size: x-large; color: #333; width: 100%;" id="disctitle" value="{{ Disc.title }}" />
+                                            </div>
+                                        </div>
                                     </div>
                                     <div>Opened on {{ Disc.creation_date | date : 'd MMM y h:mm a' }} by <a class="blackLink" href="/{{ Disc.creator }}">{{ Disc.creator }}</a></div>
                                 </div>
@@ -303,14 +310,24 @@
 
         // Changes the static discussion text display into an edit/preview box
         $scope.editDisc = false;
-        $scope.editDiscBody = "";
         $scope.editDiscAlready = false;
+        $scope.editDiscBody = "";
+        $scope.editDiscTitle = "title";
         $scope.editDiscussion = function() {
             // Only grab the saved body content the first time the edit button is pressed
             if ($scope.editDiscAlready === false) {
                 $scope.editDiscBody = $scope.Disc.body;
                 $scope.editDiscAlready = true;
             }
+
+            // Swap between an input field and header field for the discussion title
+            if ($scope.editDiscTitle === "title") {
+                $scope.editDiscTitle = "edit";
+            } else {
+                $scope.editDiscTitle = "title";
+            }
+
+            // Display the edit/preview box
             $scope.editDisc = !$scope.editDisc;
         };
 
@@ -402,6 +419,7 @@
         $scope.updateDiscussion = function() {
             // Retrieve text from the discussion edit area
             var txt = document.getElementById("disctext").value;
+            var title = document.getElementById("disctitle").value;
 
             // Send the new discussion text to the server
             $http({
@@ -409,6 +427,7 @@
                 url: "/x/updatediscuss/",
                 data: $httpParamSerializerJQLike({
                     "disctext": encodeURIComponent(txt),
+                    "disctitle": encodeURIComponent(title),
                     "folder": "/",
                     "discid": [[ .SelectedID ]],
                     "dbname": [[ .Meta.Database ]],
@@ -419,6 +438,8 @@
                 // Updating the discussion text succeeded, so switch back to the static view
                 $scope.Disc.body = txt;
                 $scope.Disc.body_rendered = response.data;
+                $scope.Disc.title = title;
+                $scope.editDiscTitle = "title";
                 $scope.editDisc = false;
             }, function failure(response) {
                 // Adding the comment failed, so display an error message

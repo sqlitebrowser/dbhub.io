@@ -439,7 +439,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate the discussions' title
 	tl := r.PostFormValue("title")
-	err = com.Validate.Var(tl, "markdownsource,max=120") // 120 seems a reasonable first guess.
+	err = com.Validate.Var(tl, "discussiontitle,max=120") // 120 seems a reasonable first guess.
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Invalid characters in the new discussions' title")
 		return
@@ -3292,7 +3292,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// This function processes discussion body text updates.
+// This function processes discussion title and body text updates.
 func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Update Discussion handler"
 
@@ -3357,8 +3357,25 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 		newTxt = nt
 	}
 
+	// Unescape, then validate the new discussion title
+	var newTitle string
+	c := r.PostFormValue("disctitle")
+	ti, err := url.QueryUnescape(c)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if ti != "" {
+		err = com.Validate.Var(ti, "discussiontitle,max=120")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		newTitle = ti
+	}
+
 	// If any of the required values were empty, indicate failure
-	if dbOwner == "" || dbFolder == "" || dbName == "" || discID == 0 || newTxt == "" {
+	if dbOwner == "" || dbFolder == "" || dbName == "" || discID == 0 || newTitle == "" || newTxt == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Required values missing!")
 		return
@@ -3377,7 +3394,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the discussion text
-	err = com.UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser, discID, newTxt)
+	err = com.UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser, discID, newTitle, newTxt)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())

@@ -10,6 +10,7 @@ import (
 var (
 	regexBraTagName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\:,\ )]+$`)
 	regexDBName         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\+,\ ]+$`)
+	regexDiscussTitle   = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\',\!,\@,\#,\&,\$,\+,\ )]+$`)
 	regexDisplayName    = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\',\ ]+$`)
 	regexFieldName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
 	regexFolder         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
@@ -27,6 +28,7 @@ func init() {
 	Validate = valid.New()
 	Validate.RegisterValidation("branchortagname", checkBranchOrTagName)
 	Validate.RegisterValidation("dbname", checkDBName)
+	Validate.RegisterValidation("discussiontitle", checkDiscussTitle)
 	Validate.RegisterValidation("displayname", checkDisplayName)
 	Validate.RegisterValidation("fieldname", checkFieldName)
 	Validate.RegisterValidation("folder", checkFolder)
@@ -48,6 +50,12 @@ func checkBranchOrTagName(fl valid.FieldLevel) bool {
 // valid file name
 func checkDBName(fl valid.FieldLevel) bool {
 	return regexDBName.MatchString(fl.Field().String())
+}
+
+// Custom validation function for discussion titles.
+// At the moment it just allows alpha and "^.-_/()'!@#&$+ " chars
+func checkDiscussTitle(fl valid.FieldLevel) bool {
+	return regexDiscussTitle.MatchString(fl.Field().String())
 }
 
 // Custom validation function for display names.
