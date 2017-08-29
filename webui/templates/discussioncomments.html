@@ -279,12 +279,14 @@
         }
 
         // Set up the initial edit/preview pieces for editing comments
-        var numComments = $scope.CommentList.length;
-        for (var i = 0; i < numComments; i++) {
-            var comID = $scope.CommentList[i].com_id;
-            $scope['comstate' + comID] = "static";
-            $scope['comtext' + comID] = $scope.CommentList[i].body;
-            $scope['comrender' + comID] = $scope.CommentList[i].body_rendered;
+        if ($scope.CommentList !== null) {
+            var numComments = $scope.CommentList.length;
+            for (var i = 0; i < numComments; i++) {
+                var comID = $scope.CommentList[i].com_id;
+                $scope['comstate' + comID] = "static";
+                $scope['comtext' + comID] = $scope.CommentList[i].body;
+                $scope['comrender' + comID] = $scope.CommentList[i].body_rendered;
+            }
         }
 
         // Add a comment to the discussion
