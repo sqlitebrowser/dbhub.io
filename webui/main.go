@@ -3407,8 +3407,6 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 }
 // This function processes discussion title and body text updates.
 func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Update Discussion handler"
-
 	// Retrieve session data (if any)
 	var loggedInUser string
 	validSession := false
@@ -3433,6 +3431,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	usr, dbFolder, dbName, err := com.GetFormUFD(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Bad request")
 		return
 	}
 	dbOwner := strings.ToLower(usr)
@@ -3459,12 +3458,14 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	nt, err := url.QueryUnescape(b)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	if nt != "" {
 		err = com.Validate.Var(nt, "markdownsource")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Discussion text failed validation")
 			return
 		}
 		newTxt = nt
@@ -3476,12 +3477,14 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	ti, err := url.QueryUnescape(c)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	if ti != "" {
 		err = com.Validate.Var(ti, "discussiontitle,max=120")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Discussion title failed validation")
 			return
 		}
 		newTitle = ti
@@ -3498,11 +3501,12 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Database not found")
 		return
 	}
 

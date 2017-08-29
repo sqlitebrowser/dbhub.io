@@ -10,7 +10,7 @@ import (
 var (
 	regexBraTagName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\:,\ )]+$`)
 	regexDBName         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\+,\ ]+$`)
-	regexDiscussTitle   = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\',\!,\@,\#,\&,\$,\+,\ )]+$`)
+	regexDiscussTitle   = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\',\!,\@,\#,\&,\$,\+,\:,\;,\?,\ )]+$`)
 	regexDisplayName    = regexp.MustCompile(`^[a-z,A-Z,\.,\-,\,,\',\ ]+$`)
 	regexFieldName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
 	regexFolder         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
@@ -53,7 +53,7 @@ func checkDBName(fl valid.FieldLevel) bool {
 }
 
 // Custom validation function for discussion titles.
-// At the moment it just allows alpha and "^.-_/()'!@#&$+ " chars
+// At the moment it just allows alpha and "^.-_/()'!@#&$+:;? " chars
 func checkDiscussTitle(fl valid.FieldLevel) bool {
 	return regexDiscussTitle.MatchString(fl.Field().String())
 }
