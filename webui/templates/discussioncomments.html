@@ -29,6 +29,22 @@
     tbody > tr > td > div.ng-binding > h4 {
         margin-top: 0;
     }
+
+    tbody > tr > td > span > div.ng-binding > h1 {
+        margin-top: 0;
+    }
+
+    tbody > tr > td > span > div.ng-binding > h2 {
+        margin-top: 0;
+    }
+
+    tbody > tr > td > span > div.ng-binding > h3 {
+        margin-top: 0;
+    }
+
+    tbody > tr > td > span > div.ng-binding > h4 {
+        margin-top: 0;
+    }
 </style>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
@@ -155,11 +171,29 @@
                                     <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
                                         <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> commented on {{ row.creation_date | date : 'd MMM y h:mm a' }}
                                         <span ng-if="row.commenter == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
-                                            <!-- <a class="blackLink" ng-click="editComment(row.com_id)"><i class="fa fa-pencil fa-fw"></i></a> -->
+                                            <a class="blackLink" ng-click="editComment(row.com_id)"><i class="fa fa-pencil fa-fw"></i></a>
                                             <a class="blackLink" ng-click="deleteComment(row.com_id)"><i class="fa fa-trash-o fa-fw"></i></a>
                                         </span>
                                     </div>
-                                    <div style="padding-left: 10px; padding-top: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;" ng-bind-html="row.body_rendered"></div>
+                                    <span ng-switch="getCommentState(row.com_id)">
+                                        <div ng-switch-when="static" style="padding-left: 10px; padding-top: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;" ng-bind-html="getCommentTextRendered(row.com_id)"></div>
+                                        <div ng-switch-when="edit" style="padding: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;">
+                                            <uib-tabset>
+                                                <uib-tab index="0">
+                                                    <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
+                                                    <textarea id="com{{ row.com_id }}" name="com{{ row.com_id }}" rows="10" style="margin-top: 2px; width: 100%;" ng-bind-html="getCommentText(row.com_id)"></textarea>
+                                                </uib-tab>
+                                                <uib-tab index="1" select="getMarkdownCom(row.com_id)">
+                                                    <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
+                                                    <div style="text-align: left; margin-top: 2px; min-height: 80px;" ng-bind-html="getCommentTextRendered(row.com_id)"></div>
+                                                </uib-tab>
+                                            </uib-tabset>
+                                            <div style="text-align: center;">
+                                                <input type="submit" class="btn btn-default" value="Cancel" style="margin-top: 10px;" ng-click="editComment(row.com_id)">
+                                                <input type="submit" class="btn btn-success" value="Save" style="margin-top: 10px;" ng-click="updateComment(row.com_id)">
+                                            </div>
+                                        </div>
+                                    </span>
                                 </td>
                             </tr>
                         </tbody>
@@ -244,14 +278,21 @@
             $scope.closeLabel = "Reopen discussion";
         }
 
+        // Set up the initial edit/preview pieces for editing comments
+        var numComments = $scope.CommentList.length;
+        for (var i = 0; i < numComments; i++) {
+            var comID = $scope.CommentList[i].com_id;
+            $scope['comstate' + comID] = "static";
+            $scope['comtext' + comID] = $scope.CommentList[i].body;
+            $scope['comrender' + comID] = $scope.CommentList[i].body_rendered;
+        }
+
         // Add a comment to the discussion
         $scope.statusMessage = "";
         $scope.statusMessageColour = "green";
         $scope.addComment = function(alsoClose) {
-            // Retrieve the comment text
+            // Send the comment text to the server
             var txt = document.getElementById("comtext").value;
-
-            // Send the comment to the server
             $http({
                 method: "POST",
                 url: "/x/createcomment/",
@@ -308,6 +349,16 @@
             });
         };
 
+        // Called when the user clicks the edit button for comments, toggling between display of an edit/preview box
+        // and displaying the final html rendered markdown
+        $scope.editComment = function(comID) {
+            if ($scope['comstate' + comID] === "static") {
+                $scope['comstate' + comID] = "edit";
+            } else {
+                $scope['comstate' + comID] = "static";
+            }
+        };
+
         // Changes the static discussion text display into an edit/preview box
         $scope.editDisc = false;
         $scope.editDiscAlready = false;
@@ -331,6 +382,24 @@
             $scope.editDisc = !$scope.editDisc;
         };
 
+        // Returns the whether a comment should be in static display or edit mode
+        $scope.getCommentState = function(comID) {
+            var comState = $scope['comstate' + comID];
+            return comState;
+        };
+
+        // Returns the updated text for a comment
+        $scope.getCommentText = function(comID) {
+            var newComText = $scope['comtext' + comID];
+            return newComText;
+        };
+
+        // Returns the rendered text for a comment
+        $scope.getCommentTextRendered = function(comID) {
+            var newRender = $scope['comrender' + comID];
+            return newRender;
+        };
+
         // Render markdown preview
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
@@ -344,6 +413,20 @@
                 data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.markDownPreview = response.data; });
+        };
+
+        // Render markdown preview for a comment edit box
+        $scope.getMarkdownCom = function(comID) {
+            // Call the server, asking for a rendered version of the markdown
+            var txt = document.getElementById("com" + comID).value;
+            $http({
+                method: "POST",
+                url: "/x/markdownpreview/",
+                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                $scope['comrender' + comID] = response.data;
+            });
         };
 
         // Render markdown preview for the discussion edit box
@@ -413,6 +496,34 @@
                     $scope.closeLabel = "Reopen discussion";
                 }
             }
+        };
+
+        // Send updated comment text to the server
+        $scope.updateComment = function(comID) {
+            var txt = document.getElementById("com" + comID).value;
+            $http({
+                method: "POST",
+                url: "/x/updatecomment/",
+                data: $httpParamSerializerJQLike({
+                    "comid": comID,
+                    "comtext": encodeURIComponent(txt),
+                    "folder": "/",
+                    "discid": [[ .SelectedID ]],
+                    "dbname": [[ .Meta.Database ]],
+                    "username": [[ .Meta.Owner ]],
+                    }),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // Updating the comment succeeded, so display it in the list
+                $scope['comtext' + comID] = txt;
+                $scope['comrender' + comID] = response.data;
+                $scope['comstate' + comID] = "static";
+
+            }, function failure(response) {
+                // Adding the comment failed, so display an error message
+                $scope.statusMessageColour = "Red";
+                $scope.statusMessage = "Updating comment failed: " + response.data;
+            });
         };
 
         // Send the updated discussion values to the server

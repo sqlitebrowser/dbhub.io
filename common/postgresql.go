@@ -2800,6 +2800,85 @@ func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
 	return nil
 }
 
+// Updates the text for a comment
+func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser string, discID int, comID int, newText string) error {
+	// Begin a transaction
+	tx, err := pdb.Begin()
+	if err != nil {
+		return err
+	}
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// Retrieve the username of whoever created the comment
+	var comCreator string
+	dbQuery := `
+		SELECT u.user_name
+		FROM discussion_comments AS dc, users AS u
+		WHERE dc.db_id = (
+				SELECT db.db_id
+				FROM sqlite_databases AS db
+				WHERE db.user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = $1
+					)
+					AND folder = $2
+					AND db_name = $3
+			)
+			AND dc.disc_id = $4
+			AND dc.com_id = $5
+			AND dc.commenter = u.user_id`
+	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID, comID).Scan(&comCreator)
+	if err != nil {
+		log.Printf("Error retrieving name of comment creator for '%s%s%s', discussion '%d', comment '%d': %v\n",
+			dbOwner, dbFolder, dbName, discID, comID, err)
+		return err
+	}
+
+	// Ensure only the database owner or comment creator can update the comment
+	if (loggedInUser != dbOwner) && (loggedInUser != comCreator) {
+		return errors.New("Not authorised")
+	}
+
+	// Update the comment body
+	dbQuery = `
+		WITH d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db
+			WHERE db.user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		)
+		UPDATE discussion_comments AS dc
+		SET body = $6
+		WHERE dc.db_id = (SELECT db_id FROM d)
+			AND dc.disc_id = $4
+			AND dc.com_id = $5`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID, newText)
+	if err != nil {
+		log.Printf("Updating comment for database '%s%s%s', discussion '%d', comment '%d' failed: %v\n",
+			dbOwner, dbFolder, dbName, discID, comID, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when updating comment for database '%s%s%s', discussion '%d', comment '%d'\n",
+			numRows, dbOwner, dbFolder, dbName, discID, comID)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Updates the text for a discussion
 func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, discID int, newTitle string, newText string) error {
 	// Begin a transaction
