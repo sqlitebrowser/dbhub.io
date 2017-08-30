@@ -1056,7 +1056,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		sdb.Close()
 	}()
 
-	// Retrieve the list of tables in the database
+	// Retrieve the list of tables and views in the database
 	tables, err := com.Tables(sdb, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())

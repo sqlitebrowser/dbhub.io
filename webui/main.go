@@ -3066,6 +3066,12 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
 			return
 		}
+		vw, err := sdb.Views("")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		tables = append(tables, vw...)
 
 		// If a specific table was requested, check it exists
 		if requestedTable != "" {

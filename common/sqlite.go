@@ -332,13 +332,13 @@ func SanityCheck(fileName string) error {
 	return nil
 }
 
-// Returns the list of tables in the SQLite database.
+// Returns the list of tables and view in the SQLite database.
 func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 	// TODO: It might be useful to cache this info in PG or memcached
 	// Retrieve the list of tables in the database
 	tables, err := sdb.Tables("")
 	if err != nil {
-		log.Printf("Error retrieving table names in Tables(): %v\n", err)
+		log.Printf("Error retrieving table names: %v\n", err)
 		if cerr, ok := err.(sqlite.ConnError); ok {
 			log.Printf("Error code: %v\n", cerr.Code())
 			log.Printf("Extended error code: %v\n", cerr.ExtendedCode())
@@ -354,5 +354,23 @@ func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
 		return nil, err
 	}
+
+	// Retrieve the list of views in the database
+	vw, err := sdb.Views("")
+	if err != nil {
+		log.Printf("Error retrieving view names: %v\n", err)
+		if cerr, ok := err.(sqlite.ConnError); ok {
+			log.Printf("Error code: %v\n", cerr.Code())
+			log.Printf("Extended error code: %v\n", cerr.ExtendedCode())
+			log.Printf("Extended error message: %v\n", cerr.Error())
+			log.Printf("Extended error filename: %v\n", cerr.Filename())
+		} else {
+			log.Printf("Expected a connection error, but got a '%v'\n", reflect.TypeOf(cerr))
+		}
+		return nil, err
+	}
+
+	// Merge the table and view arrays
+	tables = append(tables, vw...)
 	return tables, nil
 }
