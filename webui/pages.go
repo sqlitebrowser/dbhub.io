@@ -1004,13 +1004,11 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
 		loggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
 
-// Disable cache for now
-ok := false
 	// If a cached version of the page data exists, use it
-	//ok, err := com.GetCachedData(mdataCacheKey, &pageData)
-	//if err != nil {
-	//	log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
-	//}
+	ok, err := com.GetCachedData(mdataCacheKey, &pageData)
+	if err != nil {
+		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
+	}
 	if ok {
 		// Grab the cached table data as well
 		ok, err := com.GetCachedData(rowCacheKey, &pageData.Data)
@@ -1184,10 +1182,10 @@ ok := false
 	}
 
 	// Grab the cached table data if it's available
-	//ok, err = com.GetCachedData(rowCacheKey, &pageData.Data)
-	//if err != nil {
-	//	log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
-	//}
+	ok, err = com.GetCachedData(rowCacheKey, &pageData.Data)
+	if err != nil {
+		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
+	}
 
 	// If the row data wasn't in cache, read it from the database
 	if !ok {
