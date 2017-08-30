@@ -201,7 +201,7 @@
                 <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0px;">
                     <thead>
                         <tr>
-                            <th ng-repeat="header in db.ColNames" width="{{ 100 / db.ColCount }}%">
+                            <th ng-repeat="header in db.ColNames">
                                 <a href="" class="colHeader" ng-click="sortOrder(header)"><span id="col{{ header }}" ng-bind-html="addArrow(header)"></span></a>
                             </th>
                         </tr>
