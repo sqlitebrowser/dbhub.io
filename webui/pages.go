@@ -1089,7 +1089,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 				err = com.ValidatePGTable(i)
 				if err == nil {
 					// The database table name is acceptable, so use it
-					dbTable = pageData.DB.Info.DefaultTable
+					dbTable = i
 					break
 				}
 			}
