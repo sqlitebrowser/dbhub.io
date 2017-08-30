@@ -1184,10 +1184,10 @@ ok := false
 	}
 
 	// Grab the cached table data if it's available
-	ok, err = com.GetCachedData(rowCacheKey, &pageData.Data)
-	if err != nil {
-		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
-	}
+	//ok, err = com.GetCachedData(rowCacheKey, &pageData.Data)
+	//if err != nil {
+	//	log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
+	//}
 
 	// If the row data wasn't in cache, read it from the database
 	if !ok {
