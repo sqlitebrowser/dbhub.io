@@ -208,7 +208,7 @@
                     </thead>
                     <tbody>
                         <tr ng-repeat="row in db.Records">
-                            <td ng-repeat="val in row" dir="auto"><span ng-bind-html="val.Value | fixSpaces"></span></td>
+                            <td ng-repeat="val in row" dir="auto"><pre style="background-color: transparent; border: none; padding: 0px; margin: 0px;" ng-bind-html="val.Value | fixSpaces"></pre></td>
                         </tr>
                     </tbody>
                 </table>
