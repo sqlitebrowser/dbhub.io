@@ -41,14 +41,20 @@ func AddDefaultLicences() (err error) {
 			FullName:     "Creative Commons Attribution-ShareAlike 4.0 International",
 			Path:         "CC-BY-SA-4.0.txt",
 			URL:          "https://creativecommons.org/licenses/by-sa/4.0/"},
-		"ODbL-1.0": {
+		"CC-BY-NC-4.0": {
 			DisplayOrder: 500,
+			FileFormat:   "text",
+			FullName:     "Creative Commons Attribution-NonCommercial 4.0 International",
+			Path:         "CC-BY-NC-4.0.txt",
+			URL:          "https://creativecommons.org/licenses/by-nc/4.0/"},
+		"ODbL-1.0": {
+			DisplayOrder: 600,
 			FileFormat:   "text",
 			FullName:     "Open Data Commons Open Database License 1.0",
 			Path:         "ODbL-1.0.txt",
 			URL:          "https://opendatacommons.org/licenses/odbl/1.0/"},
 		"UK-OGL-3": {
-			DisplayOrder: 600,
+			DisplayOrder: 700,
 			FileFormat:   "html",
 			FullName:     "United Kingdom Open Government Licence 3",
 			Path:         "UK-OGL3.html",
