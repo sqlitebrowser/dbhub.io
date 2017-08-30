@@ -37,12 +37,24 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignor
 	var err error
 	var stmt *sqlite.Stmt
 
+	// Make sure we don't try to index non-tables
+	isTable := false
+	tb, err := sdb.Tables("")
+	if err != nil {
+		return SQLiteRecordSet{}, err
+	}
+	for _, j := range tb {
+		if dbTable == j {
+			isTable = true
+		}
+	}
+
 	// If a sort column was given, we check if the database (in the local cache) has an index on that column.  If it
 	// doesn't, we create one
 	// TODO: If no sortCol was given, but a rowOffset was, it's likely useful having an index (on any column?) anyway
 	// TODO  It'd probably be good to check if that's the case, and add an index (on say the first column) if none are
 	// TODO  already present
-	if sortCol != "" {
+	if sortCol != "" && isTable == true {
 		// Grab the list of indexes in the database
 		idxList, err := sdb.Indexes("")
 		if err != nil {
