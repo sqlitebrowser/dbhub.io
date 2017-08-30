@@ -98,7 +98,7 @@
     [[ if or (ne .DB.Info.OneLineDesc "No description") ((ne .DB.Info.SourceURL "")) ]]
         <div class="row">
             <div class="col-md-12">
-                <div class="well well-sm" style="margin-bottom: 10px;">
+                <div class="well well-sm" style="margin-bottom: 10px; border: 1px solid #DDD; border-radius: 7px;">
                     [[ if (ne .DB.Info.OneLineDesc "No description") ]]
                         <label id="viewdesc" ng-bind="meta.OneLineDesc"></label>
                     [[ end ]]
@@ -113,35 +113,37 @@
     [[ end ]]
     <div class="row">
         <div class="col-md-12">
-            <table width="100%" class="table table-bordered" style="margin-bottom: 10px;">
-                <tr>
-                    <td>
-                        <div style="text-align: center;">
-                            <a href="/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}"><label class="blackLink" id="viewcommits" ng-bind="'Commits: ' + meta.Commits"></label></a>
-                        </div>
-                    </td>
-                    <td>
-                        <div style="text-align: center;">
-                            <a href="/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewbranches" ng-bind="'Branches: ' + meta.Branches"></label></a>
-                        </div>
-                    </td>
-                    <td>
-                        <div style="text-align: center;">
-                            <a href="/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewtags" ng-bind="'Tags: ' + meta.Tags"></label></a>
-                        </div>
-                    </td>
-                    <td>
-                        <div style="text-align: center;">
-                            <a href="/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewreleases" ng-bind="'Releases: ' + meta.Releases"></label></a>
-                        </div>
-                    </td>
-                    <td>
-                        <div style="text-align: center;">
-                            <a href="/contributors/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewcontribs" ng-bind="'Contributors: ' + meta.Contributors"></label></a>
-                        </div>
-                    </td>
-                </tr>
-            </table>
+            <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px;">
+                <table width="100%" class="table" style="margin-bottom: 0; border: none;">
+                    <tr style="border: none;">
+                        <td style="border: none; border-right: 1px solid #DDD;">
+                            <div style="text-align: center;">
+                                <a href="/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}"><label class="blackLink" id="viewcommits" ng-bind="'Commits: ' + meta.Commits"></label></a>
+                            </div>
+                        </td>
+                        <td style="border: none; border-right: 1px solid #DDD;">
+                            <div style="text-align: center;">
+                                <a href="/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewbranches" ng-bind="'Branches: ' + meta.Branches"></label></a>
+                            </div>
+                        </td>
+                        <td style="border: none; border-right: 1px solid #DDD;">
+                            <div style="text-align: center;">
+                                <a href="/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewtags" ng-bind="'Tags: ' + meta.Tags"></label></a>
+                            </div>
+                        </td>
+                        <td style="border: none; border-right: 1px solid #DDD;">
+                            <div style="text-align: center;">
+                                <a href="/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewreleases" ng-bind="'Releases: ' + meta.Releases"></label></a>
+                            </div>
+                        </td>
+                        <td style="border: none;">
+                            <div style="text-align: center;">
+                                <a href="/contributors/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><label class="blackLink" id="viewcontribs" ng-bind="'Contributors: ' + meta.Contributors"></label></a>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </div>
     <div class="row" style="padding-bottom: 10px;">
@@ -197,11 +199,11 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            <div style="max-width: 100%; overflow: auto; border: 1px solid rgb(221, 221, 221);">
-                <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0px;">
+            <div style="max-width: 100%; overflow: auto; border: 1px solid #DDD; border-radius: 7px 7px 0 0;">
+                <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0; padding-bottom: 0;">
                     <thead>
                         <tr>
-                            <th ng-repeat="header in db.ColNames">
+                            <th ng-repeat="header in db.ColNames" style="padding: 7px 0 6px 6px;">
                                 <a href="" class="colHeader" ng-click="sortOrder(header)"><span id="col{{ header }}" ng-bind-html="addArrow(header)"></span></a>
                             </th>
                         </tr>
@@ -213,34 +215,38 @@
                     </tbody>
                 </table>
             </div>
-            <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0px;">
-                <thead>
-                <tr>
-                    <th colspan="{{ db.ColCount }}" style="text-align: center; padding: 1px;">
-                        <span id="tbltop" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToTop()">⏫</a></span>
-                        <span id="tblup" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageBack()">▲</a></span>
-                        <span style="vertical-align: middle;" ng-bind-html="totalRowCount()"></span>
-                        <span id="tbldown" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageForward()">▼</a></span>
-                        <span id="tblbottom" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToBottom()">⏬</a></span>
-                    </th>
-                </tr>
-                </thead>
-            </table>
+            <div style="max-width: 100%; overflow: auto; border: 1px solid #DDD; border-radius: 0 0 7px 7px;">
+                <table class="table table-responsive" style="margin: 0;">
+                    <thead>
+                    <tr>
+                        <th colspan="{{ db.ColCount }}" style="text-align: center; padding: 0;">
+                            <span id="tbltop" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToTop()">⏫</a></span>
+                            <span id="tblup" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageBack()">▲</a></span>
+                            <span style="vertical-align: middle;" ng-bind-html="totalRowCount()"></span>
+                            <span id="tbldown" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageForward()">▼</a></span>
+                            <span id="tblbottom" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToBottom()">⏬</a></span>
+                        </th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
         </div>
     </div>
-    <div class="row">
+    <div class="row" style="border: none;">
         &nbsp;
     </div>
-    <div class="row">
-        <div class="col-md-12">
-            <table class="table table-striped table-bordered table-responsive">
-                <tr>
-                    <td class="page-header"><h4>DESCRIPTION</h4></td>
-                </tr>
-                <tr>
-                    <td id="viewreadme" ng-bind-html="meta.FullDesc"></td>
-                </tr>
-            </table>
+    <div class="row" style="border: none;">
+        <div class="col-md-12" style="border: none;">
+            <div style="border: 1px solid #DDD; border-radius: 7px; padding: 1px;">
+                <table class="table table-striped table-responsive" style="margin: 0;">
+                    <tr style="border-bottom: 1px solid #DDD;">
+                        <td class="page-header" style="border: none;"><h4>DESCRIPTION</h4></td>
+                    </tr>
+                    <tr>
+                        <td id="viewreadme" ng-bind-html="meta.FullDesc"></td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </div>
     <div class="row">
