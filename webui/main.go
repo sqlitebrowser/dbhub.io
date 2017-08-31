@@ -2084,6 +2084,12 @@ func main() {
 		log.Fatalf("Configuration file problem\n\n%v", err)
 	}
 
+	// Set the temp dir environment variable
+	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
+	if err != nil {
+		log.Fatalf("Setting temp directory environment variable failed: '%s'\n", err.Error())
+	}
+
 	// Open the request log for writing
 	reqLog, err = os.OpenFile(com.Conf.Web.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
 	if err != nil {

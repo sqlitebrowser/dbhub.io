@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -384,6 +385,12 @@ func main() {
 	var err error
 	if err = com.ReadConfig(); err != nil {
 		log.Fatalf("Configuration file problem\n\n%v", err)
+	}
+
+	// Set the temp dir environment variable
+	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
+	if err != nil {
+		log.Fatalf("Setting temp directory environment variable failed: '%s'\n", err.Error())
 	}
 
 	// Connect to Minio server
