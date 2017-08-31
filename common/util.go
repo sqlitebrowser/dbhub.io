@@ -22,27 +22,11 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	branchName string, public bool, licenceName string, commitMsg string, sourceURL string, newDB io.Reader,
 	serverSw string) (numBytes int64, err error) {
 
-	// Write the temporary file locally, so we can try opening it with SQLite to verify it's ok
-	var buf bytes.Buffer
-	numBytes, err = io.Copy(&buf, newDB)
-	if err != nil {
-		log.Printf("Error: %v\n", err)
-		return numBytes, err
-	}
-	if numBytes == 0 {
-		log.Printf("Database seems to be 0 bytes in length. Username: %s, Database: %s\n", loggedInUser, dbName)
-		return numBytes, err
-	}
-	tempDB, err := ioutil.TempFile("", "dbhub-upload-")
+	// Create a temporary file to store the database in
+	tempDB, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
 	if err != nil {
 		log.Printf("Error creating temporary file. User: '%s', Database: '%s%s%s', Filename: '%s', Error: %v\n",
 			loggedInUser, dbOwner, dbFolder, dbName, tempDB.Name(), err)
-		return numBytes, err
-	}
-	_, err = tempDB.Write(buf.Bytes())
-	if err != nil {
-		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
-			"Error: %v\n", loggedInUser, dbOwner, dbFolder, dbName, err)
 		return numBytes, err
 	}
 	tempDBName := tempDB.Name()
@@ -50,15 +34,41 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	// Delete the temporary file when this function finishes
 	defer os.Remove(tempDBName)
 
+	// Write the database to the temporary file, so we can try opening it with SQLite to verify it's ok
+	bufSize := 16 << 20 // 16MB
+	buf := make([]byte, bufSize)
+	numBytes, err = io.CopyBuffer(tempDB, newDB, buf)
+	if err != nil {
+		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
+			"Error: %v\n", loggedInUser, dbOwner, dbFolder, dbName, err)
+		return numBytes, err
+	}
+
 	// Sanity check the uploaded database
 	err = SanityCheck(tempDBName)
 	if err != nil {
 		return numBytes, err
 	}
 
+	// Return to the start of the temporary file
+	newOff, err := tempDB.Seek(0, 0)
+	if err != nil {
+		log.Printf("Seeking on the temporary file failed: %v\n", err.Error())
+		return 0, err
+	}
+	if newOff != 0 {
+		return 0, errors.New("Seeking to the start of the temporary file failed")
+	}
+
 	// Generate sha256 of the uploaded file
-	s := sha256.Sum256(buf.Bytes())
-	sha := hex.EncodeToString(s[:])
+	// TODO: Using an io.MultiWriter to feed data from newDB into both the temp file and this sha256 function at the
+	// TODO  same time might be a better approach here
+	s := sha256.New()
+	_, err = io.CopyBuffer(s, tempDB, buf)
+	if err != nil {
+		return 0, err
+	}
+	sha := hex.EncodeToString(s.Sum(nil))
 
 	// Check if the database already exists in the system
 	needDefaultBranchCreated := false
@@ -106,7 +116,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	//	w.WriteHeader(http.StatusInternalServerError)
 	//	return
 	//}
-	e.Size = buf.Len()
+	e.Size = int(numBytes)
 	if licenceName == "" || licenceName == "Not specified" {
 		// No licence was specified by the client, so check if the database is already in the system and
 		// already has one.  If so, we use that.
@@ -212,12 +222,22 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 		}
 	}
 
+	// Return to the start of the temporary file again
+	newOff, err = tempDB.Seek(0, 0)
+	if err != nil {
+		log.Printf("Seeking on the temporary file (2nd time) failed: %v\n", err.Error())
+		return 0, err
+	}
+	if newOff != 0 {
+		return 0, errors.New("Seeking to start of temporary database file didn't work")
+	}
+
 	// Update the branch with the commit for this new database upload & the updated commit count for the branch
 	b := branches[branchName]
 	b.Commit = c.ID
 	b.CommitCount = commitCount
 	branches[branchName] = b
-	err = StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, buf.Bytes(), sha, "",
+	err = StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, tempDB, sha, numBytes, "",
 		"", needDefaultBranchCreated, branchName, sourceURL)
 	if err != nil {
 		return numBytes, err

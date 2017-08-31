@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx"
@@ -2428,10 +2429,10 @@ func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map
 
 // Stores database details in PostgreSQL, and the database data itself in Minio.
 func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry, c CommitEntry,
-	pub bool, buf []byte, sha string, oneLineDesc string, fullDesc string, createDefBranch bool, branchName string,
-	sourceURL string) error {
+	pub bool, buf *os.File, sha string, dbSize int64, oneLineDesc string, fullDesc string, createDefBranch bool,
+	branchName string, sourceURL string) error {
 	// Store the database file
-	err := StoreDatabaseFile(buf, sha)
+	err := StoreDatabaseFile(buf, sha, dbSize)
 	if err != nil {
 		return err
 	}

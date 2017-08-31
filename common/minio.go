@@ -1,7 +1,6 @@
 package common
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -133,7 +132,7 @@ func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 }
 
 // Store a database file in Minio.
-func StoreDatabaseFile(db []byte, sha string) error {
+func StoreDatabaseFile(db *os.File, sha string, dbSize int64) error {
 	bkt := sha[:MinioFolderChars]
 	id := sha[MinioFolderChars:]
 
@@ -152,14 +151,16 @@ func StoreDatabaseFile(db []byte, sha string) error {
 	}
 
 	// Store the SQLite database file in Minio
-	dbSize, err := minioClient.PutObject(bkt, id, bytes.NewReader(db), "application/x-sqlite3")
+	numBytes, err := minioClient.PutObject(bkt, id, db, "application/x-sqlite3")
 	if err != nil {
 		log.Printf("Storing file in Minio failed: %v\n", err)
 		return err
 	}
+
 	// Sanity check.  Make sure the # of bytes written is equal to the size of the buffer we were given
-	if len(db) != int(dbSize) {
-		log.Printf("Something went wrong storing the database file: %v\n", err.Error())
+	if dbSize != numBytes {
+		log.Printf("Something went wrong storing the database file.  dbSize = %v, numBytes = %v\n", dbSize,
+		numBytes)
 		return err
 	}
 	return nil
