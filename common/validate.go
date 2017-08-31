@@ -8,14 +8,14 @@ import (
 )
 
 var (
-	regexBraTagName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\:,\ )]+$`)
+	regexBraTagName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\:,\&,\ )]+$`)
 	regexDBName         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\+,\ ]+$`)
 	regexDiscussTitle   = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\',\!,\@,\#,\&,\$,\+,\:,\;,\?,\ )]+$`)
 	regexDisplayName    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\,,\',\ ]+$`)
 	regexFieldName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
 	regexFolder         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
 	regexLicence        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
-	regexMarkDownSource = regexp.MustCompile(`^[a-z,A-Z,0-9,‘,’,\.,\-,\_,\/,\(,\),\[,\],\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
+	regexMarkDownSource = regexp.MustCompile(`^[a-z,A-Z,0-9,‘,’,“,”,\.,\-,\_,\/,\(,\),\[,\],\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
 	regexPGTable        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
 	regexUsername       = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
@@ -39,7 +39,7 @@ func init() {
 }
 
 // Custom validation function for branch and tag names.
-// At the moment it just allows alphanumeric and "^.-_/(): " chars, though it should probably be extended to cover any
+// At the moment it just allows alphanumeric and "^.-_/():& " chars, though it should probably be extended to cover any
 // valid file name
 func checkBranchOrTagName(fl valid.FieldLevel) bool {
 	return regexBraTagName.MatchString(fl.Field().String())
@@ -84,7 +84,7 @@ func checkLicence(fl valid.FieldLevel) bool {
 }
 
 // Custom validation function for Markdown source text.
-// At the moment it allows Unicode alphanumeric, "‘’.-_/()[]\#\!'"@$*%^&+=:;<>,?~| ", and "\r\n" chars.  Will probably need more characters added.
+// At the moment it allows Unicode alphanumeric, "‘’“”.-_/()[]\#\!'"@$*%^&+=:;<>,?~| ", and "\r\n" chars.  Will probably need more characters added.
 func checkMarkDownSource(fl valid.FieldLevel) bool {
 	return regexMarkDownSource.MatchString(fl.Field().String())
 }
