@@ -573,8 +573,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Ensure the release doesn't already exist
-		_, ok := rels[tagName]
-		if ok {
+		if _, ok := rels[tagName]; ok {
 			errorPage(w, r, http.StatusConflict, "A release of that name already exists!")
 			return
 		}
@@ -634,8 +633,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the tag doesn't already exist
-	_, ok := tags[tagName]
-	if ok {
+	if _, ok := tags[tagName]; ok {
 		errorPage(w, r, http.StatusConflict, "A tag of that name already exists!")
 		return
 	}
@@ -1572,8 +1570,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the given tag exists
-	_, ok := releases[relName]
-	if !ok {
+	if _, ok := releases[relName]; !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -1669,8 +1666,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the given tag exists
-	_, ok := tags[tagName]
-	if !ok {
+	if _, ok := tags[tagName]; !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -1856,8 +1852,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Was a user agent part of the request?
 	var userAgent string
-	ua, ok := r.Header["User-Agent"]
-	if ok {
+	if ua, ok := r.Header["User-Agent"]; ok {
 		userAgent = ua[0]
 	}
 
@@ -2854,8 +2849,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the given branch exists
-	_, ok := branches[branchName]
-	if !ok {
+	if _, ok := branches[branchName]; !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

@@ -248,12 +248,12 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Work out the head commit ID for the requested branch
 	headCom, ok := branches[branchName]
-	headID := headCom.Commit
 	if !ok {
 		// Unknown branch
 		errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf("Branch '%s' not found", branchName))
 		return
 	}
+	headID := headCom.Commit
 	if headID == "" {
 		// The requested branch wasn't found.  Bad request?
 		errorPage(w, r, http.StatusBadRequest, err.Error())
@@ -501,8 +501,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// This ok check is just a way to decide whether to increment the NumCommits counter
-		_, ok := pageData.Contributors[j.AuthorName]
-		if !ok {
+		if _, ok := pageData.Contributors[j.AuthorName]; !ok {
 			// This is the first time in the loop we're adding the author to the Contributors list
 			pageData.Contributors[j.AuthorName] = AuthorEntry{
 				AuthorEmail:    j.AuthorEmail,
@@ -889,8 +888,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		_, ok := commitList[commitID]
-		if !ok {
+		if _, ok := commitList[commitID]; !ok {
 			// The requested commit isn't one in the database commit history so error out
 			errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for database '%s%s%s'", dbOwner,
 				dbFolder, dbName))
@@ -1680,8 +1678,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		for i, j := range releases {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
 			// database (and put it in the cache)
-			_, ok := userNameCache[j.ReleaserEmail]
-			if !ok {
+			if _, ok := userNameCache[j.ReleaserEmail]; !ok {
 				userNameCache[j.ReleaserEmail], err = com.GetUsernameFromEmail(j.ReleaserEmail)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -2072,8 +2069,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		for i, j := range tags {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
 			// database (and put it in the cache)
-			_, ok := userNameCache[j.TaggerEmail]
-			if !ok {
+			if _, ok := userNameCache[j.TaggerEmail]; !ok {
 				userNameCache[j.TaggerEmail], err = com.GetUsernameFromEmail(j.TaggerEmail)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
