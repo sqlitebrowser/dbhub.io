@@ -160,7 +160,7 @@ func StoreDatabaseFile(db *os.File, sha string, dbSize int64) error {
 	// Sanity check.  Make sure the # of bytes written is equal to the size of the buffer we were given
 	if dbSize != numBytes {
 		log.Printf("Something went wrong storing the database file.  dbSize = %v, numBytes = %v\n", dbSize,
-		numBytes)
+			numBytes)
 		return err
 	}
 	return nil

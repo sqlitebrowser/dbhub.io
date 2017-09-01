@@ -3651,6 +3651,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		Description:   newDesc,
 		ReleaserEmail: oldInfo.ReleaserEmail,
 		ReleaserName:  oldInfo.ReleaserName,
+		Size:          oldInfo.Size,
 	}
 
 	err = com.StoreReleases(dbOwner, dbFolder, dbName, releases)
