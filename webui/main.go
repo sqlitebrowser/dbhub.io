@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bradfitz/gomemcache/memcache"
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	"github.com/gwenn/gosqlite"
 	gfm "github.com/justinclift/github_flavored_markdown"
@@ -2052,8 +2053,26 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 		var loggedInUser string
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
+			if err == memcache.ErrCacheMiss {
+				// If the memcache session token is stale (eg memcached has been restarted), delete the session
+				// TODO: This should probably look for the session token in persistent storage (eg PG) instead, so
+				// TODO  restarts of memcached don't nuke everyone's saved sessions
+
+				// Delete the session
+				// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
+				sess.Options.MaxAge = -1
+				err = sess.Save(r, w)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+
+				// Reload the page
+				http.Redirect(w, r, fmt.Sprintf("%s", r.URL), http.StatusTemporaryRedirect)
+			} else {
+				errorPage(w, r, http.StatusBadRequest, err.Error())
+				return
+			}
 		}
 		u := sess.Values["UserName"]
 		if u != nil {
@@ -3411,6 +3430,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, string(gfm.Markdown([]byte(newTxt))))
 }
+
 // This function processes discussion title and body text updates.
 func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
