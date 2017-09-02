@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -610,8 +612,8 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Sanity check the uploaded database, and if ok then add it to the system
-	numBytes, err := com.AddDatabase(r, userAcc, targetUser, targetFolder, targetDB, branchName, public, licenceName,
-		commitMsg, sourceURL, tempFile, "db4s")
+	numBytes, commitID, err := com.AddDatabase(r, userAcc, targetUser, targetFolder, targetDB, branchName, public,
+		licenceName, commitMsg, sourceURL, tempFile, "db4s")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -620,9 +622,24 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// Log the successful database upload
 	log.Printf("Database uploaded: '%s%s%s', bytes: %v\n", userAcc, targetFolder, targetDB, numBytes)
 
-	// Indicate success back to DB4S
+	// Construct message data for returning to DB4S
+	url := filepath.Join(server, targetUser, targetFolder, targetDB)
+	url += fmt.Sprintf(`?branch=%s&commit=%s`, branchName, commitID)
+	m := map[string]string{"commit_id": commitID, "url": url}
+
+	// Convert to JSON
+	var msg bytes.Buffer
+	enc := json.NewEncoder(&msg)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(m); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Send return message back to DB4S
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "Database created: %s\n", targetDB)
+	fmt.Fprintf(w, msg.String())
 }
 
 func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, userAcc string, dbOwner string,

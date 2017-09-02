@@ -20,14 +20,14 @@ import (
 // The main function which handles database upload processing for both the webUI and DB4S end points
 func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder string, dbName string,
 	branchName string, public bool, licenceName string, commitMsg string, sourceURL string, newDB io.Reader,
-	serverSw string) (numBytes int64, err error) {
+	serverSw string) (numBytes int64, commitID string, err error) {
 
 	// Create a temporary file to store the database in
 	tempDB, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
 	if err != nil {
 		log.Printf("Error creating temporary file. User: '%s', Database: '%s%s%s', Filename: '%s', Error: %v\n",
 			loggedInUser, dbOwner, dbFolder, dbName, tempDB.Name(), err)
-		return numBytes, err
+		return 0, "", err
 	}
 	tempDBName := tempDB.Name()
 
@@ -41,23 +41,23 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	if err != nil {
 		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
 			"Error: %v\n", loggedInUser, dbOwner, dbFolder, dbName, err)
-		return numBytes, err
+		return 0, "", err
 	}
 
 	// Sanity check the uploaded database
 	err = SanityCheck(tempDBName)
 	if err != nil {
-		return numBytes, err
+		return 0, "", err
 	}
 
 	// Return to the start of the temporary file
 	newOff, err := tempDB.Seek(0, 0)
 	if err != nil {
 		log.Printf("Seeking on the temporary file failed: %v\n", err.Error())
-		return 0, err
+		return 0, "", err
 	}
 	if newOff != 0 {
-		return 0, errors.New("Seeking to the start of the temporary file failed")
+		return 0, "", errors.New("Seeking to the start of the temporary file failed")
 	}
 
 	// Generate sha256 of the uploaded file
@@ -66,7 +66,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	s := sha256.New()
 	_, err = io.CopyBuffer(s, tempDB, buf)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	sha := hex.EncodeToString(s.Sum(nil))
 
@@ -75,20 +75,20 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	var branches map[string]BranchEntry
 	exists, err := CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
 	if err != err {
-		return numBytes, err
+		return 0, "", err
 	}
 	if exists {
 		// Load the existing branchHeads for the database
 		branches, err = GetBranches(loggedInUser, dbFolder, dbName)
 		if err != nil {
-			return numBytes, err
+			return 0, "", err
 		}
 
 		// If no branch name was given, use the default for the database
 		if branchName == "" {
 			branchName, err = GetDefaultBranchName(loggedInUser, dbFolder, dbName)
 			if err != nil {
-				return numBytes, err
+				return 0, "", err
 			}
 		}
 	} else {
@@ -123,15 +123,15 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 		if exists {
 			headBranch, ok := branches[branchName]
 			if !ok {
-				return numBytes, errors.New("Error retrieving branch details")
+				return 0, "", errors.New("Error retrieving branch details")
 			}
 			commits, err := GetCommitList(loggedInUser, dbFolder, dbName)
 			if err != nil {
-				return numBytes, errors.New("Error retrieving commit list")
+				return 0, "", errors.New("Error retrieving commit list")
 			}
 			headCommit, ok := commits[headBranch.Commit]
 			if !ok {
-				return numBytes, fmt.Errorf("Err when looking up commit '%s' in commit list", headBranch.Commit)
+				return 0, "", fmt.Errorf("Err when looking up commit '%s' in commit list", headBranch.Commit)
 
 			}
 			if headCommit.Tree.Entries[0].LicenceSHA != "" {
@@ -142,7 +142,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 			// It's a new database, and the licence hasn't been specified
 			e.LicenceSHA, err = GetLicenceSha256FromName(loggedInUser, licenceName)
 			if err != nil {
-				return numBytes, err
+				return 0, "", err
 			}
 
 			// If no commit message was given, use a default one and include the info of no licence being specified
@@ -154,7 +154,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 		// A licence was specified by the client, so use that
 		e.LicenceSHA, err = GetLicenceSha256FromName(loggedInUser, licenceName)
 		if err != nil {
-			return numBytes, err
+			return 0, "", err
 		}
 
 		// Generate a reasonable commit message if none was given
@@ -171,12 +171,12 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	// Retrieve the display name and email address for the user
 	dn, em, err := GetUserDetails(loggedInUser)
 	if err != nil {
-		return numBytes, err
+		return 0, "", err
 	}
 
 	// If either the display name or email address is empty, tell the user we need them first
 	if dn == "" || em == "" {
-		return numBytes, errors.New("You need to set your full name and email address in Preferences first")
+		return 0, "", errors.New("You need to set your full name and email address in Preferences first")
 	}
 
 	// Construct a commit structure pointing to the tree
@@ -192,7 +192,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	if exists {
 		b, ok := branches[branchName]
 		if !ok {
-			return numBytes, errors.New("Error when looking up branch details")
+			return 0, "", errors.New("Error when looking up branch details")
 		}
 		c.Parent = b.Commit
 	}
@@ -205,7 +205,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	if exists {
 		commitList, err := GetCommitList(loggedInUser, dbFolder, dbName)
 		if err != nil {
-			return numBytes, err
+			return 0, "", err
 		}
 		var ok bool
 		var c2 CommitEntry
@@ -217,7 +217,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 				m := fmt.Sprintf("Error when counting commits in branch '%s' of database '%s%s%s'\n", branchName,
 					loggedInUser, dbFolder, dbName)
 				log.Print(m)
-				return numBytes, errors.New(m)
+				return 0, "", errors.New(m)
 			}
 		}
 	}
@@ -226,10 +226,10 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	newOff, err = tempDB.Seek(0, 0)
 	if err != nil {
 		log.Printf("Seeking on the temporary file (2nd time) failed: %v\n", err.Error())
-		return 0, err
+		return 0, "", err
 	}
 	if newOff != 0 {
-		return 0, errors.New("Seeking to start of temporary database file didn't work")
+		return 0, "", errors.New("Seeking to start of temporary database file didn't work")
 	}
 
 	// Update the branch with the commit for this new database upload & the updated commit count for the branch
@@ -240,14 +240,14 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	err = StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, tempDB, sha, numBytes, "",
 		"", needDefaultBranchCreated, branchName, sourceURL)
 	if err != nil {
-		return numBytes, err
+		return 0, "", err
 	}
 
 	// If the database already existed, update it's contributor count
 	if exists {
 		err = UpdateContributorsCount(loggedInUser, dbFolder, dbName)
 		if err != nil {
-			return numBytes, err
+			return 0, "", err
 		}
 	}
 
@@ -261,7 +261,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	// Make a record of the upload
 	err = LogUpload(loggedInUser, dbFolder, dbName, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now(), sha)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 
 	// Invalidate the memcached entry for the database (only really useful if we're updating an existing database)
@@ -269,7 +269,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
-		return
+		return 0, "", err
 	}
 
 	// Invalidate any memcached entries for the previous highest version # of the database
@@ -277,11 +277,11 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for any previous database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
-		return
+		return 0, "", err
 	}
 
 	// Database successfully uploaded
-	return numBytes, nil
+	return numBytes, c.ID, nil
 }
 
 // Generate a stable SHA256 for a commit.
