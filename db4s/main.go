@@ -67,6 +67,53 @@ func (u UserInfoSlice) Swap(i, j int) {
 	u[i], u[j] = u[j], u[i]
 }
 
+// Returns the list of branches for a database
+func branchListHandler(w http.ResponseWriter, r *http.Request) {
+	// Extract the account name and associated server from the validated client certificate
+	userAcc, _, err := extractUserAndServer(w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Extract and validate the form variables
+	dbOwner, dbFolder, dbName, err := com.GetUFD(r, true)
+	if err != nil {
+		http.Error(w, "Missing or incorrect data supplied", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(userAcc, dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName),
+			http.StatusNotFound)
+		return
+	}
+
+	// Retrieve the branch list for the database
+	brList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the list as JSON
+	jsonList, err := json.MarshalIndent(brList, "", "  ")
+	if err != nil {
+		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
+		log.Print(errMsg)
+		http.Error(w, errMsg, http.StatusBadRequest)
+		return
+	}
+	fmt.Fprintf(w, string(jsonList))
+	return
+}
+
 func extractUserAndServer(w http.ResponseWriter, r *http.Request) (userAcc string, certServer string, err error) {
 	// Extract the account name and associated server from the validated client certificate
 	cn := r.TLS.PeerCertificates[0].Subject.CommonName
@@ -442,6 +489,7 @@ func main() {
 	// URL handler
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", rootHandler)
+	mux.HandleFunc("/branch/list", branchListHandler)
 	mux.HandleFunc("/licence/get", getLicenceHandler)
 	mux.HandleFunc("/licence/list", licenceListHandler)
 
