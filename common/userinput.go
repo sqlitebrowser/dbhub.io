@@ -11,6 +11,50 @@ import (
 	"strings"
 )
 
+// Extracts a database name from GET or POST/PUT data.
+func GetDatabase(r *http.Request, allowGet bool) (string, error) {
+	// Retrieve the variable from the GET or POST/PUT data
+	var dbName string
+	if allowGet {
+		dbName = r.FormValue("dbname")
+	} else {
+		dbName = r.PostFormValue("dbname")
+	}
+
+	// Validate the database name
+	err := ValidateDB(dbName)
+	if err != nil {
+		log.Printf("Validation failed for database name '%s': %s", dbName, err)
+		return "", errors.New("Invalid database name")
+	}
+	return dbName, nil
+}
+
+// Returns the folder name (if any) present in GET or POST/PUT data.
+func GetFolder(r *http.Request, allowGet bool) (string, error) {
+	// Retrieve the variable from the GET or POST/PUT data
+	var folder string
+	if allowGet {
+		folder = r.FormValue("folder")
+	} else {
+		folder = r.PostFormValue("folder")
+	}
+
+	// If no folder given, return
+	if folder == "" {
+		return "", nil
+	}
+
+	// Validate the folder name
+	err := ValidateFolder(folder)
+	if err != nil {
+		log.Printf("Validation failed for folder: '%s': %s", folder, err)
+		return "", err
+	}
+
+	return folder, nil
+}
+
 // Return the requested branch name, from get or post data.
 func GetFormBranch(r *http.Request) (string, error) {
 	// If no branch was given in the input, returns an empty string
@@ -45,42 +89,6 @@ func GetFormCommit(r *http.Request) (string, error) {
 	return c, nil
 }
 
-// Extracts a database name from form data
-func GetFormDatabase(r *http.Request) (string, error) {
-	dbName := r.PostFormValue("dbname")
-	err := ValidateDB(dbName)
-	if err != nil {
-		log.Printf("Validation failed for database name '%s': %s", dbName, err)
-		return "", errors.New("Invalid database name")
-	}
-	return dbName, nil
-}
-
-// Returns the folder name (if any) present in the form data
-func GetFormFolder(r *http.Request) (string, error) {
-	// Gather submitted form data (if any)
-	err := r.ParseForm()
-	if err != nil {
-		log.Printf("Error when parsing form data: %s\n", err)
-		return "", err
-	}
-	folder := r.PostFormValue("folder")
-
-	// If no folder given, return
-	if folder == "" {
-		return "", nil
-	}
-
-	// Validate the folder name
-	err = ValidateFolder(folder)
-	if err != nil {
-		log.Printf("Validation failed for folder: '%s': %s", folder, err)
-		return "", err
-	}
-
-	return folder, nil
-}
-
 // Returns the licence name (if any) present in the form data
 func GetFormLicence(r *http.Request) (licenceName string, err error) {
 	// If no licence name given, return an empty string
@@ -102,13 +110,6 @@ func GetFormLicence(r *http.Request) (licenceName string, err error) {
 
 // Returns the source URL (if any) present in the form data
 func GetFormSourceURL(r *http.Request) (sourceURL string, err error) {
-	// Gather submitted form data (if any)
-	err = r.ParseForm()
-	if err != nil {
-		log.Printf("Error when parsing form data: %s\n", err)
-		return sourceURL, err
-	}
-
 	// Validate the source URL
 	su := r.PostFormValue("sourceurl")
 	if su != "" {
@@ -165,13 +166,13 @@ func GetFormTag(r *http.Request) (tag string, err error) {
 // Return the username, database, and commit (if any) present in the form data.
 func GetFormUDC(r *http.Request) (string, string, string, error) {
 	// Extract the username
-	userName, err := GetFormUsername(r)
+	userName, err := GetUsername(r, false)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// Extract the database name
-	dbName, err := GetFormDatabase(r)
+	dbName, err := GetDatabase(r, false)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -183,94 +184,6 @@ func GetFormUDC(r *http.Request) (string, string, string, error) {
 	}
 
 	return userName, dbName, commitID, nil
-}
-
-// Return the username, folder, and database name (if any) present in the form data.
-func GetFormUFD(r *http.Request) (string, string, string, error) {
-	// Extract the username
-	userName, err := GetFormUsername(r)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	// Extract the folder
-	dbFolder, err := GetFormFolder(r)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	// Extract the database name
-	dbName, err := GetFormDatabase(r)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	return userName, dbFolder, dbName, nil
-}
-
-// Return the username, password, and source URL from the form data.
-func GetFormUPS(r *http.Request) (string, string, string, error) {
-	// Get username
-	userName, err := GetFormUsername(r)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	// Get password and Source URL
-	password := r.PostFormValue("pass")
-	sourceURL := r.PostFormValue("sourceurl")
-
-	// If no username/password was given, return
-	if userName == "" && password == "" {
-		return "", "", "", err
-	}
-
-	// Check the password isn't blank
-	if len(password) < 1 {
-		log.Print("Password missing")
-		return "", "", "", err
-	}
-
-	// Validate the source referrer (if present)
-	var bounceURL string
-	if sourceURL != "" {
-		ref, err := url.Parse(sourceURL)
-		if err != nil {
-			log.Printf("Error when parsing referrer URL for login form: %s\n", err)
-		} else {
-			// Only use the referrer path if no hostname is set (eg check if someone is screwing around)
-			if ref.Host == "" {
-				bounceURL = ref.Path
-			}
-		}
-	}
-
-	return userName, password, bounceURL, nil
-}
-
-// Return the username (if any) present in the form data.
-func GetFormUsername(r *http.Request) (string, error) {
-	// Gather submitted form data (if any)
-	err := r.ParseForm()
-	if err != nil {
-		log.Printf("Error when parsing form data: %s\n", err)
-		return "", err
-	}
-	userName := r.PostFormValue("username")
-
-	// If no username given, return
-	if userName == "" {
-		return "", nil
-	}
-
-	// Validate the username
-	err = ValidateUser(userName)
-	if err != nil {
-		log.Printf("Validation failed for username: %s", err)
-		return "", err
-	}
-
-	return userName, nil
 }
 
 // Returns the requested database owner and database name.
@@ -367,12 +280,6 @@ func GetODTC(ignore_leading int, r *http.Request) (string, string, string, strin
 // Returns the requested "public" variable, if present in the form data.
 // If something goes wrong, it defaults to "false".
 func GetPub(r *http.Request) (bool, error) {
-	// Gather submitted form data (if any)
-	err := r.ParseForm()
-	if err != nil {
-		log.Printf("Error when parsing form data: %s\n", err)
-		return false, err
-	}
 	val := r.PostFormValue("public")
 	if val == "" {
 		// No public/private variable found
@@ -408,4 +315,52 @@ func GetTable(r *http.Request) (string, error) {
 
 	// Everything seems ok
 	return requestedTable, nil
+}
+
+// Return the username, folder, and database name (if any) present in the form data.
+func GetUFD(r *http.Request, allowGet bool) (string, string, string, error) {
+	// Extract the username
+	userName, err := GetUsername(r, allowGet)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Extract the folder
+	dbFolder, err := GetFolder(r, allowGet)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Extract the database name
+	dbName, err := GetDatabase(r, allowGet)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return userName, dbFolder, dbName, nil
+}
+
+// Return the username (if any) present in the GET or POST/PUT data.
+func GetUsername(r *http.Request, allowGet bool) (string, error) {
+	// Retrieve the variable from the GET or POST/PUT data
+	var userName string
+	if allowGet {
+		userName = r.FormValue("username")
+	} else {
+		userName = r.PostFormValue("username")
+	}
+
+	// If no username given, return
+	if userName == "" {
+		return "", nil
+	}
+
+	// Validate the username
+	err := ValidateUser(userName)
+	if err != nil {
+		log.Printf("Validation failed for username: %s", err)
+		return "", err
+	}
+
+	return userName, nil
 }

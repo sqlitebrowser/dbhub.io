@@ -316,7 +316,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract and validate the form variables
-	dbOwner, dbFolder, dbName, err := com.GetFormUFD(r)
+	dbOwner, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Missing or incorrect data supplied")
@@ -432,7 +432,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract and validate the form variables
-	dbOwner, dbFolder, dbName, err := com.GetFormUFD(r)
+	dbOwner, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
 		return
@@ -926,7 +926,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -1140,7 +1140,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract and validate the form variables
-	dbOwner, dbFolder, dbName, err := com.GetFormUFD(r)
+	dbOwner, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Missing or incorrect data supplied")
@@ -1251,7 +1251,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -1439,7 +1439,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Validation failed for owner or database name")
@@ -1525,7 +1525,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -1621,7 +1621,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -2486,7 +2486,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the username, folder, and (current) database name form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -2822,7 +2822,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -3194,7 +3194,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -3343,7 +3343,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -3454,7 +3454,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Bad request")
@@ -3574,7 +3574,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -3703,7 +3703,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetFormUFD(r)
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
