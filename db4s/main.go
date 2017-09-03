@@ -90,7 +90,7 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		http.Error(w, "{}", http.StatusNotFound)
+		fmt.Fprint(w, "{}")
 		return
 	}
 
