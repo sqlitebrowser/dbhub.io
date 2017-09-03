@@ -17,3 +17,15 @@
     border-bottom: 2px solid #ddd;
     vertical-align: middle;
 }
+
+.tableRow {
+    border-bottom: 1px solid #ddd;
+}
+
+.tableRow:last-of-type {
+    border-bottom: none;
+}
+
+#contents h1, #contents h2, #contents h3, #contents h4, #contents h5, #contents h6 {
+    margin-top: 0;
+}
