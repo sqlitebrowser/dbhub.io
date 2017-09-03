@@ -90,8 +90,7 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		http.Error(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName),
-			http.StatusNotFound)
+		http.Error(w, "{}", http.StatusNotFound)
 		return
 	}
 
