@@ -12,6 +12,14 @@
     text-decoration: underline;
 }
 
+.profileRow {
+    border-top: 1px solid #DDD;
+}
+
+.profileRow:first-of-type {
+    border: none;
+}
+
 .table > thead > tr > th {
     background-color: #dcdcdc;
     border-bottom: 2px solid #ddd;
