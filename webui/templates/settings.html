@@ -20,17 +20,17 @@
                 &nbsp;
             </div>
             <div class="col-md-8">
-                <table class="table table-bordered table-striped table-responsive">
+                <table class="table table-striped table-responsive settingsTable">
                     <tr>
-                        <th style="vertical-align: middle;">Name</th>
-                        <td><input type="text" name="newname" size="80" value="{{ meta.Database }}"></td>
+                        <th>Name</th>
+                        <td><input name="newname" style="width: 100%" value="{{ meta.Database }}"></td>
                     </tr>
                     <tr>
-                        <th style="vertical-align: middle;">One line description</th>
-                        <td><input type="text" name="onelinedesc" size="80" maxlength="120" value="{{ meta.OneLineDesc }}"></td>
+                        <th>One line description</th>
+                        <td><input name="onelinedesc" style="width: 100%" maxlength="120" value="{{ meta.OneLineDesc }}"></td>
                     </tr>
                     <tr>
-                        <th style="vertical-align: middle;">Public?</th>
+                        <th>Public?</th>
                         <td>
                             <div class="btn-group">
                                 <label class="btn btn-default" ng-model="radioPublic" ng-click="publicClick('true')" uib-btn-radio="'true'">Public</label>
@@ -40,7 +40,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <th style="vertical-align: middle;">Default table</th>
+                        <th>Default table</th>
                         <td>
                             <div class="dropdown">
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
@@ -59,7 +59,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <th style="vertical-align: middle;">Default branch</th>
+                        <th>Default branch</th>
                         <td>
                             <div class="dropdown">
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
@@ -78,17 +78,17 @@
                         </td>
                     </tr>
                     <tr>
-                        <th style="vertical-align: middle;">Source URL</th>
-                        <td><input type="text" name="sourceurl" size="80" maxlength="80" value="{{ meta.SourceURL }}"></td>
+                        <th>Source URL</th>
+                        <td><input name="sourceurl" style="width: 100%" maxlength="80" value="{{ meta.SourceURL }}"></td>
                     </tr>
                 </table>
             </div>
         </div>
         <div class="row">
             <div class="col-md-12">
-                <div style="text-align: center;">
+                <div style="text-align: center; margin-bottom: 5px;">
                     <h3>Licence</h3>
-                    <i>Can be set per branch</i><br /><br />
+                    <i>Can be set per branch</i>
                 </div>
             </div>
         </div>
@@ -97,7 +97,7 @@
                 &nbsp;
             </div>
             <div class="col-md-8">
-                <table class="table table-bordered table-striped table-responsive">
+                <table class="table table-striped table-responsive settingsTable">
                     <thead>
                         <tr>
                             <th style="text-align: center;" width="50%">Branch</th>

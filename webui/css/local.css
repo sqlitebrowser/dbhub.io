@@ -23,13 +23,13 @@
     margin-top: 6px;
 }
 
+.profileTable tr {
+    border: none;
+}
+
 .profileTable td {
     border: solid 1px #DDD;
     border-bottom: none;
-}
-
-.profileTable tr {
-    border: none;
 }
 
 .profileTable tr:first-child td:first-child {
@@ -47,6 +47,34 @@
 .profileTable tr:last-child td:last-child {
     border-bottom: solid 1px #DDD;
     border-bottom-right-radius: 7px;
+}
+
+.settingsTable {
+    border-collapse: separate;
+    border: 1px solid #DDD;
+    border-radius: 7px;
+    margin-bottom: 5px;
+    margin-top: 10px;
+}
+
+.settingsTable > tbody > tr > th {
+    border: none;
+    border-bottom: 1px solid #DDD;
+    vertical-align: middle;
+}
+
+.settingsTable > tbody > tr:last-of-type > th {
+    border: none;
+}
+
+.settingsTable > tbody > tr > td {
+    border: none;
+    border-bottom: 1px solid #DDD;
+    border-left: 1px solid #DDD;
+}
+
+.settingsTable > tbody > tr:last-of-type > td {
+    border-bottom: none;
 }
 
 .table > thead > tr > th {
