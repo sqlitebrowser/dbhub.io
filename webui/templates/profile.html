@@ -36,47 +36,37 @@
 
     <div class="row">
         <div class="col-md-6">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="pull-left" style="padding-top: 8px;">
-                        <h3 style="display: inline; vertical-align: middle;">Public databases</h3>
-                    </div>
-                    <div class="pull-right" style="padding-bottom: 8px;">
-                        <button type="button" class="btn btn-default" ng-click="toggleCollapsedPub()">{{ titleCollapsedPub }}</button>
-                    </div>
-                </div>
+            <div class="pull-left" style="padding-top: 8px;">
+                <h3 style="display: inline; vertical-align: middle;">Public databases</h3>
+            </div>
+            <div class="pull-right" style="padding-bottom: 8px;">
+                <button type="button" class="btn btn-default" ng-click="toggleCollapsedPub()">{{ titleCollapsedPub }}</button>
             </div>
             [[ if .PublicDBs ]]
-            <div class="row">
-                <div class="col-md-12">
-                    <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px;">
-                        <table class="table table-striped table-responsive" style="border-collapse: collapse; margin: 0;">
-                            <tr ng-repeat="row in pubdb.Databases" class="profileRow">
-                                <td style="border: none;"><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
-                                    {{ row.OneLineDesc }}
-                                    <div uib-collapse="isCollapsedPub" style="padding-top: 5px;">
-                                        <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
-                                        <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
-                                        <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
-                                        <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
-                                        <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
-                                        <b>Licence:</b> <a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}">{{ row.Licence }}</a> &nbsp;
-                                        <b>Watchers:</b> {{ row.Watchers }} &nbsp;
-                                        <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
-                                        <br />
-                                        <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
-                                        <b>Discussions:</b> {{ row. Discussions }} &nbsp;
-                                        <b>MRs:</b> {{ row.MRs }} &nbsp;
-                                        <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
-                                        <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
-                                        <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                <table class="table table-striped table-responsive profileTable">
+                    <tr ng-repeat="row in pubdb.Databases">
+                        <td><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
+                            {{ row.OneLineDesc }}
+                            <div uib-collapse="isCollapsedPub" style="padding-top: 5px;">
+                                <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
+                                <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
+                                <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
+                                <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
+                                <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
+                                <b>Licence:</b> <a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}">{{ row.Licence }}</a> &nbsp;
+                                <b>Watchers:</b> {{ row.Watchers }} &nbsp;
+                                <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
+                                <br />
+                                <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
+                                <b>Discussions:</b> {{ row. Discussions }} &nbsp;
+                                <b>MRs:</b> {{ row.MRs }} &nbsp;
+                                <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
+                                <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
+                                <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             [[ else ]]
                 <table class="table table-bordered table-striped table-responsive">
                     <tr>
@@ -88,47 +78,37 @@
             [[ end ]]
         </div>
         <div class="col-md-6">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="pull-left" style="padding-top: 8px;">
-                        <h3 style="display: inline; vertical-align: middle;">Private databases</h3>
-                    </div>
-                    <div class="pull-right" style="padding-bottom: 8px;">
-                        <button type="button" class="btn btn-default" ng-click="toggleCollapsedPriv()">{{ titleCollapsedPriv }}</button>
-                    </div>
-                </div>
+            <div class="pull-left" style="padding-top: 8px;">
+                <h3 style="display: inline; vertical-align: middle;">Private databases</h3>
+            </div>
+            <div class="pull-right" style="padding-bottom: 8px;">
+                <button type="button" class="btn btn-default" ng-click="toggleCollapsedPriv()">{{ titleCollapsedPriv }}</button>
             </div>
             [[ if .PrivateDBs ]]
-            <div class="row">
-                <div class="col-md-12">
-                    <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px;">
-                        <table class="table table-striped table-responsive" style="border-collapse: collapse; margin: 0;">
-                            <tr ng-repeat="row in privdb.Databases" class="profileRow">
-                                <td style="border: none;"><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
-                                    {{ row.OneLineDesc }}
-                                    <div uib-collapse="isCollapsedPriv" style="padding-top: 5px;">
-                                        <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
-                                        <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
-                                        <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
-                                        <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
-                                        <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
-                                        <b>Licence:</b> <a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}">{{ row.Licence }}</a> &nbsp;
-                                        <b>Watchers:</b> {{ row.Watchers }} &nbsp;
-                                        <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
-                                        <br />
-                                        <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
-                                        <b>Discussions:</b> {{ row. Discussions }} &nbsp;
-                                        <b>MRs:</b> {{ row.MRs }} &nbsp;
-                                        <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
-                                        <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
-                                        <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                <table class="table table-striped table-responsive profileTable">
+                    <tr ng-repeat="row in privdb.Databases">
+                        <td><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
+                            {{ row.OneLineDesc }}
+                            <div uib-collapse="isCollapsedPriv" style="padding-top: 5px;">
+                                <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
+                                <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
+                                <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
+                                <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
+                                <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
+                                <b>Licence:</b> <a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}">{{ row.Licence }}</a> &nbsp;
+                                <b>Watchers:</b> {{ row.Watchers }} &nbsp;
+                                <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
+                                <br />
+                                <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
+                                <b>Discussions:</b> {{ row. Discussions }} &nbsp;
+                                <b>MRs:</b> {{ row.MRs }} &nbsp;
+                                <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
+                                <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
+                                <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             [[ else ]]
                 <table class="table table-bordered table-striped table-responsive">
                     <tr>
@@ -143,36 +123,26 @@
 
     <div class="row">
         <div class="col-md-6">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="pull-left" style="padding-top: 8px;">
-                        <h3 style="display: inline; vertical-align: middle;">Databases you've starred</h3>
-                    </div>
-                    <div class="pull-right" style="padding-bottom: 8px;">
-                        <button type="button" class="btn btn-default" ng-click="toggleCollapsedStar()">{{ titleCollapsedStar }}</button>
-                    </div>
-                </div>
+            <div class="pull-left" style="padding-top: 8px;">
+                <h3 style="display: inline; vertical-align: middle;">Databases you've starred</h3>
+            </div>
+            <div class="pull-right" style="padding-bottom: 8px;">
+                <button type="button" class="btn btn-default" ng-click="toggleCollapsedStar()">{{ titleCollapsedStar }}</button>
             </div>
             [[ if .Stars ]]
-            <div class="row">
-                <div class="col-md-12">
-                    <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px;">
-                        <table class="table table-striped table-responsive" style="border-collapse: collapse; margin: 0;">
-                            <tr ng-repeat="row in stars.Stars" class="profileRow">
-                                <td style="border: none;">
-                                    <h4>
-                                        <a class="blackLink" href="/{{ row.Owner }}">{{ row.Owner }}</a> /
-                                        <a class="blackLink" href="/{{ row.Owner + '/' + row.DBName }}">{{ row.DBName }}</a>
-                                    </h4>
-                                    <div uib-collapse="isCollapsedStar" style="padding-top: 5px;">
-                                        <b>Date starred:</b> {{ row.DateEntry | date : 'd MMMM, y h:mm a' }}
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                <table class="table table-striped table-responsive profileTable">
+                    <tr ng-repeat="row in stars.Stars">
+                        <td>
+                            <h4>
+                                <a class="blackLink" href="/{{ row.Owner }}">{{ row.Owner }}</a> /
+                                <a class="blackLink" href="/{{ row.Owner + '/' + row.DBName }}">{{ row.DBName }}</a>
+                            </h4>
+                            <div uib-collapse="isCollapsedStar" style="padding-top: 5px;">
+                                <b>Date starred:</b> {{ row.DateEntry | date : 'd MMMM, y h:mm a' }}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             [[ else ]]
                 <table class="table table-bordered table-striped table-responsive">
                     <tr>
@@ -184,29 +154,19 @@
             [[ end ]]
         </div>
         <div class="col-md-6">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="pull-left" style="padding-top: 8px;">
-                        <h3 style="display: inline; vertical-align: middle;">Databases you're watching</h3>
-                    </div>
-                    <div class="pull-right" style="padding-bottom: 8px;">
-                        <button type="button" class="btn btn-default" ng-click="toggleCollapsedWatch()">{{ titleCollapsedWatch }}</button>
-                    </div>
-                </div>
+            <div class="pull-left" style="padding-top: 8px;">
+                <h3 style="display: inline; vertical-align: middle;">Databases you're watching</h3>
             </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px;">
-                        <table class="table table-striped table-responsive" style="border-collapse: collapse; margin: 0;">
-                            <tr style="border: none;">
-                                <td style="border: none;">
-                                    <h4>Not yet implemented</h4>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
+            <div class="pull-right" style="padding-bottom: 8px;">
+                <button type="button" class="btn btn-default" ng-click="toggleCollapsedWatch()">{{ titleCollapsedWatch }}</button>
             </div>
+            <table class="table table-striped table-responsive profileTable">
+                <tr>
+                    <td>
+                        <h4>Not yet implemented</h4>
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
 
