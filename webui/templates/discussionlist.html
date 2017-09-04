@@ -98,7 +98,7 @@
                         <td style="border-style: none;">
                             <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ row.disc_id }}" style="font-size: x-large; color: #333;">{{ row.title }}</a>
                             <div>
-                                <span>Last modified on {{ row.last_modified | date : 'd MMM y h:mm a' }} by <a class="blackLink" href="/{{ row.creator }}">{{ row.creator }}</a></span> &nbsp;
+                                Last modified <span title="{{ row.last_modified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.last_modified, true) }}</span> by <a class="blackLink" href="/{{ row.creator }}">{{ row.creator }}</a> &nbsp;
                                 <span ng-if="row.comment_count > 0"><i class="fa fa-comment-o"></i> <a class="blackLink" href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ row.disc_id }}">{{ row.comment_count }} comment<span ng-if="row.comment_count > 1">s</span></a></span>
                             </div>
                         </td>
@@ -141,6 +141,11 @@
             } else {
                 window.location = '/creatediscuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
             }
+        };
+
+        // Returns a nicely presented "time elapsed" string
+        $scope.getTimePeriodTxt = function(date1, includeOn) {
+            return getTimePeriod(date1, includeOn)
         };
 
         // Switch between showing open vs closed discussions

@@ -2250,6 +2250,9 @@ func main() {
 	http.HandleFunc("/js/angular-sanitize.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.6.5.min.js.map"))
 	}))
+	http.HandleFunc("/js/local.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "local.js"))
+	}))
 	http.HandleFunc("/js/lock-10.20.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.20.min.js"))
 	}))

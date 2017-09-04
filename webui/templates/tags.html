@@ -40,7 +40,7 @@
                                     <button class="btn btn-primary" ng-click="updateTag(key)">Update</button>
                                 </td>
                                 <td style="border-style: none;">
-                                    <input type="text" name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}">
+                                    <input name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}">
                                 </td>
                             [[ else ]]
                                 <td style="border-style: none;">
@@ -53,7 +53,7 @@
                                 <div style="padding-top: 8px;"><a href="/{{ row.tagger_user_name }}">{{ row.tagger_display_name }}</a></div>
                             </td>
                             <td style="border-style: none;">
-                                <div style="padding-top: 8px;" ng-bind="row.date | date : 'd MMMM, y h:mm a'"></div>
+                                <div style="padding-top: 8px;" title="{{ row.date | date : 'medium' }}">{{ getTimePeriodTxt(row.date, false) }}</div>
                             </td>
                             <td style="border-style: none;">
                                 <div style="padding-top: 8px;">
@@ -145,6 +145,11 @@
             }).then(function (response) {
                 mkdnID.innerHTML = response.data;
             });
+        };
+
+        // Returns a nicely presented "time elapsed" string
+        $scope.getTimePeriodTxt = function(date1, includeOn) {
+            return getTimePeriod(date1, includeOn)
         };
 
         // Send the update details to the server

@@ -138,7 +138,7 @@
                                 <td style="text-align: left;">
                                     <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
                                 </td>
-                                <td>{{ row.upload_date | date : 'd MMM y h:mm a' }}</td>
+                                <td><span title="{{ row.upload_date | date : 'medium' }}">{{ getTimePeriodTxt(row.upload_date, false) }}</span></td>
                             </tr>
                         </tbody>
                     </table>
@@ -159,6 +159,11 @@
         // Open a window to the DB4S download page
         $scope.downloadDB4S = function() {
             window.open('http://sqlitebrowser.org');
+        };
+
+        // Returns a nicely presented "time elapsed" string
+        $scope.getTimePeriodTxt = function(date1, includeOn) {
+            return getTimePeriod(date1, includeOn)
         };
 
         // Switch to the upload database page

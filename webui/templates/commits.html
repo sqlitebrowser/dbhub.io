@@ -76,7 +76,7 @@
                             </td>
                             <td width="10%" style="border-style: none;">&nbsp;</td>
                             <td style="border-style: none;">
-                                {{ row.timestamp | date : 'd MMMM, y h:mm a' }}
+                                <span title="{{ row.timestamp | date : 'medium' }}">{{ getTimePeriodTxt(row.timestamp, false) }}</span>
                             </td>
                             <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
                                 <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}&commit={{ row.id }}">{{ row.id }}</a>
@@ -157,6 +157,11 @@
                 // The delete failed, so display the returned error message
                 $scope.statusMessage = "Error: " + response.data;
             });
+        };
+
+        // Returns a nicely presented "time elapsed" string
+        $scope.getTimePeriodTxt = function(date1, includeOn) {
+            return getTimePeriod(date1, includeOn)
         };
 
         // Auth0 popup

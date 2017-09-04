@@ -49,7 +49,7 @@
                             {{ row.OneLineDesc }}
                             <div uib-collapse="isCollapsedPub" style="padding-top: 5px;">
                                 <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
-                                <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
+                                <b>Last modified:</b> <span title="{{ row.LastModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.LastModified, false) }}</span> &nbsp;
                                 <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
                                 <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
                                 <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
@@ -91,7 +91,7 @@
                             {{ row.OneLineDesc }}
                             <div uib-collapse="isCollapsedPriv" style="padding-top: 5px;">
                                 <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
-                                <b>Last modified:</b> {{ row.LastModified | date : 'd MMMM, y h:mm a' }} &nbsp;
+                                <b>Last modified:</b> <span title="{{ row.LastModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.LastModified, false) }}</span> &nbsp;
                                 <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
                                 <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
                                 <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
@@ -138,7 +138,7 @@
                                 <a class="blackLink" href="/{{ row.Owner + '/' + row.DBName }}">{{ row.DBName }}</a>
                             </h4>
                             <div uib-collapse="isCollapsedStar" style="padding-top: 5px;">
-                                <b>Date starred:</b> {{ row.DateEntry | date : 'd MMMM, y h:mm a' }}
+                                <b>Starred:</b> <span title="{{ row.DateEntry | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.DateEntry, false) }}</span>
                             </div>
                         </td>
                     </tr>
@@ -179,6 +179,11 @@
         $scope.pubdb = { Databases: [[ .PublicDBs ]] };
         $scope.privdb = { Databases: [[ .PrivateDBs ]] };
         $scope.stars = { Stars: [[ .Stars ]] };
+
+        // Returns a nicely presented "time elapsed" string
+        $scope.getTimePeriodTxt = function(date1, includeOn) {
+            return getTimePeriod(date1, includeOn)
+        };
 
         // Toggle whether to show starred databases collapsed or not
         $scope.isCollapsedStar = true;

@@ -139,7 +139,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div>Opened on {{ Disc.creation_date | date : 'd MMM y h:mm a' }} by <a class="blackLink" href="/{{ Disc.creator }}">{{ Disc.creator }}</a></div>
+                                    <div>Opened <span title="{{ Disc.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(Disc.creation_date, true) }}</span> by <a class="blackLink" href="/{{ Disc.creator }}">{{ Disc.creator }}</a></div>
                                 </div>
                                 <div style="padding: 10px; border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;">
                                     <div ng-show="editDisc === true" style="text-align: center;">
@@ -169,7 +169,7 @@
                                 <td style="border: none;" width="10%">&nbsp;</td>
                                 <td style="border: none;">
                                     <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
-                                        <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> commented on {{ row.creation_date | date : 'd MMM y h:mm a' }}
+                                        <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> commented <span title="{{ row.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.creation_date, true) }}</span>
                                         <span ng-if="row.commenter == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
                                             <a class="blackLink" ng-click="editComment(row.com_id)"><i class="fa fa-pencil fa-fw"></i></a>
                                             <a class="blackLink" ng-click="deleteComment(row.com_id)"><i class="fa fa-trash-o fa-fw"></i></a>
@@ -198,8 +198,8 @@
                             </tr>
                         </tbody>
                     </table>
-                    <div ng-if="row.entry_type == 'cls'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-ban text-danger fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">closed this on</span> {{ row.creation_date | date : 'd MMM y @ h:mm a' }}.</div>
-                    <div ng-if="row.entry_type == 'rop'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-recycle text-success fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">reopened this on</span> {{ row.creation_date | date : 'd MMM y @ h:mm a' }}.</div>
+                    <div ng-if="row.entry_type == 'cls'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-ban text-danger fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">closed this</span> <span title="{{ row.creation_date | date : 'medium' }}">{{ getTimePeriodTxt(row.creation_date, true) }}</span>.</div>
+                    <div ng-if="row.entry_type == 'rop'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-recycle text-success fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">reopened this</span> <span title="{{ row.creation_date | date : 'medium' }}">{{ getTimePeriodTxt(row.creation_date, true) }}</span>.</div>
                 </span>
                 [[ if .Meta.LoggedInUser ]]
                     <span>
@@ -444,6 +444,11 @@
                 data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.editDiscBodyPreview = response.data; });
+        };
+
+        // Returns a nicely presented "time elapsed" string
+        $scope.getTimePeriodTxt = function(date1, includeOn) {
+            return getTimePeriod(date1, includeOn)
         };
 
         // Displays the Auth0 dialog
