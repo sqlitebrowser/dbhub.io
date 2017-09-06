@@ -586,8 +586,8 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// TODO: Add support for folders
 	targetFolder := "/"
 
-	// If a branch name was provided then use it, else default to "master"
-	branchName := "master"
+	// If a branch name was provided then validate it
+	var branchName string
 	bn := r.FormValue("branch")
 	if bn != "" {
 		err := com.Validate.Var(bn, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
@@ -670,6 +670,17 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		http.Error(w, fmt.Sprintf("Error code 401: You don't have write permission for '%s'",
 			r.URL.Path), http.StatusForbidden)
 		return
+	}
+
+	// Check if the database exists already
+	exists, err := com.CheckDBExists(userAcc, targetUser, targetFolder, targetDB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !exists && branchName == "" {
+		// If the database doesn't already exist, and no branch name was provided, then default to master
+		branchName = "master"
 	}
 
 	// Sanity check the uploaded database, and if ok then add it to the system
