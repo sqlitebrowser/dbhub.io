@@ -2238,17 +2238,17 @@ func main() {
 	}))
 
 	// Javascript
-	http.HandleFunc("/js/angular-1.6.5.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.6.5.min.js"))
+	http.HandleFunc("/js/angular-1.6.6.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.6.6.min.js"))
 	}))
 	http.HandleFunc("/js/angular.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.6.5.min.js.map"))
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.6.6.min.js.map"))
 	}))
-	http.HandleFunc("/js/angular-sanitize-1.6.5.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.6.5.min.js"))
+	http.HandleFunc("/js/angular-sanitize-1.6.6.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.6.6.min.js"))
 	}))
 	http.HandleFunc("/js/angular-sanitize.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.6.5.min.js.map"))
+		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.6.6.min.js.map"))
 	}))
 	http.HandleFunc("/js/local.js", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "js", "local.js"))
@@ -2259,8 +2259,8 @@ func main() {
 	http.HandleFunc("/js/lock.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.20.min.js.map"))
 	}))
-	http.HandleFunc("/js/ui-bootstrap-tpls-2.2.0.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "ui-bootstrap-tpls-2.2.0.min.js"))
+	http.HandleFunc("/js/ui-bootstrap-tpls-2.5.0.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join("webui", "js", "ui-bootstrap-tpls-2.5.0.min.js"))
 	}))
 
 	// Other static files
