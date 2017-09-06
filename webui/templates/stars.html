@@ -19,7 +19,7 @@
                 <tr ng-repeat="row in stars.Stars">
                     <td>
                         <h4>• <a class="blackLink" href="/{{ row.Owner }}">{{ row.display_name}}</a></h4>
-                        Starred on: {{ row.DateEntry | date : 'd MMMM, y h:mm a' }}
+                        Starred <span title="{{ row.DateEntry | date : 'medium' }}">{{ getTimePeriodTxt(row.DateEntry, true) }}</span>
                     </td>
                 </tr>
             </table>
@@ -34,6 +34,11 @@
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
         app.controller('starsView', function($scope) {
             $scope.stars = { Stars: [[ .Stars ]] }
+
+            // Returns a nicely presented "time elapsed" string
+            $scope.getTimePeriodTxt = function(date1, includeOn) {
+                return getTimePeriod(date1, includeOn)
+            };
 
             var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
                 redirectUrl: "[[ .Auth0.CallbackURL]]"
