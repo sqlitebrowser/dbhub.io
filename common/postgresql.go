@@ -1405,13 +1405,13 @@ func GetActivityStats() (stats ActivityStats, err error) {
 
 	// Retrieve a list of the most recent uploads
 	dbQuery = `
-		SELECT user_name, db.db_name, db.date_created
+		SELECT user_name, db.db_name, db.last_modified
 		FROM sqlite_databases AS db, users
 		WHERE db.forked_from IS NULL
 			AND db.public = true
 			AND db.is_deleted = false
 			AND db.user_id = users.user_id
-		ORDER BY db.date_created DESC, db.last_modified
+		ORDER BY db.last_modified DESC
 		LIMIT 5`
 	upRows, err := pdb.Query(dbQuery)
 	if err != nil {
