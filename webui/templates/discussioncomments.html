@@ -146,7 +146,7 @@
                                         <uib-tabset active="activeDisc">
                                             <uib-tab index="0">
                                                 <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                                <textarea id="disctext" name="disctext" rows="10" style="margin-top: 2px; width: 100%;" ng-bind-html="editDiscBody"></textarea>
+                                                <textarea id="disctext" name="disctext" rows="10" style="margin-top: 2px; width: 100%;" ng-bind="editDiscBody"></textarea>
                                             </uib-tab>
                                             <uib-tab index="1" select="getMarkdownDisc()">
                                                 <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
@@ -181,7 +181,7 @@
                                             <uib-tabset>
                                                 <uib-tab index="0">
                                                     <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                                    <textarea id="com{{ row.com_id }}" name="com{{ row.com_id }}" rows="10" style="margin-top: 2px; width: 100%;" ng-bind-html="getCommentText(row.com_id)"></textarea>
+                                                    <textarea id="com{{ row.com_id }}" name="com{{ row.com_id }}" rows="10" style="margin-top: 2px; width: 100%;" ng-bind="getCommentText(row.com_id)"></textarea>
                                                 </uib-tab>
                                                 <uib-tab index="1" select="getMarkdownCom(row.com_id)">
                                                     <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
