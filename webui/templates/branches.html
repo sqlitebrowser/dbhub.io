@@ -172,7 +172,7 @@
         // Retrieve and render markdown text
         $scope.getMarkdown = function(rowDesc) {
             var txtID = document.getElementById(rowDesc + "_desc");
-            if (txtID == null) {
+            if (txtID === null) {
                 // txtID is null when the page first renders (and we don't need it then anyway).  It's correctly set
                 // afterwards.
                 return;

@@ -143,16 +143,16 @@
                     <i>Markdown (<a href="http://commonmark.org" target="_blank">CommonMark</a> format) is supported</i>
                 </div>
                 <div>
-                    <uib-tabset active="active">
-                        <uib-tab index="0">
+                    <uib-tabset active="0">
+                        <uib-tab index="0" select="getMarkdown()">
+                            <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
+                            <div style="text-align: left; margin-top: 2px; min-height: 80px;" ng-bind-html="markDownPreview"></div>
+                        </uib-tab>
+                        <uib-tab index="1">
                             <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
                             <div style="text-align: center;">
                                 <textarea id="fulldesc" name="fulldesc" rows="18" style="margin-top: 2px; width: 100%;" ng-bind="meta.FullDesc"></textarea>
                             </div>
-                        </uib-tab>
-                        <uib-tab index="1" select="getMarkdown()">
-                            <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
-                            <div style="text-align: left; margin-top: 2px; min-height: 80px;" ng-bind-html="markDownPreview"></div>
                         </uib-tab>
                     </uib-tabset>
                 </div>
@@ -264,13 +264,19 @@
         };
 
         // Get rendered markdown from the server, for display in the README preview tab
-        $scope.markDownPreview = "";
+        $scope.markDownPreview = "[[ .FullDescRendered ]]";
         $scope.getMarkdown = function() {
             // Retrieve latest markdown text from the text area
-            var txt = document.getElementById("fulldesc").value;
+            var txtID = document.getElementById("fulldesc");
+            if (txtID === null) {
+                // txtID is null when the page first renders (and we don't need it then anyway).  It's correctly set
+                // afterwards.
+                return;
+            }
+            var rawTxt = txtID.value;
 
             // Check for the placeholder string
-            if (txt === "No full description") {
+            if (rawTxt === "No full description") {
                 $scope.markDownPreview = "";
                 return;
             }
@@ -279,7 +285,7 @@
             $http({
                 method: "POST",
                 url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
+                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(rawTxt)}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.markDownPreview = response.data; });
         };

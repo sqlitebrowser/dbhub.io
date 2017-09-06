@@ -1769,12 +1769,14 @@ func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 func settingsPage(w http.ResponseWriter, r *http.Request) {
 	// Structures to hold page data
 	var pageData struct {
-		Auth0       com.Auth0Set
-		BranchLics  map[string]string
-		DB          com.SQLiteDBinfo
-		Licences    map[string]com.LicenceEntry
-		Meta        com.MetaInfo
-		NumLicences int
+		Auth0            com.Auth0Set
+		BranchLics       map[string]string
+		DB               com.SQLiteDBinfo
+		FullDescRendered string
+		Licences         map[string]com.LicenceEntry
+		Meta             com.MetaInfo
+		NumLicences      int
+
 	}
 	pageData.Meta.Title = "Database settings"
 
@@ -1895,6 +1897,9 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pageData.NumLicences = len(pageData.Licences)
+
+	// Render the full description markdown
+	pageData.FullDescRendered = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
 
 	// Fill out the metadata
 	pageData.Meta.Owner = dbOwner
