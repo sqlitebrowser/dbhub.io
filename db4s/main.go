@@ -101,8 +101,22 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve the default branch for the database
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Return the list as JSON
-	jsonList, err := json.MarshalIndent(brList, "", "  ")
+	info := struct {
+		Def string `json:"default_branch"`
+		Entries map[string]com.BranchEntry `json:"branches"`
+	} {
+		defBranch,
+		brList,
+	}
+	jsonList, err := json.MarshalIndent(info, "", "  ")
 	if err != nil {
 		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
 		log.Print(errMsg)
