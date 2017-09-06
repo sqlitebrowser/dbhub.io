@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 9.6.4
--- Dumped by pg_dump version 9.6.4
+-- Dumped from database version 9.6.5
+-- Dumped by pg_dump version 9.6.5
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -613,7 +613,7 @@ ALTER TABLE ONLY database_uploads
 --
 
 ALTER TABLE ONLY discussion_comments
-    ADD CONSTRAINT discussion_comments_commenter_fkey FOREIGN KEY (commenter) REFERENCES users(user_id);
+    ADD CONSTRAINT discussion_comments_commenter_fkey FOREIGN KEY (commenter) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -621,7 +621,7 @@ ALTER TABLE ONLY discussion_comments
 --
 
 ALTER TABLE ONLY discussion_comments
-    ADD CONSTRAINT discussion_comments_db_id_fkey FOREIGN KEY (db_id) REFERENCES sqlite_databases(db_id);
+    ADD CONSTRAINT discussion_comments_db_id_fkey FOREIGN KEY (db_id) REFERENCES sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -629,7 +629,7 @@ ALTER TABLE ONLY discussion_comments
 --
 
 ALTER TABLE ONLY discussion_comments
-    ADD CONSTRAINT discussion_comments_disc_id_fkey FOREIGN KEY (disc_id) REFERENCES discussions(internal_id);
+    ADD CONSTRAINT discussion_comments_disc_id_fkey FOREIGN KEY (disc_id) REFERENCES discussions(internal_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
