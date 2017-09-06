@@ -187,9 +187,9 @@
                 <!-- <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button> -->
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                     <button type="button" class="btn btn-success" uib-dropdown-toggle>
-                        Download <span class="caret"></span>
+                        Download database <span class="caret"></span>
                     </button>
-                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                    <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
                         <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
                         <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
                     </ul>
