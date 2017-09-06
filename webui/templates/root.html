@@ -60,7 +60,7 @@
                                 <td style="text-align: left;">
                                     <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
                                 </td>
-                                <td>{{ row.count }}</td>
+                                <td><a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.count }}</a></td>
                             </tr>
                         </tbody>
                     </table>
@@ -98,7 +98,7 @@
                                 <td style="text-align: left;">
                                     <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
                                 </td>
-                                <td>{{ row.count }}</td>
+                                <td><a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.count }}</a></td>
                             </tr>
                         </tbody>
                     </table>
@@ -138,7 +138,7 @@
                                 <td style="text-align: left;">
                                     <a class="blackLink" href="/{{ row.owner }}">{{ row.owner }}</a> / <a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}">{{ row.dbname }}</a>
                                 </td>
-                                <td><span title="{{ row.upload_date | date : 'medium' }}">{{ getTimePeriodTxt(row.upload_date, false) }}</span></td>
+                                <td><a class="blackLink" href="{{ '/' + row.owner + '/' + row.dbname }}"><span title="{{ row.upload_date | date : 'medium' }}">{{ getTimePeriodTxt(row.upload_date, false) }}</span></a></td>
                             </tr>
                         </tbody>
                     </table>
