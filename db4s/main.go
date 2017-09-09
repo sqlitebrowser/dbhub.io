@@ -710,11 +710,9 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	if !exists {
 		createBranch = true
 	} else {
-		// The database already exists, but no commit nor branch name was given so we can't intelligently perform
-		// commit nor fork detection.  Lets be safe here and abort.
-		if commit == "" && branchName == "" {
-			http.Error(w, "Neither commit id nor branch name were provided.  You probably need to upgrade DB4S before trying this again.",
-				http.StatusUpgradeRequired)
+		if commit == "" {
+			http.Error(w, "No commit ID was provided.  You probably need to upgrade DB4S before trying this "+
+				"again.", http.StatusUpgradeRequired)
 			return
 		}
 
@@ -737,82 +735,69 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 			// An unknown branch name was given, so this is a fork.
 			createBranch = true
 
-			// If a commit id was provided, then we fork from that.  Otherwise we fork from the head commit of the
-			// default branch
-			if commit == "" {
-				// No commit ID was provided, so we grab the commit ID of the default branch and use that
-				defBranch, err := com.GetDefaultBranchName(targetUser, targetFolder, targetDB)
+			// Make sure the given commit ID is in the commit history.  If it's not, we error out
+			found := false
+			for branch := range branchList {
+				// Loop through the branches, checking if the commit ID is in any of them
+				a, err := com.IsCommitInBranchHistory(targetUser, targetFolder, targetDB, branch, commit)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				commit = branchList[defBranch].Commit
-			} else {
-				// Make sure the given commit ID is in the commit history.  If it's not, we error out
-				commits, err := com.GetCommitList(targetUser, targetFolder, targetDB)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
+				if a {
+					found = true
 				}
-				_, ok := commits[commit]
-				if !ok {
-					http.Error(w, fmt.Sprintf("Unknown commit ID: '%s'", commit), http.StatusNotFound)
-					return
-				}
+			}
+			if !found {
+				// The commit wasn't found in the history of any branch
+				http.Error(w, fmt.Sprintf("Unknown commit ID: '%s'", commit), http.StatusNotFound)
+				return
 			}
 		} else {
 			// * Collision detection piece *
 
-			// Check if a commit ID was given
-			if commit != "" {
-				// Check if the provided commit ID is the latest head commit for the branch.  If it is, then things
-				// are in order and this new upload should be a new commit on the branch.
-				if brDetails.Commit != commit {
-					// * The provided commit doesn't match the HEAD commit for the specified branch *
+			// Check if the provided commit ID is the latest head commit for the branch.  If it is, then things
+			// are in order and this new upload should be a new commit on the branch.
+			if brDetails.Commit != commit {
+				// * The provided commit doesn't match the HEAD commit for the specified branch *
 
-					// Check if the provided commit is present in the history for the branch.  If it is, then the
-					// database being pushed is out of date compared to the HEAD commit.  We'll need to abort
-					// (with a suitable warning message), unless the force flag was passed + set to true
-					found, err := com.IsCommitInBranchHistory(targetUser, targetFolder, targetDB, branchName, commit)
-					if err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-
-					if !found {
-						// The provided commit ID isn't in the commit history for the branch, so there's something
-						// wrong.  We need to error out and let DB4S know
-						http.Error(w, fmt.Sprintf("Commit ID '%s' isn't in the commit history of branch '%s'",
-							commit, branchName), http.StatusNotFound)
-						return
-					}
-
-					// * To get here, this push is a collision *
-
-					// The commit ID provided was found in the branch history but isn't the latest (HEAD) commit for
-					// the branch.  Unless the "force" flag was provided by DB4S (and set to true), we error out to
-					// notify DB4S of the collision.  It probably just means the database has been updated on the
-					// server (eg through the webUI) but the user is still using an older version and needs to update
-
-					if !force {
-						http.Error(w, fmt.Sprintf("Outdated commit '%s' provided.  You're probably using an "+
-							"old version of the database", commit), http.StatusConflict)
-						return
-					}
-
-					// * To get here, DB4S has told us to rewrite the commit history for a branch, given us the
-					//   required info, and provided the "force" flag set to true.  So, we drop through here and get
-					//   it done *
-
-				} else {
-					// The provided commit ID matched the branch head, so things are in order.  We drop through and
-					// create a new commit
+				// Check if the provided commit is present in the history for the branch.  If it is, then the
+				// database being pushed is out of date compared to the HEAD commit.  We'll need to abort
+				// (with a suitable warning message), unless the force flag was passed + set to true
+				found, err := com.IsCommitInBranchHistory(targetUser, targetFolder, targetDB, branchName, commit)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
 				}
+
+				if !found {
+					// The provided commit ID isn't in the commit history for the branch, so there's something
+					// wrong.  We need to error out and let DB4S know
+					http.Error(w, fmt.Sprintf("Commit ID '%s' isn't in the commit history of branch '%s'",
+						commit, branchName), http.StatusNotFound)
+					return
+				}
+
+				// * To get here, this push is a collision *
+
+				// The commit ID provided was found in the branch history but isn't the latest (HEAD) commit for
+				// the branch.  Unless the "force" flag was provided by DB4S (and set to true), we error out to
+				// notify DB4S of the collision.  It probably just means the database has been updated on the
+				// server (eg through the webUI) but the user is still using an older version and needs to update
+
+				if !force {
+					http.Error(w, fmt.Sprintf("Outdated commit '%s' provided.  You're probably using an "+
+						"old version of the database", commit), http.StatusConflict)
+					return
+				}
+
+				// * To get here, DB4S has told us to rewrite the commit history for a branch, given us the
+				//   required info, and provided the "force" flag set to true.  So, we drop through here and get
+				//   it done *
+
 			} else {
-				// A known branch was provided, but no commit ID.  Return an error.
-				http.Error(w, "No commit id was provided.  You probably need to upgrade DB4S before trying "+
-					"this again.", http.StatusUpgradeRequired)
-				return
+				// The provided commit ID matched the branch head, so things are in order.  We drop through and
+				// create a new commit
 			}
 		}
 	}
