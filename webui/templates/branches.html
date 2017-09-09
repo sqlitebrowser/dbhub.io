@@ -35,7 +35,7 @@
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                 <th colspan="2">Actions</th>
                             [[ end ]]
-                            <th>Name</th><th>Commit ID</th>
+                            <th>Name</th><th>Head Commit ID</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,7 +62,7 @@
                             </td>
                             <td style="border-style: none;">
                                 <div style="padding-top: 8px;">
-                                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}">{{ row.commit }}</a>
+                                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ row.name }}&commit={{ row.commit }}">{{ row.commit }}</a>
                                 </div>
                             </td>
                         </tr>

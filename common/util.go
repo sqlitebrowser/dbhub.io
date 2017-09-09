@@ -19,8 +19,8 @@ import (
 
 // The main function which handles database upload processing for both the webUI and DB4S end points
 func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder string, dbName string,
-	branchName string, public bool, licenceName string, commitMsg string, sourceURL string, newDB io.Reader,
-	serverSw string) (numBytes int64, commitID string, err error) {
+	createBranch bool, branchName string, commitID string, public bool, licenceName string, commitMsg string, sourceURL string, newDB io.Reader,
+	serverSw string) (numBytes int64, newCommitID string, err error) {
 
 	// Create a temporary file to store the database in
 	tempDB, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
@@ -121,22 +121,13 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 		// No licence was specified by the client, so check if the database is already in the system and
 		// already has one.  If so, we use that.
 		if exists {
-			headBranch, ok := branches[branchName]
-			if !ok {
-				return 0, "", errors.New("Error retrieving branch details")
-			}
-			commits, err := GetCommitList(loggedInUser, dbFolder, dbName)
+			lic, err := CommitLicenceSHA(loggedInUser, dbFolder, dbName, commitID)
 			if err != nil {
-				return 0, "", errors.New("Error retrieving commit list")
+				return 0, "", err
 			}
-			headCommit, ok := commits[headBranch.Commit]
-			if !ok {
-				return 0, "", fmt.Errorf("Err when looking up commit '%s' in commit list", headBranch.Commit)
-
-			}
-			if headCommit.Tree.Entries[0].LicenceSHA != "" {
+			if lic != "" {
 				// The previous commit for the database had a licence, so we use that for this commit too
-				e.LicenceSHA = headCommit.Tree.Entries[0].LicenceSHA
+				e.LicenceSHA = lic
 			}
 		} else {
 			// It's a new database, and the licence hasn't been specified
@@ -157,9 +148,26 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 			return 0, "", err
 		}
 
-		// Generate a reasonable commit message if none was given
-		if !exists && commitMsg == "" {
-			commitMsg = fmt.Sprintf("Initial database upload, using licence %s.", licenceName)
+		// Generate an appropriate commit message if none was provided
+		if commitMsg == "" {
+			if !exists {
+				// A reasonable commit message for new database
+				commitMsg = fmt.Sprintf("Initial database upload, using licence %s.", licenceName)
+			} else {
+				// The database already exists, so check if the licence has changed
+				lic, err := CommitLicenceSHA(loggedInUser, dbFolder, dbName, commitID)
+				if err != nil {
+					return 0, "", err
+				}
+				if e.LicenceSHA != lic {
+					// The licence has changed, so we create a reasonable commit message indicating this
+					l, _, err := GetLicenceInfoFromSha256(loggedInUser, lic)
+					if err != nil {
+						return 0, "", err
+					}
+					commitMsg = fmt.Sprintf("Database licence changed from '%s' to '%s'.", l, licenceName)
+				}
+			}
 		}
 	}
 
@@ -187,14 +195,25 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	c.Timestamp = time.Now()
 	c.Tree = t
 
-	// If the database already exists, use the head commit for the appropriate branch as the parent for our new
-	// uploads' commit
+	// If the database already exists, determine the commit ID to use as the parent
 	if exists {
 		b, ok := branches[branchName]
-		if !ok {
-			return 0, "", errors.New("Error when looking up branch details")
+		if ok {
+			// We're adding to a known branch.  If a commit was specifically provided, use that as the parent commit,
+			// otherwise use the head commit of the branch
+			if commitID != "" {
+				c.Parent = commitID
+			} else {
+				c.Parent = b.Commit
+			}
+		} else {
+			// The branch name given isn't (yet) part of the database.  If we've been told to create the branch, then
+			// we use the commit also passed (a requirement!) as the parent.  Otherwise, we error out
+			if !createBranch {
+				return 0, "", errors.New("Error when looking up branch details")
+			}
+			c.Parent = commitID
 		}
-		c.Parent = b.Commit
 	}
 
 	// Create the commit ID for the new upload
@@ -251,6 +270,15 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 		}
 	}
 
+	// If a new branch was created, then update the branch count for the database
+	// Note, this could probably be merged into the StoreDatabase() call above, but it should be good enough for now
+	if createBranch {
+		err = StoreBranches(dbOwner, dbFolder, dbName, branches)
+		if err != nil {
+			return 0, "", err
+		}
+	}
+
 	// Was a user agent part of the request?
 	var userAgent string
 	ua, ok := r.Header["User-Agent"]
@@ -282,6 +310,19 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 
 	// Database successfully uploaded
 	return numBytes, c.ID, nil
+}
+
+// Returns the licence used by the database in a given commit
+func CommitLicenceSHA(dbOwner string, dbFolder string, dbName string, commitID string) (licenceSHA string, err error) {
+	commits, err := GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return "", err
+	}
+	c, ok := commits[commitID]
+	if !ok {
+		return "", fmt.Errorf("Commit not found in database commit list")
+	}
+	return c.Tree.Entries[0].LicenceSHA, nil
 }
 
 // Generate a stable SHA256 for a commit.
@@ -331,6 +372,49 @@ func GetCurrentFunctionName() (FuncName string) {
 	runtime.Callers(2, stk[:])
 	FuncName = runtime.FuncForPC(stk[0]).Name() + "()"
 	return
+}
+
+// Checks if a given commit ID is in the history of the given branch
+func IsCommitInBranchHistory(dbOwner string, dbFolder string, dbName string, branchName string, commit string) (bool, error) {
+	// Get the commit list for the database
+	commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return false, err
+	}
+
+	branchList, err := GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return false, err
+	}
+
+	// Walk the branch history, looking for the given commit ID
+	head, ok := branchList[branchName]
+	if !ok {
+		// The given branch name wasn't found in the database branch list
+		return false, fmt.Errorf("Branch '%s' not found in the database", branchName)
+	}
+
+	found := false
+	c, ok := commitList[head.Commit]
+	if !ok {
+		// The head commit wasn't found in the commit list.  This shouldn't happen
+		return false, fmt.Errorf("Head commit not found in database commit list.  This shouldn't happen")
+	}
+	for c.Parent != "" {
+		c, ok = commitList[c.Parent]
+		if !ok {
+			log.Printf("Broken commit history encountered for branch '%s' in '%s%s%s', when looking for "+
+				"commit '%s'\n", branchName, dbOwner, dbFolder, dbName, c.Parent)
+			return false, fmt.Errorf("Broken commit history encountered for branch '%s' when looking up "+
+				"commit details", branchName)
+		}
+		if c.ID == commit {
+			// The commit was found
+			found = true
+			break
+		}
+	}
+	return found, nil
 }
 
 // Look for the next child fork in a fork tree

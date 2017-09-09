@@ -1776,7 +1776,6 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		Licences         map[string]com.LicenceEntry
 		Meta             com.MetaInfo
 		NumLicences      int
-
 	}
 	pageData.Meta.Title = "Database settings"
 
