@@ -216,9 +216,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 								for _, tName := range iTags {
 									if tList == "" {
 										msg += fmt.Sprintf("'%s'", tName)
-										//tList = tName
 									} else {
-										//tList += ", " + tName
 										msg += fmt.Sprintf(", '%s'", tName)
 									}
 								}
@@ -229,10 +227,8 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 								for _, rName := range iRels {
 									if rList == "" {
 										msg += fmt.Sprintf("'%s'", rName)
-										//rList = rName
 									} else {
 										msg += fmt.Sprintf(", '%s'", rName)
-										//rList += ", " + rName
 									}
 								}
 							}

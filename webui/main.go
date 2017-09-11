@@ -1021,7 +1021,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		// Walk the commit history for the branch checking if any of the tags are on commits in this branch
 		c, ok := commitList[branch.Commit]
 		if !ok {
-			log.Printf("Error when checking for isolated tags while deleting branch '%s' of database " +
+			log.Printf("Error when checking for isolated tags while deleting branch '%s' of database "+
 				"'%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -1036,7 +1036,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		for c.Parent != "" {
 			c, ok = commitList[c.Parent]
 			if !ok {
-				log.Printf("Error when checking for isolated tags while deleting branch '%s' of database " +
+				log.Printf("Error when checking for isolated tags while deleting branch '%s' of database "+
 					"'%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -1073,7 +1073,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 				for c.Parent != "" {
 					c, ok = commitList[c.Parent]
 					if !ok {
-						log.Printf("Error when checking for isolated tags while deleting branch '%s' of " +
+						log.Printf("Error when checking for isolated tags while deleting branch '%s' of "+
 							"database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
@@ -1118,7 +1118,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		// Walk the commit history for the branch checking if any of the releases are on commits in this branch
 		c, ok := commitList[branch.Commit]
 		if !ok {
-			log.Printf("Error when checking for isolated releases while deleting branch '%s' of database " +
+			log.Printf("Error when checking for isolated releases while deleting branch '%s' of database "+
 				"'%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -1133,7 +1133,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		for c.Parent != "" {
 			c, ok = commitList[c.Parent]
 			if !ok {
-				log.Printf("Error when checking for isolated releases while deleting branch '%s' of database " +
+				log.Printf("Error when checking for isolated releases while deleting branch '%s' of database "+
 					"'%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -1170,7 +1170,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 				for c.Parent != "" {
 					c, ok = commitList[c.Parent]
 					if !ok {
-						log.Printf("Error when checking for isolated releases while deleting branch '%s' of " +
+						log.Printf("Error when checking for isolated releases while deleting branch '%s' of "+
 							"database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
@@ -1243,7 +1243,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 		c, ok = commitList[bEntry.Commit]
 		if !ok {
-			err = fmt.Errorf("Broken commit history encountered when checking for commits while deleting " +
+			err = fmt.Errorf("Broken commit history encountered when checking for commits while deleting "+
 				"branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 			log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 			return
@@ -1257,7 +1257,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		for c.Parent != "" {
 			c, ok = commitList[c.Parent]
 			if !ok {
-				err = fmt.Errorf("Broken commit history encountered when checking for commits while " +
+				err = fmt.Errorf("Broken commit history encountered when checking for commits while "+
 					"deleting branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 				return
@@ -1506,86 +1506,60 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure that deleting this commit won't result in any isolated/unreachable tags
-	tagList, err := com.GetTags(dbOwner, dbFolder, dbName)
+	// Determine the commit ID we'll be rewinding to
+	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	commitTags := map[string]struct{}{}
-	for tName, tEntry := range tagList {
-		// Scan through the database tag list, checking if any of the tags is for the commit we're deleting
-		if tEntry.Commit == commit {
-			commitTags[tName] = struct{}{}
-		}
+	c, ok := commitList[commit]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Requested commit not found"))
+		return
 	}
-	if len(commitTags) > 0 {
-		// If the commit we're deleting has a tag on it, we need to check if the commit is on other branches too
-		//   * If it is, we're ok to delete the commit as the commit/tag can still be reached from the other branch(es)
-		//   * If it isn't, we need to abort the commit (and tell the user), as the tag would become unreachable
-
-		// Get the commit list for the database
-		commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		isolatedTags := true
-		for bName, bEntry := range branches {
-			if bName == branchName {
-				// We only run this comparison from "other branches", not the branch we're deleting from
-				continue
-			}
-			c := commitList[bEntry.Commit]
-			if c.ID == commit {
-				// The commit is also on another branch, so we're ok to delete the commit
-				isolatedTags = false
-				break
-			}
-			for c.Parent != "" {
-				c, ok = commitList[c.Parent]
-				if !ok {
-					log.Printf("Error when checking for isolated tags while deleting commit '%s' in branch '%s' of database '%s%s%s'\n",
-						commit, branchName, dbOwner, dbFolder, dbName)
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				if c.ID == commit {
-					// The commit is also on another branch, so we're ok to delete the commit
-					isolatedTags = false
-					break
-				}
-			}
-		}
-
-		// Deleting this commit would result in isolated tags, so abort the delete and tell the user of the problem
-		if isolatedTags {
-			var conflictedTags string
-			for tName := range commitTags {
-				if conflictedTags == "" {
-					conflictedTags = tName
-				} else {
-					conflictedTags += ", " + tName
-				}
-			}
-
-			w.WriteHeader(http.StatusConflict)
-			if len(commitTags) > 1 {
-				w.Write([]byte(fmt.Sprintf("You need to delete the tags '%s' before you can delete this commit",
-					conflictedTags)))
-			} else {
-				w.Write([]byte(fmt.Sprintf("You need to delete the tag '%s' before you can delete this commit",
-					conflictedTags)))
-			}
-			return
-		}
+	if c.Parent == "" {
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte("Requested commit has no ancestors.  Not going to delete it"))
+		return
 	}
+	prevCommit := c.Parent
 
 	// Delete the commit
-	err = com.DeleteLatestBranchCommit(dbOwner, dbFolder, dbName, branchName)
+	iTags, iRels, err := com.DeleteBranchHistory(dbOwner, dbFolder, dbName, branchName, prevCommit)
 	if err != nil {
+		if (len(iTags) > 0) || (len(iRels) > 0) {
+			msg := fmt.Sprintln("You need to delete the following tags and releases before the commit can be " +
+				"deleted:")
+			var rList, tList string
+			if len(iTags) > 0 {
+				// Would-be-isolated tags were identified.  Warn the user.
+				msg += "  TAGS: "
+				for _, tName := range iTags {
+					if tList == "" {
+						msg += fmt.Sprintf("'%s'", tName)
+					} else {
+						msg += fmt.Sprintf(", '%s'", tName)
+					}
+				}
+			}
+			if len(iRels) > 0 {
+				// Would-be-isolated releases were identified.  Warn the user.
+				msg += "  RELEASES: "
+				for _, rName := range iRels {
+					if rList == "" {
+						msg += fmt.Sprintf("'%s'", rName)
+					} else {
+						msg += fmt.Sprintf(", '%s'", rName)
+					}
+				}
+			}
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(msg))
+			return
+		}
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Commit deletion failed, internal server error"))
 		return
 	}
 
