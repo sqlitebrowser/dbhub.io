@@ -11,7 +11,7 @@ or run it locally for your own users.
 **Note** - Don't store important data on the beta server.  We're still changing things
 around on it quite often, and haven't yet put time into setting up backups (etc).
 
-When the core code is more fully featured (end of August 2017 target), we'll start
+When the core code is more fully featured (end of October 2017 target), we'll start
 putting "production" servers online for people to store their data.
 
 ### Screenshot
@@ -32,7 +32,7 @@ putting "production" servers online for people to store their data.
 * [database](database/) - PostgreSQL database schema.
 * [default_licences](default_licences/) - Useful Open Source licences suitable for databases.
 * [db4s](db4s/) - REST server which [DB Browser for SQLite](http://sqlitebrowser.org)
-  connects to with File → Remote.
+  connects to for the Remote panel.
 * [dio](dio/) - (not yet created) Future home for `dio`, our command line interface (cli) for
   interacting with DBHub.io.
 * [webui](webui/) - The main public facing webUI.
