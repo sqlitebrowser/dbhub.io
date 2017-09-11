@@ -965,14 +965,14 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	branchList, err := com.GetBranches(loggedInUser, dbFolder, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Make sure the given branch exists
-	branch, ok := branches[branchName]
+	branch, ok := branchList[branchName]
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -999,18 +999,25 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the commit list for the database
+	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	// If the database has tags, walk the commit history for the branch checking if any of the tags are on commits in
 	// this branch
 	branchTags := make(map[string]string)
 	if len(tags) > 0 {
 		// Walk the commit history for the branch checking if any of the tags are on commits in this branch
-		commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
-		if err != nil {
+		c, ok := commitList[branch.Commit]
+		if !ok {
+			log.Printf("Error when checking for isolated tags while deleting branch '%s' of database " +
+				"'%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
-		c := commitList[branch.Commit]
 		for tName, tEntry := range tags {
 			// Scan through the tags, checking if any of them are for this commit
 			if tEntry.Commit == c.ID {
@@ -1021,8 +1028,8 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		for c.Parent != "" {
 			c, ok = commitList[c.Parent]
 			if !ok {
-				log.Printf("Error when checking for isolated tags while deleting branch '%s' of database '%s%s%s'\n",
-					branchName, dbOwner, dbFolder, dbName)
+				log.Printf("Error when checking for isolated tags while deleting branch '%s' of database " +
+					"'%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -1037,7 +1044,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 		// For any tags on commits in this branch, check if they're also on other branches
 		if len(branchTags) > 0 {
-			for bName, bEntry := range branches {
+			for bName, bEntry := range branchList {
 				if bName == branchName {
 					// We're only checking "other branches"
 					continue
@@ -1058,8 +1065,8 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 				for c.Parent != "" {
 					c, ok = commitList[c.Parent]
 					if !ok {
-						log.Printf("Error when checking for isolated tags while deleting branch '%s' of database '%s%s%s'\n",
-							branchName, dbOwner, dbFolder, dbName)
+						log.Printf("Error when checking for isolated tags while deleting branch '%s' of " +
+							"database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
@@ -1096,10 +1103,80 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Make a list of commits in this branch
+	lst := map[string]bool{}
+	c, ok := commitList[branch.Commit]
+	if !ok {
+		log.Printf("Error when creating commit list while deleting branch '%s' of database '%s%s%s'\n",
+			branchName, dbOwner, dbFolder, dbName)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	lst[c.ID] = true
+	for c.Parent != "" {
+		c, ok = commitList[c.Parent]
+		if !ok {
+			log.Printf("Error when creating commit list while deleting branch '%s' of database '%s%s%s'\n",
+				branchName, dbOwner, dbFolder, dbName)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		lst[c.ID] = true
+	}
+
+	// For each commit, determine if it's only on this branch, and will need to be deleted after the branch
+	for bName, bEntry := range branchList {
+		if bName == branchName {
+			// We only run this comparison from "other branches", not the branch we're deleting
+			continue
+		}
+		c, ok = commitList[bEntry.Commit]
+		if !ok {
+			err = fmt.Errorf("Broken commit history encountered when checking for commits while deleting " +
+				"branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+			log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
+			return
+		}
+		for delCommit := range lst {
+			if c.ID == delCommit {
+				// The commit is also on another branch, so we *must not* delete the commit afterwards
+				delete(lst, c.ID)
+			}
+		}
+		for c.Parent != "" {
+			c, ok = commitList[c.Parent]
+			if !ok {
+				err = fmt.Errorf("Broken commit history encountered when checking for commits while " +
+					"deleting branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
+				return
+			}
+			for delCommit := range lst {
+				if c.ID == delCommit {
+					// The commit is also on another branch, so we *must not* delete the commit afterwards
+					delete(lst, c.ID)
+				}
+			}
+		}
+	}
+
 	// Delete the branch
-	delete(branches, branchName)
-	err = com.StoreBranches(dbOwner, dbFolder, dbName, branches)
+	delete(branchList, branchName)
+	err = com.StoreBranches(dbOwner, dbFolder, dbName, branchList)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Delete the left over commits
+	// TODO: We may want to consider clearing any memcache entries for the deleted commits too
+	for cid := range lst {
+		delete(commitList, cid)
+	}
+	err = com.StoreCommits(dbOwner, dbFolder, dbName, commitList)
+	if err != nil {
+		log.Printf("Error when updating commit list while deleting branch '%s' of database '%s%s%s': %s\n",
+			branchName, dbOwner, dbFolder, dbName, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
