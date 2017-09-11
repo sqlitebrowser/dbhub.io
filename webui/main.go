@@ -989,8 +989,16 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Make sure that deleting this branch wouldn't result in any isolated tags.  For example, when there is a tag on
-	// a commit which is only in this branch, deleting the branch would leave the tag in place with no way to reach it
+	// Make sure that deleting this branch wouldn't result in any isolated tags or releases.  For example, when there
+	// is a tag or release on a commit which is only in this branch, deleting the branch would leave the tag or
+	// release in place with no way to reach it
+
+	// Get the commit list for the database
+	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// Get the tag list for the database
 	tags, err := com.GetTags(dbOwner, dbFolder, dbName)
@@ -999,8 +1007,8 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the commit list for the database
-	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	// Get the release list for the database
+	rels, err := com.GetReleases(dbOwner, dbFolder, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1050,8 +1058,8 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
+				// If there are no tags left to check, we might as well stop further looping
 				if len(branchTags) == 0 {
-					// If there are no tags left to check, we might as well stop further looping
 					break
 				}
 
@@ -1103,6 +1111,103 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// If the database has releases, walk the commit history for the branch checking if any of the releases are on
+	// commits in this branch
+	branchRels := make(map[string]string)
+	if len(rels) > 0 {
+		// Walk the commit history for the branch checking if any of the releases are on commits in this branch
+		c, ok := commitList[branch.Commit]
+		if !ok {
+			log.Printf("Error when checking for isolated releases while deleting branch '%s' of database " +
+				"'%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		for rName, rEntry := range rels {
+			// Scan through the releases, checking if any of them are for this commit
+			if rEntry.Commit == c.ID {
+				// It's a match, so add this release to the list of releases on this branch
+				branchRels[rName] = c.ID
+			}
+		}
+		for c.Parent != "" {
+			c, ok = commitList[c.Parent]
+			if !ok {
+				log.Printf("Error when checking for isolated releases while deleting branch '%s' of database " +
+					"'%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			for rName, rEntry := range rels {
+				// Scan through the releases, checking if any of them are for this commit
+				if rEntry.Commit == c.ID {
+					// It's a match, so add this release to the list of releases on this branch
+					branchRels[rName] = c.ID
+				}
+			}
+		}
+
+		// For any releases on commits in this branch, check if they're also on other branches
+		if len(branchRels) > 0 {
+			for bName, bEntry := range branchList {
+				if bName == branchName {
+					// We're only checking "other branches"
+					continue
+				}
+
+				// If there are no releases left to check, we might as well stop further looping
+				if len(branchRels) == 0 {
+					break
+				}
+
+				c := commitList[bEntry.Commit]
+				for rName, rCommit := range branchRels {
+					if c.ID == rCommit {
+						// This commit matches a release, so remove the release from the list
+						delete(branchRels, rName)
+					}
+				}
+				for c.Parent != "" {
+					c, ok = commitList[c.Parent]
+					if !ok {
+						log.Printf("Error when checking for isolated releases while deleting branch '%s' of " +
+							"database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					for rName, rCommit := range branchRels {
+						if c.ID == rCommit {
+							// This commit matches a release, so remove the release from the list
+							delete(branchRels, rName)
+						}
+					}
+				}
+			}
+		}
+
+		// If there are any releases left over which aren't on other branches, abort this branch deletion and tell the user
+		if len(branchRels) > 0 {
+			var conflictedRels string
+			for rName := range branchRels {
+				if conflictedRels == "" {
+					conflictedRels = rName
+				} else {
+					conflictedRels += ", " + rName
+				}
+			}
+
+			w.WriteHeader(http.StatusConflict)
+			if len(branchRels) > 1 {
+				w.Write([]byte(fmt.Sprintf("You need to delete the releases '%s' before you can delete this branch",
+					conflictedRels)))
+			} else {
+				w.Write([]byte(fmt.Sprintf("You need to delete the release '%s' before you can delete this branch",
+					conflictedRels)))
+			}
+			return
+		}
+	}
+
 	// Make a list of commits in this branch
 	lst := map[string]bool{}
 	c, ok := commitList[branch.Commit]
@@ -1130,6 +1235,12 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 			// We only run this comparison from "other branches", not the branch we're deleting
 			continue
 		}
+
+		// If there are no commits left to check, we might as well stop further looping
+		if len(lst) == 0 {
+			break
+		}
+
 		c, ok = commitList[bEntry.Commit]
 		if !ok {
 			err = fmt.Errorf("Broken commit history encountered when checking for commits while deleting " +
