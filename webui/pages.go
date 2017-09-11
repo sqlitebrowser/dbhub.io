@@ -131,10 +131,16 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 
 	for i, j := range branches {
 		// Create a branch entry
+		var r string
+		if j.Description == "" {
+			r = "No description"
+		} else {
+			r = string(gfm.Markdown([]byte(j.Description)))
+		}
 		k := brEntry{
 			Commit:       j.Commit,
 			Description:  j.Description,
-			MarkDownDesc: string(gfm.Markdown([]byte(j.Description))),
+			MarkDownDesc: r,
 			Name:         i,
 		}
 		pageData.Branches = append(pageData.Branches, k)
@@ -1687,11 +1693,17 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Create the tag info we pass to the tag list rendering page
+			var r string
+			if j.Description == "" {
+				r = "No description"
+			} else {
+				r = string(gfm.Markdown([]byte(j.Description)))
+			}
 			pageData.ReleaseList[i] = relEntry{
 				Commit:              j.Commit,
 				Date:                j.Date,
 				Description:         j.Description,
-				DescriptionMarkdown: string(gfm.Markdown([]byte(j.Description))),
+				DescriptionMarkdown: r,
 				ReleaserUserName:    userNameCache[j.ReleaserEmail],
 				ReleaserDisplayName: j.ReleaserName,
 				Size:                j.Size,
@@ -2082,11 +2094,17 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Create the tag info we pass to the tag list rendering page
+			var r string
+			if j.Description == "" {
+				r = "No description"
+			} else {
+				r = string(gfm.Markdown([]byte(j.Description)))
+			}
 			pageData.TagList[i] = tgEntry{
 				Commit:              j.Commit,
 				Date:                j.Date,
 				Description:         j.Description,
-				DescriptionMarkdown: string(gfm.Markdown([]byte(j.Description))),
+				DescriptionMarkdown: r,
 				TaggerUserName:      userNameCache[j.TaggerEmail],
 				TaggerDisplayName:   j.TaggerName,
 			}

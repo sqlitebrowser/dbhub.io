@@ -187,7 +187,11 @@
                 data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(rawTxt)}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
-                mkdnID.innerHTML = response.data;
+                if (response.data === "") {
+                    mkdnID.innerHTML = "No description";
+                } else {
+                    mkdnID.innerHTML = response.data;
+                }
             });
         };
 
