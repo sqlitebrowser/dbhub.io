@@ -202,6 +202,45 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 			// We're adding to a known branch.  If a commit was specifically provided, use that as the parent commit,
 			// otherwise use the head commit of the branch
 			if commitID != "" {
+				if b.Commit != commitID {
+					// We're rewriting commit history
+					iTags, iRels, err := DeleteBranchHistory(dbOwner, dbFolder, dbName, branchName, commitID)
+					if err != nil {
+						if (len(iTags) > 0) || (len(iRels) > 0) {
+							msg := fmt.Sprintln("You need to delete the following tags and releases before doing " +
+								"this:")
+							var rList, tList string
+							if len(iTags) > 0 {
+								// Would-be-isolated tags were identified.  Warn the user.
+								msg += "  TAGS: "
+								for _, tName := range iTags {
+									if tList == "" {
+										msg += fmt.Sprintf("'%s'", tName)
+										//tList = tName
+									} else {
+										//tList += ", " + tName
+										msg += fmt.Sprintf(", '%s'", tName)
+									}
+								}
+							}
+							if len(iRels) > 0 {
+								// Would-be-isolated releases were identified.  Warn the user.
+								msg += "  RELEASES: "
+								for _, rName := range iRels {
+									if rList == "" {
+										msg += fmt.Sprintf("'%s'", rName)
+										//rList = rName
+									} else {
+										msg += fmt.Sprintf(", '%s'", rName)
+										//rList += ", " + rName
+									}
+								}
+							}
+							return 0, "", fmt.Errorf(msg)
+						}
+						return 0, "", err
+					}
+				}
 				c.Parent = commitID
 			} else {
 				c.Parent = b.Commit
@@ -366,6 +405,276 @@ func CreateDBTreeID(entries []DBTreeEntry) string {
 	return hex.EncodeToString(s[:])
 }
 
+// Safely removes the commit history for a branch, from the head of the branch back to (but not including) the
+// specified commit.  The new branch head will be at the commit ID specified
+func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchName string, commitID string) (isolatedTags []string, isolatedRels []string, err error) {
+	// Make sure the requested commit is in the history for the specified branch
+	ok, err := IsCommitInBranchHistory(dbOwner, dbFolder, dbName, branchName, commitID)
+	if err != nil {
+		return
+	}
+	if !ok {
+		err = fmt.Errorf("The specified commit isn't in the history of that branch")
+		return
+	}
+
+	// Get the commit list for the database
+	commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return
+	}
+
+	// Walk the branch history, making a list of the commit IDs to delete
+	delList := map[string]struct{}{}
+	branchList, err := GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return
+	}
+	head, ok := branchList[branchName]
+	if !ok {
+		err = fmt.Errorf("Could not locate the head commit info for branch '%s'.  This shouldn't happen",
+			branchName)
+		return
+	}
+	if head.Commit == commitID {
+		// The branch head is already at the specified commit.  There's nothing to do
+		return // err still = nil
+	}
+	delList[head.Commit] = struct{}{}
+	c, ok := commitList[head.Commit]
+	if !ok {
+		// The head commit wasn't found in the commit list.  This shouldn't happen
+		err = fmt.Errorf("Head commit not found in database commit list.  This shouldn't happen")
+		return
+	}
+	for c.Parent != "" {
+		c, ok = commitList[c.Parent]
+		if !ok {
+			err = fmt.Errorf("Broken commit history encountered for branch '%s' in '%s%s%s', when looking for "+
+				"commit '%s'\n", branchName, dbOwner, dbFolder, dbName, c.Parent)
+			log.Printf(err.Error())
+			return
+		}
+		if c.ID == commitID {
+			// We've reached the desired commit, no need to keep walking the history
+			break
+		}
+
+		// Add the commit ID to the deletion list
+		delList[c.ID] = struct{}{}
+	}
+
+	// * To get here, we have the list of commits to delete *
+
+	tagList, err := GetTags(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return
+	}
+
+	relList, err := GetReleases(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return
+	}
+
+	// Check if deleting the commits would leave isolated tags or releases
+	type isolCheck struct {
+		safe   bool
+		commit string
+	}
+	commitTags := map[string]isolCheck{}
+	commitRels := map[string]isolCheck{}
+	for delCommit := range delList {
+
+		// Ensure that deleting this commit won't result in any isolated/unreachable tags
+		for tName, tEntry := range tagList {
+			// Scan through the database tag list, checking if any of the tags is for the commit we're deleting
+			if tEntry.Commit == delCommit {
+				commitTags[tName] = isolCheck{safe: false, commit: delCommit}
+			}
+		}
+
+		// Ensure that deleting this commit won't result in any isolated/unreachable releases
+		for rName, rEntry := range relList {
+			// Scan through the database release list, checking if any of the releases is on the commit we're deleting
+			if rEntry.Commit == delCommit {
+				commitRels[rName] = isolCheck{safe: false, commit: delCommit}
+			}
+		}
+	}
+
+	if len(commitTags) > 0 {
+		// If a commit we're deleting has a tag on it, we need to check whether the commit is on other branches too
+		//   * If it is, we're ok to proceed as the tag can still be reached from the other branch(es)
+		//   * If it isn't, we need to abort this deletion (and tell the user), as the tag would become unreachable
+
+		for bName, bEntry := range branchList {
+			if bName == branchName {
+				// We only run this comparison from "other branches", not the branch whose history we're changing
+				continue
+			}
+			c, ok = commitList[bEntry.Commit]
+			if !ok {
+				err = fmt.Errorf("Broken commit history encountered when checking for isolated tags while "+
+					"deleting commits in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
+				return
+			}
+			for tName, tEntry := range commitTags {
+				if c.ID == tEntry.commit {
+					// The commit is also on another branch, so we're ok to delete the commit
+					tmp := commitTags[tName]
+					tmp.safe = true
+					commitTags[tName] = tmp
+				}
+			}
+			for c.Parent != "" {
+				c, ok = commitList[c.Parent]
+				if !ok {
+					err = fmt.Errorf("Broken commit history encountered when checking for isolated tags "+
+						"while deleting commits in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder,
+						dbName)
+					log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
+					return
+				}
+				for tName, tEntry := range commitTags {
+					if c.ID == tEntry.commit {
+						// The commit is also on another branch, so we're ok to delete the commit
+						tmp := commitTags[tName]
+						tmp.safe = true
+						commitTags[tName] = tmp
+					}
+				}
+			}
+		}
+
+		// Create a list of would-be-isolated tags
+		for tName, tEntry := range commitTags {
+			if tEntry.safe == false {
+				isolatedTags = append(isolatedTags, tName)
+			}
+		}
+	}
+
+	// Check if deleting the commits would leave isolated releases
+	if len(commitRels) > 0 {
+		// If a commit we're deleting has a release on it, we need to check whether the commit is on other branches too
+		//   * If it is, we're ok to proceed as the release can still be reached from the other branch(es)
+		//   * If it isn't, we need to abort this deletion (and tell the user), as the release would become unreachable
+		for bName, bEntry := range branchList {
+			if bName == branchName {
+				// We only run this comparison from "other branches", not the branch whose history we're changing
+				continue
+			}
+			c, ok = commitList[bEntry.Commit]
+			if !ok {
+				err = fmt.Errorf("Broken commit history encountered when checking for isolated releases "+
+					"while deleting commits in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder,
+					dbName)
+				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
+				return
+			}
+			for rName, rEntry := range commitRels {
+				if c.ID == rEntry.commit {
+					// The commit is also on another branch, so we're ok to delete the commit
+					tmp := commitRels[rName]
+					tmp.safe = true
+					commitRels[rName] = tmp
+				}
+			}
+			for c.Parent != "" {
+				c, ok = commitList[c.Parent]
+				if !ok {
+					err = fmt.Errorf("Broken commit history encountered when checking for isolated releases "+
+						"while deleting commits in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder,
+						dbName)
+					log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
+					return
+				}
+				for rName, rEntry := range commitRels {
+					if c.ID == rEntry.commit {
+						// The commit is also on another branch, so we're ok to delete the commit
+						tmp := commitRels[rName]
+						tmp.safe = true
+						commitRels[rName] = tmp
+					}
+				}
+			}
+		}
+
+		// Create a list of would-be-isolated releases
+		for rName, rEntry := range commitRels {
+			if rEntry.safe == false {
+				isolatedRels = append(isolatedRels, rName)
+			}
+		}
+	}
+
+	// If any tags or releases would be isolated, abort
+	if (len(isolatedTags) > 0) || (len(isolatedRels) > 0) {
+		err = fmt.Errorf("Can't proceed, as isolated tags or releases would be left over")
+		return
+	}
+
+	// Make a list of commits which aren't on any other branches, so should be removed from the commit list entirely
+	checkList := map[string]bool{}
+	for delCommit := range delList {
+		checkList[delCommit] = true
+	}
+	for delCommit := range delList {
+		for bName, bEntry := range branchList {
+			if bName == branchName {
+				// We only run this comparison from "other branches", not the branch whose history we're changing
+				continue
+			}
+
+			// Walk the commit history for the branch, checking if it matches the current "delCommit" value
+			c, ok = commitList[bEntry.Commit]
+			if !ok {
+				err = fmt.Errorf("Broken commit history encountered when checking for commits to remove in "+
+					"branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
+				return
+			}
+			if c.ID == delCommit {
+				// The commit is also on another branch, so we *must not* remove it
+				checkList[delCommit] = false
+			}
+			for c.Parent != "" {
+				c, ok = commitList[c.Parent]
+				if !ok {
+					err = fmt.Errorf("Broken commit history encountered when checking for commits to remove "+
+						"in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+					log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
+					return
+				}
+				if c.ID == delCommit {
+					// The commit is also on another branch, so we *must not* remove it
+					checkList[delCommit] = false
+				}
+			}
+		}
+	}
+
+	// Rewind the branch history
+	b, ok := branchList[branchName]
+	b.Commit = commitID
+	branchList[branchName] = b
+	err = StoreBranches(dbOwner, dbFolder, dbName, branchList)
+	if err != nil {
+		return
+	}
+
+	// Remove any no-longer-needed commits
+	// TODO: We may want to consider clearing any memcache entries for the deleted commits too
+	for cid, del := range checkList {
+		if del == true {
+			delete(commitList, cid)
+		}
+	}
+	err = StoreCommits(dbOwner, dbFolder, dbName, commitList)
+	return
+}
+
 // Returns the name of the function this was called from
 func GetCurrentFunctionName() (FuncName string) {
 	stk := make([]uintptr, 1)
@@ -375,7 +684,7 @@ func GetCurrentFunctionName() (FuncName string) {
 }
 
 // Checks if a given commit ID is in the history of the given branch
-func IsCommitInBranchHistory(dbOwner string, dbFolder string, dbName string, branchName string, commit string) (bool, error) {
+func IsCommitInBranchHistory(dbOwner string, dbFolder string, dbName string, branchName string, commitID string) (bool, error) {
 	// Get the commit list for the database
 	commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -408,7 +717,7 @@ func IsCommitInBranchHistory(dbOwner string, dbFolder string, dbName string, bra
 			return false, fmt.Errorf("Broken commit history encountered for branch '%s' when looking up "+
 				"commit details", branchName)
 		}
-		if c.ID == commit {
+		if c.ID == commitID {
 			// The commit was found
 			found = true
 			break
