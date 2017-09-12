@@ -15,7 +15,7 @@
                 The public/private setting is ignored when uploading new versions to an existing database.<br />
                 To change it, visit the "Settings" page for the database after uploading.</h4>
             <form action="/x/uploaddata/" enctype="multipart/form-data" method="POST">
-                <table class="table table-bordered table-striped table-responsive">
+                <table class="table table-striped table-responsive settingsTable">
                     <tr>
                         <th style="vertical-align: middle;" width="25%">Database file</th>
                         <td style="vertical-align: middle;"><input type="file" name="database"></td>
@@ -52,9 +52,9 @@
                 </table>
                 <uib-accordion>
                     <div uib-accordion-group class="panel-default" heading="Advanced" is-open="false">
-                        <table class="table table-bordered table-striped table-responsive" width="100%">
+                        <table class="table table-striped table-responsive settingsTable" width="100%">
                             <tr>
-                                <td style="vertical-align: middle; width: 160px;">
+                                <td style="vertical-align: middle; width: 160px; border-left: none;">
                                     <b>Commit Message</b><br /><br />
                                     <i>Markdown (<a href="http://commonmark.org" target="_blank">CommonMark</a> format) is supported</i></td>
                                 <td>
@@ -62,7 +62,7 @@
                                         <uib-tabset active="active">
                                             <uib-tab index="0">
                                                 <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                                <textarea id="commitmsg" name="commitmsg" rows="18" style="margin-top: 2px; width: 100%;" placeholder="A description for this specific commit"></textarea>
+                                                <textarea id="commitmsg" name="commitmsg" rows="18" style="margin-top: 2px; width: 100%; padding: 6px;" placeholder="A description for this specific commit"></textarea>
                                             </uib-tab>
                                             <uib-tab index="1" select="getMarkdown()">
                                                 <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
