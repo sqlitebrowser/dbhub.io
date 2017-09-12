@@ -4078,32 +4078,42 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve the commit ID for the head of the specified branch
-	createBranch := false
-	branchList, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	// Check if the requested database exists already
+	exists, err := com.CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	branchEntry, ok := branchList[branchName]
-	if !ok {
-		// The specified branch name doesn't exist, so we'll need to create it
-		createBranch = true
 
-		// We also need a commit ID to branch from, so we use the head commit of the default branch
-		defBranch, err := com.GetDefaultBranchName(loggedInUser, dbFolder, dbName)
+	// Retrieve the commit ID for the head of the specified branch
+	var commitID string
+	createBranch := false
+	if exists {
+		branchList, err := com.GetBranches(loggedInUser, dbFolder, dbName)
 		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		branchEntry, ok = branchList[defBranch]
+		branchEntry, ok := branchList[branchName]
 		if !ok {
-			errorPage(w, r, http.StatusInternalServerError, "Could not retrieve commit info for default branch entry")
-			return
+			// The specified branch name doesn't exist, so we'll need to create it
+			createBranch = true
+
+			// We also need a commit ID to branch from, so we use the head commit of the default branch
+			defBranch, err := com.GetDefaultBranchName(loggedInUser, dbFolder, dbName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			branchEntry, ok = branchList[defBranch]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, "Could not retrieve commit info for default branch entry")
+				return
+			}
 		}
+		commitID = branchEntry.Commit
 	}
-	commitID := branchEntry.Commit
 
 	// Sanity check the uploaded database, and if ok then add it to the system
 	numBytes, _, err := com.AddDatabase(r, loggedInUser, loggedInUser, dbFolder, dbName, createBranch, branchName,
