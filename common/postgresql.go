@@ -1746,23 +1746,23 @@ func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser stri
 // If the requested database doesn't exist, or the loggedInUser doesn't have access to it, then an error will be
 // returned.
 func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (minioBucket string,
-	minioID string, err error) {
+	minioID string, lastModified time.Time, err error) {
 
 	// TODO: This will likely need updating to query the "database_files" table to retrieve the Minio server name
 
 	// If no commit was provided, we grab the default one
 	if commitID == "" {
-		var err error
 		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
 		if err != nil {
-			return minioBucket, minioID, err // Bucket and ID are still the initial default empty string
+			return // Bucket and ID are still the initial default empty string
 		}
 	}
 
-	// Retrieve the sha256 for the requested commit's database file
+	// Retrieve the sha256 and last modified date for the requested commit's database file
 	var dbQuery string
 	dbQuery = `
-		SELECT commit_list->$4::text->'tree'->'entries'->0->'sha256' AS sha256
+		SELECT commit_list->$4::text->'tree'->'entries'->0->'sha256' AS sha256,
+			commit_list->$4::text->'tree'->'entries'->0->'last_modified' AS last_modified
 		FROM sqlite_databases AS db
 		WHERE db.user_id = (
 				SELECT user_id
@@ -1779,21 +1779,27 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 				AND db.public = true`
 	}
 
-	var sha256 string
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&sha256)
+	var sha, mod string
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&sha, &mod)
 	if err != nil {
 		log.Printf("Error retrieving MinioID for %s/%s version %v: %v\n", dbOwner, dbName, commitID, err)
-		return minioBucket, minioID, err // Bucket and ID are still the initial default empty string
+		return // Bucket and ID are still the initial default empty string
 	}
 
-	if sha256 == "" {
+	if sha == "" {
 		// The requested database doesn't exist, or the logged in user doesn't have access to it
-		return minioBucket, minioID, errors.New("The requested database wasn't found") // Bucket and ID are still the initial default empty string
+		err = fmt.Errorf("The requested database wasn't found")
+		return // Bucket and ID are still the initial default empty string
 	}
 
-	minioBucket = sha256[:MinioFolderChars]
-	minioID = sha256[MinioFolderChars:]
-	return minioBucket, minioID, nil
+	lastModified, err = time.Parse(time.RFC3339, mod)
+	if err != nil {
+		return // Bucket and ID are still the initial default empty string
+	}
+
+	minioBucket = sha[:MinioFolderChars]
+	minioID = sha[MinioFolderChars:]
+	return
 }
 
 // Return the user's preference for maximum number of SQLite rows to display.

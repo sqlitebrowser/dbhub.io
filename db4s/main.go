@@ -533,6 +533,20 @@ func main() {
 	log.Fatal(newServer.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey))
 }
 
+// postHandler receives uploaded files from DB4S. To simulate a DB4S upload, the following curl command can be used:
+//
+//   $ curl -kE ~/my.cert.pem -D headers.out -F file=@someupload.sqlite -F "branch=master" -F "commitmsg=stuff" \
+//       -F "sourceurl=https://example.org" -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" \
+//       https://db4s-beta.dbhub.io:5550/someuser
+//
+// Subsequent uploads to the same database name will need to include an additional "commit" field, with the value of
+// the commit ID last known to DB4S.  An example curl command demonstrating this:
+//
+//   $ curl -kE ~/my.cert.pem -D headers.out -F file=@someupload.sqlite -F "branch=master" -F "commitmsg=stuff" \
+//       -F "sourceurl=https://example.org" -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" \
+//       -F "commit=51d494f2c5eb6734ddaa204eccb9597b426091c79c951924ac83c72038f22b55" \
+//       https://db4s-beta.dbhub.io:5550/someuser
+//
 func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	pageName := "POST request handler"
 
@@ -685,6 +699,20 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		}
 	}
 
+	// If the last modified timestamp was provided, then validate it
+	var lastMod time.Time
+	lm := r.FormValue("lastmodified")
+	if lm != "" {
+		lastMod, err = time.Parse(time.RFC3339, lm)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid lastmodified value: '%v'", lm), http.StatusBadRequest)
+			return
+		}
+	} else {
+		// No last modified time provided, so just use the current server time
+		lastMod = time.Now()
+	}
+
 	// Verify the user is uploading to a location they have write access for
 	if targetUser != userAcc {
 		log.Printf("%s: Attempt by '%s' to write to unauthorised location: %v\n", pageName, userAcc,
@@ -804,7 +832,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// Sanity check the uploaded database, and if ok then add it to the system
 	numBytes, commitID, err := com.AddDatabase(r, userAcc, targetUser, targetFolder, targetDB, createBranch,
-		branchName, commit, public, licenceName, commitMsg, sourceURL, tempFile, "db4s")
+		branchName, commit, public, licenceName, commitMsg, sourceURL, tempFile, "db4s", lastMod)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -833,12 +861,16 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	fmt.Fprintf(w, msg.String())
 }
 
+// Returns a file requested by DB4S.  An example curl command to simulate the DB4S request is:
+//
+//   $ curl -OL -kE ~/my.cert.pem -D headers.out -G https://db4s-beta.dbhub.io:5550/someuser/somedb.sqlite
+//
 func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, userAcc string, dbOwner string,
 	dbFolder string, dbName string, commit string) (err error) {
 	pageName += ":retrieveDatabase()"
 
-	// Retrieve the Minio details for the requested database
-	bucket, id, err := com.MinioLocation(dbOwner, dbFolder, dbName, commit, userAcc)
+	// Retrieve the Minio details and last modified date for the requested database
+	bucket, id, lastMod, err := com.MinioLocation(dbOwner, dbFolder, dbName, commit, userAcc)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -882,7 +914,9 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 	}
 
 	// Send the database to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", url.QueryEscape(dbName)))
+	// Note: modification-date parameter format copied from RFC 2183 (the closest match I could find easily)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"; modification-date="%s";`,
+		url.QueryEscape(dbName), lastMod.Format(time.RFC3339)))
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", stat.Size))
 	w.Header().Set("Content-Type", "application/x-sqlite3")
 	bytesWritten, err := io.Copy(w, userDB)
@@ -930,7 +964,10 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// Returns the list of database available to the user
+// Returns the list of databases available to the user.  To simulate DB4S, the following curl command can be used:
+//
+//   $ curl -kE ~/my.cert.pem -D headers.out -G https://db4s-beta.dbhub.io:5550/someuser
+//
 func userDatabaseList(pageName string, userAcc string, user string) (dbList []byte, err error) {
 	pageName += ":userDatabaseList()"
 

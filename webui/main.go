@@ -1926,7 +1926,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
-	bucket, id, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
+	bucket, id, _, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1988,7 +1988,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
-	bucket, id, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3172,7 +3172,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database
-	bucket, id, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -3975,6 +3975,9 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Upload DB handler"
 
+	// TODO: Investigate getting the last modified timestamp of the database file selected for upload
+	// TODO   * https://developer.mozilla.org/en-US/docs/Web/API/File/lastModified
+
 	// Set the maximum accepted database size for uploading
 	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
 
@@ -4117,7 +4120,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Sanity check the uploaded database, and if ok then add it to the system
 	numBytes, _, err := com.AddDatabase(r, loggedInUser, loggedInUser, dbFolder, dbName, createBranch, branchName,
-		commitID, public, licenceName, commitMsg, sourceURL, tempFile, "webui")
+		commitID, public, licenceName, commitMsg, sourceURL, tempFile, "webui", time.Now())
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

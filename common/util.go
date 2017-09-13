@@ -19,8 +19,9 @@ import (
 
 // The main function which handles database upload processing for both the webUI and DB4S end points
 func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder string, dbName string,
-	createBranch bool, branchName string, commitID string, public bool, licenceName string, commitMsg string, sourceURL string, newDB io.Reader,
-	serverSw string) (numBytes int64, newCommitID string, err error) {
+	createBranch bool, branchName string, commitID string, public bool, licenceName string, commitMsg string,
+	sourceURL string, newDB io.Reader, serverSw string, lastModified time.Time) (numBytes int64, newCommitID string,
+	err error) {
 
 	// Create a temporary file to store the database in
 	tempDB, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
@@ -107,15 +108,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	e.EntryType = DATABASE
 	e.Name = dbName
 	e.Sha256 = sha
-	e.Last_Modified = time.Now()
-	// TODO: Check if there's a way to pass the last modified timestamp through a standard file upload control.  If
-	// TODO  not, then it might only be possible through db4s, dio cli and similar
-	//e.Last_Modified, err = time.Parse(time.RFC3339, modTime)
-	//if err != nil {
-	//	log.Println(err.Error())
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	return
-	//}
+	e.Last_Modified = lastModified
 	e.Size = int(numBytes)
 	if licenceName == "" || licenceName == "Not specified" {
 		// No licence was specified by the client, so check if the database is already in the system and
