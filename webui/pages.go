@@ -1144,9 +1144,25 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.Meta.Title = fmt.Sprintf("%s %s %s", dbOwner, dbFolder, dbName)
 
 	// Fill out the branch info
+	pageData.DB.Info.BranchList = []string{}
 	for i := range branchHeads {
 		pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
 	}
+
+	// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
+	bCheck := map[string]struct{}{}
+	for _, j := range pageData.DB.Info.BranchList{
+		_, ok := bCheck[j]
+		if !ok {
+			// The branch name value isn't in the map already, so add it
+			bCheck[j] = struct{}{}
+		} else {
+			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
+			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', " +
+				"logged in user '%s'", j, dbOwner, dbFolder, dbName, loggedInUser)
+		}
+	}
+
 	if branchName == "" {
 		branchName, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
 		if err != nil {
