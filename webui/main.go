@@ -4006,7 +4006,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest,
 			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
 				com.MaxDatabaseSize, r.ContentLength/1024/1024))
-		log.Println(fmt.Sprintf("'%s' attempted to upload an oversided database %d MB in size.  Limit is %d MB\n",
+		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
 			loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
 		return
 	}

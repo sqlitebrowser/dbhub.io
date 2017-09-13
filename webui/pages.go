@@ -1151,14 +1151,14 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
 	bCheck := map[string]struct{}{}
-	for _, j := range pageData.DB.Info.BranchList{
+	for _, j := range pageData.DB.Info.BranchList {
 		_, ok := bCheck[j]
 		if !ok {
 			// The branch name value isn't in the map already, so add it
 			bCheck[j] = struct{}{}
 		} else {
 			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
-			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', " +
+			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
 				"logged in user '%s'", j, dbOwner, dbFolder, dbName, loggedInUser)
 		}
 	}

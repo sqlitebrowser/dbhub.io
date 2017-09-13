@@ -338,7 +338,7 @@ func SanityCheck(fileName string) error {
 	}
 	if len(tables) == 0 {
 		// No table names were returned, so abort
-		log.Print("The attemped upload failed, as it doesn't seem to have any tables.")
+		log.Print("The attempted upload failed, as it doesn't seem to have any tables.")
 		return errors.New("Database has no tables?")
 	}
 	return nil
