@@ -124,7 +124,7 @@ ALTER SEQUENCE database_licences_lic_id_seq OWNED BY database_licences.lic_id;
 CREATE TABLE database_stars (
     db_id bigint NOT NULL,
     user_id bigint NOT NULL,
-    date_starred timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+    date_starred timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -244,8 +244,8 @@ CREATE TABLE sqlite_databases (
     folder text NOT NULL,
     db_name text NOT NULL,
     public boolean DEFAULT false NOT NULL,
-    date_created timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    last_modified timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    date_created timestamp with time zone DEFAULT now() NOT NULL,
+    last_modified timestamp with time zone DEFAULT now() NOT NULL,
     watchers bigint DEFAULT 0 NOT NULL,
     stars bigint DEFAULT 0 NOT NULL,
     forks bigint DEFAULT 0 NOT NULL,
@@ -300,7 +300,7 @@ CREATE TABLE users (
     user_name text NOT NULL,
     auth0_id text NOT NULL,
     email text,
-    date_joined timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    date_joined timestamp with time zone DEFAULT now() NOT NULL,
     client_cert bytea NOT NULL,
     password_hash text NOT NULL,
     pref_max_rows integer DEFAULT 10 NOT NULL,
