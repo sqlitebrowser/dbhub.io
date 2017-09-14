@@ -1857,7 +1857,19 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the user has access to the requested database (and get it's details if available)
+	// Check if the user has access to the requested database
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Retrieve the database details
 	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
