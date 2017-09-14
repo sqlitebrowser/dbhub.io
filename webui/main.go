@@ -2818,18 +2818,26 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve the SHA256 for the database file
-	var db com.SQLiteDBinfo
-	err = com.DBDetails(&db, loggedInUser, dbOwner, dbFolder, dbName, "")
+	// Get the list of branches in the database
+	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	dbSHA := db.Info.DBEntry.Sha256
+
+	// Retrieve the SHA256 for the database file
+	head, ok := branchList[defBranch]
+	if !ok {
+		errorPage(w, r, http.StatusInternalServerError, "Requested branch name not found")
+		return
+	}
+	bkt, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, head.Commit, loggedInUser)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// Get a handle from Minio for the database object
-	bkt := dbSHA[:com.MinioFolderChars]
-	id := dbSHA[com.MinioFolderChars:]
 	sdb, err := com.OpenMinioObject(bkt, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -2877,14 +2885,9 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Loop through the branches of the database, processing the user submitted licence choice for each
-	branchHeads, err := com.GetBranches(dbOwner, dbFolder, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
 	branchesUpdated := false
 	newBranchHeads := make(map[string]com.BranchEntry)
-	for bName, bEntry := range branchHeads {
+	for bName, bEntry := range branchList {
 		// Get the previous licence entry for the branch
 		c, ok := commitList[bEntry.Commit]
 		if !ok {
@@ -2968,7 +2971,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			branchesUpdated = true
 		} else {
 			// Copy the old branch entry to the new list
-			newBranchHeads[bName] = branchHeads[bName]
+			newBranchHeads[bName] = branchList[bName]
 		}
 	}
 

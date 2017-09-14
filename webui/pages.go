@@ -1087,11 +1087,16 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			}
 		}
 		if tablePresent == false {
-			// The requested table doesn't exist in the database
-			log.Printf("%s: Requested table not present in database. DB: '%s%s%s', Table: '%s'\n",
-				pageName, dbOwner, dbFolder, dbName, dbTable)
-			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
-			return
+			// The requested table doesn't exist in the database, so pick one of the tables that is
+			for _, t := range tables {
+				err = com.ValidatePGTable(t)
+				if err == nil {
+					// Validation passed, so use this table
+					dbTable = t
+					pageData.DB.Info.DefaultTable = t
+					break
+				}
+			}
 		}
 	}
 
