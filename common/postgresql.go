@@ -1827,10 +1827,14 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 	// Save the database settings
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET dbname = $4
-		WHERE username = $1
+		SET db_name = $4
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
 			AND folder = $2
-			AND dbname = $3`
+			AND db_name = $3`
 	commandTag, err := pdb.Exec(dbQuery, userName, dbFolder, dbName, newName)
 	if err != nil {
 		log.Printf("Renaming database '%s%s%s' failed: %v\n", userName, dbFolder, dbName, err)
@@ -2783,7 +2787,7 @@ func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
 		SELECT user_name, email, password_hash, date_joined, client_cert
 		FROM users
-		WHERE username = $1`
+		WHERE user_name = $1`
 	err = pdb.QueryRow(dbQuery, userName).Scan(&user.Username, &user.Email, &user.PHash, &user.DateJoined,
 		&user.ClientCert)
 	if err != nil {
