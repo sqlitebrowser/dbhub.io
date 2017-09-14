@@ -951,6 +951,15 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		commitID = tg.Commit
 	}
 
+	// If we still haven't determined the required commit ID, use the head commit of the default branch
+	if commitID == "" {
+		commitID, err = com.DefaultCommit(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	// Retrieve the database details
 	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, commitID)
 	if err != nil {
