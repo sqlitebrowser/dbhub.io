@@ -1525,6 +1525,63 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	prevCommit := c.Parent
 
+	// If we're working on the default branch, check if the default table is present in the prior commit's version
+	// of the database.  If it's not, we need to clear the default table value
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if branchName == defBranch {
+		// * Retrieve the list of tables present in the prior commit *
+		bkt, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, prevCommit, loggedInUser)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Get a handle from Minio for the SQLite database object
+		sdb, err := com.OpenMinioObject(bkt, id)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// Automatically close the SQLite database when this function finishes
+		defer func() {
+			sdb.Close()
+		}()
+
+		// Retrieve the list of tables in the database
+		sTbls, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+		defer sdb.Close()
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Retrieve the default table name for the database
+		defTbl, err := com.GetDefaultTableName(dbOwner, dbFolder, dbName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defFound := false
+		for _, j := range sTbls {
+			if j == defTbl {
+				defFound = true
+			}
+		}
+		if !defFound {
+			// The default table is present in the previous commit, so we clear the default table value
+			err = com.StoreDefaultTableName(dbOwner, dbFolder, dbName, "")
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
 	// Delete the commit
 	iTags, iRels, err := com.DeleteBranchHistory(dbOwner, dbFolder, dbName, branchName, prevCommit)
 	if err != nil {
@@ -2358,6 +2415,7 @@ func main() {
 	http.HandleFunc("/x/setdefaultbranch/", logReq(setDefaultBranchHandler))
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
 	http.HandleFunc("/x/table/", logReq(tableViewHandler))
+	http.HandleFunc("/x/tablenames/", logReq(tableNamesHandler))
 	http.HandleFunc("/x/updatebranch/", logReq(updateBranchHandler))
 	http.HandleFunc("/x/updatecomment/", logReq(updateCommentHandler))
 	http.HandleFunc("/x/updatediscuss/", logReq(updateDiscussHandler))
@@ -3103,6 +3161,178 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, newStarCount)
+}
+
+// Returns the table and view names present in a specific database commit
+func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Extract the required form variables
+	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbOwner := strings.ToLower(usr)
+
+	// Make sure a branch name was provided
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// If any of the required values were empty, indicate failure
+	if dbOwner == "" || dbFolder == "" || dbName == "" || branchName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", com.GetCurrentFunctionName(), err)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
+	if dbOwner != loggedInUser {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "Access denied")
+		return
+	}
+
+	// Load the existing branchHeads for the database
+	branches, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the given branch exists
+	head, ok := branches[branchName]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Unknown branch name: '%s'", branchName)
+		return
+	}
+	commitID := head.Commit
+
+	// * Retrieve the table names for the given commit *
+
+	// Retrieve the Minio bucket and id for the commit
+	bkt, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Get a handle from Minio for the SQLite database object
+	sdb, err := com.OpenMinioObject(bkt, id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Automatically close the SQLite database when this function finishes
+	defer func() {
+		sdb.Close()
+	}()
+
+	// Retrieve the list of tables in the database
+	sTbls, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+	defer sdb.Close()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Validate the tables names
+	var d struct {
+		DefTbl string   `json:"default_table"`
+		Tables []string `json:"tables"`
+	}
+	for _, t := range sTbls {
+		err = com.ValidatePGTable(t)
+		if err == nil {
+			// Validation passed, so add the table to the list
+			d.Tables = append(d.Tables, t)
+		}
+	}
+
+	// If the branch name given is the default branch, check what the default table is set to for it and pass that
+	// info back as the one to have auto-selected in the drop down
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if defBranch == branchName {
+		dt, err := com.GetDefaultTableName(dbOwner, dbFolder, dbName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// If the default table name is in the new table list, then set it as the default in the returned info
+		fnd := false
+		for _, j := range d.Tables {
+			if j == dt {
+				fnd = true
+			}
+		}
+		if fnd == true {
+			d.DefTbl = dt
+		} else {
+			// The "database default" table name wasn't found in the table list, so we can't use it.  Instead, we choose
+			// the first valid entry from the table list (if there is one)
+			if len(d.Tables) > 0 {
+				d.DefTbl = d.Tables[0]
+			}
+		}
+	} else {
+		// The requested branch isn't the database default, so pick the first first valid entry from the table list
+		// (if there is one) and use that instead
+		if len(d.Tables) > 0 {
+			d.DefTbl = d.Tables[0]
+		}
+	}
+
+	// JSON encode the result
+	data, err := json.MarshalIndent(d, "", " ")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// TODO: It would probably be useful to store these table names in memcache too, to later retrieval
+
+	// Return the table name info
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, string(data))
 }
 
 // This passes table row data back to the main UI in JSON format.

@@ -45,8 +45,8 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 		return 0, "", err
 	}
 
-	// Sanity check the uploaded database
-	err = SanityCheck(tempDBName)
+	// Sanity check the uploaded database, and get the list of tables in the database
+	sTbls, err := SanityCheck(tempDBName)
 	if err != nil {
 		return 0, "", err
 	}
@@ -72,6 +72,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	sha := hex.EncodeToString(s.Sum(nil))
 
 	// Check if the database already exists in the system
+	var defBranch string
 	needDefaultBranchCreated := false
 	var branches map[string]BranchEntry
 	exists, err := CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
@@ -86,11 +87,12 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 		}
 
 		// If no branch name was given, use the default for the database
+		defBranch, err = GetDefaultBranchName(loggedInUser, dbFolder, dbName)
+		if err != nil {
+			return 0, "", err
+		}
 		if branchName == "" {
-			branchName, err = GetDefaultBranchName(loggedInUser, dbFolder, dbName)
-			if err != nil {
-				return 0, "", err
-			}
+			branchName = defBranch
 		}
 	} else {
 		// No existing branches, so this will be the first
@@ -304,6 +306,28 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 		err = StoreBranches(dbOwner, dbFolder, dbName, branches)
 		if err != nil {
 			return 0, "", err
+		}
+	}
+
+	// If the newly uploaded database is on the default branch, check if the default table is present in this version
+	// of the database.  If it's not, we need to clear the default table value
+	if branchName == defBranch {
+		defTbl, err := GetDefaultTableName(dbOwner, dbFolder, dbName)
+		if err != nil {
+			return 0, "", err
+		}
+		defFound := false
+		for _, j := range sTbls {
+			if j == defTbl {
+				defFound = true
+			}
+		}
+		if !defFound {
+			// The default table is present in the previous commit, so we clear the default table value
+			err = StoreDefaultTableName(dbOwner, dbFolder, dbName, "")
+			if err != nil {
+				return 0, "", err
+			}
 		}
 	}
 

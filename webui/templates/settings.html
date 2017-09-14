@@ -14,6 +14,13 @@
             </h2>
         </div>
     </div>
+    <div class="row" ng-if="statusMessage != ''">
+        <div class="col-md-12">
+            <div style="text-align: center; padding-bottom: 8px;">
+                <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
+            </div>
+        </div>
+    </div>
     <form action="/x/savesettings" method="post">
         <div class="row">
             <div class="col-md-2">
@@ -236,10 +243,37 @@
             window.location = "/[[ .Meta.Owner ]]/[[ .Meta.Database ]]";
         };
 
-        // Update name of default branch in the drop down selector
+        // Update name of default branch in the drop down selector, and update the default table list
+        $scope.statusMessage = "";
+        $scope.statusMessageColour = "red";
         $scope.changeBranch = function(newbranch) {
-            // Update displayed value
-            $scope.meta.DefaultBranch = newbranch;
+            // Retrieve the tables in the newly selected branches default commit
+            $http({
+                method: "POST",
+                url: "/x/tablenames/",
+                data: $httpParamSerializerJQLike({
+                        "branch": encodeURIComponent(newbranch),
+                        "folder": "/",
+                        "dbname": [[ .Meta.Database ]],
+                        "username": [[ .Meta.Owner ]]
+                    }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // Update displayed branch value
+                $scope.meta.DefaultBranch = newbranch;
+
+                // Update displayed default table values
+                $scope.meta.Tables = response.data.tables;
+                $scope.meta.DefaultTable = response.data.default_table;
+
+                // Reset any displayed error message
+                $scope.statusMessage = "";
+                $scope.statusMessageColour = "green";
+            }, function failure(response) {
+                // The retrieving table names failed, so display an error message
+                $scope.statusMessageColour = "red";
+                $scope.statusMessage = "Retrieving table names for the branch failed";
+            });
         };
 
         // Update the chosen licence displayed in the licence dropdown

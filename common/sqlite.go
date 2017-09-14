@@ -323,25 +323,28 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 }
 
 // Performs basic sanity checks of an uploaded database.
-func SanityCheck(fileName string) error {
+func SanityCheck(fileName string) (tables []string, err error) {
 	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
 	sqliteDB, err := sqlite.Open(fileName, sqlite.OpenReadOnly)
 	if err != nil {
 		log.Printf("Couldn't open database when sanity checking upload: %s", err)
-		return errors.New("Internal error when uploading database")
+		err = fmt.Errorf("Internal error when uploading database")
+		return
 	}
 	defer sqliteDB.Close()
-	tables, err := sqliteDB.Tables("")
+	tables, err = sqliteDB.Tables("")
 	if err != nil {
 		log.Printf("Error retrieving table names when sanity checking upload: %s", err)
-		return errors.New("Error when sanity checking file.  Possibly encrypted or not a database?")
+		err = fmt.Errorf("Error when sanity checking file.  Possibly encrypted or not a database?")
+		return
 	}
 	if len(tables) == 0 {
 		// No table names were returned, so abort
 		log.Print("The attempted upload failed, as it doesn't seem to have any tables.")
-		return errors.New("Database has no tables?")
+		err = fmt.Errorf("Database has no tables?")
+		return
 	}
-	return nil
+	return
 }
 
 // Returns the list of tables and view in the SQLite database.

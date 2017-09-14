@@ -1321,9 +1321,8 @@ func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[s
 	return branches, nil
 }
 
-// Retrieve the default branch name for a database.
-func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (string, error) {
-	// Return the default branch name
+// Returns the default branch name for a database.
+func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (branchName string, err error) {
 	dbQuery := `
 		SELECT db.default_branch
 		FROM sqlite_databases AS db
@@ -1335,20 +1334,51 @@ func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (strin
 			AND db.folder = $2
 			AND db.db_name = $3
 			AND db.is_deleted = false`
-	var branchName string
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&branchName)
+	var b pgx.NullString
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&b)
 	if err != nil {
 		if err != pgx.ErrNoRows {
 			log.Printf("Error when retrieving default branch name for database '%s%s%s': %v\n", dbOwner,
 				dbFolder, dbName, err)
-			return "", err
+			return
 		} else {
 			log.Printf("No default branch name exists for database '%s%s%s'. This shouldn't happen\n", dbOwner,
 				dbFolder, dbName)
-			return "", err
+			return
 		}
 	}
-	return branchName, nil
+	if b.Valid {
+		branchName = b.String
+	}
+	return
+}
+
+// Returns the default table name for a database.
+func GetDefaultTableName(dbOwner string, dbFolder string, dbName string) (tableName string, err error) {
+	dbQuery := `
+		SELECT db.default_table
+		FROM sqlite_databases AS db
+		WHERE db.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+			)
+			AND db.folder = $2
+			AND db.db_name = $3
+			AND db.is_deleted = false`
+	var t pgx.NullString
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&t)
+	if err != nil {
+		if err != pgx.ErrNoRows {
+			log.Printf("Error when retrieving default table name for database '%s%s%s': %v\n", dbOwner,
+				dbFolder, dbName, err)
+			return
+		}
+	}
+	if t.Valid {
+		tableName = t.String
+	}
+	return
 }
 
 // Retrieves the full commit list for a database.
@@ -2353,6 +2383,35 @@ func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branch
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected during update: database: %v, new branch name: '%v'\n",
 			numRows, dbName, branchName)
+	}
+	return nil
+}
+
+// Stores the default table name for a database.
+func StoreDefaultTableName(dbOwner string, folder string, dbName string, tableName string) error {
+	var t pgx.NullString
+	if tableName != "" {
+		t.String = tableName
+		t.Valid = true
+	}
+	dbQuery := `
+		UPDATE sqlite_databases
+		SET default_table = $4
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = $1
+				)
+			AND folder = $2
+			AND db_name = $3`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, folder, dbName, t)
+	if err != nil {
+		log.Printf("Changing default table for database '%v' to '%v' failed: %v\n", dbName, tableName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected during update: database: %v, new table name: '%v'\n",
+			numRows, dbName, tableName)
 	}
 	return nil
 }
