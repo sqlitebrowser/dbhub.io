@@ -1035,6 +1035,11 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		// Restore the correct username
 		pageData.Meta.LoggedInUser = loggedInUser
 
+		// Set the selected branch name
+		if branchName != "" {
+			pageData.DB.Info.Branch = branchName
+		}
+
 		// Get latest star and fork count
 		_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)
 		if err != nil {
