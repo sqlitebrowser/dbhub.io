@@ -150,7 +150,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Bounce to a new page, for the user to select their preferred username
-		http.Redirect(w, r, "/selectusername", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, "/selectusername", http.StatusSeeOther)
 	}
 
 	// Create a session cookie for the user
@@ -167,7 +167,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Login completed, so bounce to the users' profile page
-	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/"+userName, http.StatusSeeOther)
 }
 
 func createBranchHandler(w http.ResponseWriter, r *http.Request) {
@@ -288,8 +288,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Bounce to the branches page
-	http.Redirect(w, r, fmt.Sprintf("/branches/%s%s%s", loggedInUser, dbFolder, dbName),
-		http.StatusTemporaryRedirect)
+	http.Redirect(w, r, fmt.Sprintf("/branches/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusSeeOther)
 }
 
 // Receives incoming info for adding a comment to an existing discussion
@@ -488,7 +487,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Bounce to the discussions page
-	http.Redirect(w, r, fmt.Sprintf("/discuss/%s%s%s", dbOwner, dbFolder, dbName), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, fmt.Sprintf("/discuss/%s%s%s", dbOwner, dbFolder, dbName), http.StatusSeeOther)
 }
 
 func createTagHandler(w http.ResponseWriter, r *http.Request) {
@@ -619,8 +618,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Bounce to the releases page
-		http.Redirect(w, r, fmt.Sprintf("/releases/%s%s%s", loggedInUser, dbFolder, dbName),
-			http.StatusTemporaryRedirect)
+		http.Redirect(w, r, fmt.Sprintf("/releases/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusSeeOther)
 		return
 	}
 
@@ -669,8 +667,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Bounce to the tags page
-	http.Redirect(w, r, fmt.Sprintf("/tags/%s%s%s", loggedInUser, dbFolder, dbName),
-		http.StatusTemporaryRedirect)
+	http.Redirect(w, r, fmt.Sprintf("/tags/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusSeeOther)
 }
 
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -863,7 +860,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// User creation completed, so bounce to the user's profile page
-	http.Redirect(w, r, "/"+userName, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/"+userName, http.StatusSeeOther)
 }
 
 // This is called from the username selection page, to check if a name is available.
@@ -2194,7 +2191,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Database '%s%s%s' forked to user '%s'\n", dbOwner, dbFolder, dbName, loggedInUser)
 
 	// Bounce to the page of the forked database
-	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusSeeOther)
 }
 
 // Generates a client certificate for the user and gives it to the browser.
@@ -2262,7 +2259,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Bounce to the front page
 	// TODO: This should probably reload the existing page instead
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // Wrapper function to log incoming https requests.
@@ -2683,7 +2680,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Bounce to the user home page
-	http.Redirect(w, r, "/"+loggedInUser, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/"+loggedInUser, http.StatusSeeOther)
 }
 
 // Handler for the Database Settings page
@@ -3020,7 +3017,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Settings saved, so bounce back to the database page
-	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", dbOwner, dbFolder, newName), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", dbOwner, dbFolder, newName), http.StatusSeeOther)
 }
 
 // This function sets a branch as the default for a given database.
@@ -4364,5 +4361,5 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		loggedInUser, dbFolder, dbName, numBytes)
 
 	// Database upload succeeded.  Bounce the user to the page for their new database
-	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, "/", dbName), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, "/", dbName), http.StatusSeeOther)
 }
