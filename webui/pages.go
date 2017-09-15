@@ -1040,6 +1040,35 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			pageData.DB.Info.Branch = branchName
 		}
 
+		// Fill out the branch info
+		pageData.DB.Info.BranchList = []string{}
+		if branchName != "" {
+			// If a specific branch was requested, ensure it's the first entry of the drop down
+			pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, branchName)
+		}
+		for i := range branchHeads {
+			if i != branchName {
+				err = com.Validate.Var(i, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+				if err == nil {
+					pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
+				}
+			}
+		}
+
+		// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
+		bCheck := map[string]struct{}{}
+		for _, j := range pageData.DB.Info.BranchList {
+			_, ok := bCheck[j]
+			if !ok {
+				// The branch name value isn't in the map already, so add it
+				bCheck[j] = struct{}{}
+			} else {
+				// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
+				log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
+					"logged in user '%s'", j, dbOwner, dbFolder, dbName, loggedInUser)
+			}
+		}
+
 		// Get latest star and fork count
 		_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)
 		if err != nil {
@@ -1162,10 +1191,28 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.Meta.Server = com.Conf.Web.ServerName
 	pageData.Meta.Title = fmt.Sprintf("%s %s %s", dbOwner, dbFolder, dbName)
 
+	// Retrieve default branch name details
+	if branchName == "" {
+		branchName, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
+			return
+		}
+	}
+
 	// Fill out the branch info
 	pageData.DB.Info.BranchList = []string{}
+	if branchName != "" {
+		// If a specific branch was requested, ensure it's the first entry of the drop down
+		pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, branchName)
+	}
 	for i := range branchHeads {
-		pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
+		if i != branchName {
+			err = com.Validate.Var(i, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+			if err == nil {
+				pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
+			}
+		}
 	}
 
 	// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
@@ -1182,13 +1229,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		}
 	}
 
-	if branchName == "" {
-		branchName, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
-			return
-		}
-	}
 	pageData.DB.Info.Branch = branchName
 	pageData.DB.Info.Commits = branchHeads[branchName].CommitCount
 
