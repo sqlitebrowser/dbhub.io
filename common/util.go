@@ -668,9 +668,24 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 		}
 	}
 
+	// Count the number of commits in the updated branch
+	c = commitList[commitID]
+	commitCount := 1
+	for c.Parent != "" {
+		commitCount++
+		c, ok = commitList[c.Parent]
+		if !ok {
+			log.Printf("Error when counting # of commits while rewriting branch '%s' of database '%s%s%s'\n",
+				branchName, dbOwner, dbFolder, dbName)
+			err = fmt.Errorf("Error when counting commits during branch history rewrite")
+			return
+		}
+	}
+
 	// Rewind the branch history
 	b, ok := branchList[branchName]
 	b.Commit = commitID
+	b.CommitCount = commitCount
 	branchList[branchName] = b
 	err = StoreBranches(dbOwner, dbFolder, dbName, branchList)
 	if err != nil {
