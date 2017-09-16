@@ -312,7 +312,7 @@
                 window.location = '/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
             }, function failure(response) {
                 // Adding the comment failed, so display an error message
-                $scope.statusMessageColour = "Red";
+                $scope.statusMessageColour = "red";
                 $scope.statusMessage = "Adding comment failed: " + response.data;
             });
         };
@@ -346,7 +346,7 @@
                 window.location = '/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
             }, function failure(response) {
                 // Deleting the comment failed, so display an error message
-                $scope.statusMessageColour = "Red";
+                $scope.statusMessageColour = "red";
                 $scope.statusMessage = "Deleting comment failed";
             });
         };
@@ -526,9 +526,12 @@
                 $scope['comrender' + comID] = response.data;
                 $scope['comstate' + comID] = "static";
 
+                // Clear any previous error message
+                $scope.statusMessageColour = "green";
+                $scope.statusMessage = "";
             }, function failure(response) {
                 // Adding the comment failed, so display an error message
-                $scope.statusMessageColour = "Red";
+                $scope.statusMessageColour = "red";
                 $scope.statusMessage = "Updating comment failed: " + response.data;
             });
         };
@@ -559,9 +562,13 @@
                 $scope.Disc.title = title;
                 $scope.editDiscTitle = "title";
                 $scope.editDisc = false;
+
+                // Clear any previous error message
+                $scope.statusMessageColour = "green";
+                $scope.statusMessage = "";
             }, function failure(response) {
                 // Adding the comment failed, so display an error message
-                $scope.statusMessageColour = "Red";
+                $scope.statusMessageColour = "red";
                 $scope.statusMessage = "Updating discussion failed: " + response.data;
             });
         };

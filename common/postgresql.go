@@ -484,23 +484,37 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 
 // Delete a specific comment from a discussion
 func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, comID int) error {
-	// Update the fork count for the root database
+	// Begin a transaction
+	tx, err := pdb.Begin()
+	if err != nil {
+		return err
+	}
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// Delete the requested discussion comment
 	dbQuery := `
-		DELETE FROM discussion_comments
-		WHERE db_id = (
-				SELECT db.db_id
-				FROM sqlite_databases AS db
-				WHERE db.user_id = (
-						SELECT user_id
-						FROM users
-						WHERE user_name = $1
-					)
-					AND folder = $2
-					AND db_name = $3
-			)
+		WITH d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db
+			WHERE db.user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		), int AS (
+			SELECT internal_id AS int_id
+			FROM discussions
+			WHERE db_id = (SELECT db_id FROM d)
 			AND disc_id = $4
+		)
+		DELETE FROM discussion_comments
+		WHERE db_id = (SELECT db_id FROM d)
+			AND disc_id = (SELECT int_id FROM int)
 			AND com_id = $5`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID)
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID)
 	if err != nil {
 		log.Printf("Deleting comment '%d' from '%s%s%s', discussion '%d' failed: %v\n", comID, dbOwner,
 			dbFolder, dbName, discID, err)
@@ -510,6 +524,51 @@ func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, c
 		log.Printf("Wrong number of rows (%v) affected when deleting comment '%d' from database '%s%s%s, discussion '%d''\n",
 			numRows, comID, dbOwner, dbFolder, dbName, discID)
 	}
+
+	// Update the comment count and last modified date for the discussion
+	dbQuery = `
+		WITH d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db
+			WHERE db.user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		), int AS (
+			SELECT internal_id AS int_id
+			FROM discussions
+			WHERE db_id = (SELECT db_id FROM d)
+			AND disc_id = $4
+		), new AS (
+			SELECT count(*)
+			FROM discussion_comments
+			WHERE db_id = (SELECT db_id FROM d)
+				AND disc_id = (SELECT int_id FROM int)
+				AND entry_type = 'txt'
+		)
+		UPDATE discussions
+		SET comment_count = (SELECT count FROM new), last_modified = now()
+		WHERE internal_id = (SELECT int_id FROM int)`
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID)
+	if err != nil {
+		log.Printf("Updating comment count for discussion '%v' of '%s%s%s' in PostgreSQL failed: %v\n",
+			discID, dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected when updating comment count for discussion '%v' in "+
+			"'%s%s%s'\n", numRows, discID, dbOwner, dbFolder, dbName)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -795,11 +854,17 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
 				AND db.folder = $2
-				AND db.db_name = $3)
+				AND db.db_name = $3
+		), int AS (
+				SELECT internal_id AS int_id
+				FROM discussions
+				WHERE db_id = (SELECT db_id FROM d)
+				AND disc_id = $4
+			)
 		SELECT com.com_id, users.user_name, com.date_created, com.body, com.entry_type
 		FROM discussion_comments AS com, d, users
 		WHERE com.db_id = d.db_id
-			AND com.disc_id = $4
+			AND com.disc_id = (SELECT int_id FROM int)
 			AND com.commenter = users.user_id`
 	if comID != 0 {
 		dbQuery += fmt.Sprintf(`
@@ -2117,9 +2182,14 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 					)
 					AND folder = $2
 					AND db_name = $3
+			), int AS (
+				SELECT internal_id AS int_id
+				FROM discussions
+				WHERE db_id = (SELECT db_id FROM d)
+				AND disc_id = $5
 			)
 			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
-			SELECT (SELECT db_id FROM d), $5, (SELECT user_id FROM users WHERE user_name = $4), $6, 'txt'`
+			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE user_name = $4), $6, 'txt'`
 		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, comText)
 		if err != nil {
 			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
@@ -2158,9 +2228,14 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 					)
 					AND folder = $2
 					AND db_name = $3
+			), int AS (
+				SELECT internal_id AS int_id
+				FROM discussions
+				WHERE db_id = (SELECT db_id FROM d)
+				AND disc_id = $5
 			)
 			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
-			SELECT (SELECT db_id FROM d), $5, (SELECT user_id FROM users WHERE user_name = $4), $6, $7`
+			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE user_name = $4), $6, $7`
 		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, eventTxt, eventType)
 		if err != nil {
 			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
@@ -2698,22 +2773,28 @@ func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser 
 	// Retrieve the username of whoever created the comment
 	var comCreator string
 	dbQuery := `
+		WITH d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db
+			WHERE db.user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1
+				)
+				AND folder = $2
+				AND db_name = $3
+		), int AS (
+			SELECT internal_id AS int_id
+			FROM discussions
+			WHERE db_id = (SELECT db_id FROM d)
+			AND disc_id = $4
+		)
 		SELECT u.user_name
-		FROM discussion_comments AS dc, users AS u
-		WHERE dc.db_id = (
-				SELECT db.db_id
-				FROM sqlite_databases AS db
-				WHERE db.user_id = (
-						SELECT user_id
-						FROM users
-						WHERE user_name = $1
-					)
-					AND folder = $2
-					AND db_name = $3
-			)
-			AND dc.disc_id = $4
-			AND dc.com_id = $5
-			AND dc.commenter = u.user_id`
+		FROM discussion_comments AS com, users AS u
+		WHERE com.db_id = (SELECT db_id FROM d)
+			AND com.disc_id = (SELECT int_id FROM int)
+			AND com.com_id = $5
+			AND com.commenter = u.user_id`
 	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID, comID).Scan(&comCreator)
 	if err != nil {
 		log.Printf("Error retrieving name of comment creator for '%s%s%s', discussion '%d', comment '%d': %v\n",
@@ -2738,12 +2819,17 @@ func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser 
 				)
 				AND folder = $2
 				AND db_name = $3
+		), int AS (
+			SELECT internal_id AS int_id
+			FROM discussions
+			WHERE db_id = (SELECT db_id FROM d)
+			AND disc_id = $4
 		)
-		UPDATE discussion_comments AS dc
+		UPDATE discussion_comments AS com
 		SET body = $6
-		WHERE dc.db_id = (SELECT db_id FROM d)
-			AND dc.disc_id = $4
-			AND dc.com_id = $5`
+		WHERE com.db_id = (SELECT db_id FROM d)
+			AND com.disc_id = (SELECT int_id FROM int)
+			AND com.com_id = $5`
 	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID, newText)
 	if err != nil {
 		log.Printf("Updating comment for database '%s%s%s', discussion '%d', comment '%d' failed: %v\n",
