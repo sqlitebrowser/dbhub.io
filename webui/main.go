@@ -2005,10 +2005,20 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Was a user agent part of the request?
+	var userAgent string
+	if ua, ok := r.Header["User-Agent"]; ok {
+		userAgent = strings.ToLower(ua[0])
+	}
+
+	// Check if the request came from a Windows based device.  If it did, it'll need CRLF line endings
+	win := strings.Contains(userAgent, "windows")
+
 	// Convert resultSet into CSV and send to the user
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.csv"`, dbTable))
 	w.Header().Set("Content-Type", "text/csv")
 	csvFile := csv.NewWriter(w)
+	csvFile.UseCRLF = win
 	err = csvFile.WriteAll(resultSet)
 	if err != nil {
 		log.Printf("%s: Error when generating CSV: %v\n", pageName, err)
