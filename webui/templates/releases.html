@@ -84,15 +84,15 @@
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <uib-tabset>
                                 <uib-tab index="0" heading="Description" select="getMarkdown(key)">
-                                    <div style="border-left: 1px solid #DDD; padding: 8px 8px; text-align: left; min-height: 40px;" id="{{ key }}_mkdn"><span ng-bind-html="row.description_markdown"></span></div>
+                                    <div style="border-left: 1px solid #DDD; padding: 8px 8px; text-align: left; min-height: 40px;"><span ng-bind-html="RelRendered[key]"></span></div>
                                 </uib-tab>
                                 <uib-tab index="1" heading="Edit">
-                                    <textarea id="{{ key }}_desc" name="{{ key }}_desc" rows="10" style="margin-top: 2px; width: 100%" ng-attr-placeholder="A description for this release">{{ row.description }}</textarea>
+                                    <textarea rows="10" style="margin-top: 2px; width: 100%" ng-attr-placeholder="A description for this release" ng-model="RelText[key]"></textarea>
                                 </uib-tab>
                             </uib-tabset>
                             [[ else ]]
                                 <div style="padding: 8px;">
-                                    <span ng-bind-html="row.description_markdown"></span>
+                                    <span ng-bind-html="RelRendered[key]"></span>
                                 </div>
                             [[ end ]]
                         </td>
@@ -110,9 +110,18 @@
         $scope.Releases = [[ .ReleaseList ]];
 
         // We use the # of releases to decide whether or not we'll display a "No releases defined yet!" message
-        // TODO: Figure out why using $scope.Tags.Releases gives "undefined" here, but works perfectly fine for the
-        // TODO  commits page.  We're forced to do dodgy crap like pass a counter from the backend until that's solved. ;)
-        $scope.numRels = [[ .NumRels ]];
+        $scope.numRels = 0;
+
+        // Set the initial release description edit/preview values, and increment the release counter
+        $scope.RelText = [];
+        $scope.RelRendered = [];
+        if ($scope.Releases !== null) {
+            Object.keys($scope.Releases).forEach(function(rel) {
+                $scope.RelText[rel] = $scope.Releases[rel].description;
+                $scope.RelRendered[rel] = $scope.Releases[rel].description_markdown;
+                $scope.numRels = $scope.numRels + 1;
+            });
+        }
 
         // Delete the release
         $scope.statusMessage = "";
@@ -143,27 +152,18 @@
         };
 
         // Retrieve and render markdown text
-        $scope.getMarkdown = function(rowDesc) {
-            var txtID = document.getElementById(rowDesc + "_desc");
-            if (txtID == null) {
-                // txtID is null when the page first renders (and we don't need it then anyway).  It's correctly set
-                // afterwards.
-                return;
-            }
-            var rawTxt = txtID.value;
-            var mkdnID = document.getElementById(rowDesc + "_mkdn");
-
+        $scope.getMarkdown = function(relName) {
             // Call the server, asking for a rendered version of the markdown
             $http({
                 method: "POST",
                 url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(rawTxt)}),
+                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent($scope.RelText[relName])}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 if (response.data === "") {
-                    mkdnID.innerHTML = "No description";
+                    $scope.RelRendered[relName] = "No description";
                 } else {
-                    mkdnID.innerHTML = response.data;
+                    $scope.RelRendered[relName] = response.data;
                 }
             });
         };
@@ -175,9 +175,7 @@
 
         // Send the update details to the server
         $scope.updateRelease = function(relName){
-            var descID = document.getElementById(relName + "_desc");
             var nameID = document.getElementById(relName + "_name");
-            var newDesc = descID.value;
             var newName = nameID.value;
             $http({
                 method: "POST",
@@ -187,7 +185,7 @@
                         "folder": "/",
                         "dbname": [[ .Meta.Database ]],
                         "username": [[ .Meta.Owner ]],
-                        "newmsg": encodeURIComponent(newDesc),
+                        "newmsg": encodeURIComponent($scope.RelText[relName]),
                         "newrel": encodeURIComponent(newName)
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }

@@ -71,15 +71,15 @@
                                 [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                     <uib-tabset>
                                         <uib-tab index="0" heading="Description" select="getMarkdown(key)">
-                                            <div style="border-left: 1px solid #DDD; padding: 8px; text-align: left; min-height: 40px;" id="{{ key }}_mkdn"><span ng-bind-html="row.description_markdown"></span></div>
+                                            <div style="border-left: 1px solid #DDD; padding: 8px; text-align: left; min-height: 40px;"><span ng-bind-html="TagRendered[key]"></span></div>
                                         </uib-tab>
                                         <uib-tab index="1" heading="Edit">
-                                            <textarea id="{{ key }}_desc" name="{{ key }}_desc" rows="10" style="margin-top: 2px; width: 100%;" ng-attr-placeholder="A description for this tag">{{ row.description }}</textarea>
+                                            <textarea rows="10" style="margin-top: 2px; width: 100%;" ng-attr-placeholder="A description for this tag" ng-model="TagText[key]"></textarea>
                                         </uib-tab>
                                     </uib-tabset>
                                 [[ else ]]
                                     <div style="padding: 8px;">
-                                        <span ng-bind-html="row.description_markdown"></span>
+                                        <span ng-bind-html="TagRendered[key]"></span>
                                     </div>
                                 [[ end ]]
                             </td>
@@ -98,9 +98,18 @@
         $scope.Tags = [[ .TagList ]];
 
         // We use the # of tags to decide whether or not we'll display a "No tags defined yet!" message
-        // TODO: Figure out why using $scope.Tags.length gives "undefined" here, but works perfectly fine for the
-        // TODO  commits page.  We're forced to do dodgy crap like pass a counter from the backend until that's solved. ;)
-        $scope.numTags = [[ .NumTags ]];
+        $scope.numTags = 0;
+
+        // Set the initial tag description edit/preview values, and increment the tag counter
+        $scope.TagText = [];
+        $scope.TagRendered = [];
+        if ($scope.Tags !== null) {
+            Object.keys($scope.Tags).forEach(function(tag) {
+                $scope.TagText[tag] = $scope.Tags[tag].description;
+                $scope.TagRendered[tag] = $scope.Tags[tag].description_markdown;
+                $scope.numTags = $scope.numTags + 1;
+            });
+        }
 
         // Delete the tag
         $scope.statusMessage = "";
@@ -126,27 +135,18 @@
         };
 
         // Retrieve and render markdown text
-        $scope.getMarkdown = function(rowDesc) {
-            var txtID = document.getElementById(rowDesc + "_desc");
-            if (txtID == null) {
-                // txtID is null when the page first renders (and we don't need it then anyway).  It's correctly set
-                // afterwards.
-                return;
-            }
-            var rawTxt = txtID.value;
-            var mkdnID = document.getElementById(rowDesc + "_mkdn");
-
+        $scope.getMarkdown = function(tagName) {
             // Call the server, asking for a rendered version of the markdown
             $http({
                 method: "POST",
                 url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(rawTxt)}),
+                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent($scope.TagText[tagName])}),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 if (response.data === "") {
-                    mkdnID.innerHTML = "No description";
+                    $scope.TagRendered[tagName] = "No description";
                 } else {
-                    mkdnID.innerHTML = response.data;
+                    $scope.TagRendered[tagName] = response.data;
                 }
             });
         };
@@ -158,9 +158,7 @@
 
         // Send the update details to the server
         $scope.updateTag = function(tagName) {
-            var descID = document.getElementById(tagName + "_desc");
             var nameID = document.getElementById(tagName + "_name");
-            var newDesc = descID.value;
             var newName = nameID.value;
             $http({
                 method: "POST",
@@ -170,7 +168,7 @@
                         "folder": "/",
                         "dbname": [[ .Meta.Database ]],
                         "username": [[ .Meta.Owner ]],
-                        "newmsg": encodeURIComponent(newDesc),
+                        "newmsg": encodeURIComponent($scope.TagText[tagName]),
                         "newtag": encodeURIComponent(newName)
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }

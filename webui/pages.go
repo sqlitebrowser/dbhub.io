@@ -1688,7 +1688,6 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		DB          com.SQLiteDBinfo
 		Meta        com.MetaInfo
 		ReleaseList map[string]relEntry
-		NumRels     int
 	}
 	pageData.Meta.Title = "Release list"
 
@@ -1754,8 +1753,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.ReleaseList = make(map[string]relEntry)
-	pageData.NumRels = len(releases)
-	if pageData.NumRels > 0 {
+	if len(releases) > 0 {
 		for i, j := range releases {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
 			// database (and put it in the cache)
@@ -2101,7 +2099,6 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		DB      com.SQLiteDBinfo
 		Meta    com.MetaInfo
 		TagList map[string]tgEntry
-		NumTags int
 	}
 	pageData.Meta.Title = "Tag list"
 
@@ -2167,8 +2164,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.TagList = make(map[string]tgEntry)
-	pageData.NumTags = len(tags)
-	if pageData.NumTags > 0 {
+	if len(tags) > 0 {
 		for i, j := range tags {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
 			// database (and put it in the cache)
