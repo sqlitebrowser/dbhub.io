@@ -285,6 +285,7 @@
                 var comID = $scope.CommentList[i].com_id;
                 $scope['comstate' + comID] = "static";
                 $scope['comtext' + comID] = $scope.CommentList[i].body;
+                $scope['combackup' + comID] = $scope.CommentList[i].body;
                 $scope['comrender' + comID] = $scope.CommentList[i].body_rendered;
             }
         }
@@ -355,8 +356,18 @@
         // and displaying the final html rendered markdown
         $scope.editComment = function(comID) {
             if ($scope['comstate' + comID] === "static") {
+                // Make a backup of the original text
+                $scope['combackup' + comID] = $scope['comtext' + comID];
+
+                // Switch to the comment editing view
                 $scope['comstate' + comID] = "edit";
             } else {
+                // Restore the original comment/preview text
+                $scope['comtext' + comID] = $scope['combackup' + comID];
+                document.getElementById("com" + comID).value = $scope['combackup' + comID];
+                $scope.getMarkdownCom(comID);
+
+                // Switch to the static comment view
                 $scope['comstate' + comID] = "static";
             }
         };
@@ -523,6 +534,7 @@
             }).then(function (response) {
                 // Updating the comment succeeded, so display it in the list
                 $scope['comtext' + comID] = txt;
+                $scope['combackup' + comID] = txt;
                 $scope['comrender' + comID] = response.data;
                 $scope['comstate' + comID] = "static";
 
