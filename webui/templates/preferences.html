@@ -16,11 +16,11 @@
                 <table class="table table-striped table-responsive settingsTable">
                     <tr>
                         <th width="25%">Full Name</th>
-                        <td><input name="fullname" style="width: 100%;" value="{{ FullName }}" placeholder="{{ NamePlaceholder }}" maxlength="80"></td>
+                        <td><input name="fullname" style="width: 100%;" value="{{ FullName }}" ng-attr-placeholder="{{ NamePlaceholder }}" maxlength="80"></td>
                     </tr>
                     <tr>
                         <th>Email address</th>
-                        <td><input name="email" style="width: 100%;" value="{{ EmailAddr }}" placeholder="{{ EmailPlaceholder }}" maxlength="80"><br />
+                        <td><input name="email" style="width: 100%;" value="{{ EmailAddr }}" ng-attr-placeholder="{{ EmailPlaceholder }}" maxlength="80"><br />
                             <i>If you don't want to use your real email address, use
                                 "[[ .Meta.LoggedInUser ]]@[[ .Meta.Server ]]".</i></td>
                     </tr>

@@ -74,7 +74,7 @@
                                             <div style="border-left: 1px solid #DDD; padding: 8px; text-align: left; min-height: 40px;" id="{{ key }}_mkdn"><span ng-bind-html="row.description_markdown"></span></div>
                                         </uib-tab>
                                         <uib-tab index="1" heading="Edit">
-                                            <textarea id="{{ key }}_desc" name="{{ key }}_desc" rows="10" style="margin-top: 2px; width: 100%;" placeholder="A description for this tag">{{ row.description }}</textarea>
+                                            <textarea id="{{ key }}_desc" name="{{ key }}_desc" rows="10" style="margin-top: 2px; width: 100%;" ng-attr-placeholder="A description for this tag">{{ row.description }}</textarea>
                                         </uib-tab>
                                     </uib-tabset>
                                 [[ else ]]
