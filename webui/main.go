@@ -3060,7 +3060,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
+	if dbOwner == "" || dbFolder == "" || dbName == "" || branchName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -3084,7 +3084,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	branches, err := com.GetBranches(dbOwner, dbFolder, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -3100,6 +3100,14 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.StoreDefaultBranchName(dbOwner, dbFolder, dbName, branchName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Invalidate the memcache data for the database, so the new default branch gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
 		return
 	}
 
