@@ -1385,6 +1385,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	// Fill out the metadata
 	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
+	pageData.Meta.Title = "Discussion List"
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
@@ -1393,6 +1394,19 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 
 	// If a specific discussion ID was given, then we display the discussion comments page
 	if pageData.SelectedID != 0 {
+		// Check if the discussion exists, and set the page title to the discussion info
+		found := false
+		for _, j := range pageData.DiscussionList {
+			if pageData.SelectedID == j.ID {
+				pageData.Meta.Title = fmt.Sprintf("Discussion #%d : %s", j.ID, j.Title)
+				found = true
+			}
+		}
+		if !found {
+			errorPage(w, r, http.StatusNotFound, "Unknown discussion ID")
+			return
+		}
+
 		// Load the comments for the requested discussion
 		pageData.CommentList, err = com.DiscussionComments(dbOwner, dbFolder, dbName, pageData.SelectedID, 0)
 		if err != nil {
