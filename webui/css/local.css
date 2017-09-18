@@ -19,34 +19,28 @@
     min-height: 80px;
 }
 
-.editPreview h1 {
+.editPreview h1:first-child {
     margin-top: 0;
-    margin-bottom: 0;
 }
 
-.editPreview h2 {
+.editPreview h2:first-child {
     margin-top: 0;
-    margin-bottom: 0;
 }
 
-.editPreview h3 {
+.editPreview h3:first-child {
     margin-top: 0;
-    margin-bottom: 0;
 }
 
-.editPreview h4 {
+.editPreview h4:first-child {
     margin-top: 0;
-    margin-bottom: 0;
 }
 
-.editPreview h5 {
+.editPreview h5:first-child {
     margin-top: 0;
-    margin-bottom: 0;
 }
 
-.editPreview h6 {
+.editPreview h6:first-child {
     margin-top: 0;
-    margin-bottom: 0;
 }
 
 .profileTable {

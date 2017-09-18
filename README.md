@@ -20,7 +20,7 @@ putting "production" servers online for people to store their data.
 
 ### Requirements
 
-* [Golang](https://golang.org) - version 1.8 or above is required.
+* [Golang](https://golang.org) - version 1.8 or above is required, with 1.9 highly recommended.
 * [Memcached](https://memcached.org) - version 1.4.33 and above are known to work.
 * [Minio](https://minio.io) - release 2016-11-26T02:23:47Z and later are known to work.
 * [PostgreSQL](https://www.postgresql.org) - version 9.6 or above is required.
