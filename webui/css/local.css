@@ -12,35 +12,12 @@
     text-decoration: underline;
 }
 
-.editPreview {
-    padding: 8px;
-    text-align: left;
-    margin-top: 2px;
+.minHeight {
     min-height: 80px;
 }
 
-.editPreview h1:first-child {
-    margin-top: 0;
-}
-
-.editPreview h2:first-child {
-    margin-top: 0;
-}
-
-.editPreview h3:first-child {
-    margin-top: 0;
-}
-
-.editPreview h4:first-child {
-    margin-top: 0;
-}
-
-.editPreview h5:first-child {
-    margin-top: 0;
-}
-
-.editPreview h6:first-child {
-    margin-top: 0;
+.minHeightSmaller {
+    min-height: 60px;
 }
 
 .profileTable {
@@ -78,6 +55,60 @@
 .profileTable tr:last-child td:last-child {
     border-bottom: solid 1px #DDD;
     border-bottom-right-radius: 7px;
+}
+
+.rendered {
+    padding: 8px;
+    text-align: left;
+    margin-top: 2px;
+}
+
+.rendered h1:first-child {
+    margin-top: 0;
+}
+
+.rendered h2:first-child {
+    margin-top: 0;
+}
+
+.rendered h3:first-child {
+    margin-top: 0;
+}
+
+.rendered h4:first-child {
+    margin-top: 0;
+}
+
+.rendered h5:first-child {
+    margin-top: 0;
+}
+
+.rendered h6:first-child {
+    margin-top: 0;
+}
+
+.rendered h1:last-child {
+    margin-bottom: 0;
+}
+
+.rendered h2:last-child {
+    margin-bottom: 0;
+}
+
+.rendered h3:last-child {
+    margin-bottom: 0;
+}
+
+.rendered h4:last-child {
+    margin-bottom: 0;
+}
+
+.rendered h5:last-child {
+    margin-bottom: 0;
+}
+
+.rendered h6:last-child {
+    margin-bottom: 0;
 }
 
 .settingsTable {

@@ -71,16 +71,14 @@
                                 [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                     <uib-tabset>
                                         <uib-tab index="0" heading="Description" select="getMarkdown(key)">
-                                            <div class="editPreview" style="border-left: 1px solid #DDD; min-height: 40px;"><span ng-bind-html="TagRendered[key]"></span></div>
+                                            <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;"><span ng-bind-html="TagRendered[key]"></span></div>
                                         </uib-tab>
                                         <uib-tab index="1" heading="Edit">
                                             <textarea rows="10" ng-attr-placeholder="A description for this tag" ng-model="TagText[key]"></textarea>
                                         </uib-tab>
                                     </uib-tabset>
                                 [[ else ]]
-                                    <div style="padding: 8px;">
-                                        <span ng-bind-html="TagRendered[key]"></span>
-                                    </div>
+                                    <div class="rendered minHeightSmaller" ng-bind-html="TagRendered[key]"></div>
                                 [[ end ]]
                             </td>
                         </tr>
