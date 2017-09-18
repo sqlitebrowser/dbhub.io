@@ -12,6 +12,43 @@
     text-decoration: underline;
 }
 
+.editPreview {
+    padding: 8px;
+    text-align: left;
+    margin-top: 2px;
+    min-height: 80px;
+}
+
+.editPreview h1 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.editPreview h2 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.editPreview h3 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.editPreview h4 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.editPreview h5 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.editPreview h6 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
 .profileTable {
     border-collapse: separate;
     border: none;
@@ -93,4 +130,10 @@
 
 #contents h1, #contents h2, #contents h3, #contents h4, #contents h5, #contents h6 {
     margin-top: 0;
+}
+
+textarea {
+    margin-top: 2px;
+    width: 100%;
+    padding: 6px;
 }

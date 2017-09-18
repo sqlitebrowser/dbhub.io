@@ -74,10 +74,10 @@
                                 <td style="border-style: none; padding: 0;" colspan="3">
                                     <uib-tabset>
                                         <uib-tab index="0" heading="Description" select="getMarkdown(row.name)">
-                                            <div style="border-left: 1px solid #DDD; padding: 8px; text-align: left; min-height: 40px;" id="{{ row.name }}_mkdn"><span ng-bind-html="row.mkdowndesc"></span></div>
+                                            <div class="editPreview" style="border-left: 1px solid #DDD; min-height: 40px;" id="{{ row.name }}_mkdn"><span ng-bind-html="row.mkdowndesc"></span></div>
                                         </uib-tab>
                                         <uib-tab index="1" heading="Edit">
-                                            <textarea id="{{ row.name }}_desc" name="{{ row.name }}_desc" rows="10" style="margin-top: 2px; width: 100%;" ng-attr-placeholder="A description for this branch">{{ row.description }}</textarea>
+                                            <textarea id="{{ row.name }}_desc" name="{{ row.name }}_desc" rows="10" ng-attr-placeholder="A description for this branch">{{ row.description }}</textarea>
                                         </uib-tab>
                                     </uib-tabset>
                                 </td>
