@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	valid "gopkg.in/go-playground/validator.v9"
 )
@@ -107,7 +108,7 @@ func ReservedUsernamesCheck(userName string) error {
 		"logout", "mail", "news", "pref", "printer", "public", "reference", "register", "root", "star",
 		"stars", "system", "table", "upload", "uploaddata", "vis"}
 	for _, word := range reserved {
-		if userName == word {
+		if strings.ToLower(userName) == strings.ToLower(word) {
 			return fmt.Errorf("That username is not available: %s\n", userName)
 		}
 	}

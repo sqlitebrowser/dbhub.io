@@ -125,8 +125,13 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fill out the metadata
-	pageData.Meta.Owner = dbOwner
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
 	pageData.Meta.Database = dbName
 
 	for i, j := range branches {
@@ -326,8 +331,15 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		pageData.History = append(pageData.History, newEntry)
 	}
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out the metadata
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.Branch = branchName
 	for i := range branches {
@@ -398,13 +410,20 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database owner matches the logged in user
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out metadata for the page to be rendered
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 
 	// Add Auth0 info to the page data
@@ -491,8 +510,15 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out the metadata
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.Contributors = make(map[string]AuthorEntry)
 	for _, j := range commitList {
@@ -592,13 +618,20 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database owner matches the logged in user
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out metadata for the page to be rendered
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.Commit = commit
 
@@ -665,8 +698,15 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out metadata for the page to be rendered
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 
 	// Add Auth0 info to the page data
@@ -734,13 +774,20 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database owner matches the logged in user
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out metadata for the page to be rendered
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.Commit = commit
 
@@ -879,7 +926,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// * Execution can only get here if the user has access to the requested database *
 
 	// Increment the view counter for the database (excluding people viewing their own databases)
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		err = com.IncrementViewCount(dbOwner, dbFolder, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -1185,8 +1232,15 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		}
 	}
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out various metadata fields
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = com.Conf.Web.ServerName
 	pageData.Meta.Title = fmt.Sprintf("%s %s %s", dbOwner, dbFolder, dbName)
@@ -1382,8 +1436,15 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out the metadata
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.Meta.Title = "Discussion List"
 
@@ -1439,6 +1500,7 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 		Meta    com.MetaInfo
 	}
 	pageData.Message = msg
+	pageData.Meta.Title = "Error"
 
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -1482,7 +1544,6 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	dbFolder := "/"
 
@@ -1518,6 +1579,14 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 				dbName, err.Error()))
 		return
 	}
+
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
@@ -1633,8 +1702,6 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		PublicDBs  []com.DBInfo
 		Stars      []com.DBEntry
 	}
-	pageData.Meta.Owner = userName
-	pageData.Meta.Title = userName
 	pageData.Meta.Server = com.Conf.Web.ServerName
 	pageData.Meta.LoggedInUser = userName
 
@@ -1671,6 +1738,15 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
 	}
+
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+	pageData.Meta.Title = usr.Username
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
@@ -1763,8 +1839,15 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	// looked up
 	userNameCache := make(map[string]string)
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out the metadata
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.ReleaseList = make(map[string]relEntry)
 	if len(releases) > 0 {
@@ -1913,7 +1996,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
 		return
 	}
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		errorPage(w, r, http.StatusBadRequest,
 			"You can only access the settings page for your own databases")
 		return
@@ -2011,8 +2094,15 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	// Render the full description markdown
 	pageData.FullDescRendered = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out the metadata
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 
 	// If the default table is blank, use the first one from the table list
@@ -2061,7 +2151,6 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 
 	// Check if the database exists
@@ -2083,6 +2172,14 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
 	}
+
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
@@ -2174,8 +2271,15 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	// looked up
 	userNameCache := make(map[string]string)
 
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
 	// Fill out the metadata
-	pageData.Meta.Owner = dbOwner
 	pageData.Meta.Database = dbName
 	pageData.TagList = make(map[string]tgEntry)
 	if len(tags) > 0 {
@@ -2299,8 +2403,6 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		FullName string
 		Meta     com.MetaInfo
 	}
-	pageData.Meta.Owner = userName
-	pageData.Meta.Title = userName
 	pageData.Meta.Server = com.Conf.Web.ServerName
 
 	// Retrieve session data (if any)
@@ -2313,7 +2415,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
-		if loggedInUser == userName {
+		if strings.ToLower(loggedInUser) == strings.ToLower(userName) {
 			// The logged in user is looking at their own user page
 			profilePage(w, r, loggedInUser)
 			return
@@ -2347,6 +2449,15 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
 	}
+
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+	pageData.Meta.Title = usr.Username
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"

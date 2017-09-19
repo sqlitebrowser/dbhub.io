@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -781,7 +782,7 @@ func nextChild(loggedInUser string, rawListPtr *[]ForkEntry, outputListPtr *[]Fo
 				rawList[j].IconList = append(rawList[j].IconList, END)
 
 				// If the database is no longer public, then use placeholder details instead
-				if !rawList[j].Public && (rawList[j].Owner != loggedInUser) {
+				if !rawList[j].Public && (strings.ToLower(rawList[j].Owner) != strings.ToLower(loggedInUser)) {
 					rawList[j].DBName = "private database"
 				}
 

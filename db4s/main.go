@@ -714,7 +714,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Verify the user is uploading to a location they have write access for
-	if targetUser != userAcc {
+	if strings.ToLower(targetUser) != strings.ToLower(userAcc) {
 		log.Printf("%s: Attempt by '%s' to write to unauthorised location: %v\n", pageName, userAcc,
 			r.URL.Path)
 		http.Error(w, fmt.Sprintf("Error code 401: You don't have write permission for '%s'",
@@ -927,7 +927,7 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 	}
 
 	// If downloaded by someone other than the owner, increment the download count for the database
-	if userAcc != dbOwner {
+	if strings.ToLower(userAcc) != strings.ToLower(dbOwner) {
 		err = com.IncrementDownloadCount(dbOwner, dbFolder, dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -987,7 +987,7 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 	// Retrieve the list of databases for the requested username.  Only include those accessible to the logged
 	// in user (userAcc) though
 	var pubSetting com.AccessType
-	if userAcc != user {
+	if strings.ToLower(userAcc) != strings.ToLower(user) {
 		// The user is requesting someone else's list, so only return public databases
 		pubSetting = com.DB_PUBLIC
 	} else {

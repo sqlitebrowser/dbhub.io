@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/bradfitz/gomemcache/memcache"
 )
@@ -215,11 +216,11 @@ func MemcacheHandle() *memcache.Client {
 // Generate a predictable cache key for metadata information
 func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) string {
 	var cacheString string
-	if loggedInUser == dbOwner {
-		cacheString = fmt.Sprintf("%s/%s/%s/%s/%s", prefix, dbOwner, dbFolder, dbName, commitID)
+	if strings.ToLower(loggedInUser) == strings.ToLower(dbOwner) {
+		cacheString = fmt.Sprintf("%s/%s/%s/%s/%s", prefix, strings.ToLower(dbOwner), dbFolder, dbName, commitID)
 	} else {
 		// Requests for other users databases are cached separately from users own database requests
-		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%s", prefix, dbOwner, dbFolder, dbName, commitID)
+		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%s", prefix, strings.ToLower(dbOwner), dbFolder, dbName, commitID)
 	}
 	tempArr := md5.Sum([]byte(cacheString))
 	return hex.EncodeToString(tempArr[:])
@@ -228,12 +229,12 @@ func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbFold
 // Generate a predictable cache key for SQLite row data
 func TableRowsCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string, dbTable string, rows int) string {
 	var cacheString string
-	if loggedInUser == dbOwner {
-		cacheString = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d", prefix, dbOwner, dbFolder, dbName, commitID,
+	if strings.ToLower(loggedInUser) == strings.ToLower(dbOwner) {
+		cacheString = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d", prefix, strings.ToLower(dbOwner), dbFolder, dbName, commitID,
 			dbTable, rows)
 	} else {
 		// Requests for other users databases are cached separately from users own database requests
-		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%s/%s/%d", prefix, dbOwner, dbFolder, dbName,
+		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%s/%s/%d", prefix, strings.ToLower(dbOwner), dbFolder, dbName,
 			commitID, dbTable, rows)
 	}
 	tempArr := md5.Sum([]byte(cacheString))

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx"
@@ -88,15 +89,14 @@ func CheckDBExists(loggedInUser string, dbOwner string, dbFolder string, dbName 
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3
 			AND is_deleted = false`
-
 	// If the request is from someone who's not logged in, or is for another users database, ensure we only consider
 	// public databases
-	if loggedInUser != dbOwner || loggedInUser == "" {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) || loggedInUser == "" {
 		dbQuery += `
 			AND public = true`
 	}
@@ -123,7 +123,7 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 		WHERE database_stars.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND database_stars.db_id = (
 					SELECT db_id
@@ -131,7 +131,7 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 					WHERE user_id = (
 							SELECT user_id
 							FROM users
-							WHERE user_name = $2
+							WHERE lower(user_name) = lower($2)
 						)
 						AND folder = $3
 						AND db_name = $4
@@ -182,7 +182,7 @@ func CheckUserExists(userName string) (bool, error) {
 	dbQuery := `
 		SELECT count(user_id)
 		FROM users
-		WHERE user_name = $1`
+		WHERE lower(user_name) = lower($1)`
 	var userCount int
 	err := pdb.QueryRow(dbQuery, userName).Scan(&userCount)
 	if err != nil {
@@ -203,7 +203,7 @@ func ClientCert(userName string) ([]byte, error) {
 	err := pdb.QueryRow(`
 		SELECT client_cert
 		FROM users
-		WHERE user_name = $1`, userName).Scan(&cert)
+		WHERE lower(user_name) = lower($1)`, userName).Scan(&cert)
 	if err != nil {
 		log.Printf("Retrieving client cert for '%s' from database failed: %v\n", userName, err)
 		return nil, err
@@ -235,7 +235,7 @@ func databaseID(dbOwner string, dbFolder string, dbName string) (dbID int, err e
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1)
+				WHERE lower(user_name) = lower($1))
 			AND folder = $2
 			AND db_name = $3
 			AND is_deleted = false`
@@ -290,7 +290,7 @@ func DB4SDefaultList(loggedInUser string) (map[string]UserInfo, error) {
 		WITH u AS (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1
+			WHERE lower(user_name) = lower($1)
 		), user_db_list AS (
 			SELECT DISTINCT ON (db_id) db_id, last_modified
 			FROM sqlite_databases AS db, u
@@ -344,14 +344,14 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 		WHERE db.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND db.folder = $2
 			AND db.db_name = $3
 			AND db.is_deleted = false`
 
 	// If the request is for another users database, ensure we only look up public ones
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		dbQuery += `
 			AND db.public = true`
 	}
@@ -419,7 +419,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 			WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1)
+				WHERE lower(user_name) = lower($1))
 			AND folder = $2
 			AND db_name = $3)`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DB.Info.Forks)
@@ -446,7 +446,7 @@ func DBStars(dbOwner string, dbFolder string, dbName string) (starCount int, err
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3
@@ -468,7 +468,7 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 		WHERE user_id = (
 				SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3
@@ -500,7 +500,7 @@ func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, c
 			WHERE db.user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -533,7 +533,7 @@ func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, c
 			WHERE db.user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -593,7 +593,7 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -620,7 +620,7 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 				WHERE user_id = (
 						SELECT user_id
 						FROM users
-						WHERE user_name = $1
+						WHERE lower(user_name) = lower($1)
 					)
 					AND folder = $2
 					AND db_name = $3
@@ -653,7 +653,7 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3`
@@ -693,7 +693,7 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -716,7 +716,7 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -740,7 +740,7 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -796,7 +796,7 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discID int) (li
 		WITH u AS (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1
+			WHERE lower(user_name) = lower($1)
 		), d AS (
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
@@ -848,7 +848,7 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 		WITH u AS (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1
+			WHERE lower(user_name) = lower($1)
 		), d AS (
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
@@ -958,7 +958,7 @@ func FlushViewCount() {
 					WHERE user_id = (
 							SELECT user_id
 							FROM users
-							WHERE user_name = $1
+							WHERE lower(user_name) = lower($1)
 						)
 						AND folder = $2
 						AND db_name = $3`
@@ -988,7 +988,7 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 		WITH dst_u AS (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1
+			WHERE lower(user_name) = lower($1)
 		)
 		INSERT INTO sqlite_databases (user_id, folder, db_name, public, forks, one_line_description, full_description,
 			branches, contributors, root_database, default_table, source_url, commit_list, branch_heads, tags,
@@ -1000,7 +1000,7 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 		WHERE sqlite_databases.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $2
+				WHERE lower(user_name) = lower($2)
 			)
 			AND folder = $3
 			AND db_name = $4`
@@ -1022,7 +1022,7 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -1056,7 +1056,7 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1)
+				WHERE lower(user_name) = lower($1))
 			AND folder = $2
 			AND db_name = $3`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID, &forkedFrom)
@@ -1101,7 +1101,7 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 				WHERE user_id = (
 						SELECT user_id
 						FROM users
-						WHERE user_name = $1
+						WHERE lower(user_name) = lower($1)
 					)
 					AND folder = $2
 					AND db_name = $3
@@ -1153,7 +1153,7 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 	dbList[0].IconList = append(dbList[0].IconList, ROOT)
 
 	// If the root database is no longer public, then use placeholder details instead
-	if !dbList[0].Public && (dbList[0].Owner != loggedInUser) {
+	if !dbList[0].Public && (strings.ToLower(dbList[0].Owner) != strings.ToLower(loggedInUser)) {
 		dbList[0].DBName = "private database"
 	}
 
@@ -1373,7 +1373,7 @@ func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[s
 		WHERE db.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND db.folder = $2
 			AND db.db_name = $3`
@@ -1394,7 +1394,7 @@ func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (branc
 		WHERE db.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND db.folder = $2
 			AND db.db_name = $3
@@ -1426,7 +1426,7 @@ func GetDefaultTableName(dbOwner string, dbFolder string, dbName string) (tableN
 		WHERE db.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND db.folder = $2
 			AND db.db_name = $3
@@ -1452,7 +1452,7 @@ func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]C
 		WITH u AS (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1
+			WHERE lower(user_name) = lower($1)
 		)
 		SELECT commit_list as commits
 		FROM sqlite_databases AS db, u
@@ -1479,7 +1479,7 @@ func GetLicence(userName string, licenceName string) (txt string, format string,
 				user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				) OR
 				user_id = (
 					SELECT user_id
@@ -1512,7 +1512,7 @@ func GetLicences(user string) (map[string]LicenceEntry, error) {
 			OR user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)`
 	rows, err := pdb.Query(dbQuery, user)
 	if err != nil {
@@ -1551,7 +1551,7 @@ func GetLicenceInfoFromSha256(userName string, sha256 string) (lName string, lUR
 			OR dl.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			))`
 	rows, err := pdb.Query(dbQuery, userName, sha256)
 	if err != nil {
@@ -1625,7 +1625,7 @@ func GetLicenceSha256FromName(userName string, licenceName string) (sha256 strin
 			OR user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			))`
 	err = pdb.QueryRow(dbQuery, userName, licenceName).Scan(&sha256)
 	if err != nil {
@@ -1648,7 +1648,7 @@ func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[s
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -1672,7 +1672,7 @@ func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]Ta
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -1694,7 +1694,7 @@ func GetUserDetails(userName string) (displayName string, email string, err erro
 	dbQuery := `
 		SELECT display_name, email
 		FROM users
-		WHERE user_name = $1`
+		WHERE lower(user_name) = lower($1)`
 	var dn, em pgx.NullString
 	err = pdb.QueryRow(dbQuery, userName).Scan(&dn, &em)
 	if err != nil {
@@ -1738,7 +1738,7 @@ func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) erro
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -1775,13 +1775,13 @@ func LogDownload(dbOwner string, dbFolder string, dbName string, loggedInUser st
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND db.folder = $2
 				AND db.db_name = $3
 		)
 		INSERT INTO database_downloads (db_id, user_id, ip_addr, server_sw, user_agent, download_date, db_sha256)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE user_name = $4), $5, $6, $7, $8, $9`
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7, $8, $9`
 	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, downloader, ipAddr, serverSw, userAgent,
 		downloadDate, sha)
 	if err != nil {
@@ -1814,13 +1814,13 @@ func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser stri
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND db.folder = $2
 				AND db.db_name = $3
 		)
 		INSERT INTO database_uploads (db_id, user_id, ip_addr, server_sw, user_agent, upload_date, db_sha256)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE user_name = $4), $5, $6, $7, $8, $9`
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7, $8, $9`
 	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, uploader, ipAddr, serverSw, userAgent,
 		uploadDate, sha)
 	if err != nil {
@@ -1862,14 +1862,14 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 		WHERE db.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND db.folder = $2
 			AND db.db_name = $3
 			AND db.is_deleted = false`
 
 	// If the request is for another users database, it needs to be a public one
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		dbQuery += `
 				AND db.public = true`
 	}
@@ -1906,7 +1906,7 @@ func PrefUserMaxRows(loggedInUser string) int {
 		WHERE user_id = (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1)`
+			WHERE lower(user_name) = lower($1))`
 	var maxRows int
 	err := pdb.QueryRow(dbQuery, loggedInUser).Scan(&maxRows)
 	if err != nil {
@@ -1926,7 +1926,7 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -1981,7 +1981,7 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -2015,7 +2015,7 @@ func SetClientCert(newCert []byte, userName string) error {
 	SQLQuery := `
 		UPDATE users
 		SET client_cert = $1
-		WHERE user_name = $2`
+		WHERE lower(user_name) = lower($2)`
 	commandTag, err := pdb.Exec(SQLQuery, newCert, userName)
 	if err != nil {
 		log.Printf("Updating client certificate for '%s' failed: %v\n", userName, err)
@@ -2036,7 +2036,7 @@ func SetUserPreferences(userName string, maxRows int, displayName string, email 
 	dbQuery := `
 		UPDATE users
 		SET pref_max_rows = $2, display_name = $3, email = $4
-		WHERE user_name = $1`
+		WHERE lower(user_name) = lower($1)`
 	commandTag, err := pdb.Exec(dbQuery, userName, maxRows, displayName, email)
 	if err != nil {
 		log.Printf("Updating user preferences failed for user '%s'. Error: '%v'\n", userName, err)
@@ -2061,7 +2061,7 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -2081,7 +2081,7 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 				WHERE user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 					)
 			AND folder = $2
 			AND db_name = $3)`
@@ -2103,7 +2103,7 @@ func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 				)
 			AND folder = $2
 			AND db_name = $3`
@@ -2148,7 +2148,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 					WHERE db.user_id = (
 							SELECT user_id
 							FROM users
-							WHERE user_name = $1
+							WHERE lower(user_name) = lower($1)
 						)
 						AND folder = $2
 						AND db_name = $3
@@ -2163,7 +2163,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 		}
 
 		// Ensure only the database owner or discussion starter can close/reopen databases
-		if (commenter != dbOwner) && (commenter != discCreator) {
+		if (strings.ToLower(commenter) != strings.ToLower(dbOwner)) && (strings.ToLower(commenter) != strings.ToLower(discCreator)) {
 			return errors.New("Not authorised")
 		}
 	}
@@ -2178,7 +2178,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 				WHERE db.user_id = (
 						SELECT user_id
 						FROM users
-						WHERE user_name = $1
+						WHERE lower(user_name) = lower($1)
 					)
 					AND folder = $2
 					AND db_name = $3
@@ -2189,7 +2189,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 				AND disc_id = $5
 			)
 			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
-			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE user_name = $4), $6, 'txt'`
+			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $6, 'txt'`
 		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, comText)
 		if err != nil {
 			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
@@ -2224,7 +2224,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 				WHERE db.user_id = (
 						SELECT user_id
 						FROM users
-						WHERE user_name = $1
+						WHERE lower(user_name) = lower($1)
 					)
 					AND folder = $2
 					AND db_name = $3
@@ -2235,7 +2235,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 				AND disc_id = $5
 			)
 			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
-			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE user_name = $4), $6, $7`
+			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $6, $7`
 		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, eventTxt, eventType)
 		if err != nil {
 			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
@@ -2272,7 +2272,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 				WHERE db.user_id = (
 						SELECT user_id
 						FROM users
-						WHERE user_name = $1
+						WHERE lower(user_name) = lower($1)
 					)
 					AND folder = $2
 					AND db_name = $3
@@ -2298,7 +2298,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 			WHERE db.user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -2340,7 +2340,7 @@ func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 				)
 			AND folder = $2
 			AND db_name = $3`
@@ -2399,7 +2399,7 @@ func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[
 		SELECT (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1), (SELECT val FROM root), $2, $3, $4, $5, $6, $8, (SELECT val FROM root), $7`
+			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), $2, $3, $4, $5, $6, $8, (SELECT val FROM root), $7`
 	if sourceURL != "" {
 		dbQuery += `, $9`
 	}
@@ -2446,7 +2446,7 @@ func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branch
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 				)
 			AND folder = $2
 			AND db_name = $3`
@@ -2475,7 +2475,7 @@ func StoreDefaultTableName(dbOwner string, folder string, dbName string, tableNa
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 				)
 			AND folder = $2
 			AND db_name = $3`
@@ -2506,7 +2506,7 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 		WITH u AS (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1
+			WHERE lower(user_name) = lower($1)
 		), d AS (
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
@@ -2519,7 +2519,7 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 			WHERE disc.db_id = d.db_id
 		)
 		INSERT INTO discussions (db_id, disc_id, creator, title, description, open)
-		SELECT (SELECT db_id FROM d), (SELECT id FROM next_id), (SELECT user_id FROM users WHERE user_name = $4), $5, $6, true`
+		SELECT (SELECT db_id FROM d), (SELECT id FROM next_id), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, true`
 	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text)
 	if err != nil {
 		log.Printf("Adding new discussion '%s' for '%s%s%s' failed: %v\n", title, dbOwner, dbFolder, dbName,
@@ -2538,7 +2538,7 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -2569,7 +2569,7 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 		WITH u AS (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1
+			WHERE lower(user_name) = lower($1)
 		)
 		INSERT INTO database_licences (user_id, friendly_name, lic_sha256, licence_text, licence_url, display_order,
 			full_name, file_format)
@@ -2604,7 +2604,7 @@ func StoreReleases(dbOwner string, dbFolder string, dbName string, releases map[
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -2628,7 +2628,7 @@ func StoreTags(dbOwner string, dbFolder string, dbName string, tags map[string]T
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`
@@ -2665,7 +2665,7 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 			WITH u AS (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $2
+				WHERE lower(user_name) = lower($2)
 			)
 			INSERT INTO database_stars (db_id, user_id)
 			SELECT $1, u.user_id
@@ -2688,7 +2688,7 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 			AND user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $2
+				WHERE WHERE lower(user_name) = lower($2)
 			)`
 		commandTag, err := pdb.Exec(deleteQuery, dbID, loggedInUser)
 		if err != nil {
@@ -2743,7 +2743,7 @@ func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
 			WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 				AND folder = $2
 				AND db_name = $3`
@@ -2779,7 +2779,7 @@ func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser 
 			WHERE db.user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -2803,7 +2803,7 @@ func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser 
 	}
 
 	// Ensure only the database owner or comment creator can update the comment
-	if (loggedInUser != dbOwner) && (loggedInUser != comCreator) {
+	if (strings.ToLower(loggedInUser) != strings.ToLower(dbOwner)) && (strings.ToLower(loggedInUser) != strings.ToLower(comCreator)) {
 		return errors.New("Not authorised")
 	}
 
@@ -2815,7 +2815,7 @@ func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser 
 			WHERE db.user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -2871,7 +2871,7 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 				WHERE db.user_id = (
 						SELECT user_id
 						FROM users
-						WHERE user_name = $1
+						WHERE lower(user_name) = lower($1)
 					)
 					AND folder = $2
 					AND db_name = $3
@@ -2886,7 +2886,7 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 	}
 
 	// Ensure only the database owner or discussion starter can update the discussion
-	if (loggedInUser != dbOwner) && (loggedInUser != discCreator) {
+	if (strings.ToLower(loggedInUser) != strings.ToLower(dbOwner)) && (strings.ToLower(loggedInUser) != strings.ToLower(discCreator)) {
 		return errors.New("Not authorised")
 	}
 
@@ -2898,7 +2898,7 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 			WHERE db.user_id = (
 					SELECT user_id
 					FROM users
-					WHERE user_name = $1
+					WHERE lower(user_name) = lower($1)
 				)
 				AND folder = $2
 				AND db_name = $3
@@ -2932,7 +2932,7 @@ func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
 		SELECT user_name, email, password_hash, date_joined, client_cert
 		FROM users
-		WHERE user_name = $1`
+		WHERE lower(user_name) = lower($1)`
 	err = pdb.QueryRow(dbQuery, userName).Scan(&user.Username, &user.Email, &user.PHash, &user.DateJoined,
 		&user.ClientCert)
 	if err != nil {
@@ -2956,7 +2956,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		WITH u AS (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1
+			WHERE lower(user_name) = lower($1)
 		), default_commits AS (
 			SELECT DISTINCT ON (db.db_name) db_name, db.db_id, db.branch_heads->db.default_branch->>'commit' AS id
 			FROM sqlite_databases AS db, u
@@ -3036,7 +3036,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			WITH u AS (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			SELECT forks
 			FROM sqlite_databases, u
@@ -3086,7 +3086,7 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 		WITH u AS (
 			SELECT user_id
 			FROM users
-			WHERE user_name = $1
+			WHERE lower(user_name) = lower($1)
 		),
 		stars AS (
 			SELECT st.db_id, st.date_starred
@@ -3133,7 +3133,7 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 				WHERE user_id = (
 						SELECT user_id
 						FROM users
-						WHERE user_name = $1
+						WHERE lower(user_name) = lower($1)
 					)
 					AND folder = $2
 					AND db_name = $3
@@ -3177,7 +3177,7 @@ func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, e
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE user_name = $1
+				WHERE lower(user_name) = lower($1)
 			)
 			AND folder = $2
 			AND db_name = $3`

@@ -133,9 +133,21 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+
 		// Create a special session cookie, purely for the registration page
 		sess, err := store.Get(r, "user-reg")
 		if err != nil {
+			if err == memcache.ErrCacheMiss {
+				// Seems like a stale session token, so delete the session and reload the page
+				sess.Options.MaxAge = -1
+				err = sess.Save(r, w)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+				http.Redirect(w, r, "/selectusername", http.StatusTemporaryRedirect)
+				return
+			}
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -229,7 +241,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database owner matches the logged in user
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
@@ -556,7 +568,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database owner matches the logged in user
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
@@ -733,7 +745,6 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		sess.Options.MaxAge = -1
 		err = sess.Save(r, w)
 		if err != nil {
-			// Try to display both errors
 			errorPage(w, r, http.StatusInternalServerError, err.Error()+" Username failed validation")
 			return
 		}
@@ -751,7 +762,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
 		sess.Options.MaxAge = -1
 		err2 := sess.Save(r, w)
-		if err != nil {
+		if err2 != nil {
 			// Try to display both errors
 			errorPage(w, r, http.StatusInternalServerError, err2.Error()+" "+err.Error())
 			return
@@ -769,7 +780,6 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		sess.Options.MaxAge = -1
 		err = sess.Save(r, w)
 		if err != nil {
-			// Try to display both errors
 			errorPage(w, r, http.StatusInternalServerError, err.Error()+" Username check failed")
 			return
 		}
@@ -783,7 +793,6 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		sess.Options.MaxAge = -1
 		err = sess.Save(r, w)
 		if err != nil {
-			// Try to display both errors
 			errorPage(w, r, http.StatusInternalServerError, err.Error()+" That username is already taken")
 			return
 		}
@@ -828,7 +837,6 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		sess.Options.MaxAge = -1
 		err = sess.Save(r, w)
 		if err != nil {
-			// Try to display both errors
 			errorPage(w, r, http.StatusInternalServerError, err.Error()+" Something went wrong during user creation")
 			return
 		}
@@ -956,7 +964,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -1379,7 +1387,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the logged in user is allowed to delete the requested comment
 	deleteAllowed := false
-	if dbOwner == loggedInUser {
+	if strings.ToLower(dbOwner) == strings.ToLower(loggedInUser) {
 		// The database owner can delete any discussion comment on their databases
 		deleteAllowed = true
 	} else {
@@ -1390,7 +1398,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, err.Error())
 			return
 		}
-		if rq[0].Commenter == loggedInUser {
+		if strings.ToLower(rq[0].Commenter) == strings.ToLower(loggedInUser) {
 			deleteAllowed = true
 		}
 	}
@@ -1476,7 +1484,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -1686,7 +1694,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprint(w, "You don't have permission to delete that database")
 		return
@@ -1774,7 +1782,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -1870,7 +1878,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -2103,7 +2111,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If downloaded by someone other than the owner, increment the download count for the database
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		err = com.IncrementDownloadCount(dbOwner, dbFolder, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -2164,7 +2172,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the source and destination owners are different
-	if loggedInUser == dbOwner {
+	if strings.ToLower(loggedInUser) == strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusBadRequest, "Forking your own database in-place doesn't make sense")
 		return
 	}
@@ -2673,7 +2681,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, "Error when checking email address")
 		return
 	}
-	if a != "" && a != loggedInUser {
+	if a != "" && strings.ToLower(a) != strings.ToLower(loggedInUser) {
 		errorPage(w, r, http.StatusBadRequest, "That email address is already associated with a different user")
 		return
 	}
@@ -2736,7 +2744,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database owner matches the logged in user
-	if loggedInUser != dbOwner {
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusBadRequest, "You can only change settings for your own databases.")
 		return
 	}
@@ -3027,7 +3035,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Settings saved, so bounce back to the database page
-	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", dbOwner, dbFolder, newName), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, dbFolder, newName), http.StatusSeeOther)
 }
 
 // This function sets a branch as the default for a given database.
@@ -3088,7 +3096,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -3237,7 +3245,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprint(w, "Access denied")
 		return
@@ -3671,7 +3679,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -4051,7 +4059,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -4180,7 +4188,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if dbOwner != loggedInUser {
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
