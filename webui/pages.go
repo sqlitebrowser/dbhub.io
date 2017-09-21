@@ -171,6 +171,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		AuthorEmail    string     `json:"author_email"`
 		AuthorName     string     `json:"author_name"`
 		AuthorUserName string     `json:"author_user_name"`
+		AvatarURL      string     `json:"avatar_url"`
 		CommitterEmail string     `json:"committer_email"`
 		CommitterName  string     `json:"committer_name"`
 		ID             string     `json:"id"`
@@ -281,10 +282,13 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	// TODO: Ugh, this is an ugly approach just to add the username to the commit data.  Surely there's a better way?
 	// TODO  Maybe store the username in the commit data structure in the database instead?
 	// TODO: Display licence changes too
-	eml, err := com.GetUsernameFromEmail(rawList[headID].AuthorEmail)
+	uName, avatarURL, err := com.GetUsernameFromEmail(rawList[headID].AuthorEmail)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
+	}
+	if avatarURL != "" {
+		avatarURL += "&s=30"
 	}
 
 	// Create the history entry
@@ -292,14 +296,14 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		{
 			AuthorEmail:    rawList[headID].AuthorEmail,
 			AuthorName:     rawList[headID].AuthorName,
-			AuthorUserName: eml,
+			AuthorUserName: uName,
+			AvatarURL:      avatarURL,
 			CommitterEmail: rawList[headID].CommitterEmail,
 			CommitterName:  rawList[headID].CommitterName,
 			ID:             rawList[headID].ID,
 			Message:        string(gfm.Markdown([]byte(rawList[headID].Message))),
 			Parent:         rawList[headID].Parent,
 			Timestamp:      rawList[headID].Timestamp,
-			Tree:           rawList[headID].Tree,
 		},
 	}
 	commitData := com.CommitEntry{Parent: rawList[headID].Parent}
@@ -309,24 +313,27 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 			errorPage(w, r, http.StatusInternalServerError, "Internal error when retrieving commit data")
 			return
 		}
-		eml, err := com.GetUsernameFromEmail(commitData.AuthorEmail)
+		uName, avatarURL, err = com.GetUsernameFromEmail(commitData.AuthorEmail)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
+		}
+		if avatarURL != "" {
+			avatarURL += "&s=30"
 		}
 
 		// Create a history entry
 		newEntry := HistEntry{
 			AuthorEmail:    commitData.AuthorEmail,
 			AuthorName:     commitData.AuthorName,
-			AuthorUserName: eml,
+			AuthorUserName: uName,
+			AvatarURL:      avatarURL,
 			CommitterEmail: commitData.CommitterEmail,
 			CommitterName:  commitData.CommitterName,
 			ID:             commitData.ID,
 			Message:        string(gfm.Markdown([]byte(commitData.Message))),
 			Parent:         commitData.Parent,
 			Timestamp:      commitData.Timestamp,
-			Tree:           commitData.Tree,
 		}
 		pageData.History = append(pageData.History, newEntry)
 	}
@@ -446,6 +453,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		AuthorEmail    string `json:"author_email"`
 		AuthorName     string `json:"author_name"`
 		AuthorUserName string `json:"author_user_name"`
+		AvatarURL      string `json:"avatar_url"`
 		NumCommits     int    `json:"num_commits"`
 	}
 	var pageData struct {
@@ -526,10 +534,13 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		// TODO: There are likely a bunch of ways to optimise this, from keeping the user name entries in a map to
 		// TODO  directly storing the username in the jsonb commit data.  Storing the user name entry in the jsonb is
 		// TODO  probably the way to go, as it would save lookups in a lot of places
-		u, err := com.GetUsernameFromEmail(j.AuthorEmail)
+		u, avatarURL, err := com.GetUsernameFromEmail(j.AuthorEmail)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
+		}
+		if avatarURL != "" {
+			avatarURL += "&s=30"
 		}
 
 		// This ok check is just a way to decide whether to increment the NumCommits counter
@@ -539,6 +550,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 				AuthorEmail:    j.AuthorEmail,
 				AuthorName:     j.AuthorName,
 				AuthorUserName: u,
+				AvatarURL:      avatarURL,
 				NumCommits:     1,
 			}
 		} else {
@@ -548,6 +560,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 				AuthorEmail:    j.AuthorEmail,
 				AuthorName:     j.AuthorName,
 				AuthorUserName: u,
+				AvatarURL:      avatarURL,
 				NumCommits:     n,
 			}
 		}
@@ -1660,19 +1673,20 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	pageData.Meta.Title = "Preferences"
 	pageData.Meta.LoggedInUser = loggedInUser
 
-	// Grab the user's display name and email address
-	var err error
-	pageData.DisplayName, pageData.Email, err = com.GetUserDetails(loggedInUser)
+	// Grab the display name and email address for the user
+	usr, err := com.User(loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
 	}
+	pageData.DisplayName = usr.DisplayName
+	pageData.Email = usr.Email
 
 	// Set the server name, used for the placeholder email address suggestion
 	serverName := strings.Split(com.Conf.Web.ServerName, ":")
 	pageData.Meta.Server = serverName[0]
 
-	// If the user's email address is empty, use username@server by default.  This mirrors the suggestion on the
+	// If the email address for the user is empty, use username@server by default.  This mirrors the suggestion on the
 	// rendered HTML, so the user doesn't have to manually type it in
 	if pageData.Email == "" {
 		pageData.Email = fmt.Sprintf("%s@%s", loggedInUser, pageData.Meta.Server)
@@ -1739,11 +1753,14 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
-	// Retrieve correctly capitalised username for the user
+	// Retrieve the details for the user
 	usr, err := com.User(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
+	}
+	if usr.AvatarURL != "" {
+		pageData.Meta.AvatarURL = usr.AvatarURL + "&s=48"
 	}
 	pageData.Meta.Owner = usr.Username
 	pageData.Meta.Title = usr.Username
@@ -1765,6 +1782,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 func releasesPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	type relEntry struct {
+		AvatarURL           string    `json:"avatar_url"`
 		Commit              string    `json:"commit"`
 		Date                time.Time `json:"date"`
 		Description         string    `json:"description"`
@@ -1837,7 +1855,11 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 
 	// Create a small username/email lookup cache, so we don't have to query the database for usernames we've already
 	// looked up
-	userNameCache := make(map[string]string)
+	type userCacheEntry struct {
+		AvatarURL string
+		Email     string
+	}
+	userNameCache := make(map[string]userCacheEntry)
 
 	// Retrieve correctly capitalised username for the user
 	usr, err := com.User(dbOwner)
@@ -1855,11 +1877,15 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
 			// database (and put it in the cache)
 			if _, ok := userNameCache[j.ReleaserEmail]; !ok {
-				userNameCache[j.ReleaserEmail], err = com.GetUsernameFromEmail(j.ReleaserEmail)
+				eml, avatarURL, err := com.GetUsernameFromEmail(j.ReleaserEmail)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
 				}
+				if avatarURL != "" {
+					avatarURL += "&s=28"
+				}
+				userNameCache[j.ReleaserEmail] = userCacheEntry{AvatarURL: avatarURL, Email: eml}
 			}
 
 			// Create the tag info we pass to the tag list rendering page
@@ -1870,11 +1896,12 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 				r = string(gfm.Markdown([]byte(j.Description)))
 			}
 			pageData.ReleaseList[i] = relEntry{
+				AvatarURL:           userNameCache[j.ReleaserEmail].AvatarURL,
 				Commit:              j.Commit,
 				Date:                j.Date,
 				Description:         j.Description,
 				DescriptionMarkdown: r,
-				ReleaserUserName:    userNameCache[j.ReleaserEmail],
+				ReleaserUserName:    userNameCache[j.ReleaserEmail].Email,
 				ReleaserDisplayName: j.ReleaserName,
 				Size:                j.Size,
 			}
@@ -2198,6 +2225,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 func tagsPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	type tgEntry struct {
+		AvatarURL           string    `json:"avatar_url"`
 		Commit              string    `json:"commit"`
 		Date                time.Time `json:"date"`
 		Description         string    `json:"description"`
@@ -2269,7 +2297,11 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Create a small username/email lookup cache, so we don't have to query the database for usernames we've already
 	// looked up
-	userNameCache := make(map[string]string)
+	type userCacheEntry struct {
+		AvatarURL string
+		Email     string
+	}
+	userNameCache := make(map[string]userCacheEntry)
 
 	// Retrieve correctly capitalised username for the user
 	usr, err := com.User(dbOwner)
@@ -2287,11 +2319,15 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
 			// database (and put it in the cache)
 			if _, ok := userNameCache[j.TaggerEmail]; !ok {
-				userNameCache[j.TaggerEmail], err = com.GetUsernameFromEmail(j.TaggerEmail)
+				eml, avatarURL, err := com.GetUsernameFromEmail(j.TaggerEmail)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
 				}
+				if avatarURL != "" {
+					avatarURL += "&s=28"
+				}
+				userNameCache[j.TaggerEmail] = userCacheEntry{AvatarURL: avatarURL, Email: eml}
 			}
 
 			// Create the tag info we pass to the tag list rendering page
@@ -2302,11 +2338,12 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 				r = string(gfm.Markdown([]byte(j.Description)))
 			}
 			pageData.TagList[i] = tgEntry{
+				AvatarURL:           userNameCache[j.TaggerEmail].AvatarURL,
 				Commit:              j.Commit,
 				Date:                j.Date,
 				Description:         j.Description,
 				DescriptionMarkdown: r,
-				TaggerUserName:      userNameCache[j.TaggerEmail],
+				TaggerUserName:      userNameCache[j.TaggerEmail].Email,
 				TaggerDisplayName:   j.TaggerName,
 			}
 		}
@@ -2359,12 +2396,12 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure the user has set their display name and email address
-	displayName, email, err := com.GetUserDetails(loggedInUser)
+	usr, err := com.User(loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving user details")
 		return
 	}
-	if displayName == "" || email == "" {
+	if usr.DisplayName == "" || usr.Email == "" {
 		errorPage(w, r, http.StatusBadRequest,
 			"You need to set your full name and email address in Preferences first")
 		return
@@ -2436,11 +2473,17 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
-	// Retrieve the full name for the user
-	pageData.FullName, _, err = com.GetUserDetails(userName)
+	// Retrieve the details for the user
+	usr, err := com.User(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
+	}
+	pageData.FullName = usr.DisplayName
+	pageData.Meta.Owner = usr.Username
+	pageData.Meta.Title = usr.Username
+	if usr.AvatarURL != "" {
+		pageData.Meta.AvatarURL = usr.AvatarURL + "&s=48"
 	}
 
 	// Retrieve list of public databases for the user
@@ -2449,15 +2492,6 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
 	}
-
-	// Retrieve correctly capitalised username for the user
-	usr, err := com.User(userName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	pageData.Meta.Owner = usr.Username
-	pageData.Meta.Title = usr.Username
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"

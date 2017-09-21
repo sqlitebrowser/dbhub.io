@@ -66,6 +66,7 @@
                                 </td>
                             [[ end ]]
                             <td width="15%" style="border-style: none;">
+                                <img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="30" width="30"/>
                                 <a class="blackLink" href="/{{ row.author_user_name }}">{{ row.author_name }}</a>
                             </td>
                             <td width="10%" style="border-style: none;">&nbsp;</td>
@@ -125,6 +126,11 @@
         // Bounce to the page for creating tags
         $scope.createTag = function(commit){
             window.location = "/createtag/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=" + commit;
+        };
+
+        // Change \u0026 to &
+        $scope.decodeAmp = function(str) {
+            return decodeURIComponent(str);
         };
 
         // Delete a commit from the viewed branch

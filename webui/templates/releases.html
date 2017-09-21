@@ -58,7 +58,9 @@
                             </td>
                         [[ end ]]
                         <td style="border: none;">
-                            <div style="padding-top: 8px;"><a href="/{{ row.releaser_user_name }}">{{ row.releaser_display_name }}</a></div>
+                            <div style="padding-top: 4px;">
+                                <img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="28" width="28"/>
+                                <a class="blackLink" href="/{{ row.releaser_user_name }}" style="vertical-align: middle;">{{ row.releaser_display_name }}</a></div>
                         </td>
                         <td style="border: none;">
                             <div style="padding-top: 8px;" title="{{ row.date | date : 'medium' }}">{{ getTimePeriodTxt(row.date, false) }}</div>
@@ -120,6 +122,11 @@
                 $scope.numRels = $scope.numRels + 1;
             });
         }
+
+        // Change \u0026 to &
+        $scope.decodeAmp = function(str) {
+            return decodeURIComponent(str);
+        };
 
         // Delete the release
         $scope.statusMessage = "";

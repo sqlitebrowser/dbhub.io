@@ -306,7 +306,8 @@ CREATE TABLE users (
     pref_max_rows integer DEFAULT 10 NOT NULL,
     watchers bigint DEFAULT 0 NOT NULL,
     default_licence integer,
-    display_name text
+    display_name text,
+    avatar_url text
 );
 
 

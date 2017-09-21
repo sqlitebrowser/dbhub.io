@@ -87,7 +87,8 @@
                 <table class="table table-responsive" style="margin-bottom: 0px;">
                     <tbody>
                         <tr style="border: none;">
-                            <td width="10%" style="text-align: center; vertical-align: text-top; border-top: none;">
+                            <td width="10%" style="text-align: center; vertical-align: text-top; border-top: none; padding-right: 0;">
+                                <img ng-if="Disc.avatar_url != ''" class="pull-right" style="margin-top: 12px;" ng-attr-src="{{ decodeAmp(Disc.avatar_url) }}" height="30" width="30"/>
                                 <div style="font-size: x-large; color: #333;"># {{ Disc.disc_id }}</div>
                                 <div ng-if="Disc.open == true" class="btn btn-success" style="font-size: medium;"><i class="fa fa-minus-square-o"></i> Open</div>
                                 <div ng-if="Disc.open != true" class="btn btn-danger" style="font-size: medium;"><i class="fa fa-check-square-o"></i> Closed</div>
@@ -134,7 +135,7 @@
                     <table ng-if="row.entry_type == 'txt'" class="table table-responsive" style="margin-bottom: 0px;">
                         <tbody>
                             <tr>
-                                <td style="border: none;" width="10%">&nbsp;</td>
+                                <td style="border: none; padding-right: 0;" width="10%"><img ng-if="row.avatar_url != ''" class="pull-right" style="margin-top: 6px;" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="30" width="30"/></td>
                                 <td style="border: none;">
                                     <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
                                         <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> commented <span title="{{ row.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.creation_date, true) }}</span>
@@ -294,6 +295,11 @@
             } else {
                 window.location = '/creatediscuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
             }
+        };
+
+        // Change \u0026 to &
+        $scope.decodeAmp = function(str) {
+            return decodeURIComponent(str);
         };
 
         // Deletes a comment

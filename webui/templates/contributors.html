@@ -26,7 +26,10 @@
                     <tbody>
                         <tr ng-repeat="row in Contributors" class="tableRow">
                             <td>
-                                <div style="padding-top: 8px;"><a class="blackLink" href="/{{ row.author_user_name }}">{{ row.author_name }}</a></div>
+                                <div style="padding-top: 4px;">
+                                    <img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="30" width="30"/>
+                                    <a class="blackLink" href="/{{ row.author_user_name }}" style="vertical-align: middle;">{{ row.author_name }}</a>
+                                </div>
                             </td>
                             <td>
                                 <div style="padding-top: 8px;" ng-bind="row.num_commits"></div>
@@ -43,6 +46,11 @@
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('contributorsView', function($scope) {
         $scope.Contributors = [[ .Contributors ]];
+
+        // Change \u0026 to &
+        $scope.decodeAmp = function(str) {
+            return decodeURIComponent(str);
+        };
 
         // Auth0
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {

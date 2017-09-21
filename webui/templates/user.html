@@ -9,7 +9,7 @@
         <div class="col-md-12">
             <h2 id="viewuser" style="margin-top: 10px;">
                 <div class="pull-left">
-                    [[ .Meta.Owner ]] : [[ .FullName ]]'s public databases
+                    [[ if .Meta.AvatarURL ]]<img src="[[ .Meta.AvatarURL ]]" height="48" width="48"/>[[ end ]] [[ .Meta.Owner ]] : [[ .FullName ]]'s public databases
                 </div>
                 <div class="pull-right">
                     <button type="button" class="btn btn-default" ng-click="toggleCollapsed()">{{ titleCollapsed }}</button>
@@ -35,7 +35,7 @@
                             <b>Watchers:</b> {{ row.Watchers }} &nbsp;
                             <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
                             <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
-                            <b>Discussions:</b> {{ row. Discussions }} &nbsp;
+                            <b>Discussions:</b> <a class="blackLink" href="/discuss/{{ meta.Owner + '/' + row.Database }}">{{ row. Discussions }}</a> &nbsp;
                             <b>MRs:</b> {{ row.MRs }} &nbsp;
                             <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
                             <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;

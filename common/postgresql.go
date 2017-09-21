@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -30,14 +31,13 @@ func AddDefaultUser() error {
 		"Default system user")
 	if err != nil {
 		// For now, don't bother logging a failure here.  This *might* need changing later on
-		//log.Printf("Adding default user to database failed: %v\n", err)
 		return err
 	}
 	return nil
 }
 
 // Add a user to the system.
-func AddUser(auth0ID string, userName string, password string, email string, displayName string) error {
+func AddUser(auth0ID string, userName string, password string, email string, displayName string, avatarURL string) error {
 	// Hash the user's password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -52,20 +52,22 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 		return err
 	}
 
-	// If the displayName variable is an empty string, we insert a NULL instead
-	var dn pgx.NullString
-	if displayName == "" {
-		dn.Valid = false
-	} else {
+	// If the display name or avatar URL are an empty string, we insert a NULL instead
+	var av, dn pgx.NullString
+	if displayName != "" {
 		dn.String = displayName
 		dn.Valid = true
+	}
+	if avatarURL != "" {
+		av.String = avatarURL
+		av.Valid = true
 	}
 
 	// Add the new user to the database
 	insertQuery := `
-		INSERT INTO users (auth0_id, user_name, email, password_hash, client_cert, display_name)
-		VALUES ($1, $2, $3, $4, $5, $6)`
-	commandTag, err := pdb.Exec(insertQuery, auth0ID, userName, email, hash, cert, dn)
+		INSERT INTO users (auth0_id, user_name, email, password_hash, client_cert, display_name, avatar_url)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	commandTag, err := pdb.Exec(insertQuery, auth0ID, userName, email, hash, cert, dn, av)
 	if err != nil {
 		log.Printf("Adding user to database failed: %v\n", err)
 		return err
@@ -803,8 +805,8 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discID int) (li
 			WHERE db.user_id = u.user_id
 				AND db.folder = $2
 				AND db.db_name = $3)
-		SELECT disc.disc_id, disc.title, disc.open, disc.date_created, users.user_name, disc.description,
-			last_modified, comment_count
+		SELECT disc.disc_id, disc.title, disc.open, disc.date_created, users.user_name, users.email, users.avatar_url,
+			disc.description, last_modified, comment_count
 		FROM discussions AS disc, d, users
 		WHERE disc.db_id = d.db_id
 			AND disc.creator = users.user_id`
@@ -821,14 +823,24 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discID int) (li
 		return
 	}
 	for rows.Next() {
+		var av, em pgx.NullString
 		var oneRow DiscussionEntry
-		err = rows.Scan(&oneRow.ID, &oneRow.Title, &oneRow.Open, &oneRow.Date_created, &oneRow.Creator, &oneRow.Body,
-			&oneRow.Last_modified, &oneRow.CommentCount)
+		err = rows.Scan(&oneRow.ID, &oneRow.Title, &oneRow.Open, &oneRow.Date_created, &oneRow.Creator, &em, &av,
+			&oneRow.Body, &oneRow.Last_modified, &oneRow.CommentCount)
 		if err != nil {
 			log.Printf("Error retrieving discussion list for database '%s%s%s': %v\n", dbOwner, dbFolder,
 				dbName, err)
 			rows.Close()
 			return
+		}
+		if av.Valid {
+			oneRow.AvatarURL = av.String
+		} else {
+			// If no avatar URL is presently stored, default to a gravatar based on the users email (if known)
+			if em.Valid {
+				picHash := md5.Sum([]byte(em.String))
+				oneRow.AvatarURL = fmt.Sprintf("https://www.gravatar.com/avatar/%x?d=identicon&s=30", picHash)
+			}
 		}
 		oneRow.BodyRendered = string(gfm.Markdown([]byte(oneRow.Body)))
 		list = append(list, oneRow)
@@ -861,7 +873,7 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 				WHERE db_id = (SELECT db_id FROM d)
 				AND disc_id = $4
 			)
-		SELECT com.com_id, users.user_name, com.date_created, com.body, com.entry_type
+		SELECT com.com_id, users.user_name, users.email, users.avatar_url, com.date_created, com.body, com.entry_type
 		FROM discussion_comments AS com, d, users
 		WHERE com.db_id = d.db_id
 			AND com.disc_id = (SELECT int_id FROM int)
@@ -879,14 +891,25 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 		return
 	}
 	for rows.Next() {
+		var av, em pgx.NullString
 		var oneRow DiscussionCommentEntry
-		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &oneRow.Date_created, &oneRow.Body, &oneRow.EntryType)
+		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &em, &av, &oneRow.Date_created, &oneRow.Body, &oneRow.EntryType)
 		if err != nil {
 			log.Printf("Error retrieving comment list for database '%s%s%s', discussion '%d': %v\n", dbOwner,
 				dbFolder, dbName, discID, err)
 			rows.Close()
 			return
 		}
+
+		if av.Valid {
+			oneRow.AvatarURL = av.String
+		} else {
+			if em.Valid {
+				picHash := md5.Sum([]byte(em.String))
+				oneRow.AvatarURL = fmt.Sprintf("https://www.gravatar.com/avatar/%x?d=identicon&s=30", picHash)
+			}
+		}
+
 		oneRow.BodyRendered = string(gfm.Markdown([]byte(oneRow.Body)))
 		list = append(list, oneRow)
 	}
@@ -1688,46 +1711,33 @@ func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]Ta
 	return tags, nil
 }
 
-// Retrieve display name and email address for a given user.
-func GetUserDetails(userName string) (displayName string, email string, err error) {
-	// Retrieve the values from the database
-	dbQuery := `
-		SELECT display_name, email
-		FROM users
-		WHERE lower(user_name) = lower($1)`
-	var dn, em pgx.NullString
-	err = pdb.QueryRow(dbQuery, userName).Scan(&dn, &em)
-	if err != nil {
-		log.Printf("Error when retrieving display name and email for user '%s': %v\n", userName, err)
-		return "", "", err
-	}
-
-	// Return the values which aren't NULL.  For those which are, return an empty string.
-	if dn.Valid {
-		displayName = dn.String
-	}
-	if em.Valid {
-		email = em.String
-	}
-	return displayName, email, err
-}
-
 // Returns the username associated with an email address.
-func GetUsernameFromEmail(email string) (userName string, err error) {
+func GetUsernameFromEmail(email string) (userName string, avatarURL string, err error) {
 	dbQuery := `
-		SELECT user_name
+		SELECT user_name, avatar_url
 		FROM users
 		WHERE email = $1`
-	err = pdb.QueryRow(dbQuery, email).Scan(&userName)
+	var av pgx.NullString
+	err = pdb.QueryRow(dbQuery, email).Scan(&userName, &av)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			// No matching username of the email
-			return "", nil
+			err = nil
+			return
 		}
 		log.Printf("Looking up username for email address '%s' failed: %v\n", email, err)
-		return "", err
+		return
 	}
-	return userName, nil
+
+	// If no avatar URL is presently stored, default to a gravatar based on the users email (if known)
+	if !av.Valid {
+		picHash := md5.Sum([]byte(email))
+		avatarURL = fmt.Sprintf("https://www.gravatar.com/avatar/%x?d=identicon", picHash)
+	} else {
+		avatarURL = av.String
+	}
+
+	return
 }
 
 // Increments the download count for a database
@@ -2721,6 +2731,24 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 	return nil
 }
 
+// Updates the Avatar URL for a user.
+func UpdateAvatarURL(userName string, avatarURL string) error {
+	dbQuery := `
+		UPDATE users
+		SET avatar_url = $2
+		WHERE lower(user_name) = lower($1)`
+	commandTag, err := pdb.Exec(dbQuery, userName, avatarURL)
+	if err != nil {
+		log.Printf("Updating avatar URL failed for user '%s'. Error: '%v'\n", userName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong # of rows (%v) affected when updating avatar URL. User: '%s'\n", numRows,
+			userName)
+	}
+	return nil
+}
+
 // Updates the contributors count for a database.
 func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
 	// Get the commit list for the database
@@ -2930,10 +2958,11 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 // Returns details for a user.
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
-		SELECT user_name, email, password_hash, date_joined, client_cert
+		SELECT user_name, display_name, email, avatar_url, password_hash, date_joined, client_cert
 		FROM users
 		WHERE lower(user_name) = lower($1)`
-	err = pdb.QueryRow(dbQuery, userName).Scan(&user.Username, &user.Email, &user.PHash, &user.DateJoined,
+	var av, dn, em pgx.NullString
+	err = pdb.QueryRow(dbQuery, userName).Scan(&user.Username, &dn, &em, &av, &user.PHash, &user.DateJoined,
 		&user.ClientCert)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -2944,6 +2973,25 @@ func User(userName string) (user UserDetails, err error) {
 		// A real occurred
 		log.Printf("Error retrieving details for user '%s' from database: %v\n", userName, err)
 		return user, nil
+	}
+
+	// Return the display name and email values (if not empty)
+	if dn.Valid {
+		user.DisplayName = dn.String
+	}
+	if em.Valid {
+		user.Email = em.String
+	}
+
+	// Determine an appropriate URL to the users's profile pic
+	if av.Valid {
+		user.AvatarURL = av.String
+	} else {
+		// No avatar URL is presently stored, so default to a gravatar based on users email (if known)
+		if user.Email != "" {
+			picHash := md5.Sum([]byte(user.Email))
+			user.AvatarURL = fmt.Sprintf("https://www.gravatar.com/avatar/%x?d=identicon", picHash)
+		}
 	}
 
 	return user, nil

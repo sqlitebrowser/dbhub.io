@@ -172,21 +172,21 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	t.Entries = append(t.Entries, e)
 	t.ID = CreateDBTreeID(t.Entries)
 
-	// Retrieve the display name and email address for the user
-	dn, em, err := GetUserDetails(loggedInUser)
+	// Retrieve the details for the user
+	usr, err := User(loggedInUser)
 	if err != nil {
 		return 0, "", err
 	}
 
 	// If either the display name or email address is empty, tell the user we need them first
-	if dn == "" || em == "" {
+	if usr.DisplayName == "" || usr.Email == "" {
 		return 0, "", errors.New("You need to set your full name and email address in Preferences first")
 	}
 
 	// Construct a commit structure pointing to the tree
 	var c CommitEntry
-	c.AuthorName = dn
-	c.AuthorEmail = em
+	c.AuthorName = usr.DisplayName
+	c.AuthorEmail = usr.Email
 	c.Message = commitMsg
 	c.Timestamp = time.Now()
 	c.Tree = t

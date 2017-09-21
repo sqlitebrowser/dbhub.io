@@ -251,6 +251,7 @@ type DBInfo struct {
 }
 
 type DiscussionEntry struct {
+	AvatarURL     string    `json:"avatar_url"`
 	Body          string    `json:"body"`
 	BodyRendered  string    `json:"body_rendered"`
 	CommentCount  int       `json:"comment_count"`
@@ -271,6 +272,7 @@ const (
 )
 
 type DiscussionCommentEntry struct {
+	AvatarURL    string                `json:"avatar_url"`
 	Body         string                `json:"body"`
 	BodyRendered string                `json:"body_rendered"`
 	Commenter    string                `json:"commenter"`
@@ -300,6 +302,7 @@ type LicenceEntry struct {
 }
 
 type MetaInfo struct {
+	AvatarURL    string
 	Database     string
 	ForkDatabase string
 	ForkDeleted  bool
@@ -367,11 +370,13 @@ type UserInfo struct {
 }
 
 type UserDetails struct {
-	ClientCert []byte
-	DateJoined time.Time
-	Email      string
-	Password   string
-	PHash      []byte
-	PVerify    string
-	Username   string
+	AvatarURL   string
+	ClientCert  []byte
+	DateJoined  time.Time
+	DisplayName string
+	Email       string
+	Password    string
+	PHash       []byte
+	PVerify     string
+	Username    string
 }

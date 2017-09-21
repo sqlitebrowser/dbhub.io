@@ -81,8 +81,8 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract the information we need
-	var auth0ID, email, nickName string
+	// Extract the basic user info we use
+	var auth0Conn, auth0ID, avatarURL, email, nickName string
 	em := profile["email"]
 	if em != nil {
 		email = em.(string)
@@ -99,6 +99,22 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	ni := profile["nickname"]
 	if ni != nil {
 		nickName = ni.(string)
+	}
+
+	// Determine if the user has a profile pic we can use
+	var i map[string]interface{}
+	if profile["identities"] != nil {
+		i = profile["identities"].([]interface{})[0].(map[string]interface{})
+	}
+	co, ok := i["connection"]
+	if ok {
+		auth0Conn = co.(string)
+	}
+	if auth0Conn != "Test2DB" { // The Auth0 fallback profile pic's seem pretty lousy, so avoid those
+		p, ok := profile["picture"]
+		if ok && p.(string) != "" {
+			avatarURL = p.(string)
+		}
 	}
 
 	// If the user has an unverified email address, tell them to verify it before proceeding
@@ -153,6 +169,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		sess.Values["registrationinprogress"] = true
 		sess.Values["auth0id"] = auth0ID
+		sess.Values["avatar"] = avatarURL
 		sess.Values["email"] = email
 		sess.Values["nickname"] = nickName
 		err = sess.Save(r, w)
@@ -163,6 +180,26 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Bounce to a new page, for the user to select their preferred username
 		http.Redirect(w, r, "/selectusername", http.StatusSeeOther)
+		return
+	}
+
+	// If Auth0 provided a picture URL for the user, check if it's different to what we already have (eg it may have
+	// been updated)
+	if avatarURL != "" {
+		usr, err := com.User(userName)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		if usr.AvatarURL != avatarURL {
+			// The Auth0 provided pic URL is different to what we have already, so we update the database with the new
+			// value
+			err = com.UpdateAvatarURL(userName, avatarURL)
+			if err != nil {
+				errorPage(w, r, http.StatusBadRequest, err.Error())
+				return
+			}
+		}
 	}
 
 	// Create a session cookie for the user
@@ -573,6 +610,12 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve the user details
+	usr, err := com.User(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "An error occurred when retrieving user details")
+	}
+
 	// Create a new tag or release as appropriate
 	if tagType == "release" {
 		// * It's a release *
@@ -600,16 +643,12 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		size := tmp.Info.DBEntry.Size
 
 		// Create the release
-		name, email, err := com.GetUserDetails(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusConflict, "An error occurred when retrieving user details")
-		}
 		newRel := com.ReleaseEntry{
 			Commit:        commit,
 			Date:          time.Now(),
 			Description:   tagDesc,
-			ReleaserEmail: email,
-			ReleaserName:  name,
+			ReleaserEmail: usr.Email,
+			ReleaserName:  usr.DisplayName,
 			Size:          size,
 		}
 		rels[tagName] = newRel
@@ -650,16 +689,12 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create the tag
-	name, email, err := com.GetUserDetails(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusConflict, "An error occurred when retrieving user details")
-	}
 	newTag := com.TagEntry{
 		Commit:      commit,
 		Date:        time.Now(),
 		Description: tagDesc,
-		TaggerEmail: email,
-		TaggerName:  name,
+		TaggerEmail: usr.Email,
+		TaggerName:  usr.DisplayName,
 	}
 	tags[tagName] = newTag
 
@@ -704,13 +739,17 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the registration data
-	var auth0ID, email, displayName string
+	var auth0ID, avatarURL, email, displayName string
 	au := sess.Values["auth0id"]
 	if au != nil {
 		auth0ID = au.(string)
 	} else {
 		errorPage(w, r, http.StatusBadRequest, "Invalid user creation id")
 		return
+	}
+	av, ok := sess.Values["avatar"]
+	if ok {
+		avatarURL = av.(string)
 	}
 	em := sess.Values["email"]
 	if em != nil {
@@ -831,7 +870,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Add the user to the system
 	// NOTE: We generate a random password here (for now).  We may remove the password field itself from the
 	// database at some point, depending on whether we continue to support local database users
-	err = com.AddUser(auth0ID, userName, com.RandomString(32), email, displayName)
+	err = com.AddUser(auth0ID, userName, com.RandomString(32), email, displayName, avatarURL)
 	if err != nil {
 		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
 		sess.Options.MaxAge = -1
@@ -867,7 +906,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// User creation completed, so bounce to the user's profile page
+	// User creation completed, so bounce to the user profile page
 	http.Redirect(w, r, "/"+userName, http.StatusSeeOther)
 }
 
@@ -2676,7 +2715,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the email address isn't already assigned to a different user
-	a, err := com.GetUsernameFromEmail(email)
+	a, _, err := com.GetUsernameFromEmail(email)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when checking email address")
 		return
@@ -2954,6 +2993,12 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			t.Entries = append(t.Entries, e)
 			t.ID = com.CreateDBTreeID(t.Entries)
 
+			// Retrieve the user details
+			usr, err := com.User(loggedInUser)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, "An error occurred when retrieving user details")
+			}
+
 			// Create a new commit for the new tree
 			newCom := com.CommitEntry{
 				CommitterName:  c.AuthorName,
@@ -2963,11 +3008,8 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 				Timestamp:      time.Now(),
 				Tree:           t,
 			}
-			newCom.AuthorName, newCom.AuthorEmail, err = com.GetUserDetails(loggedInUser)
-			if err != nil {
-				errorPage(w, r, http.StatusInternalServerError, err.Error())
-				return
-			}
+			newCom.AuthorName = usr.DisplayName
+			newCom.AuthorEmail = usr.Email
 
 			// Calculate the new commit ID, which incorporates the updated tree ID (and thus the new licence sha256)
 			newCom.ID = com.CreateCommitID(newCom)
