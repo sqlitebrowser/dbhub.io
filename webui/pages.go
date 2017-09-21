@@ -32,6 +32,18 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
 	pageData.Meta.Title = "What is DBHub.io?"
 
 	// Add Auth0 info to the page data
@@ -149,6 +161,18 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 			Name:         i,
 		}
 		pageData.Branches = append(pageData.Branches, k)
+	}
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
 	}
 
 	// Add Auth0 info to the page data
@@ -346,6 +370,18 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
 	// Fill out the metadata
 	pageData.Meta.Database = dbName
 	pageData.Branch = branchName
@@ -422,13 +458,25 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve correctly capitalised username for the user
+	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
 
 	// Fill out metadata for the page to be rendered
 	pageData.Meta.Database = dbName
@@ -566,6 +614,18 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
 	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
@@ -636,13 +696,25 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve correctly capitalised username for the user
+	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
 
 	// Fill out metadata for the page to be rendered
 	pageData.Meta.Database = dbName
@@ -711,13 +783,25 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve correctly capitalised username for the user
+	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
 
 	// Fill out metadata for the page to be rendered
 	pageData.Meta.Database = dbName
@@ -792,13 +876,25 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve correctly capitalised username for the user
+	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
 
 	// Fill out metadata for the page to be rendered
 	pageData.Meta.Database = dbName
@@ -1069,6 +1165,18 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		// Not logged in, so use the default number of rows
 		tempMaxRows = com.DefaultNumDisplayRows
 		pageData.DB.MaxRows = tempMaxRows
+	}
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
 	}
 
 	// Generate predictable cache keys for the metadata and sqlite table rows
@@ -1449,13 +1557,25 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve correctly capitalised username for the user
+	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
 
 	// Fill out the metadata
 	pageData.Meta.Database = dbName
@@ -1528,6 +1648,18 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
 	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
@@ -1593,13 +1725,25 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve correctly capitalised username for the user
+	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
@@ -1653,6 +1797,18 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
 	// Render the page
 	t := tmpl.Lookup("rootPage")
 	err = t.Execute(w, pageData)
@@ -1694,6 +1850,18 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 
 	// Retrieve the user preference data
 	pageData.MaxRows = com.PrefUserMaxRows(loggedInUser)
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
@@ -1905,6 +2073,18 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 				ReleaserDisplayName: j.ReleaserName,
 				Size:                j.Size,
 			}
+		}
+	}
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
 		}
 	}
 
@@ -2121,13 +2301,25 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	// Render the full description markdown
 	pageData.FullDescRendered = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
 
-	// Retrieve correctly capitalised username for the user
+	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
 
 	// Fill out the metadata
 	pageData.Meta.Database = dbName
@@ -2200,13 +2392,25 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve correctly capitalised username for the user
+	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
@@ -2349,6 +2553,18 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
 	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
@@ -2415,6 +2631,18 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.NumLicences = len(pageData.Licences)
 
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
 	// Fill out page metadata
 	pageData.Meta.Title = "Upload database"
 	pageData.Meta.LoggedInUser = loggedInUser
@@ -2435,10 +2663,11 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	// Structure to hold page data
 	var pageData struct {
-		Auth0    com.Auth0Set
-		DBRows   []com.DBInfo
-		FullName string
-		Meta     com.MetaInfo
+		Auth0         com.Auth0Set
+		DBRows        []com.DBInfo
+		FullName      string
+		Meta          com.MetaInfo
+		UserAvatarURL string
 	}
 	pageData.Meta.Server = com.Conf.Web.ServerName
 
@@ -2473,7 +2702,19 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
-	// Retrieve the details for the user
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		u, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if u.AvatarURL != "" {
+			pageData.Meta.AvatarURL = u.AvatarURL + "&s=48"
+		}
+	}
+
+	// Retrieve the details for the user who's page we're looking at
 	usr, err := com.User(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -2483,7 +2724,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	pageData.Meta.Owner = usr.Username
 	pageData.Meta.Title = usr.Username
 	if usr.AvatarURL != "" {
-		pageData.Meta.AvatarURL = usr.AvatarURL + "&s=48"
+		pageData.UserAvatarURL = usr.AvatarURL + "&s=48"
 	}
 
 	// Retrieve list of public databases for the user
