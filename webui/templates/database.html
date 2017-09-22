@@ -151,7 +151,7 @@
             <span class="pull-left">
                 <div class="dropdown">
                     <div class="btn-group" uib-dropdown keyboard-nav="true">
-                        <button id="viewtable" type="button" class="btn">{{ 'Table: ' + db.Tablename }}</button>
+                        <button id="viewtable" type="button" class="btn">Table/view: {{ db.Tablename }}</button>
 
                         <button type="button" uib-dropdown-toggle class="btn btn-default">
                             <span class="caret"></span>
@@ -211,6 +211,9 @@
                     <tbody>
                         <tr ng-repeat="row in db.Records">
                             <td ng-repeat="val in row" dir="auto"><pre style="background-color: transparent; border: none; padding: 0px; margin: 0px;" ng-bind-html="val.Value | fixSpaces"></pre></td>
+                        </tr>
+                        <tr ng-if="db.Records === null">
+                            <td style="text-align: center;">Empty table or view</td>
                         </tr>
                     </tbody>
                 </table>
