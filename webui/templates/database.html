@@ -213,7 +213,7 @@
                             <td ng-repeat="val in row" dir="auto"><pre style="background-color: transparent; border: none; padding: 0px; margin: 0px;" ng-bind-html="val.Value | fixSpaces"></pre></td>
                         </tr>
                         <tr ng-if="db.Records === null">
-                            <td style="text-align: center;">Empty table or view</td>
+                            <td style="text-align: center;" colspan="{{ db.ColCount }}">Empty table or view</td>
                         </tr>
                     </tbody>
                 </table>
