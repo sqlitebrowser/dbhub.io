@@ -1123,6 +1123,13 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		return
 	}
 
+	// Get the latest discussion and merge request count directly from PG, skipping the ones (incorrectly) stored in memcache
+	currentDisc, currentMRs, err := com.GetDiscussionAndMRCount(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
 	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
 	if licSHA != "" {
@@ -1203,6 +1210,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 		// Restore the correct username
 		pageData.Meta.LoggedInUser = loggedInUser
+
+		// Restore the correct discussion and MR count
+		pageData.DB.Info.Discussions = currentDisc
+		pageData.DB.Info.MRs = currentMRs
 
 		// Set the selected branch name
 		if branchName != "" {
@@ -1436,6 +1447,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// Render the full description as markdown
 	pageData.DB.Info.FullDesc = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
 
+	// Restore the correct discussion and MR count
+	pageData.DB.Info.Discussions = currentDisc
+	pageData.DB.Info.MRs = currentMRs
+
 	// Cache the page metadata
 	err = com.CacheData(mdataCacheKey, pageData, com.Conf.Memcache.DefaultCacheTime)
 	if err != nil {
@@ -1559,6 +1574,13 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the list of discussions for this database
 	pageData.DiscussionList, err = com.Discussions(dbOwner, dbFolder, dbName, pageData.SelectedID)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve the latest discussion and MR counts
+	pageData.DB.Info.Discussions, pageData.DB.Info.MRs, err = com.GetDiscussionAndMRCount(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

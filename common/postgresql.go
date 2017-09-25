@@ -1409,6 +1409,29 @@ func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[s
 	return branches, nil
 }
 
+// Retrieves the full commit list for a database.
+func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]CommitEntry, error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		SELECT commit_list as commits
+		FROM sqlite_databases AS db, u
+		WHERE db.user_id = u.user_id
+			AND db.folder = $2
+			AND db.db_name = $3
+			AND db.is_deleted = false`
+	var l map[string]CommitEntry
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&l)
+	if err != nil {
+		log.Printf("Retrieving commit list for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		return map[string]CommitEntry{}, err
+	}
+	return l, nil
+}
+
 // Returns the default branch name for a database.
 func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (branchName string, err error) {
 	dbQuery := `
@@ -1469,27 +1492,35 @@ func GetDefaultTableName(dbOwner string, dbFolder string, dbName string) (tableN
 	return
 }
 
-// Retrieves the full commit list for a database.
-func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]CommitEntry, error) {
+// Returns the discussion and merge request counts for a database
+// TODO: The only reason this function exists atm, is because we're incorrectly caching the discussion and MR data in
+// TODO  a way that makes invalidating it correctly hard/impossible.  We should redo our memcached approach to solve the
+// TODO  issue properly
+func GetDiscussionAndMRCount(dbOwner string, dbFolder string, dbName string) (discCount int, mrCount int, err error) {
 	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		)
-		SELECT commit_list as commits
-		FROM sqlite_databases AS db, u
-		WHERE db.user_id = u.user_id
+		SELECT db.discussions, db.merge_requests
+		FROM sqlite_databases AS db
+		WHERE db.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)
 			AND db.folder = $2
 			AND db.db_name = $3
 			AND db.is_deleted = false`
-	var l map[string]CommitEntry
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&l)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&discCount, &mrCount)
 	if err != nil {
-		log.Printf("Retrieving commit list for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
-		return map[string]CommitEntry{}, err
+		if err != pgx.ErrNoRows {
+			log.Printf("Error when retrieving discussion and MR count for database '%s%s%s': %v\n", dbOwner,
+				dbFolder, dbName, err)
+			return
+		} else {
+			log.Printf("Database '%s%s%s' not found when attempting to retrieve discussion and MR count. This"+
+				"shouldn't happen\n", dbOwner, dbFolder, dbName)
+			return
+		}
 	}
-	return l, nil
+	return
 }
 
 // Returns the text for a given licence.
