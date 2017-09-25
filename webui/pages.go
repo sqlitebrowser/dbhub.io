@@ -1168,6 +1168,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Retrieve the details for the logged in user
+	var avatarURL string
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -1175,7 +1176,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			return
 		}
 		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+			avatarURL = ur.AvatarURL + "&s=48"
 		}
 	}
 
@@ -1243,6 +1244,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
+
+		// Ensure the correct Avatar URL is displayed
+		pageData.Meta.AvatarURL = avatarURL
 
 		// Render the page (using the caches)
 		if ok {
@@ -1360,6 +1364,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		return
 	}
 	pageData.Meta.Owner = usr.Username
+
+	// Ensure the correct Avatar URL is displayed
+	pageData.Meta.AvatarURL = avatarURL
 
 	// Fill out various metadata fields
 	pageData.Meta.Database = dbName
