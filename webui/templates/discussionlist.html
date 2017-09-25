@@ -88,11 +88,15 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-md-12">
-            <table ng-if="DiscussionList != ''" class="table table-striped table-responsive">
+        <div class="col-md-12" style="padding-bottom: 10px;">
+            <table ng-if="(DiscussionList != '') && (((radioOpen === false) && (discussionCount.closed !== 0)) || ((radioOpen === true) && (discussionCount.open !== 0)))" class="table table-striped table-responsive settingsTable">
                 <tbody>
                     <tr ng-repeat="row in DiscussionList" ng-if="row.open == radioOpen">
                         <td style="border-style: none;" width="5%">
+                            <div class="pull-right" style="padding-top: 6px;">
+                                <i ng-if="row.open === true" class="fa fa-minus-square-o fa-lg text-success"></i>
+                                <i ng-if="row.open === false" class="fa fa fa-check-square-o fa-lg text-danger"></i>
+                            </div>
                             <div style="padding-top: 6px;"># {{ row.disc_id }}</div>
                         </td>
                         <td style="border-style: none;">
@@ -105,7 +109,9 @@
                     </tr>
                 </tbody>
             </table>
-            <div ng-if="DiscussionList == null" style="text-align: center; font-size:large; padding-bottom: 20px;"><i>This database doesn't have any discussions yet</i></div>
+            <div ng-if="DiscussionList === null" style="text-align: center; font-size:large;"><i>This database doesn't have any discussions yet</i></div>
+            <div ng-if="(radioOpen === false) && (DiscussionList !== null) && (discussionCount.closed === 0)" style="text-align: center; font-size:large;"><i>This database doesn't have any closed discussions</i></div>
+            <div ng-if="(radioOpen === true) && (DiscussionList !== null) && (discussionCount.open === 0)" style="text-align: center; font-size:large;"><i>This database doesn't have any open discussions</i></div>
         </div>
     </div>
 </div>
@@ -132,6 +138,20 @@
 
         $scope.statusMessage = "";
         $scope.DiscussionList = [[ .DiscussionList ]];
+
+        // Count the number of open and closed discussions, so we can display an appropriate placeholder when one of
+        // them has 0 (eg no open discussions, or no closed discussions)
+        $scope.discussionCount = {"open": 0, "closed": 0};
+        if ($scope.DiscussionList !== null) {
+            var numDisc = $scope.DiscussionList.length;
+            for (var i = 0; i < numDisc; i++) {
+                if ($scope.DiscussionList[i].open) {
+                    $scope.discussionCount.open += 1;
+                } else {
+                    $scope.discussionCount.closed += 1;
+                }
+            }
+        }
 
         // Switch to the create discussion page
         $scope.createDiscussion = function() {
