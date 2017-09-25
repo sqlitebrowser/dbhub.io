@@ -369,6 +369,11 @@
             $scope.editDisc = !$scope.editDisc;
         };
 
+        // Sends the user to the forks page for the database
+        $scope.forksPage = function() {
+            window.location = "/forks/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+        };
+
         // Returns the whether a comment should be in static display or edit mode
         $scope.getCommentState = function(comID) {
             var comState = $scope['comstate' + comID];

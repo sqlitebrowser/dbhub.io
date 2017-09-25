@@ -148,6 +148,11 @@
             return decodeURIComponent(str);
         };
 
+        // Sends the user to the forks page for the database
+        $scope.forksPage = function() {
+            window.location = "/forks/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+        };
+
         // Returns a nicely presented "time elapsed" string
         $scope.getTimePeriodTxt = function(date1, includeOn) {
             return getTimePeriod(date1, includeOn)
