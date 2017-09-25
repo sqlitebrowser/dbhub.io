@@ -110,7 +110,7 @@
                                     </div>
                                     <div>Opened <span title="{{ Disc.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(Disc.creation_date, true) }}</span> by <a class="blackLink" href="/{{ Disc.creator }}">{{ Disc.creator }}</a></div>
                                 </div>
-                                <div style="border: 1px solid #CCC; border-radius: 0px 0px 7px 7px;">
+                                <div style="border: 1px solid #CCC; padding: 10px; border-radius: 0px 0px 7px 7px;">
                                     <div ng-show="editDisc === true" style="text-align: center;">
                                         <uib-tabset active="activeDisc">
                                             <uib-tab index="0">
@@ -125,7 +125,7 @@
                                         <input type="submit" class="btn btn-default" value="Cancel" style="margin-top: 10px;" ng-click="editDiscussion()">
                                         <input type="submit" class="btn btn-success" value="Save" style="margin-top: 10px;" ng-click="updateDiscussion()">
                                     </div>
-                                    <div ng-hide="editDisc === true" class="rendered" ng-bind-html="Disc.body_rendered"></div>
+                                    <div ng-hide="editDisc === true" class="rendered" ng-bind-html="Disc.body_rendered" style="padding: 0;"></div>
                                 </div>
                             </td>
                         </tr>
