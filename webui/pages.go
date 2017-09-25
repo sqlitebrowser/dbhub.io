@@ -1606,6 +1606,17 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Retrieve the "forked from" information
+	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+		return
+	}
+	pageData.Meta.ForkOwner = frkOwn
+	pageData.Meta.ForkFolder = frkFol
+	pageData.Meta.ForkDatabase = frkDB
+	pageData.Meta.ForkDeleted = frkDel
+
 	// Fill out the metadata
 	pageData.Meta.Database = dbName
 	pageData.Meta.Title = "Discussion List"
