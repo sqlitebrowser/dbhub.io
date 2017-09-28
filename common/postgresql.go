@@ -2574,7 +2574,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map[string]CommitEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET commit_list = $4
+		SET commit_list = $4, last_modified = now()
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
