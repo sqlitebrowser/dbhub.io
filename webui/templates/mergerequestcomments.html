@@ -1,6 +1,6 @@
-[[ define "discussCommentsPage" ]]
+[[ define "mergeRequestCommentsPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="discussCommentsView">
+<html ng-app="DBHub" ng-controller="mergeRequestCommentsView">
 [[ template "headawesome" . ]]
 <body>
 [[ template "header" . ]]
@@ -48,8 +48,8 @@
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
         <div class="col-md-12">
             <label id="viewdata" style="font-weight: 600; font-family: 'arial black';"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data"><i class="fa fa-database"></i> Data</a></label> &nbsp; &nbsp; &nbsp;
-            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
-            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
+            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
+            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                 <label id="settings" style="font-weight: 600; font-family: 'arial black';"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><i class="fa fa-cog"></i> Settings</a></label>
             [[ end ]]
@@ -58,7 +58,7 @@
     <div class="row">
         <div class="col-md-12">
             <div class="pull-left">
-                <button class="btn btn-success" ng-click="createDiscussion()">Start a new discussion</button>
+                <button class="btn btn-success" ng-click="createMR()">New Merge Request</button>
             </div>
             <br /><br />
         </div>
@@ -70,10 +70,17 @@
             </div>
         </div>
     </div>
+    <div class="row" ng-if="licenceWarning != ''">
+        <div class="col-md-12">
+            <div style="text-align: center; padding-bottom: 8px;">
+                <h4 style="color: orange;" ng-bind="licenceWarning"></h4>
+            </div>
+        </div>
+    </div>
     <div class="row">
         <div class="col-md-12">
             <span ng-if="DiscussionList != ''">
-                <table class="table table-responsive" style="margin-bottom: 0px;">
+                <table class="table table-responsive" style="margin-bottom: 0;">
                     <tbody>
                         <tr style="border: none;">
                             <td width="85px" style="text-align: center; vertical-align: text-top; border-top: none; padding: 8px 0 0 0;">
@@ -89,7 +96,7 @@
                                     <div>
                                         <div ng-switch="editDiscTitle">
                                             <div ng-switch-when="title">
-                                                <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ Disc.disc_id }}" style="font-size: x-large; color: #333;">{{ Disc.title }}</a>
+                                                <a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ Disc.disc_id }}" style="font-size: x-large; color: #333;">{{ Disc.title }}</a>
                                                 <span ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
                                                     <a class="blackLink" ng-click="editDiscussion()"><i class="fa fa-pencil fa-fw"></i></a>
                                                 </span>
@@ -99,9 +106,20 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div>Opened <span title="{{ Disc.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(Disc.creation_date, true) }}</span> by <a class="blackLink" href="/{{ Disc.creator }}">{{ Disc.creator }}</a></div>
+                                    <div>Opened <span title="{{ Disc.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(Disc.creation_date, true) }}</span>: <a href="/{{ Disc.creator }}">{{ Disc.creator }}</a>
+                                        <span ng-if="Disc.open === true">wants to merge</span><span ng-if="Disc.open !== true">requested a merge from</span>
+                                        <a ng-if="meta.SourceDBOK === true" href="{{ '/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name }}" ng-bind="Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name"></a>
+                                        <span ng-if="meta.SourceDBOK !== true">{{ Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name }}</span>
+                                        branch
+                                        <a ng-if="(meta.SourceDBOK === true) && (meta.SourceBranchOK === true)" href="{{ '/commits/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?branch=' + Disc.mr_details.source_branch }}">{{ Disc.mr_details.source_branch }}</a>
+                                        <span ng-if="(meta.SourceDBOK !== true) || (meta.SourceBranchOK !== true)" ng-bind="Disc.mr_details.source_branch"></span>
+                                        into
+                                        <a ng-if="meta.DestBranchNameOK === true" href="/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ Disc.mr_details.destination_branch }}" ng-bind="Disc.mr_details.destination_branch"></a>
+                                        <span ng-if="(meta.DestBranchNameOK !== true) && (Disc.open === true)">[ unavailable branch ]</span>
+                                        <span ng-if="(meta.DestBranchNameOK !== true) && (Disc.open !== true)" ng-bind="Disc.mr_details.destination_branch"></span>
+                                    </div>
                                 </div>
-                                <div style="border: 1px solid #CCC; padding: 10px; border-radius: 0px 0px 7px 7px;">
+                                <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px;">
                                     <div ng-show="editDisc === true" style="text-align: center;">
                                         <uib-tabset active="activeDisc">
                                             <uib-tab index="0">
@@ -117,6 +135,43 @@
                                         <input type="submit" class="btn btn-success" value="Save" style="margin-top: 10px;" ng-click="updateDiscussion()">
                                     </div>
                                     <div ng-hide="editDisc === true" class="rendered" ng-bind-html="Disc.body_rendered" style="padding: 0;"></div>
+                                </div>
+                                [[ if and (or (eq (index .MRList 0).Creator .Meta.LoggedInUser) (eq .Meta.Owner .Meta.LoggedInUser)) (ne (index .MRList 0).MRDetails.State 1)]]
+                                <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px;">
+                                [[ else ]]
+                                <div style="border: 1px solid #CCC; border-radius: 0 0 7px 7px; padding: 10px;">
+                                [[ end ]]
+                                    <h4 style="margin: 0;">Commit List</h4>
+                                    <table class="table table-responsive settingsTable" style="margin: 5px 0 0 0;">
+                                        <thead>
+                                            <tr>
+                                                <th style="min-width: 50px; width: 200px; max-width: 200px;">Author</th>
+                                                <th style="min-width: 50px; width: 100px; max-width: 100px;">Commit ID</th>
+                                                <th style="min-width: 50%; width: 50%;">Commit message</th>
+                                                <th style="min-width: 50px; width: 150px; max-width: 150px;">Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr ng-repeat="row in CommitList">
+                                                <td style="border-left: none;">
+                                                    <a href="/{{ row.author_username }}" class="blackLink" style="vertical-align: middle;"><img ng-if="row.author_avatar != ''" ng-attr-src="{{ decodeAmp(row.author_avatar) }}" height="18" width="18"/> {{ row.author_name }}</a>
+                                                </td>
+                                                <td>
+                                                    <span ng-if="Disc.open !== true" ng-bind="row.id | limitTo: 8" style="vertical-align: middle;"></span>
+                                                    <a ng-if="Disc.open === true" href="{{ '/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?branch=' + Disc.mr_details.source_branch + '&commit=' + row.id }}"><span ng-bind="row.id | limitTo: 8" class="blackLink" style="vertical-align: middle;"></span></a>
+                                                </td>
+                                                <td>
+                                                    <span ng-bind="row.message" style="vertical-align: middle;"></span><span ng-if="row.message === ''" style="color: grey; vertical-align: middle;">This commit has no commit message</span>
+                                                    <div ng-if="row.licence_change !== ''" style="color: red; border: 1px solid red; padding: 5px; margin-top: 8px; text-align: center;" ng-bind="row.licence_change"></div>
+                                                </td>
+                                                <td><span title="{{ row.timestamp | date : 'medium' }}" style="vertical-align: middle;">{{ getTimePeriodTxt(row.timestamp, true) }}</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div ng-if="Disc.mr_details.state !== 1 && (Disc.creator === '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' === '[[ .Meta.LoggedInUser ]]')" style="border: 1px solid #CCC; padding: 10px; border-radius: 0 0 7px 7px; text-align: center;">
+                                    <input ng-if="Disc.creator === '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' === '[[ .Meta.LoggedInUser ]]'" type="submit" class="btn btn-default" value="{{ closeDiscLabel }}" ng-click="closeRequest()">
+                                    <input ng-if="(Disc.open === true) && ('[[ .Meta.Owner ]]' === '[[ .Meta.LoggedInUser ]]') && (meta.DestBranchNameOK === true) && (meta.DestBranchUsable === true)" type="submit" class="btn btn-success" value="Merge the request" ng-click="mergeRequest()">
                                 </div>
                             </td>
                         </tr>
@@ -161,8 +216,22 @@
                             </tr>
                         </tbody>
                     </table>
-                    <div ng-if="row.entry_type == 'cls'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-ban text-danger fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">closed this</span> <span title="{{ row.creation_date | date : 'medium' }}">{{ getTimePeriodTxt(row.creation_date, true) }}</span>.</div>
-                    <div ng-if="row.entry_type == 'rop'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-recycle text-success fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">reopened this</span> <span title="{{ row.creation_date | date : 'medium' }}">{{ getTimePeriodTxt(row.creation_date, true) }}</span>.</div>
+                    <div ng-if="row.entry_type == 'cls'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;">
+                        <table width="100%">
+                            <tr>
+                                <td width="130px">&nbsp;</td>
+                                <td><i class="fa fa-ban text-danger fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span ng-if="Disc.mr_details.state === 1" style="color: grey;">merged this</span><span ng-if="Disc.mr_details.state === 2" style="color: grey;">closed this</span> <span title="{{ row.creation_date | date : 'medium' }}">{{ getTimePeriodTxt(row.creation_date, true) }}</span>.</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div ng-if="row.entry_type == 'rop'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;">
+                        <table width="100%">
+                            <tr>
+                                <td width="130px">&nbsp;</td>
+                                <td><i class="fa fa-recycle text-success fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">reopened this</span> <span title="{{ row.creation_date | date : 'medium' }}">{{ getTimePeriodTxt(row.creation_date, true) }}</span>.</td>
+                            </tr>
+                        </table>
+                    </div>
                 </span>
                 [[ if .Meta.LoggedInUser ]]
                     <span>
@@ -187,7 +256,7 @@
                                             <input type="hidden" name="folder" value="/">
                                             <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
                                             <input type="hidden" name="discid" value="[[ .SelectedID ]]">
-                                            <input ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
+                                            <input ng-if="Disc.mr_details.state !== 1 && (Disc.creator === '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' === '[[ .Meta.LoggedInUser ]]')" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
                                             <input type="submit" class="btn btn-success" value="Add comment" style="margin-top: 10px;" ng-click="addComment(false)">
                                         </div>
                                     </td>
@@ -207,23 +276,27 @@
                     </div>
                 [[ end ]]
             </span>
-            <div ng-if="DiscussionList == ''" style="text-align: center; padding-bottom: 10px;"><i>This database doesn't have any discussions yet</i></div>
+            <div ng-if="DiscussionList == ''" style="text-align: center; padding-bottom: 10px;"><i>This database doesn't have any merge requests yet</i></div>
         </div>
     </div>
 </div>
 [[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('discussCommentsView', function($scope, $http, $httpParamSerializerJQLike) {
+    app.controller('mergeRequestCommentsView', function($scope, $http, $httpParamSerializerJQLike) {
         // Pre-filled data
         $scope.meta = {
             Database: "[[ .Meta.Database ]]",
+            DestBranchNameOK: [[ .DestBranchNameOK ]],
+            DestBranchUsable: [[ .DestBranchUsable ]],
             Discussions: "[[ .DB.Info.Discussions ]]",
             Forks: "[[ .DB.Info.Forks ]]",
             MRs: "[[ .DB.Info.MRs ]]",
             MyStar: "[[  .MyStar ]]",
             Owner: "[[ .Meta.Owner ]]",
             SelectedID: "[[ .SelectedID ]]",
+            SourceBranchOK: [[ .SourceBranchOK ]],
+            SourceDBOK: [[ .SourceDBOK ]],
             Stars: "[[ .DB.Info.Stars ]]",
             Watchers: "[[ .DB.Info.Watchers ]]",
             [[ if .Meta.LoggedInUser ]]
@@ -232,15 +305,24 @@
                 Loggedin: "false",
             [[ end ]]
         }
-        $scope.Disc = [[ .DiscussionList ]][0];
+        $scope.Disc = [[ .MRList ]][0];
         $scope.CommentList = [[ .CommentList ]];
+        $scope.CommitList = [[ .CommitList ]];
 
-        // Set the initial Close button label according to the discussion open/closed state
+        // If a licence change warning was passed from the backend, then display it
+        $scope.licenceWarning = "[[ .LicenceWarning ]]";
+
+        // If a status message was passed from the backend, then display it
+        $scope.statusMessage = "[[ .StatusMessage ]]";
+        $scope.statusMessageColour = "[[ .StatusMessageColour ]]";
+
+        // Set the initial Close button labels according to the MR open/closed state
         if ($scope.Disc.open === true) {
-            $scope.closeLabel = "Close discussion";
+            $scope.closeLabel = "Close without merging";
         } else {
-            $scope.closeLabel = "Reopen discussion";
+            $scope.closeLabel = "Reopen merge request";
         }
+        $scope.closeDiscLabel = $scope.closeLabel;
 
         // Set up the initial edit/preview pieces for editing comments
         if ($scope.CommentList !== null) {
@@ -254,9 +336,7 @@
             }
         }
 
-        // Add a comment to the discussion
-        $scope.statusMessage = "";
-        $scope.statusMessageColour = "green";
+        // Add a comment to the merge request
         $scope.addComment = function(alsoClose) {
             // Send the comment text to the server
             var txt = document.getElementById("comtext").value;
@@ -274,7 +354,7 @@
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // Adding the comment succeeded, so display it in the list (we cheat for now by just reloading the page)
-                window.location = '/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
+                window.location = '/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
             }, function failure(response) {
                 // Adding the comment failed, so display an error message
                 $scope.statusMessageColour = "red";
@@ -282,13 +362,38 @@
             });
         };
 
-        // Switch to the create discussion page
-        $scope.createDiscussion = function() {
+        // Closes the merge request
+        $scope.closeRequest = function() {
+            // Send the comment text to the server
+            $http({
+                method: "POST",
+                url: "/x/createcomment/",
+                data: $httpParamSerializerJQLike({
+                    "comtext": "",
+                    "close": true,
+                    "folder": "/",
+                    "discid": [[ .SelectedID ]],
+                    "dbname": [[ .Meta.Database ]],
+                    "username": [[ .Meta.Owner ]],
+                }),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // Closing the MR succeeded, so update the status (we cheat for now by just reloading the page)
+                window.location = '/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
+            }, function failure(response) {
+                // Adding the MR failed, so display an error message
+                $scope.statusMessageColour = "red";
+                $scope.statusMessage = "Closing merge request failed: " + response.data;
+            });
+        };
+
+        // Switch to the create MR page
+        $scope.createMR = function() {
             if ($scope.meta.Loggedin != "true") {
                 // User needs to be logged in
                 lock.show();
             } else {
-                window.location = '/creatediscuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+                window.location = '/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
             }
         };
 
@@ -313,7 +418,7 @@
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // Deleting the comment succeeded, so reload the page
-                window.location = '/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
+                window.location = '/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
             }, function failure(response) {
                 // Deleting the comment failed, so display an error message
                 $scope.statusMessageColour = "red";
@@ -341,7 +446,7 @@
             }
         };
 
-        // Changes the static discussion text display into an edit/preview box
+        // Changes the static MR text display into an edit/preview box
         $scope.editDisc = false;
         $scope.editDiscAlready = false;
         $scope.editDiscBody = "";
@@ -353,7 +458,7 @@
                 $scope.editDiscAlready = true;
             }
 
-            // Swap between an input field and header field for the discussion title
+            // Swap between an input field and header field for the MR title
             if ($scope.editDiscTitle === "title") {
                 $scope.editDiscTitle = "edit";
             } else {
@@ -416,10 +521,10 @@
             });
         };
 
-        // Render markdown preview for the discussion edit box
+        // Render markdown preview for the MR edit box
         $scope.editDiscBodyPreview = "";
         $scope.getMarkdownDisc = function() {
-            // Retrieve text from the discussion edit area
+            // Retrieve text from the MR edit area
             var txt = document.getElementById("disctext").value;
 
             // Call the server, asking for a markdown rendered version of the text
@@ -434,6 +539,28 @@
         // Returns a nicely presented "time elapsed" string
         $scope.getTimePeriodTxt = function(date1, includeOn) {
             return getTimePeriod(date1, includeOn)
+        };
+
+        // Merges the request
+        $scope.mergeRequest = function() {
+            $http({
+                method: "POST",
+                url: "/x/mergerequest/",
+                data: $httpParamSerializerJQLike({
+                    "folder": "/",
+                    "mrid": [[ .SelectedID ]],
+                    "dbname": [[ .Meta.Database ]],
+                    "username": [[ .Meta.Owner ]],
+                }),
+                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // Merging the MR succeeded, so update the status (we cheat for now by just reloading the page)
+                window.location = '/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
+            }, function failure(response) {
+                // Merging the MR failed, so display an error message
+                $scope.statusMessageColour = "red";
+                $scope.statusMessage = "Merging failed: " + response.data;
+            });
         };
 
         // Displays the Auth0 dialog
@@ -477,15 +604,15 @@
             var txt = document.getElementById("comtext").value;
             if (txt.length > 0) {
                 if ($scope.Disc.open === true) {
-                    $scope.closeLabel = "Add comment and close discussion";
+                    $scope.closeLabel = "Add comment and close without merging";
                 } else {
-                    $scope.closeLabel = "Add comment and reopen discussion";
+                    $scope.closeLabel = "Add comment and reopen merge request";
                 }
             } else {
                 if ($scope.Disc.open === true) {
-                    $scope.closeLabel = "Close discussion";
+                    $scope.closeLabel = "Close without merging";
                 } else {
-                    $scope.closeLabel = "Reopen discussion";
+                    $scope.closeLabel = "Reopen merge request";
                 }
             }
         };
@@ -522,13 +649,13 @@
             });
         };
 
-        // Send the updated discussion values to the server
+        // Send the updated MR values to the server
         $scope.updateDiscussion = function() {
-            // Retrieve text from the discussion edit area
+            // Retrieve text from the MR edit area
             var txt = document.getElementById("disctext").value;
             var title = document.getElementById("disctitle").value;
 
-            // Send the new discussion text to the server
+            // Send the new MR details to the server
             $http({
                 method: "POST",
                 url: "/x/updatediscuss/",
@@ -542,7 +669,7 @@
                     }),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
-                // Updating the discussion text succeeded, so switch back to the static view
+                // Updating the MR succeeded, so switch back to the static view
                 $scope.Disc.body = txt;
                 $scope.Disc.body_rendered = response.data;
                 $scope.Disc.title = title;
@@ -555,7 +682,7 @@
             }, function failure(response) {
                 // Adding the comment failed, so display an error message
                 $scope.statusMessageColour = "red";
-                $scope.statusMessage = "Updating discussion failed: " + response.data;
+                $scope.statusMessage = "Updating merge request failed: " + response.data;
             });
         };
 

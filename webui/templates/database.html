@@ -12,16 +12,6 @@
     .colHeader:hover {
         text-decoration: underline;
     }
-
-    .notImplementedYet {
-        color: gray;
-        text-decoration: none;
-    }
-
-    .notImplementedYet:hover {
-        color: gray;
-        text-decoration: none;
-    }
 </style>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
@@ -69,7 +59,7 @@
         <div class="col-md-6">
             <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-database"></i> Data</label> &nbsp; &nbsp; &nbsp;
             <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
-            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="" class="notImplementedYet" title="Not yet implemented"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
+            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
             <label id="settings" style="font-weight: 600; font-family: 'arial black';"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><i class="fa fa-cog"></i> Settings</a></label>
             [[ end ]]
@@ -174,12 +164,10 @@
                             </li>
                         </ul>
                     </div>
+                    [[ if .Meta.LoggedInUser ]]
+                        <button class="btn btn-primary" ng-click="mergeRequest()">New Merge Request</button>
+                    [[ end ]]
                 </div>
-<!-- // Don't show this for now
-                [[ if .Meta.LoggedInUser ]]
-                    <button class="btn btn-primary">New Merge Request</button>
-                [[ end ]]
--->
             </span>
         </div>
         <div class="col-md-5">
@@ -428,6 +416,18 @@
                     $scope.updateTableArrows();
                 }
             )
+        };
+
+        // Change to the page for creating Merge Requests
+        var forkOwner = [[ .Meta.ForkOwner ]];
+        var forkDB = [[ .Meta.ForkDatabase ]];
+        var forkDeleted = [[ .Meta.ForkDeleted ]];
+        $scope.mergeRequest = function() {
+            if ((forkOwner !== "") && (forkDeleted !== false)) {
+                window.location = "/compare/[[ .Meta.ForkOwner ]]/[[ .Meta.ForkDatabase ]]";
+            } else {
+                window.location = "/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]";
+            }
         };
 
         // Refreshes the table data, moving backwards one page

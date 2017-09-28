@@ -211,8 +211,21 @@ CREATE TABLE discussions (
     open boolean DEFAULT true NOT NULL,
     disc_id integer DEFAULT 1 NOT NULL,
     last_modified timestamp with time zone DEFAULT now() NOT NULL,
-    comment_count integer DEFAULT 0 NOT NULL
+    comment_count integer DEFAULT 0 NOT NULL,
+    discussion_type integer DEFAULT 0 NOT NULL,
+    mr_source_db_id bigint,
+    mr_source_db_branch text,
+    mr_destination_branch text,
+    mr_state integer DEFAULT 0 NOT NULL,
+    mr_commits jsonb
 );
+
+
+--
+-- Name: COLUMN discussions.mr_source_db_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN discussions.mr_source_db_id IS 'Only used by Merge Requests, not standard discussions';
 
 
 --
@@ -505,6 +518,13 @@ CREATE INDEX database_licences_user_id_friendly_name_idx ON database_licences US
 
 
 --
+-- Name: discussions_discussion_type_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX discussions_discussion_type_idx ON discussions USING btree (discussion_type);
+
+
+--
 -- Name: fki_database_downloads_db_id_fkey; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -537,6 +557,20 @@ CREATE INDEX fki_database_uploads_user_id_fkey ON database_uploads USING btree (
 --
 
 CREATE INDEX fki_discussion_comments_db_id_fkey ON discussion_comments USING btree (db_id);
+
+
+--
+-- Name: fki_discussions_source_db_id_fkey; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fki_discussions_source_db_id_fkey ON discussions USING btree (mr_source_db_id);
+
+
+--
+-- Name: users_lower_user_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX users_lower_user_name_idx ON users USING btree (lower(user_name));
 
 
 --
@@ -639,6 +673,14 @@ ALTER TABLE ONLY discussion_comments
 
 ALTER TABLE ONLY discussions
     ADD CONSTRAINT discussions_db_id_fkey FOREIGN KEY (db_id) REFERENCES sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: discussions discussions_mr_source_db_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY discussions
+    ADD CONSTRAINT discussions_mr_source_db_id_fkey FOREIGN KEY (mr_source_db_id) REFERENCES sqlite_databases(db_id) ON UPDATE SET NULL ON DELETE SET NULL;
 
 
 --

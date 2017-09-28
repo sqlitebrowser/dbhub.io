@@ -14,15 +14,19 @@ import (
 // Extracts a database name from GET or POST/PUT data.
 func GetDatabase(r *http.Request, allowGet bool) (string, error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var dbName string
+	var d, dbName string
 	if allowGet {
-		dbName = r.FormValue("dbname")
+		d = r.FormValue("dbname")
 	} else {
-		dbName = r.PostFormValue("dbname")
+		d = r.PostFormValue("dbname")
 	}
 
-	// Validate the database name
-	err := ValidateDB(dbName)
+	// Unescape, then validate the database name
+	dbName, err := url.QueryUnescape(d)
+	if err != nil {
+		return "", err
+	}
+	err = ValidateDB(dbName)
 	if err != nil {
 		log.Printf("Validation failed for database name '%s': %s", dbName, err)
 		return "", errors.New("Invalid database name")
@@ -33,20 +37,24 @@ func GetDatabase(r *http.Request, allowGet bool) (string, error) {
 // Returns the folder name (if any) present in GET or POST/PUT data.
 func GetFolder(r *http.Request, allowGet bool) (string, error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var folder string
+	var f, folder string
 	if allowGet {
-		folder = r.FormValue("folder")
+		f = r.FormValue("folder")
 	} else {
-		folder = r.PostFormValue("folder")
+		f = r.PostFormValue("folder")
 	}
 
 	// If no folder given, return
-	if folder == "" {
+	if f == "" {
 		return "", nil
 	}
 
-	// Validate the folder name
-	err := ValidateFolder(folder)
+	// Unescape, then validate the folder name
+	folder, err := url.QueryUnescape(f)
+	if err != nil {
+		return "", err
+	}
+	err = ValidateFolder(folder)
 	if err != nil {
 		log.Printf("Validation failed for folder: '%s': %s", folder, err)
 		return "", err
@@ -68,7 +76,7 @@ func GetFormBranch(r *http.Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = Validate.Var(b, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	err = ValidateBranchName(b)
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Invalid branch name: '%v'", b))
 	}
@@ -136,7 +144,7 @@ func GetFormRelease(r *http.Request) (release string, err error) {
 	if err != nil {
 		return "", err
 	}
-	err = Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	err = ValidateBranchName(c)
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Invalid release name: '%v'", c))
 	}
@@ -156,7 +164,7 @@ func GetFormTag(r *http.Request) (tag string, err error) {
 	if err != nil {
 		return "", err
 	}
-	err = Validate.Var(c, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	err = ValidateBranchName(c)
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Invalid tag name: '%v'", c))
 	}
@@ -343,20 +351,24 @@ func GetUFD(r *http.Request, allowGet bool) (string, string, string, error) {
 // Return the username (if any) present in the GET or POST/PUT data.
 func GetUsername(r *http.Request, allowGet bool) (string, error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var userName string
+	var u, userName string
 	if allowGet {
-		userName = r.FormValue("username")
+		u = r.FormValue("username")
 	} else {
-		userName = r.PostFormValue("username")
+		u = r.PostFormValue("username")
 	}
 
 	// If no username given, return
-	if userName == "" {
+	if u == "" {
 		return "", nil
 	}
 
-	// Validate the username
-	err := ValidateUser(userName)
+	// Unescape, then validate the user name
+	userName, err := url.QueryUnescape(u)
+	if err != nil {
+		return "", err
+	}
+	err = ValidateUser(userName)
 	if err != nil {
 		log.Printf("Validation failed for username: %s", err)
 		return "", err

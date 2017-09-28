@@ -111,7 +111,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	e.EntryType = DATABASE
 	e.Name = dbName
 	e.Sha256 = sha
-	e.Last_Modified = lastModified
+	e.LastModified = lastModified
 	e.Size = int(numBytes)
 	if licenceName == "" || licenceName == "Not specified" {
 		// No licence was specified by the client, so check if the database is already in the system and
@@ -385,6 +385,9 @@ func CreateCommitID(c CommitEntry) string {
 	if c.Parent != "" {
 		b.WriteString(fmt.Sprintf("parent %s\n", c.Parent))
 	}
+	for _, j := range c.OtherParents {
+		b.WriteString(fmt.Sprintf("parent %s\n", j))
+	}
 	b.WriteString(fmt.Sprintf("author %s <%s> %v\n", c.AuthorName, c.AuthorEmail,
 		c.Timestamp.Format(time.UnixDate)))
 	if c.CommitterEmail != "" {
@@ -411,7 +414,7 @@ func CreateDBTreeID(entries []DBTreeEntry) string {
 		b.WriteByte(0)
 		b.WriteString(j.Name)
 		b.WriteByte(0)
-		b.WriteString(j.Last_Modified.Format(time.RFC3339))
+		b.WriteString(j.LastModified.Format(time.RFC3339))
 		b.WriteByte(0)
 		b.WriteString(fmt.Sprintf("%d\n", j.Size))
 	}
@@ -701,6 +704,80 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 		}
 	}
 	err = StoreCommits(dbOwner, dbFolder, dbName, commitList)
+	return
+}
+
+// Determines the common ancestor commit (if any) between a source and destination branch.  Returns the commit ID of
+// the ancestor and a slice of the commits between them.  If no common ancestor exists, the returned ancestorID will be
+// an empty string. Created for use by our Merge Request functions.
+func GetCommonAncestorCommits(srcOwner string, srcFolder string, srcDBName string, srcBranch string, destOwner string,
+	destFolder string, destName string, destBranch string) (ancestorID string, commitList []CommitEntry, err error, errType int) {
+
+	// To determine the common ancestor, we retrieve the source and destination commit lists, then starting from the
+	// end of the source list, step backwards looking for a matching ID in the destination list.
+	//   * If none is found then there's nothing in common (so abort).
+	//   * If one is found, that one is the last common commit
+	//       * For now, we only support merging to the head commit of the destination branch, so we only check for
+	//         that. Adding support for merging to non-head destination commits isn't yet supported.
+
+	// Get the details of the head commit for the source and destination database branches
+	branchList, err := GetBranches(destOwner, destFolder, destName) // Destination branch list
+	if err != nil {
+		errType = http.StatusInternalServerError
+		return
+	}
+	branchDetails, ok := branchList[destBranch]
+	if !ok {
+		errType = http.StatusInternalServerError
+		err = fmt.Errorf("Could not retrieve details for the destination branch")
+		return
+	}
+	destCommitID := branchDetails.Commit
+	srcBranchList, err := GetBranches(srcOwner, srcFolder, srcDBName)
+	if err != nil {
+		errType = http.StatusInternalServerError
+		return
+	}
+	srcBranchDetails, ok := srcBranchList[srcBranch]
+	if !ok {
+		errType = http.StatusInternalServerError
+		err = fmt.Errorf("Could not retrieve details for the source branch")
+		return
+	}
+	srcCommitID := srcBranchDetails.Commit
+	srcCommitList, err := GetCommitList(srcOwner, srcFolder, srcDBName)
+	if err != nil {
+		errType = http.StatusInternalServerError
+		return
+	}
+
+	// If the source and destination commit IDs are the same, then abort
+	if srcCommitID == destCommitID {
+		errType = http.StatusBadRequest
+		err = fmt.Errorf("Source and destination commits are identical, no merge needs doing")
+		return
+	}
+
+	// Look for the common ancestor
+	s, ok := srcCommitList[srcCommitID]
+	if !ok {
+		errType = http.StatusInternalServerError
+		err = fmt.Errorf("Could not retrieve details for the source branch commit")
+		return
+	}
+	for s.Parent != "" {
+		commitList = append(commitList, s) // Add this commit to the list
+		s, ok = srcCommitList[s.Parent]
+		if !ok {
+			errType = http.StatusInternalServerError
+			err = fmt.Errorf("Error when walking the source branch commit list")
+			return
+		}
+		if s.ID == destCommitID {
+			ancestorID = s.ID
+			break
+		}
+	}
 	return
 }
 

@@ -219,6 +219,89 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/"+userName, http.StatusSeeOther)
 }
 
+// Returns a list of the branches present in a database
+func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Extract the required form variables
+	usr, dbFolder, dbName, err := com.GetUFD(r, true)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbOwner := strings.ToLower(usr)
+
+	// If any of the required values were empty, indicate failure
+	if dbOwner == "" || dbFolder == "" || dbName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the database exists in the system
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if !exists {
+		log.Printf("%s: Validation failed for database name: %s", com.GetCurrentFunctionName(), err)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Retrieve the branch info for the database
+	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Prepare the branch list for sending
+	var b struct {
+		Branches      []string `json:"branches"`
+		DefaultBranch string   `json:"default_branch"`
+	}
+	for name := range branchList {
+		b.Branches = append(b.Branches, name)
+	}
+	b.DefaultBranch = defBranch
+	data, err := json.MarshalIndent(b, "", " ")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// Return the branch list
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, string(data))
+}
+
 func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -434,7 +517,8 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the comment to PostgreSQL
-	err = com.StoreComment(dbOwner, dbFolder, dbName, loggedInUser, discID, comText, discClose)
+	err = com.StoreComment(dbOwner, dbFolder, dbName, loggedInUser, discID, comText, discClose,
+		com.CLOSED_WITHOUT_MERGE) // com.CLOSED_WITHOUT_MERGE is ignored for discussions.  It's only used for MRs
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -488,7 +572,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate the discussions' title
 	tl := r.PostFormValue("title")
-	err = com.Validate.Var(tl, "discussiontitle,max=120") // 120 seems a reasonable first guess.
+	err = com.ValidateDiscussionTitle(tl)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Invalid characters in the new discussions' title")
 		return
@@ -521,7 +605,8 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the discussion detail to PostgreSQL
-	err = com.StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, discTitle, discText)
+	id, err := com.StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, discTitle, discText, com.DISCUSSION,
+		com.MergeRequestEntry{})
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -536,7 +621,295 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Bounce to the discussions page
-	http.Redirect(w, r, fmt.Sprintf("/discuss/%s%s%s", dbOwner, dbFolder, dbName), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/discuss/%s%s%s?id=%d", dbOwner, dbFolder, dbName, id), http.StatusSeeOther)
+}
+
+// Receives incoming requests from the merge request creation page, creating them if the info is correct
+func createMergeHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
+		return
+	}
+
+	// Extract and validate the form variables
+	userName, err := com.GetUsername(r, false)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if userName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing username in supplied fields")
+		return
+	}
+
+	// Retrieve source owner
+	o := r.PostFormValue("sourceowner")
+	srcOwner, err := url.QueryUnescape(o)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateUser(srcOwner)
+	if err != nil {
+		log.Printf("Validation failed for username: '%s'- %s", srcOwner, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve source folder
+	f := r.PostFormValue("sourcefolder")
+	srcFolder, err := url.QueryUnescape(f)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateFolder(srcFolder)
+	if err != nil {
+		log.Printf("Validation failed for folder: '%s' - %s", srcFolder, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve source database name
+	d := r.PostFormValue("sourcedbname")
+	srcDBName, err := url.QueryUnescape(d)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateDB(srcDBName)
+	if err != nil {
+		log.Printf("Validation failed for database name '%s': %s", srcDBName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve source branch name
+	a := r.PostFormValue("sourcebranch")
+	srcBranch, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateBranchName(srcBranch)
+	if err != nil {
+		log.Printf("Validation failed for branch name '%s': %s", srcBranch, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve destination owner
+	o = r.PostFormValue("destowner")
+	destOwner, err := url.QueryUnescape(o)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateUser(destOwner)
+	if err != nil {
+		log.Printf("Validation failed for username: '%s'- %s", destOwner, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve destination folder
+	f = r.PostFormValue("destfolder")
+	destFolder, err := url.QueryUnescape(f)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateFolder(destFolder)
+	if err != nil {
+		log.Printf("Validation failed for folder: '%s' - %s", destFolder, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve destination database name
+	d = r.PostFormValue("destdbname")
+	destDBName, err := url.QueryUnescape(d)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateDB(destDBName)
+	if err != nil {
+		log.Printf("Validation failed for database name '%s': %s", destDBName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve destination branch name
+	a = r.PostFormValue("destbranch")
+	destBranch, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateBranchName(destBranch)
+	if err != nil {
+		log.Printf("Validation failed for branch name '%s': %s", destBranch, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Validate the MR title
+	tl := r.PostFormValue("title")
+	if tl == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Title can't be blank")
+		return
+	}
+	title, err := url.QueryUnescape(tl)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateDiscussionTitle(title)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid characters in the merge request title")
+		return
+	}
+
+	// Validate the MR description
+	t := r.PostFormValue("desc")
+	if t == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Merge request description can't be empty")
+		return
+	}
+	descrip, err := url.QueryUnescape(t)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.Validate.Var(title, "markdownsource")
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "Invalid characters in the description field")
+		return
+	}
+
+	// Make sure none of the required fields is empty
+	if srcOwner == "" || srcFolder == "" || srcDBName == "" || srcBranch == "" || destOwner == "" || destFolder ==
+		"" || destDBName == "" || destBranch == "" || title == "" || descrip == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Some of the (required) supplied fields are empty")
+		return
+	}
+
+	// Check the databases exist
+	srcExists, err := com.CheckDBExists(loggedInUser, srcOwner, srcFolder, srcDBName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	destExists, err := com.CheckDBExists(loggedInUser, destOwner, destFolder, destDBName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if !srcExists || !destExists {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Invalid database.  One of the source or destination databases doesn't exist")
+		return
+	}
+
+	// Get the details of the commits for the MR
+	mrDetails := com.MergeRequestEntry{
+		DestBranch:   destBranch,
+		SourceBranch: srcBranch,
+		SourceDBName: srcDBName,
+		SourceFolder: srcFolder,
+		SourceOwner:  srcOwner,
+	}
+	var ancestorID string
+	ancestorID, mrDetails.Commits, err, _ = com.GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch,
+		destOwner, destFolder, destDBName, destBranch)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Make sure the source branch will cleanly apply to the destination.  eg the destination branch hasn't received
+	// additional commits since the source was forked
+	if ancestorID == "" {
+		w.WriteHeader(http.StatusConflict)
+		fmt.Fprint(w, "Source branch is not a direct descendent of the destination branch.  Cannot merge.")
+		return
+	}
+
+	// Create the merge request in PostgreSQL
+	var x struct {
+		ID int `json:"mr_id"`
+	}
+	x.ID, err = com.StoreDiscussion(destOwner, destFolder, destDBName, loggedInUser, title, descrip, com.MERGE_REQUEST,
+		mrDetails)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Invalidate the memcache data for the destination database, so the new MR count gets picked up
+	err = com.InvalidateCacheEntry(loggedInUser, destOwner, destFolder, destDBName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Indicate success to the caller, and return the ID # of the new merge request
+	y, err := json.MarshalIndent(x, "", " ")
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, string(y))
 }
 
 func createTagHandler(w http.ResponseWriter, r *http.Request) {
@@ -2431,6 +2804,7 @@ func main() {
 	http.HandleFunc("/about", logReq(aboutPage))
 	http.HandleFunc("/branches/", logReq(branchesPage))
 	http.HandleFunc("/commits/", logReq(commitsPage))
+	http.HandleFunc("/compare/", logReq(comparePage))
 	http.HandleFunc("/confirmdelete/", logReq(confirmDeletePage))
 	http.HandleFunc("/contributors/", logReq(contributorsPage))
 	http.HandleFunc("/createbranch/", logReq(createBranchPage))
@@ -2439,6 +2813,7 @@ func main() {
 	http.HandleFunc("/discuss/", logReq(discussPage))
 	http.HandleFunc("/forks/", logReq(forksPage))
 	http.HandleFunc("/logout", logReq(logoutHandler))
+	http.HandleFunc("/merge/", logReq(mergePage))
 	http.HandleFunc("/pref", logReq(prefHandler))
 	http.HandleFunc("/register", logReq(createUserHandler))
 	http.HandleFunc("/releases/", logReq(releasesPage))
@@ -2447,11 +2822,13 @@ func main() {
 	http.HandleFunc("/stars/", logReq(starsPage))
 	http.HandleFunc("/tags/", logReq(tagsPage))
 	http.HandleFunc("/upload/", logReq(uploadPage))
+	http.HandleFunc("/x/branchnames", logReq(branchNamesHandler))
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
 	http.HandleFunc("/x/createbranch", logReq(createBranchHandler))
 	http.HandleFunc("/x/createcomment/", logReq(createCommentHandler))
 	http.HandleFunc("/x/creatediscuss", logReq(createDiscussHandler))
+	http.HandleFunc("/x/createmerge/", logReq(createMergeHandler))
 	http.HandleFunc("/x/createtag", logReq(createTagHandler))
 	http.HandleFunc("/x/deletebranch/", logReq(deleteBranchHandler))
 	http.HandleFunc("/x/deletecomment/", logReq(deleteCommentHandler))
@@ -2465,6 +2842,7 @@ func main() {
 	http.HandleFunc("/x/forkdb/", logReq(forkDBHandler))
 	http.HandleFunc("/x/gencert", logReq(generateCertHandler))
 	http.HandleFunc("/x/markdownpreview/", logReq(markdownPreview))
+	http.HandleFunc("/x/mergerequest/", logReq(mergeRequestHandler))
 	http.HandleFunc("/x/savesettings", logReq(saveSettingsHandler))
 	http.HandleFunc("/x/setdefaultbranch/", logReq(setDefaultBranchHandler))
 	http.HandleFunc("/x/star/", logReq(starToggleHandler))
@@ -2635,6 +3013,192 @@ func markdownPreview(w http.ResponseWriter, r *http.Request) {
 
 	// Send the rendered version back to the caller
 	fmt.Fprint(w, string(renderedText))
+}
+
+// Handler which does merging to MR's.  Called from the MR details page
+func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
+		return
+	}
+
+	// Extract and validate the form variables
+	dbOwner, dbFolder, dbName, err := com.GetUFD(r, false)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing or incorrect data supplied")
+		return
+	}
+
+	// Ensure an MR id was given
+	a := r.PostFormValue("mrid")
+	if a == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing merge request id")
+		return
+	}
+	mrID, err := strconv.Atoi(a)
+	if err != nil {
+		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+			com.GetCurrentFunctionName(), err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error when parsing merge request id value")
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if !exists {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		return
+	}
+
+	// Ensure the request is coming from the database owner
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "Only the database owner can merge in merge requests")
+		return
+	}
+
+	// Retrieve the names of the source & destination databases and branches
+	disc, err := com.Discussions(dbOwner, dbFolder, dbName, com.MERGE_REQUEST, mrID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	branchName := disc[0].MRDetails.DestBranch
+	commitDiffList := disc[0].MRDetails.Commits
+	srcOwner := disc[0].MRDetails.SourceOwner
+	srcFolder := disc[0].MRDetails.SourceFolder
+	srcDBName := disc[0].MRDetails.SourceDBName
+	srcBranchName := disc[0].MRDetails.SourceBranch
+
+	// Ensure the merge request isn't closed
+	if !disc[0].Open {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Cannot merge a closed merge request")
+		return
+	}
+
+	// Get the details of the head commit for the destination database branch
+	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName) // Destination branch list
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	branchDetails, ok := branchList[branchName]
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Could not retrieve details for the destination branch")
+		return
+	}
+	destCommitID := branchDetails.Commit
+	destCommitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Check if the MR commits will still apply cleanly to the destination branch
+	finalCommit := commitDiffList[len(commitDiffList)-1]
+	if finalCommit.Parent != destCommitID {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, fmt.Errorf("Destination branch has changed. Merge cannot proceed."))
+		return
+	}
+
+	// * The required details have been collected, and sanity checks completed, so merge the MR *
+
+	// Add the source commits directly to the destination commit list
+	for _, j := range commitDiffList {
+		destCommitList[j.ID] = j
+	}
+
+	// Retrieve details for the logged in user
+	usr, err := com.User(loggedInUser)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Create a merge commit, using the details of the source commit (this gets us a correctly filled in DB tree
+	// structure easily)
+	mrg := commitDiffList[0]
+	mrg.AuthorEmail = usr.Email
+	mrg.AuthorName = usr.DisplayName
+	mrg.Message = fmt.Sprintf("Merge branch '%s' of '%s%s%s' into '%s'", srcBranchName, srcOwner, srcFolder,
+		srcDBName, branchName)
+	mrg.Parent = commitDiffList[0].ID
+	mrg.OtherParents = append(mrg.OtherParents, destCommitID)
+	mrg.Timestamp = time.Now()
+	mrg.ID = com.CreateCommitID(mrg)
+
+	// Add the new commit to the destination db commit list, and update the branch list with it
+	destCommitList[mrg.ID] = mrg
+	b := com.BranchEntry{
+		Commit:      mrg.ID,
+		CommitCount: branchDetails.CommitCount + len(commitDiffList) + 1,
+		Description: branchDetails.Description,
+	}
+	branchList[branchName] = b
+	err = com.StoreCommits(dbOwner, dbFolder, dbName, destCommitList)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.StoreBranches(dbOwner, dbFolder, dbName, branchList)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Change the status of the MR to closed, and indicate it was successfully merged
+	err = com.StoreComment(dbOwner, dbFolder, dbName, loggedInUser, mrID, "", true,
+		com.CLOSED_WITH_MERGE)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Invalidate the memcached entries for the destination database case
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		return
+	}
+
+	// Send a success message back to the caller
+	w.WriteHeader(http.StatusOK)
 }
 
 // This handles incoming requests for the preferences page by logged in users.
@@ -2982,7 +3546,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			// Create a new dbTree entry for the database file
 			var e com.DBTreeEntry
 			e.EntryType = com.DATABASE
-			e.Last_Modified = dbEntry.Last_Modified
+			e.LastModified = dbEntry.LastModified
 			e.LicenceSHA = newLicSHA
 			e.Name = dbEntry.Name
 			e.Sha256 = dbEntry.Sha256
@@ -3671,7 +4235,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err = com.Validate.Var(nb, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	err = com.ValidateBranchName(nb)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -4051,7 +4615,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err = com.Validate.Var(nr, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	err = com.ValidateBranchName(nr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -4180,7 +4744,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err = com.Validate.Var(nt, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+	err = com.ValidateBranchName(nt)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -4343,7 +4907,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	var commitMsg string
 	cm := r.PostFormValue("commitmsg")
 	if cm != "" {
-		err = com.Validate.Var(cm, "markdownsource,max=1024") // 1024 seems like a reasonable first guess
+		err = com.ValidateMarkdown(cm)
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, "Validation failed for the commit message")
 			return

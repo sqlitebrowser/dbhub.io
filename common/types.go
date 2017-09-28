@@ -177,6 +177,7 @@ type CommitEntry struct {
 	CommitterName  string    `json:"committer_name"`
 	ID             string    `json:"id"`
 	Message        string    `json:"message"`
+	OtherParents   []string  `json:"other_parents"`
 	Parent         string    `json:"parent"`
 	Timestamp      time.Time `json:"timestamp"`
 	Tree           DBTree    `json:"tree"`
@@ -210,12 +211,12 @@ type DBTree struct {
 	Entries []DBTreeEntry `json:"entries"`
 }
 type DBTreeEntry struct {
-	EntryType     DBTreeEntryType `json:"entry_type"`
-	Last_Modified time.Time       `json:"last_modified"`
-	LicenceSHA    string          `json:"licence"`
-	Name          string          `json:"name"`
-	Sha256        string          `json:"sha256"`
-	Size          int             `json:"size"`
+	EntryType    DBTreeEntryType `json:"entry_type"`
+	LastModified time.Time       `json:"last_modified"`
+	LicenceSHA   string          `json:"licence"`
+	Name         string          `json:"name"`
+	Sha256       string          `json:"sha256"`
+	Size         int             `json:"size"`
 }
 
 type DBInfo struct {
@@ -250,19 +251,6 @@ type DBInfo struct {
 	Watchers      int
 }
 
-type DiscussionEntry struct {
-	AvatarURL     string    `json:"avatar_url"`
-	Body          string    `json:"body"`
-	BodyRendered  string    `json:"body_rendered"`
-	CommentCount  int       `json:"comment_count"`
-	Creator       string    `json:"creator"`
-	Date_created  time.Time `json:"creation_date"`
-	ID            int       `json:"disc_id"`
-	Last_modified time.Time `json:"last_modified"`
-	Open          bool      `json:"open"`
-	Title         string    `json:"title"`
-}
-
 type DiscussionCommentType string
 
 const (
@@ -276,21 +264,43 @@ type DiscussionCommentEntry struct {
 	Body         string                `json:"body"`
 	BodyRendered string                `json:"body_rendered"`
 	Commenter    string                `json:"commenter"`
-	Date_created time.Time             `json:"creation_date"`
+	DateCreated  time.Time             `json:"creation_date"`
 	EntryType    DiscussionCommentType `json:"entry_type"`
 	ID           int                   `json:"com_id"`
 }
 
+type DiscussionType int
+
+const (
+	DISCUSSION    DiscussionType = 0
+	MERGE_REQUEST                = 1
+)
+
+type DiscussionEntry struct {
+	AvatarURL    string            `json:"avatar_url"`
+	Body         string            `json:"body"`
+	BodyRendered string            `json:"body_rendered"`
+	CommentCount int               `json:"comment_count"`
+	Creator      string            `json:"creator"`
+	DateCreated  time.Time         `json:"creation_date"`
+	ID           int               `json:"disc_id"`
+	LastModified time.Time         `json:"last_modified"`
+	MRDetails    MergeRequestEntry `json:"mr_details"`
+	Open         bool              `json:"open"`
+	Title        string            `json:"title"`
+	Type         DiscussionType    `json:"discussion_type"`
+}
+
 type ForkEntry struct {
-	DBName     string
-	Folder     string
-	ForkedFrom int
-	IconList   []ForkType
-	ID         int
-	Owner      string
-	Processed  bool
-	Public     bool
-	Deleted    bool
+	DBName     string     `json:"database_name"`
+	Folder     string     `json:"database_folder"`
+	ForkedFrom int        `json:"forked_from"`
+	IconList   []ForkType `json:"icon_list"`
+	ID         int        `json:"id"`
+	Owner      string     `json:"database_owner"`
+	Processed  bool       `json:"processed"`
+	Public     bool       `json:"public"`
+	Deleted    bool       `json:"deleted"`
 }
 
 type LicenceEntry struct {
@@ -299,6 +309,25 @@ type LicenceEntry struct {
 	Order      int    `json:"order"`
 	Sha256     string `json:"sha256"`
 	URL        string `json:"url"`
+}
+
+type MergeRequestState int
+
+const (
+	OPEN                 MergeRequestState = 0
+	CLOSED_WITH_MERGE                      = 1
+	CLOSED_WITHOUT_MERGE                   = 2
+)
+
+type MergeRequestEntry struct {
+	Commits      []CommitEntry     `json:"commits"`
+	DestBranch   string            `json:"destination_branch"`
+	SourceBranch string            `json:"source_branch"`
+	SourceDBID   int64             `json:"source_database_id"`
+	SourceDBName string            `json:"source_database_name"`
+	SourceFolder string            `json:"source_folder"`
+	SourceOwner  string            `json:"source_owner"`
+	State        MergeRequestState `json:"state"`
 }
 
 type MetaInfo struct {

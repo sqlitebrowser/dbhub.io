@@ -117,6 +117,41 @@ func CheckDBExists(loggedInUser string, dbOwner string, dbFolder string, dbName 
 	return true, nil
 }
 
+// Check if a given database ID is available, and return it's folder/name so the caller can determine if it has been
+// renamed.  If an error occurs, the true/false value should be ignored, as only the error value is valid.
+func CheckDBID(loggedInUser string, dbOwner string, dbID int64) (avail bool, dbFolder string, dbName string, err error) {
+	dbQuery := `
+		SELECT folder, db_name
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)
+			AND db_id = $2
+			AND is_deleted = false`
+	// If the request is from someone who's not logged in, or is for another users database, ensure we only consider
+	// public databases
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) || loggedInUser == "" {
+		dbQuery += `
+			AND public = true`
+	}
+	err = pdb.QueryRow(dbQuery, dbOwner, dbID).Scan(&dbFolder, &dbName)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			avail = false
+			return
+		} else {
+			log.Printf("Checking if a database exists failed: %v\n", err)
+			return
+		}
+	}
+
+	// Database exists
+	avail = true
+	return
+}
+
 // Check if a database has been starred by a given user.  The boolean return value is only valid when err is nil.
 func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
 	dbQuery := `
@@ -786,14 +821,14 @@ func DisconnectPostgreSQL() {
 	log.Printf("Disconnected from PostgreSQL server: %v:%v\n", Conf.Pg.Server, uint16(Conf.Pg.Port))
 }
 
-// Returns the list of discussions for a given database.
-// If a non-0 discID value is passed, it will only return the details for that specific discussion.  Otherwise it will
-// return a list of all discussions for a given database
+// Returns the list of discussions or MRs for a given database.
+// If a non-0 discID value is passed, it will only return the details for that specific discussion/MR.  Otherwise it
+// will return a list of all discussions or MRs for a given database
 // Note - This returns a slice of DiscussionEntry, instead of a map.  We use a slice because it lets us use an ORDER
 //        BY clause in the SQL and preserve the returned order (maps don't preserve order).  If in future we no longer
 //        need to preserve the order, it might be useful to switch to using a map instead since they're often simpler
 //        to work with.
-func Discussions(dbOwner string, dbFolder string, dbName string, discID int) (list []DiscussionEntry, err error) {
+func Discussions(dbOwner string, dbFolder string, dbName string, discType DiscussionType, discID int) (list []DiscussionEntry, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -806,9 +841,11 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discID int) (li
 				AND db.folder = $2
 				AND db.db_name = $3)
 		SELECT disc.disc_id, disc.title, disc.open, disc.date_created, users.user_name, users.email, users.avatar_url,
-			disc.description, last_modified, comment_count
+			disc.description, last_modified, comment_count, mr_source_db_id, mr_source_db_branch,
+			mr_destination_branch, mr_state, mr_commits
 		FROM discussions AS disc, d, users
 		WHERE disc.db_id = d.db_id
+			AND disc.discussion_type = $4
 			AND disc.creator = users.user_id`
 	if discID != 0 {
 		dbQuery += fmt.Sprintf(`
@@ -817,18 +854,20 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discID int) (li
 	dbQuery += `
 		ORDER BY last_modified DESC`
 	var rows *pgx.Rows
-	rows, err = pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, err = pdb.Query(dbQuery, dbOwner, dbFolder, dbName, discType)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return
 	}
 	for rows.Next() {
-		var av, em pgx.NullString
+		var av, em, sb, db pgx.NullString
+		var sdb pgx.NullInt64
 		var oneRow DiscussionEntry
-		err = rows.Scan(&oneRow.ID, &oneRow.Title, &oneRow.Open, &oneRow.Date_created, &oneRow.Creator, &em, &av,
-			&oneRow.Body, &oneRow.Last_modified, &oneRow.CommentCount)
+		err = rows.Scan(&oneRow.ID, &oneRow.Title, &oneRow.Open, &oneRow.DateCreated, &oneRow.Creator, &em, &av,
+			&oneRow.Body, &oneRow.LastModified, &oneRow.CommentCount, &sdb, &sb, &db, &oneRow.MRDetails.State,
+			&oneRow.MRDetails.Commits)
 		if err != nil {
-			log.Printf("Error retrieving discussion list for database '%s%s%s': %v\n", dbOwner, dbFolder,
+			log.Printf("Error retrieving discussion/MR list for database '%s%s%s': %v\n", dbOwner, dbFolder,
 				dbName, err)
 			rows.Close()
 			return
@@ -842,9 +881,46 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discID int) (li
 				oneRow.AvatarURL = fmt.Sprintf("https://www.gravatar.com/avatar/%x?d=identicon&s=30", picHash)
 			}
 		}
+		if discType == MERGE_REQUEST && sdb.Valid {
+			oneRow.MRDetails.SourceDBID = sdb.Int64
+		}
+		if sb.Valid {
+			oneRow.MRDetails.SourceBranch = sb.String
+		}
+		if db.Valid {
+			oneRow.MRDetails.DestBranch = db.String
+		}
 		oneRow.BodyRendered = string(gfm.Markdown([]byte(oneRow.Body)))
 		list = append(list, oneRow)
 	}
+
+	// For merge requests, turn the source database ID's into full owner/folder/name strings
+	if discType == MERGE_REQUEST {
+		for i, j := range list {
+			// Retrieve the owner/folder/name for a database id
+			dbQuery = `
+				SELECT users.user_name, db.folder, db.db_name
+				FROM sqlite_databases AS db, users
+				WHERE db.db_id = $1
+					AND db.user_id = users.user_id`
+			var o, f, n pgx.NullString
+			err2 := pdb.QueryRow(dbQuery, j.MRDetails.SourceDBID).Scan(&o, &f, &n)
+			if err2 != nil && err2 != pgx.ErrNoRows {
+				log.Printf("Retrieving source database owner/folder/name failed: %v\n", err)
+				return
+			}
+			if o.Valid {
+				list[i].MRDetails.SourceOwner = o.String
+			}
+			if f.Valid {
+				list[i].MRDetails.SourceFolder = f.String
+			}
+			if n.Valid {
+				list[i].MRDetails.SourceDBName = n.String
+			}
+		}
+	}
+
 	rows.Close()
 	return
 }
@@ -893,7 +969,7 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 	for rows.Next() {
 		var av, em pgx.NullString
 		var oneRow DiscussionCommentEntry
-		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &em, &av, &oneRow.Date_created, &oneRow.Body, &oneRow.EntryType)
+		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &em, &av, &oneRow.DateCreated, &oneRow.Body, &oneRow.EntryType)
 		if err != nil {
 			log.Printf("Error retrieving comment list for database '%s%s%s', discussion '%d': %v\n", dbOwner,
 				dbFolder, dbName, discID, err)
@@ -1111,6 +1187,89 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 		forkDB = ""
 	}
 	return forkOwn, forkFol, forkDB, forkDel, nil
+}
+
+// Return the parent of a database, if there is one (and it's accessible to the logged in user).  If no parent was
+// found, the returned Owner/Folder/DBName values will be empty strings
+func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName string) (parentOwner string,
+	parentFolder string, parentDBName string, err error) {
+	dbQuery := `
+		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
+		FROM sqlite_databases AS db, users
+		WHERE db.root_database = (
+				SELECT root_database
+				FROM sqlite_databases
+				WHERE user_id = (
+						SELECT user_id
+						FROM users
+						WHERE lower(user_name) = lower($1)
+					)
+					AND folder = $2
+					AND db_name = $3
+				)
+			AND db.user_id = users.user_id
+		ORDER BY db.forked_from NULLS FIRST`
+	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return
+	}
+	defer rows.Close()
+	dbList := make(map[int]ForkEntry)
+	//var dbList []ForkEntry
+	for rows.Next() {
+		var frk pgx.NullInt64
+		var oneRow ForkEntry
+		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk, &oneRow.Deleted)
+		if err != nil {
+			log.Printf("Error retrieving fork parent for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+				err)
+			return
+		}
+		if frk.Valid {
+			oneRow.ForkedFrom = int(frk.Int64)
+		}
+		dbList[oneRow.ID] = oneRow
+		//dbList = append(dbList, oneRow)
+	}
+
+	// Safety check
+	numResults := len(dbList)
+	if numResults == 0 {
+		err = fmt.Errorf("Empty list returned instead of fork tree.  This shouldn't happen")
+		return
+	}
+
+	// Get the ID of the database being called
+	dbID, err := databaseID(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return
+	}
+
+	// Find the closest (not-deleted) parent for the database
+	dbEntry, ok := dbList[dbID]
+	if !ok {
+		// The database itself wasn't found in the list.  This shouldn't happen
+		err = fmt.Errorf("Internal error when retrieving fork parent info.  This shouldn't happen.")
+		return
+	}
+	for dbEntry.ForkedFrom != 0 {
+		dbEntry, ok = dbList[dbEntry.ForkedFrom]
+		if !ok {
+			// Parent database entry wasn't found in the list.  This shouldn't happen either
+			err = fmt.Errorf("Internal error when retrieving fork parent info (#2).  This shouldn't happen.")
+			return
+		}
+		if !dbEntry.Deleted {
+			// Found a parent (that's not deleted).  We'll use this and stop looping
+			parentOwner = dbEntry.Owner
+			parentFolder = dbEntry.Folder
+			parentDBName = dbEntry.DBName
+			break
+		}
+	}
+
+	return
 }
 
 // Return the complete fork tree for a given database
@@ -1767,7 +1926,6 @@ func GetUsernameFromEmail(email string) (userName string, avatarURL string, err 
 	} else {
 		avatarURL = av.String
 	}
-
 	return
 }
 
@@ -2164,7 +2322,7 @@ func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[
 
 // Adds a comment to a discussion.
 func StoreComment(dbOwner string, dbFolder string, dbName string, commenter string, discID int, comText string,
-	discClose bool) error {
+	discClose bool, mrState MergeRequestState) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -2177,11 +2335,12 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 	// person who started the discussion
 	var dbQuery string
 	var discState bool
+	var discType int64
 	if discClose == true {
 		// Get the current details for the discussion
 		var discCreator string
 		dbQuery := `
-			SELECT disc.open, u.user_name
+			SELECT disc.open, u.user_name, disc.discussion_type
 			FROM discussions AS disc, users AS u
 			WHERE disc.db_id = (
 					SELECT db.db_id
@@ -2196,7 +2355,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 				)
 				AND disc.disc_id = $4
 				AND disc.creator = u.user_id`
-		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState, &discCreator)
+		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState, &discCreator, &discType)
 		if err != nil {
 			log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", dbOwner,
 				dbFolder, dbName, discID, err)
@@ -2290,6 +2449,36 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 		}
 	}
 
+	// Update the merge request state for MR's being closed
+	if discClose == true && discType == MERGE_REQUEST {
+		dbQuery = `
+			UPDATE discussions
+			SET mr_state = $5
+			WHERE db_id = (
+					SELECT db.db_id
+					FROM sqlite_databases AS db
+					WHERE db.user_id = (
+							SELECT user_id
+							FROM users
+							WHERE lower(user_name) = lower($1)
+						)
+						AND folder = $2
+						AND db_name = $3
+				)
+				AND disc_id = $4`
+		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, mrState)
+		if err != nil {
+			log.Printf("Updating MR state for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner,
+				dbFolder, dbName, discID, err)
+			return err
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf(
+				"Wrong number of rows (%v) affected when updating MR state for database '%s%s%s', discussion '%d'\n",
+				numRows, dbOwner, dbFolder, dbName, discID)
+		}
+	}
+
 	// Update the last_modified date for the parent discussion
 	dbQuery = `
 		UPDATE discussions
@@ -2331,7 +2520,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 			numRows, dbOwner, dbFolder, dbName, discID)
 	}
 
-	// Update the counter of open discussions for the database
+	// Update the open discussion and MR counters for the database
 	dbQuery = `
 		WITH d AS (
 			SELECT db.db_id
@@ -2350,6 +2539,14 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 				FROM discussions AS disc, d
 				WHERE disc.db_id = d.db_id
 					AND open = true
+					AND discussion_type = 0
+			),
+			merge_requests = (
+				SELECT count(disc.*)
+				FROM discussions AS disc, d
+				WHERE disc.db_id = d.db_id
+					AND open = true
+					AND discussion_type = 1
 			)
 		WHERE db_id = (SELECT db_id FROM d)`
 	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
@@ -2533,11 +2730,13 @@ func StoreDefaultTableName(dbOwner string, folder string, dbName string, tableNa
 }
 
 // Stores a new discussion for a database.
-func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, title string, text string) error {
+func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, title string, text string,
+	discType DiscussionType, mr MergeRequestEntry) (newID int, err error) {
+
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
-		return err
+		return
 	}
 	// Set up an automatic transaction roll back if the function exits without committing
 	defer tx.Rollback()
@@ -2555,27 +2754,61 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 				AND db.folder = $2
 				AND db.db_name = $3
 		), next_id AS (
-			SELECT count(disc.disc_id) + 1 AS id
+			SELECT coalesce(max(disc.disc_id), 0) + 1 AS id
 			FROM discussions AS disc, d
 			WHERE disc.db_id = d.db_id
 		)
-		INSERT INTO discussions (db_id, disc_id, creator, title, description, open)
-		SELECT (SELECT db_id FROM d), (SELECT id FROM next_id), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, true`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text)
-	if err != nil {
-		log.Printf("Adding new discussion '%s' for '%s%s%s' failed: %v\n", title, dbOwner, dbFolder, dbName,
-			err)
-		return err
+		INSERT INTO discussions (db_id, disc_id, creator, title, description, open, discussion_type`
+	if discType == MERGE_REQUEST {
+		dbQuery += `, mr_source_db_id, mr_source_db_branch, mr_destination_branch, mr_commits`
 	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected when adding new discussion '%s' to database '%s%s%s'\n",
-			numRows, title, dbOwner, dbFolder, dbName)
+	dbQuery += `
+			)
+		SELECT (SELECT db_id FROM d),
+			(SELECT id FROM next_id),
+			(SELECT user_id FROM users WHERE lower(user_name) = lower($4)),
+			$5,
+			$6,
+			true,
+			$7`
+	if discType == MERGE_REQUEST {
+		dbQuery += `,(
+			SELECT db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($8))
+			AND folder = $9
+			AND db_name = $10
+			AND is_deleted = false
+		), $11, $12, $13`
+	}
+	dbQuery += `
+		RETURNING (SELECT id FROM next_id)`
+	if discType == MERGE_REQUEST {
+		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text, discType, mr.SourceOwner,
+			mr.SourceFolder, mr.SourceDBName, mr.SourceBranch, mr.DestBranch, mr.Commits).Scan(&newID)
+	} else {
+		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text, discType).Scan(&newID)
+	}
+	if err != nil {
+		log.Printf("Adding new discussion or merge request '%s' for '%s%s%s' failed: %v\n", title, dbOwner,
+			dbFolder, dbName, err)
+		return
 	}
 
-	// Increment the discussion counter for the database
+	// Increment the discussion or merge request counter for the database
 	dbQuery = `
-		UPDATE sqlite_databases
-		SET discussions = discussions + 1
+		UPDATE sqlite_databases`
+	if discType == DISCUSSION {
+		dbQuery += `
+			SET discussions = discussions + 1`
+	} else {
+		dbQuery += `
+			SET merge_requests = merge_requests + 1`
+	}
+	dbQuery += `
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
@@ -2583,10 +2816,10 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 			)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
 	if err != nil {
 		log.Printf("Updating discussion counter for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
-		return err
+		return
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when updating discussion counter for '%s%s%s'\n",
@@ -2596,9 +2829,9 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 	// Commit the transaction
 	err = tx.Commit()
 	if err != nil {
-		return err
+		return
 	}
-	return nil
+	return
 }
 
 // Store a licence.
@@ -2982,6 +3215,38 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 	err = tx.Commit()
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// Updates the commit list for a Merge Request
+func UpdateMergeRequestCommits(dbOwner string, dbFolder string, dbName string, discID int, mrCommits []CommitEntry) (err error) {
+	dbQuery := `
+		WITH d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db
+			WHERE db.user_id = (
+					SELECT user_id
+					FROM users
+					WHERE lower(user_name) = lower($1)
+				)
+				AND folder = $2
+				AND db_name = $3
+		)
+		UPDATE discussions AS disc
+		SET mr_commits = $5
+		WHERE disc.db_id = (SELECT db_id FROM d)
+			AND disc.disc_id = $4`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, mrCommits)
+	if err != nil {
+		log.Printf("Updating commit list for database '%s%s%s', MR '%d' failed: %v\n", dbOwner,
+			dbFolder, dbName, discID, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf(
+			"Wrong number of rows (%v) affected when updating commit list for database '%s%s%s', MR '%d'\n",
+			numRows, dbOwner, dbFolder, dbName, discID)
 	}
 	return nil
 }

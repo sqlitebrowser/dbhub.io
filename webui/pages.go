@@ -230,7 +230,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the database owner & name, and branch name
 	// TODO: Add folder support
 	dbFolder := "/"
-	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/settings/" at the start of the URL
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/commits/" at the start of the URL
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -396,6 +396,146 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Render the page
 	t := tmpl.Lookup("commitsPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+// Render the compare page, for creating new merge requests
+func comparePage(w http.ResponseWriter, r *http.Request) {
+	// Structure to hold page data
+	var pageData struct {
+		Auth0                 com.Auth0Set
+		DB                    com.SQLiteDBinfo
+		DestDBBranches        []string
+		DestDBDefaultBranch   string
+		DestDBName            string
+		DestFolder            string
+		DestOwner             string
+		Forks                 []com.ForkEntry
+		Meta                  com.MetaInfo
+		SourceDBBranches      []string
+		SourceDBDefaultBranch string
+		SourceDBName          string
+		SourceFolder          string
+		SourceOwner           string
+	}
+	pageData.Meta.Title = "Create new Merge Request"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+	}
+
+	// Retrieve the database owner & name, and branch name
+	// TODO: Add folder support
+	dbFolder := "/"
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/compare/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Retrieve list of forks for the database
+	pageData.Forks, err = com.ForkTree(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError,
+			fmt.Sprintf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder,
+				dbName, err.Error()))
+		return
+	}
+
+	// Use the database which the "New Merge Request" button was pressed on as the initially selected source
+	pageData.SourceOwner = dbOwner
+	pageData.SourceFolder = dbFolder
+	pageData.SourceDBName = dbName
+
+	// If the source database has an (accessible) parent, use that as the default destination selected for the user.
+	// If it doesn't, then set the source as the destination as well and the user will have to manually choose
+	pageData.DestOwner, pageData.DestFolder, pageData.DestDBName, err = com.ForkParent(loggedInUser, dbOwner, dbFolder,
+		dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if pageData.DestOwner == "" || pageData.DestFolder == "" || pageData.DestDBName == "" {
+		pageData.DestOwner = dbOwner
+		pageData.DestFolder = dbFolder
+		pageData.DestDBName = dbName
+	}
+
+	// * Determine the source and destination database branches *
+
+	// Retrieve the branch info for the source database
+	branchList, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	for name := range branchList {
+		pageData.SourceDBBranches = append(pageData.SourceDBBranches, name)
+	}
+	pageData.SourceDBDefaultBranch, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Retrieve the branch info for the destination database
+	branchList, err = com.GetBranches(pageData.DestOwner, pageData.DestFolder, pageData.DestDBName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	for name := range branchList {
+		pageData.DestDBBranches = append(pageData.DestDBBranches, name)
+	}
+	pageData.DestDBDefaultBranch, err = com.GetDefaultBranchName(pageData.DestOwner, pageData.DestFolder,
+		pageData.DestDBName)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Retrieve correctly capitalised username for the database owner
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
+	// Fill out the metadata
+	pageData.Meta.Database = dbName
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+
+	// Render the page
+	t := tmpl.Lookup("comparePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
@@ -972,7 +1112,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// Check if a specific release was requested
 	releaseName := r.FormValue("release")
 	if releaseName != "" {
-		err = com.Validate.Var(releaseName, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+		err = com.ValidateBranchName(releaseName)
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, "Validation failed for release name")
 			return
@@ -1228,7 +1368,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		}
 		for i := range branchHeads {
 			if i != branchName {
-				err = com.Validate.Var(i, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+				err = com.ValidateBranchName(i)
 				if err == nil {
 					pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
 				}
@@ -1401,7 +1541,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 	for i := range branchHeads {
 		if i != branchName {
-			err = com.Validate.Var(i, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess.
+			err = com.ValidateBranchName(i)
 			if err == nil {
 				pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
 			}
@@ -1573,7 +1713,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of discussions for this database
-	pageData.DiscussionList, err = com.Discussions(dbOwner, dbFolder, dbName, pageData.SelectedID)
+	pageData.DiscussionList, err = com.Discussions(dbOwner, dbFolder, dbName, com.DISCUSSION, pageData.SelectedID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1718,8 +1858,8 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 func forksPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		Auth0 com.Auth0Set
-		Meta  com.MetaInfo
 		Forks []com.ForkEntry
+		Meta  com.MetaInfo
 	}
 	pageData.Meta.Title = "Forks"
 
@@ -1851,6 +1991,347 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 
 	// Render the page
 	t := tmpl.Lookup("rootPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+func mergePage(w http.ResponseWriter, r *http.Request) {
+	type CommitData struct {
+		AuthorAvatar   string    `json:"author_avatar"`
+		AuthorEmail    string    `json:"author_email"`
+		AuthorName     string    `json:"author_name"`
+		AuthorUsername string    `json:"author_username"`
+		ID             string    `json:"id"`
+		LicenceChange  string    `json:"licence_change"`
+		Message        string    `json:"message"`
+		Timestamp      time.Time `json:"timestamp"`
+	}
+	var pageData struct {
+		Auth0               com.Auth0Set
+		CommentList         []com.DiscussionCommentEntry
+		CommitList          []CommitData
+		DB                  com.SQLiteDBinfo
+		DestBranchNameOK    bool
+		DestBranchUsable    bool
+		LicenceWarning      string
+		MRList              []com.DiscussionEntry
+		Meta                com.MetaInfo
+		SelectedID          int
+		StatusMessage       string
+		StatusMessageColour string
+		SourceBranchOK      bool
+		SourceDBOK          bool
+		MyStar              bool
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+	}
+
+	// Retrieve the database owner & name
+	// TODO: Add folder support
+	dbFolder := "/"
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/discuss/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if an MR id was provided
+	a := r.FormValue("id")                   // Optional
+	if a != "" && a != "{{ row.disc_id }}" { // Search engines have a habit of passing AngularJS tags, so we ignore when the field has the AngularJS tag in it
+		pageData.SelectedID, err = strconv.Atoi(a)
+		if err != nil {
+			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+				com.GetCurrentFunctionName(), err)
+			errorPage(w, r, http.StatusBadRequest, "Error when parsing discussion id value")
+			return
+		}
+	}
+
+	// Validate the supplied information
+	if dbOwner == "" || dbName == "" {
+		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get latest star and fork count
+	_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Retrieve the list of MRs for this database
+	pageData.MRList, err = com.Discussions(dbOwner, dbFolder, dbName, com.MERGE_REQUEST, pageData.SelectedID)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve the latest discussion and MR counts
+	pageData.DB.Info.Discussions, pageData.DB.Info.MRs, err = com.GetDiscussionAndMRCount(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve correctly capitalised username for the database owner
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
+	// Retrieve the "forked from" information
+	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+		return
+	}
+	pageData.Meta.ForkOwner = frkOwn
+	pageData.Meta.ForkFolder = frkFol
+	pageData.Meta.ForkDatabase = frkDB
+	pageData.Meta.ForkDeleted = frkDel
+
+	// Fill out the metadata
+	pageData.Meta.Database = dbName
+	pageData.Meta.Title = "Merge Requests"
+
+	// Set the default status message colour
+	pageData.StatusMessageColour = "green"
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+
+	// If a specific MR ID was given, then we display the MR comments page
+	if pageData.SelectedID != 0 {
+		// Check if the MR exists, and set the page title to the MR info
+		found := false
+		for _, j := range pageData.MRList {
+			if pageData.SelectedID == j.ID {
+				pageData.Meta.Title = fmt.Sprintf("Merge Request #%d : %s", j.ID, j.Title)
+				found = true
+			}
+		}
+		if !found {
+			errorPage(w, r, http.StatusNotFound, "Unknown merge request ID")
+			return
+		}
+
+		// * Check the current state of the source and destination branches *
+
+		// Check if the source database has been deleted or renamed
+		mr := &pageData.MRList[0]
+		if mr.MRDetails.SourceDBID != 0 {
+			pageData.SourceDBOK, mr.MRDetails.SourceFolder, mr.MRDetails.SourceDBName, err = com.CheckDBID(loggedInUser,
+				mr.MRDetails.SourceOwner, mr.MRDetails.SourceDBID)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			// Check if the source branch name is still available
+			srcBranches, err := com.GetBranches(mr.MRDetails.SourceOwner, mr.MRDetails.SourceFolder,
+				mr.MRDetails.SourceDBName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			_, pageData.SourceBranchOK = srcBranches[mr.MRDetails.SourceBranch]
+		} else {
+			mr.MRDetails.SourceOwner = "[ unavailable"
+			mr.MRDetails.SourceFolder = " "
+			mr.MRDetails.SourceDBName = "database ]"
+		}
+
+		// Check if the destination branch name is still available
+		destBranches, err := com.GetBranches(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		var destBranchHead com.BranchEntry
+		destBranchHead, pageData.DestBranchNameOK = destBranches[mr.MRDetails.DestBranch]
+		if !pageData.DestBranchNameOK {
+			pageData.StatusMessage = "Destination branch is no longer available. Merge cannot proceed."
+			pageData.StatusMessageColour = "red"
+		}
+
+		// Get the head commit ID of the destination branch
+		destCommitID := destBranchHead.Commit
+
+		// If the MR is still open then make sure the source and destination branches can still be merged
+		pageData.DestBranchUsable = true
+		if mr.Open {
+			// If we the source database (or source branch) isn't available, we can only check if the current mr list
+			// still applies to the destination branch
+			if !pageData.SourceDBOK || !pageData.SourceBranchOK {
+
+				// Get the commit ID for the commit which would be joined to the destination head
+				finalCommit := mr.MRDetails.Commits[len(mr.MRDetails.Commits)-1]
+
+				// If the parent ID of finalCommit isn't the same as the destination head commit, then the destination
+				// branch has changed and the merge cannot proceed
+				if finalCommit.Parent != destCommitID {
+					pageData.DestBranchUsable = false
+					pageData.StatusMessage = "Destination branch has changed. Merge cannot proceed."
+					pageData.StatusMessageColour = "red"
+				}
+			} else {
+				// Check if the source branch can still be applied to the destination, and also check for new/changed
+				// commits
+				ancestorID, newCommitList, err, _ := com.GetCommonAncestorCommits(mr.MRDetails.SourceOwner,
+					mr.MRDetails.SourceFolder, mr.MRDetails.SourceDBName, mr.MRDetails.SourceBranch, dbOwner, dbFolder,
+					dbName, mr.MRDetails.DestBranch)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+				if ancestorID == "" {
+					// Commits have been added to the destination branch after the MR was created.  This isn't yet
+					// a scenario we can successfully merge
+					pageData.DestBranchUsable = false
+					pageData.StatusMessage = "Destination branch has changed. Merge cannot proceed."
+					pageData.StatusMessageColour = "red"
+				} else {
+					// The source can still be applied to the destination.  Update the merge commit list, just in case
+					// the source branch commit list has changed
+					mr.MRDetails.Commits = newCommitList
+
+					// Save the updated commit list back to PostgreSQL
+					err = com.UpdateMergeRequestCommits(dbOwner, dbFolder, dbName, pageData.SelectedID,
+						mr.MRDetails.Commits)
+					if err != nil {
+						errorPage(w, r, http.StatusInternalServerError, err.Error())
+						return
+					}
+				}
+			}
+		}
+
+		// Retrieve the current licence for the destination branch
+		commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		destCommit, ok := commitList[destCommitID]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, "Destination commit ID not found in commit list.")
+			return
+		}
+		destLicenceSHA := destCommit.Tree.Entries[0].LicenceSHA
+
+		// Add the commit author's username and avatar URL to the commit list entries, and check for licence changes
+		var licenceChanges bool
+		for _, j := range mr.MRDetails.Commits {
+			var c CommitData
+			c.AuthorEmail = j.AuthorEmail
+			c.AuthorName = j.AuthorName
+			c.ID = j.ID
+			c.Message = j.Message
+			c.Timestamp = j.Timestamp
+			c.AuthorUsername, c.AuthorAvatar, err = com.GetUsernameFromEmail(j.AuthorEmail)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if c.AuthorAvatar != "" {
+				c.AuthorAvatar += "&s=18"
+			}
+
+			// Check for licence changes
+			commitLicSHA := j.Tree.Entries[0].LicenceSHA
+			if commitLicSHA != destLicenceSHA {
+				licenceChanges = true
+				lName, _, err := com.GetLicenceInfoFromSha256(mr.MRDetails.SourceOwner, commitLicSHA)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+				c.LicenceChange = fmt.Sprintf("This commit includes a licence change to '%s'", lName)
+			}
+
+			pageData.CommitList = append(pageData.CommitList, c)
+		}
+
+		// Warn the user if any of the commits would include a licence change
+		if licenceChanges {
+			pageData.LicenceWarning = "WARNING: At least one of the commits in the merge list includes a licence " +
+				"change. Proceed with caution."
+		}
+
+		// Load the comments for the requested MR
+		pageData.CommentList, err = com.DiscussionComments(dbOwner, dbFolder, dbName, pageData.SelectedID, 0)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Render the MR comments page
+		t := tmpl.Lookup("mergeRequestCommentsPage")
+		err = t.Execute(w, pageData)
+		if err != nil {
+			log.Printf("Error: %s", err)
+		}
+		return
+	}
+
+	// Render the MR list page
+	t := tmpl.Lookup("mergeRequestListPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)

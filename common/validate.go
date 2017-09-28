@@ -104,8 +104,8 @@ func checkUsername(fl valid.FieldLevel) bool {
 
 // Checks a username against the list of reserved ones.
 func ReservedUsernamesCheck(userName string) error {
-	reserved := []string{"about", "admin", "blog", "dbhub", "download", "downloadcsv", "forks", "legal", "login",
-		"logout", "mail", "news", "pref", "printer", "public", "reference", "register", "root", "star",
+	reserved := []string{"about", "admin", "blog", "dbhub", "compare", "download", "downloadcsv", "forks", "legal",
+		"login", "logout", "mail", "news", "pref", "printer", "public", "reference", "register", "root", "star",
 		"stars", "system", "table", "upload", "uploaddata", "vis"}
 	for _, word := range reserved {
 		if strings.ToLower(userName) == strings.ToLower(word) {
@@ -116,7 +116,17 @@ func ReservedUsernamesCheck(userName string) error {
 	return nil
 }
 
-// Validate the SQLite field name
+// Validate the provided branch, release, or tag name.
+func ValidateBranchName(fieldName string) error {
+	err := Validate.Var(fieldName, "branchortagname,min=1,max=32") // 32 seems a reasonable first guess
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Validate the SQLite field name.
 func ValidateFieldName(fieldName string) error {
 	err := Validate.Var(fieldName, "required,fieldname,min=1,max=63") // 63 char limit seems reasonable
 	if err != nil {
@@ -166,6 +176,16 @@ func ValidateLicence(licence string) error {
 	return nil
 }
 
+// Validate the provided markdown .
+func ValidateMarkdown(fieldName string) error {
+	err := Validate.Var(fieldName, "markdownsource,max=1024") // 1024 seems like a reasonable first guess
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Validate the provided PostgreSQL table name.
 func ValidatePGTable(table string) error {
 	// TODO: Improve this to work with all valid SQLite identifiers
@@ -174,6 +194,16 @@ func ValidatePGTable(table string) error {
 	// TODO      https://www.postgresql.org/docs/current/static/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
 	// TODO: Should we exclude SQLite internal tables too? (eg "sqlite_*" https://sqlite.org/lang_createtable.html)
 	err := Validate.Var(table, "required,pgtable,max=63")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Validate the provided discussion or merge request title.
+func ValidateDiscussionTitle(fieldName string) error {
+	err := Validate.Var(fieldName, "discussiontitle,max=120") // 120 seems a reasonable first guess.
 	if err != nil {
 		return err
 	}

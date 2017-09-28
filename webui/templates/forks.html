@@ -31,7 +31,7 @@
                     <td style="border-style: none;">&nbsp;</td>
                     <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
                         <span ng-bind-html="rowIcons(row)"></span>
-                        <a class="blackLink" href="/{{ row.Owner }}">{{ row.Owner }}</a> {{ row.Folder }}
+                        <a class="blackLink" href="/{{ row.database_owner }}">{{ row.database_owner }}</a> {{ row.database_folder }}
                         <span ng-bind-html="rowURL(row)"></span>
                     </td>
                 </tr>
@@ -56,7 +56,7 @@
         // Display the appropriate fork icons for a database row
         $scope.rowIcons = function(rowData) {
             var returnList = "";
-            rowData.IconList.forEach(function(item, index, array) {
+            rowData.icon_list.forEach(function(item, index, array) {
                 switch (item) {
                     case 0:
                         returnList += "&nbsp; "; // Space
@@ -83,16 +83,18 @@
         // Ensure private and deleted databases display appropriately
         $scope.rowURL = function(row) {
             // Simple placeholder for deleted databases
-            if (row.Deleted === true) {
+            if (row.deleted === true) {
                 return "deleted database";
             }
 
             // Create appropriate link or placeholder for public/private databases
-            if (row.Public === true) {
-                return '<a class="blackLink" href="/'+ row.Owner + row.Folder + row.DBName + '">' + row.DBName + '</a>';
-            } else if (row.Owner == "[[ .Meta.LoggedInUser ]]") {
+            if (row.public === true) {
+                return '<a class="blackLink" href="/'+ row.database_owner + row.database_folder + row.database_name +
+                    '">' + row.database_name + '</a>';
+            } else if (row.database_owner == "[[ .Meta.LoggedInUser ]]") {
                 // The logged in user should see their own private databases. Make sure it's not mistaken as public though.
-                return '<a class="blackLink" href="/'+ row.Owner + row.Folder + row.DBName + '">' + row.DBName + '</a> (private database)';
+                return '<a class="blackLink" href="/'+ row.database_owner + row.database_folder + row.database_name +
+                    '">' + row.database_name + '</a> (private database)';
             } else {
                 return "private database";
             }
