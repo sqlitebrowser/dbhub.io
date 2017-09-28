@@ -10,7 +10,7 @@
         <div id="auth" class="col-md-6">
             <div class="pull-right">
                 [[ if .Meta.LoggedInUser ]]
-                    [[ if .Meta.AvatarURL ]]<img src="[[ .Meta.AvatarURL ]]" height="18" width="18"/>[[ end ]]
+                    [[ if .Meta.AvatarURL ]]<img src="[[ .Meta.AvatarURL ]]" height="18" width="18" style="border: 1px solid #8c8c8c;"/>[[ end ]]
                     <a href="/pref" style="color: black; vertical-align: middle;">Preferences</a> | <a href="/[[ .Meta.LoggedInUser ]]" style="color: black; vertical-align: middle;">Home</a> | <a href="/logout" style="color: black; vertical-align: middle;">Log out</a>
                 [[ else ]]
                     <a href="" ng-click="showLock()" style="color: black;">Login / Register</a>

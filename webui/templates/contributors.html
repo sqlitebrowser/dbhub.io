@@ -27,7 +27,7 @@
                         <tr ng-repeat="row in Contributors" class="tableRow">
                             <td>
                                 <div style="padding-top: 4px;">
-                                    <img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="30" width="30"/>
+                                    <img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="30" width="30" style="border: 1px solid #8c8c8c;"/>
                                     <a class="blackLink" href="/{{ row.author_user_name }}" style="vertical-align: middle;">{{ row.author_name }}</a>
                                 </div>
                             </td>
