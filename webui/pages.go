@@ -477,7 +477,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	// * Determine the source and destination database branches *
 
 	// Retrieve the branch info for the source database
-	branchList, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
