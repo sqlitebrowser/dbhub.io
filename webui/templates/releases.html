@@ -41,7 +41,7 @@
                 <tbody>
                     <tr ng-repeat-start="(key, row) in Releases">
                         <td style="background-color: #FFFFFF; border: none;">
-                            <div style="text-align: center;"><button class="btn btn-success" ng-click="downloadDB(row.commit)">Download</button></div>
+                            <div style="text-align: center;"><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}" class="btn btn-success">Download</a></div>
                         </td>
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <td style="border: none; border-left: 1px solid #DDD; padding: 10px;">
@@ -149,11 +149,6 @@
                     window.location = '/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
                 }
             });
-        };
-
-        // Download a release
-        $scope.downloadDB = function(commit) {
-            window.location = "/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=" + commit;
         };
 
         // Retrieve and render markdown text

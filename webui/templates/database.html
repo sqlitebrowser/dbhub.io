@@ -165,7 +165,7 @@
                         </ul>
                     </div>
                     [[ if .Meta.LoggedInUser ]]
-                        <button class="btn btn-primary" ng-click="mergeRequest()">New Merge Request</button>
+                        <a href="/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="btn btn-primary">New Merge Request</a>
                     [[ end ]]
                 </div>
             </span>
@@ -416,18 +416,6 @@
                     $scope.updateTableArrows();
                 }
             )
-        };
-
-        // Change to the page for creating Merge Requests
-        var forkOwner = [[ .Meta.ForkOwner ]];
-        var forkDB = [[ .Meta.ForkDatabase ]];
-        var forkDeleted = [[ .Meta.ForkDeleted ]];
-        $scope.mergeRequest = function() {
-            if ((forkOwner !== "") && (forkDeleted !== false)) {
-                window.location = "/compare/[[ .Meta.ForkOwner ]]/[[ .Meta.ForkDatabase ]]";
-            } else {
-                window.location = "/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]";
-            }
         };
 
         // Refreshes the table data, moving backwards one page
