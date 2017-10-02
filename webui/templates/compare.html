@@ -60,7 +60,7 @@
         <div class="col-md-10" style="text-align: center;">
             <h2 style="text-align: center; margin-top: 0;">Create a Merge Request</h2>
             <div ng-if="statusMessage != ''" style="text-align: center; padding-bottom: 8px;">
-                <h4 style="color: red;">&nbsp;{{ statusMessage }}</h4>
+                <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
             </div>
             <table class="table table-striped table-responsive settingsTable">
                 <tr>
@@ -507,9 +507,15 @@
             }).then(function (response) {
                 // Retrieving the commit list succeeded, so update the displayed commit list
                 $scope.commitList = response.data.commit_list;
+
+                $scope.statusMessageColour = "green";
+                $scope.statusMessage = "";
             }, function failure(response) {
-                // Retrieving the commit list failed, so clear out the existing displayed list
+                // Retrieving the commit list failed, so clear out the existing displayed list and display a message
+                // about it
                 $scope.commitList = {};
+                $scope.statusMessageColour = "orange";
+                $scope.statusMessage = "The selected source and destination can't be merged.  Please choose a different source and destination.";
             });
         };
 
