@@ -170,6 +170,17 @@ type BranchEntry struct {
 	Description string `json:"description"`
 }
 
+type CommitData struct {
+	AuthorAvatar   string    `json:"author_avatar"`
+	AuthorEmail    string    `json:"author_email"`
+	AuthorName     string    `json:"author_name"`
+	AuthorUsername string    `json:"author_username"`
+	ID             string    `json:"id"`
+	LicenceChange  string    `json:"licence_change"`
+	Message        string    `json:"message"`
+	Timestamp      time.Time `json:"timestamp"`
+}
+
 type CommitEntry struct {
 	AuthorEmail    string    `json:"author_email"`
 	AuthorName     string    `json:"author_name"`

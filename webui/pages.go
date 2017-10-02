@@ -404,9 +404,9 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 
 // Render the compare page, for creating new merge requests
 func comparePage(w http.ResponseWriter, r *http.Request) {
-	// Structure to hold page data
 	var pageData struct {
 		Auth0                 com.Auth0Set
+		CommitList            []com.CommitData
 		DB                    com.SQLiteDBinfo
 		DestDBBranches        []string
 		DestDBDefaultBranch   string
@@ -426,6 +426,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	validSession := false
 	sess, err := store.Get(r, "dbhub-user")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
@@ -435,6 +436,13 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
 	}
 
 	// Retrieve the database owner & name, and branch name
@@ -477,12 +485,12 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	// * Determine the source and destination database branches *
 
 	// Retrieve the branch info for the source database
-	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	srcBranchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	for name := range branchList {
+	for name := range srcBranchList {
 		pageData.SourceDBBranches = append(pageData.SourceDBBranches, name)
 	}
 	pageData.SourceDBDefaultBranch, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
@@ -492,12 +500,12 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the branch info for the destination database
-	branchList, err = com.GetBranches(pageData.DestOwner, pageData.DestFolder, pageData.DestDBName)
+	destBranchList, err := com.GetBranches(pageData.DestOwner, pageData.DestFolder, pageData.DestDBName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	for name := range branchList {
+	for name := range destBranchList {
 		pageData.DestDBBranches = append(pageData.DestDBBranches, name)
 	}
 	pageData.DestDBDefaultBranch, err = com.GetDefaultBranchName(pageData.DestOwner, pageData.DestFolder,
@@ -545,6 +553,70 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
+	// If the initially chosen source and destinations can be directly applied, fill out the initial commit list entries
+	// for display to the user
+	ancestorID, cList, err, errType := com.GetCommonAncestorCommits(dbOwner, dbFolder, dbName,
+		pageData.SourceDBDefaultBranch, pageData.DestOwner, pageData.DestFolder, pageData.DestDBName,
+		pageData.DestDBDefaultBranch)
+	if err != nil && errType != http.StatusBadRequest {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ancestorID != "" {
+		// Retrieve the commit ID for the destination branch
+		destBranch, ok := destBranchList[pageData.DestDBDefaultBranch]
+		if !ok {
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+		destCommitID := destBranch.Commit
+
+		// Retrieve the current licence for the destination branch
+		commitList, err := com.GetCommitList(pageData.DestOwner, pageData.DestFolder, pageData.DestDBName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		destCommit, ok := commitList[destCommitID]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, "Destination commit ID not found in commit list.")
+			return
+		}
+		destLicenceSHA := destCommit.Tree.Entries[0].LicenceSHA
+
+		// Convert the commit entries into something we can display in a commit list
+		for _, j := range cList {
+			var c com.CommitData
+			c.AuthorEmail = j.AuthorEmail
+			c.AuthorName = j.AuthorName
+			c.ID = j.ID
+			c.Message = j.Message
+			c.Timestamp = j.Timestamp
+			c.AuthorUsername, c.AuthorAvatar, err = com.GetUsernameFromEmail(j.AuthorEmail)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if c.AuthorAvatar != "" {
+				c.AuthorAvatar += "&s=18"
+			}
+
+			// Check for licence changes
+			commitLicSHA := j.Tree.Entries[0].LicenceSHA
+			if commitLicSHA != destLicenceSHA {
+				lName, _, err := com.GetLicenceInfoFromSha256(dbOwner, commitLicSHA)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+				c.LicenceChange = fmt.Sprintf("This commit includes a licence change to '%s'", lName)
+			}
+			pageData.CommitList = append(pageData.CommitList, c)
 		}
 	}
 
@@ -2042,20 +2114,10 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func mergePage(w http.ResponseWriter, r *http.Request) {
-	type CommitData struct {
-		AuthorAvatar   string    `json:"author_avatar"`
-		AuthorEmail    string    `json:"author_email"`
-		AuthorName     string    `json:"author_name"`
-		AuthorUsername string    `json:"author_username"`
-		ID             string    `json:"id"`
-		LicenceChange  string    `json:"licence_change"`
-		Message        string    `json:"message"`
-		Timestamp      time.Time `json:"timestamp"`
-	}
 	var pageData struct {
 		Auth0               com.Auth0Set
 		CommentList         []com.DiscussionCommentEntry
-		CommitList          []CommitData
+		CommitList          []com.CommitData
 		DB                  com.SQLiteDBinfo
 		DestBranchNameOK    bool
 		DestBranchUsable    bool
@@ -2322,7 +2384,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		// Add the commit author's username and avatar URL to the commit list entries, and check for licence changes
 		var licenceChanges bool
 		for _, j := range mr.MRDetails.Commits {
-			var c CommitData
+			var c com.CommitData
 			c.AuthorEmail = j.AuthorEmail
 			c.AuthorName = j.AuthorName
 			c.ID = j.ID

@@ -2328,6 +2328,272 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// Returns the list of commits that are different between a source and destination database/branch
+func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+	}
+
+	// Retrieve source owner
+	o := r.PostFormValue("sourceowner")
+	srcOwner, err := url.QueryUnescape(o)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateUser(srcOwner)
+	if err != nil {
+		log.Printf("Validation failed for username: '%s'- %s", srcOwner, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve source folder
+	f := r.PostFormValue("sourcefolder")
+	srcFolder, err := url.QueryUnescape(f)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateFolder(srcFolder)
+	if err != nil {
+		log.Printf("Validation failed for folder: '%s' - %s", srcFolder, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve source database name
+	d := r.PostFormValue("sourcedbname")
+	srcDBName, err := url.QueryUnescape(d)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateDB(srcDBName)
+	if err != nil {
+		log.Printf("Validation failed for database name '%s': %s", srcDBName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve source branch name
+	a := r.PostFormValue("sourcebranch")
+	srcBranch, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateBranchName(srcBranch)
+	if err != nil {
+		log.Printf("Validation failed for branch name '%s': %s", srcBranch, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve destination owner
+	o = r.PostFormValue("destowner")
+	destOwner, err := url.QueryUnescape(o)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateUser(destOwner)
+	if err != nil {
+		log.Printf("Validation failed for username: '%s'- %s", destOwner, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve destination folder
+	f = r.PostFormValue("destfolder")
+	destFolder, err := url.QueryUnescape(f)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateFolder(destFolder)
+	if err != nil {
+		log.Printf("Validation failed for folder: '%s' - %s", destFolder, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve destination database name
+	d = r.PostFormValue("destdbname")
+	destDBName, err := url.QueryUnescape(d)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateDB(destDBName)
+	if err != nil {
+		log.Printf("Validation failed for database name '%s': %s", destDBName, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve destination branch name
+	a = r.PostFormValue("destbranch")
+	destBranch, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	err = com.ValidateBranchName(destBranch)
+	if err != nil {
+		log.Printf("Validation failed for branch name '%s': %s", destBranch, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Make sure none of the required fields is empty
+	if srcOwner == "" || srcFolder == "" || srcDBName == "" || srcBranch == "" || destOwner == "" || destFolder ==
+		"" || destDBName == "" || destBranch == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Some of the (required) supplied fields are empty")
+		return
+	}
+
+	// Check the databases exist
+	srcExists, err := com.CheckDBExists(loggedInUser, srcOwner, srcFolder, srcDBName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	destExists, err := com.CheckDBExists(loggedInUser, destOwner, destFolder, destDBName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if !srcExists || !destExists {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Invalid database.  One of the source or destination databases doesn't exist")
+		return
+	}
+
+	// Get the commit list diff
+	ancestorID, cList, err, errType := com.GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch, destOwner,
+		destFolder, destDBName, destBranch)
+	if err != nil && errType != http.StatusBadRequest {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Make sure the source branch will cleanly apply to the destination.  eg the destination branch hasn't received
+	// additional commits since the source was forked
+	if ancestorID == "" {
+		w.WriteHeader(http.StatusConflict)
+		fmt.Fprint(w, "Source branch is not a direct descendent of the destination branch.  Cannot create commit "+
+			"list diff.")
+		return
+	}
+
+	// * Retrieve the current licence for the destination branch *
+
+	// Retrieve the commit ID for the destination branch
+	destBranchList, err := com.GetBranches(destOwner, destFolder, destDBName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	b, ok := destBranchList[destBranch]
+	if !ok {
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+	}
+	destCommitID := b.Commit
+
+	// Retrieve the current licence for the destination branch, using the commit ID
+	commitList, err := com.GetCommitList(destOwner, destFolder, destDBName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	destCommit, ok := commitList[destCommitID]
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Destination commit ID not found in commit list.")
+		return
+	}
+	destLicenceSHA := destCommit.Tree.Entries[0].LicenceSHA
+
+	// Convert the commit entries into something we can display in a commit list
+	var x struct {
+		CommitList []com.CommitData `json:"commit_list"`
+	}
+	for _, j := range cList {
+		var c com.CommitData
+		c.AuthorEmail = j.AuthorEmail
+		c.AuthorName = j.AuthorName
+		c.ID = j.ID
+		c.Message = j.Message
+		c.Timestamp = j.Timestamp
+		c.AuthorUsername, c.AuthorAvatar, err = com.GetUsernameFromEmail(j.AuthorEmail)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if c.AuthorAvatar != "" {
+			c.AuthorAvatar += "&s=18"
+		}
+
+		// Check for licence changes
+		commitLicSHA := j.Tree.Entries[0].LicenceSHA
+		if commitLicSHA != destLicenceSHA {
+			lName, _, err := com.GetLicenceInfoFromSha256(srcOwner, commitLicSHA)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			c.LicenceChange = fmt.Sprintf("This commit includes a licence change to '%s'", lName)
+		}
+		x.CommitList = append(x.CommitList, c)
+	}
+
+	// Return the commit list
+	y, err := json.MarshalIndent(x, "", " ")
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, string(y))
+}
+
 // Sends the X509 DB4S certificate to the user
 func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
@@ -2836,6 +3102,7 @@ func main() {
 	http.HandleFunc("/x/deletedatabase/", logReq(deleteDatabaseHandler))
 	http.HandleFunc("/x/deleterelease/", logReq(deleteReleaseHandler))
 	http.HandleFunc("/x/deletetag/", logReq(deleteTagHandler))
+	http.HandleFunc("/x/diffcommitlist/", logReq(diffCommitListHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
 	http.HandleFunc("/x/downloadcert", logReq(downloadCertHandler))
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))

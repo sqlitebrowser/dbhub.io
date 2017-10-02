@@ -181,13 +181,46 @@
                 </tr>
             </table>
         </div>
-        <div class="col-md-1">&nbsp;</div>
+        <div class="col-md-1" style="padding: 0;">&nbsp;</div>
     </div>
     <div class="row">
-        <div class="col-md-12" style="text-align: center; padding-bottom: 20px;">
+        <div class="col-md-12" style="text-align: center; padding-top: 10px; padding-bottom: 15px;">
             <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelCreate()">
             <input type="submit" class="btn btn-primary" value="Create" ng-click="createMR()">
         </div>
+    </div>
+    <div class="row">
+        <div class="col-md-1" style="padding: 0;">&nbsp;</div>
+        <div class="col-md-10" style="text-align: center; padding-bottom: 20px;">
+            <h4 style="margin: 0;">Changes between the source and destination</h4>
+            <table class="table table-responsive settingsTable" style="margin: 5px 0 0 0;">
+                <thead>
+                    <tr>
+                        <th style="min-width: 50px; width: 200px; max-width: 200px;">Author</th>
+                        <th style="min-width: 50px; width: 100px; max-width: 100px;">Commit ID</th>
+                        <th style="min-width: 50%; width: 50%;">Commit message</th>
+                        <th style="min-width: 50px; width: 150px; max-width: 150px;">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-if="commitList != ''" ng-repeat="row in commitList">
+                        <td style="border-left: none;">
+                            <a href="/{{ row.author_username }}" class="blackLink" style="vertical-align: middle;"><img ng-if="row.author_avatar != ''" ng-attr-src="{{ decodeAmp(row.author_avatar) }}" height="18" width="18" style="border: 1px solid #8c8c8c;"/> {{ row.author_name }}</a>
+                        </td>
+                        <td>
+                            <span ng-if="Disc.open !== true" ng-bind="row.id | limitTo: 8" style="vertical-align: middle;"></span>
+                            <a ng-if="Disc.open === true" href="{{ '/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?branch=' + Disc.mr_details.source_branch + '&commit=' + row.id }}"><span ng-bind="row.id | limitTo: 8" class="blackLink" style="vertical-align: middle;"></span></a>
+                        </td>
+                        <td>
+                            <span ng-bind="row.message" style="vertical-align: middle;"></span><span ng-if="row.message === ''" style="color: grey; vertical-align: middle;">This commit has no commit message</span>
+                            <div ng-if="row.licence_change !== ''" style="color: red; border: 1px solid red; padding: 5px; margin-top: 8px; text-align: center;" ng-bind="row.licence_change"></div>
+                        </td>
+                        <td><span title="{{ row.timestamp | date : 'medium' }}" style="vertical-align: middle;">{{ getTimePeriodTxt(row.timestamp, true) }}</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-1" style="padding: 0;">&nbsp;</div>
     </div>
     <!-- TODO: Some kind of preview would probably be useful -->
 </div>
@@ -211,9 +244,10 @@
             [[ else ]]
                 Loggedin: "false",
             [[ end ]]
-    };
+        };
 
-        // Fork entries
+        // Commit list and fork entries
+        $scope.commitList = [[ .CommitList ]];
         $scope.forkList = [[ .Forks ]];
 
         // Variables used when sending the creation request
@@ -241,6 +275,9 @@
         // Update name of the destination branch in the drop down selector
         $scope.changeDestBranch = function(newBranch) {
             $scope.meta.DestBranch = newBranch;
+
+            // Update displayed commit list
+            $scope.updateCommitList();
         };
 
         // Updates the destination database name and branch list in the drop down selectors
@@ -275,6 +312,9 @@
                 // Reset any displayed error message
                 $scope.statusMessage = "";
                 $scope.statusMessageColour = "green";
+
+                // Update displayed commit list
+                $scope.updateCommitList();
             }, function failure(response) {
                 // Retrieving the branch names failed, so display an error message
                 $scope.statusMessageColour = "red";
@@ -285,6 +325,9 @@
         // Update name of the source branch in the drop down selector
         $scope.changeSourceBranch = function(newBranch) {
             $scope.meta.SourceBranch = newBranch;
+
+            // Update displayed commit list
+            $scope.updateCommitList();
         };
 
         // Updates the source database name and branch list in the drop down selectors
@@ -317,6 +360,9 @@
                 // Reset any displayed error message
                 $scope.statusMessage = "";
                 $scope.statusMessageColour = "green";
+
+                // Update displayed commit list
+                $scope.updateCommitList();
             }, function failure(response) {
                 // Retrieving the branch names failed, so display an error message
                 $scope.statusMessageColour = "red";
@@ -326,6 +372,13 @@
 
         // Sends the merge request creation details, and if successful then bounces to the newly created MR for it
         $scope.createMR = function() {
+            if ($scope.meta.Loggedin != "true") {
+                // User needs to be logged in
+                lock.show();
+                return;
+            }
+
+            // Send the MR creation request
             $http({
                 method: "POST",
                 url: "/x/createmerge/",
@@ -433,6 +486,31 @@
             }
 
             // TODO: Write the rest of the watch toggling code
+        };
+
+        // Updates the commit list showing the difference between source and destination databases
+        $scope.updateCommitList = function() {
+            $http({
+                method: "POST",
+                url: "/x/diffcommitlist/",
+                data: $httpParamSerializerJQLike({
+                        "destbranch": encodeURIComponent($scope.meta.DestBranch),
+                        "destdbname": encodeURIComponent($scope.dest.name),
+                        "destfolder": encodeURIComponent($scope.dest.folder),
+                        "destowner": encodeURIComponent($scope.dest.owner),
+                        "sourcebranch": encodeURIComponent($scope.meta.SourceBranch),
+                        "sourcedbname": encodeURIComponent($scope.source.name),
+                        "sourcefolder": encodeURIComponent($scope.source.folder),
+                        "sourceowner": encodeURIComponent($scope.source.owner)
+                    }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+                // Retrieving the commit list succeeded, so update the displayed commit list
+                $scope.commitList = response.data.commit_list;
+            }, function failure(response) {
+                // Retrieving the commit list failed, so clear out the existing displayed list
+                $scope.commitList = {};
+            });
         };
 
         // Update star button text to say "Stars" or "Unstar"
