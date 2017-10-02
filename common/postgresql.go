@@ -2962,7 +2962,7 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 			AND user_id = (
 				SELECT user_id
 				FROM users
-				WHERE WHERE lower(user_name) = lower($2)
+				WHERE lower(user_name) = lower($2)
 			)`
 		commandTag, err := pdb.Exec(deleteQuery, dbID, loggedInUser)
 		if err != nil {
