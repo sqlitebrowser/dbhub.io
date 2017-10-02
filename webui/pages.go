@@ -415,6 +415,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		DestOwner             string
 		Forks                 []com.ForkEntry
 		Meta                  com.MetaInfo
+		MyStar                bool
 		SourceDBBranches      []string
 		SourceDBDefaultBranch string
 		SourceDBName          string
@@ -506,6 +507,27 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get latest star and fork count
+	_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
 	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
 	if err != nil {
@@ -525,6 +547,17 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
 		}
 	}
+
+	// Retrieve the "forked from" information
+	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+		return
+	}
+	pageData.Meta.ForkOwner = frkOwn
+	pageData.Meta.ForkFolder = frkFol
+	pageData.Meta.ForkDatabase = frkDB
+	pageData.Meta.ForkDeleted = frkDel
 
 	// Fill out the metadata
 	pageData.Meta.Database = dbName
@@ -1388,6 +1421,17 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 					"logged in user '%s'", j, dbOwner, dbFolder, dbName, loggedInUser)
 			}
 		}
+
+		// Retrieve the "forked from" information
+		frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+			return
+		}
+		pageData.Meta.ForkOwner = frkOwn
+		pageData.Meta.ForkFolder = frkFol
+		pageData.Meta.ForkDatabase = frkDB
+		pageData.Meta.ForkDeleted = frkDel
 
 		// Get latest star and fork count
 		_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)

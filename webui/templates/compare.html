@@ -1,10 +1,60 @@
 [[ define "comparePage" ]]
 <!doctype html>
 <html ng-app="DBHub" ng-controller="compareView">
-[[ template "head" . ]]
+[[ template "headawesome" . ]]
 <body>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 id="viewdb" style="margin-top: 10px;">
+                <div class="pull-left">
+                    <div>
+                        <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
+                        <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                    </div>
+                    [[ if .Meta.ForkOwner ]]
+                    <div style="font-size: small">
+                        forked from <a href="/[[ .Meta.ForkOwner ]]">[[ .Meta.ForkOwner ]]</a> /
+                        [[ if not .Meta.ForkDeleted ]]
+                        <a href="/merge/[[ .Meta.ForkOwner ]]/[[ .Meta.ForkDatabase ]]">[[ .Meta.ForkDatabase ]]</a>
+                        [[ else ]]
+                        deleted database
+                        [[ end ]]
+                    </div>
+                    [[ end ]]
+                </div>
+                <div class="pull-right">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-disabled="true" ng-click="toggleWatch()"><i class="fa fa-eye"></i> Watch</button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Watchers"></button>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default" ng-bind-html="starsText" ng-click="toggleStars()"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Stars" ng-click="starsPage()"></button>
+                    </div>
+                    <div class="btn-group">
+                        [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
+                        <button type="button" class="btn btn-default" ng-click="forkDB()"><i class="fa fa-sitemap"></i> Fork</button>
+                        [[ else ]]
+                        <button type="button" class="btn btn-default" ng-disabled="true"><i class="fa fa-sitemap"></i> Fork</button>
+                        [[ end ]]
+                        <button type="button" class="btn btn-default" ng-bind="meta.Forks" ng-click="forksPage()"></button>
+                    </div>
+                </div>
+            </h2>
+        </div>
+    </div>
+    <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
+        <div class="col-md-12">
+            <label id="viewdata" style="font-weight: 600; font-family: 'arial black';"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data"><i class="fa fa-database"></i> Data</a></label> &nbsp; &nbsp; &nbsp;
+            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
+            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
+            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+            <label id="settings" style="font-weight: 600; font-family: 'arial black';"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><i class="fa fa-cog"></i> Settings</a></label>
+            [[ end ]]
+        </div>
+    </div>
     <div class="row">
         <div class="col-md-1">
             &nbsp;
@@ -34,7 +84,7 @@
                         <span class="caret"></span>
                     </button>
                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li ng-repeat="row in meta.Forks" role="menuitem" ng-click="changeSourceDB(row)">
+                        <li ng-repeat="row in forkList" role="menuitem" ng-click="changeSourceDB(row)">
                             <a href="">{{ row.database_owner + row.database_folder + row.database_name }}</a>
                         </li>
                     </ul>
@@ -69,7 +119,7 @@
                         <span class="caret"></span>
                     </button>
                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li ng-repeat="row in meta.Forks" role="menuitem" ng-click="changeDestDB(row)">
+                        <li ng-repeat="row in forkList" role="menuitem" ng-click="changeDestDB(row)">
                             <a href="">{{ row.database_owner + row.database_folder + row.database_name }}</a>
                         </li>
                     </ul>
@@ -133,10 +183,23 @@
         $scope.meta = {
             DestBranch:     [[ .DestDBDefaultBranch ]],
             DestBranches:   [[ .DestDBBranches ]],
-            Forks:          [[ .Forks ]],
+            Discussions:    "[[ .DB.Info.Discussions ]]",
+            Forks:          "[[ .DB.Info.Forks ]]",
+            MRs:            "[[ .DB.Info.MRs ]]",
+            MyStar:         "[[  .MyStar ]]",
             SourceBranch:   [[ .SourceDBDefaultBranch ]],
-            SourceBranches: [[ .SourceDBBranches ]]
-        };
+            SourceBranches: [[ .SourceDBBranches ]],
+            Stars:          "[[ .DB.Info.Stars ]]",
+            Watchers:       "[[ .DB.Info.Watchers ]]",
+            [[ if .Meta.LoggedInUser ]]
+                Loggedin: "true",
+            [[ else ]]
+                Loggedin: "false",
+            [[ end ]]
+    };
+
+        // Fork entries
+        $scope.forkList = [[ .Forks ]];
 
         // Variables used when sending the creation request
         $scope.mr = {"desc": "", "title": ""};
@@ -282,6 +345,27 @@
             return decodeURIComponent(str);
         };
 
+        // Fork the database
+        $scope.forkDB = function() {
+            // Check if the user is logged in
+            if ($scope.meta.Loggedin != "true") {
+                // User needs to be logged in
+                lock.show();
+                return;
+            }
+
+            // Only proceed if the database being forked doesn't already belong to the user
+            if ("[[ .Meta.LoggedInUser ]]" != "[[ .Meta.Owner ]]") {
+                // Call the fork database code, which should bounce us to the forked database
+                window.location = "/x/forkdb/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]";
+            }
+        };
+
+        // Sends the user to the forks page for the database
+        $scope.forksPage = function() {
+            window.location = "/forks/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+        };
+
         // Get rendered markdown from the server, for display in the description preview
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
@@ -293,6 +377,59 @@
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) { $scope.markDownPreview = response.data; });
         };
+
+        // Sends the user to the stars page for the database
+        $scope.starsPage = function() {
+            window.location = "/stars/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+        };
+
+        // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
+        $scope.toggleStars = function() {
+            if ($scope.meta.Loggedin != "true") {
+                // User needs to be logged in
+                lock.show();
+            } else {
+                $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
+                    .then(function (response) {
+                        var tempval = response.data;
+                        if (tempval != "-1") {
+                            // Update star button text
+                            if ($scope.meta.MyStar != "true") {
+                                $scope.meta.MyStar = "true";
+                            } else {
+                                $scope.meta.MyStar = "false";
+                            }
+                            $scope.updateStarsText();
+
+                            // Update displayed star count
+                            $scope.meta.Stars = tempval;
+                        }
+                    })
+            }
+        };
+
+        // Turns on watching for a database
+        $scope.toggleWatch = function() {
+            // Check if the user is logged in
+            if ($scope.meta.Loggedin != "true") {
+                // User needs to be logged in
+                lock.show();
+                return;
+            }
+
+            // TODO: Write the rest of the watch toggling code
+        };
+
+        // Update star button text to say "Stars" or "Unstar"
+        $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
+        $scope.updateStarsText = function() {
+            if ($scope.meta.MyStar != "true") {
+                $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
+            } else {
+                $scope.starsText = "<i class=\"fa fa-star\"></i> Unstar";
+            }
+        };
+        $scope.updateStarsText();
 
         // Auth0 popup
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
