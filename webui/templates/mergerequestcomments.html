@@ -469,6 +469,22 @@
             $scope.editDisc = !$scope.editDisc;
         };
 
+        // Fork the database
+        $scope.forkDB = function() {
+            // Check if the user is logged in
+            if ($scope.meta.Loggedin != "true") {
+                // User needs to be logged in
+                lock.show();
+                return;
+            }
+
+            // Only proceed if the database being forked doesn't already belong to the user
+            if ("[[ .Meta.LoggedInUser ]]" != "[[ .Meta.Owner ]]") {
+                // Call the fork database code, which should bounce us to the forked database
+                window.location = "/x/forkdb/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]";
+            }
+        };
+
         // Sends the user to the forks page for the database
         $scope.forksPage = function() {
             window.location = "/forks/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
@@ -597,6 +613,18 @@
                         }
                     })
             }
+        };
+
+        // Turns on watching for a database
+        $scope.toggleWatch = function() {
+            // Check if the user is logged in
+            if ($scope.meta.Loggedin != "true") {
+                // User needs to be logged in
+                lock.show();
+                return;
+            }
+
+            // TODO: Write the rest of the watch toggling code
         };
 
         // Update the close button label as appropriate for text area content
