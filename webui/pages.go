@@ -422,7 +422,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		SourceFolder          string
 		SourceOwner           string
 	}
-	pageData.Meta.Title = "Create new Merge Request"
+	pageData.Meta.Title = "Create a Merge Request"
 
 	// Retrieve session data (if any)
 	var loggedInUser string
