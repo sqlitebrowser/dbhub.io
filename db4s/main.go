@@ -1019,6 +1019,9 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 			tempRow.URL = fmt.Sprintf("%s/%s%s/%s?commit=%v", server, user, j.Folder,
 				url.PathEscape(j.Database), j.CommitID)
 		}
+		if j.DefaultBranch != "" {
+			tempRow.URL += fmt.Sprintf("&branch=%s", j.DefaultBranch)
+		}
 		tempRow.Size = j.Size
 		tempRow.SHA256 = j.SHA256
 		tempRow.LastModified = j.LastModified.Format(time.RFC822)
@@ -1029,13 +1032,15 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 
 	// Convert the list to JSON, ready to send
 	if rowCount > 0 {
-		// Use json.MarshalIndent() for nicer looking output
-		dbList, err = json.MarshalIndent(rowList, "", "  ")
-		if err != nil {
-			log.Printf("%s: Error when JSON marshalling the default list: %v\n", pageName, err)
-			return nil, errors.Wrap(err,
-				fmt.Sprintf("%s: Error when JSON marshalling the default list", pageName))
+		// Note that we can't use json.MarshalIndent() here, as that escapes '&' characters which stuffs up the url field
+		var msg bytes.Buffer
+		enc := json.NewEncoder(&msg)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(rowList); err != nil {
+			return nil, err
 		}
+		dbList = msg.Bytes()
 	} else {
 		// Return an empty set indicator, instead of "null"
 		dbList = []byte{'{', '}'}

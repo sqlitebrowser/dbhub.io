@@ -3309,7 +3309,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
 				db.watchers, db.stars, db.discussions, db.merge_requests, db.branches, db.release_count, db.tags,
 				db.contributors, db.one_line_description, default_commits.id,
-				db.commit_list->default_commits.id->'tree'->'entries'->0, db.source_url
+				db.commit_list->default_commits.id->'tree'->'entries'->0, db.source_url, db.default_branch
 			FROM sqlite_databases AS db, default_commits
 			WHERE db.db_id = default_commits.db_id
 				AND db.is_deleted = false`
@@ -3338,23 +3338,23 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var desc, source pgx.NullString
+		var defBranch, desc, source pgx.NullString
 		var oneRow DBInfo
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified, &oneRow.Public,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Branches,
-			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.DBEntry, &source)
+			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.DBEntry, &source,
+			&defBranch)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err
 		}
-		if !desc.Valid {
-			oneRow.OneLineDesc = ""
-		} else {
+		if defBranch.Valid {
+			oneRow.DefaultBranch = defBranch.String
+		}
+		if desc.Valid {
 			oneRow.OneLineDesc = desc.String
 		}
-		if !source.Valid {
-			oneRow.SourceURL = ""
-		} else {
+		if source.Valid {
 			oneRow.SourceURL = source.String
 		}
 		oneRow.Size = oneRow.DBEntry.Size
