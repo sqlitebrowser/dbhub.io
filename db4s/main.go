@@ -294,38 +294,56 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		return
 	}
 
-	// If a branch name was provided use it, else default to "master"
-	branchName := "master"
+	// Get the branch heads list for the database
+	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// If a branch name was provided use it, else use the default branch for the database
+	var branchName string
 	bn, err := com.GetFormBranch(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if bn != "" {
+		_, ok := branchList[bn]
+		if !ok {
+			http.Error(w, "Unknown branch name", http.StatusNotFound)
+			return
+		}
 		branchName = bn
-	}
-
-	// If no commit ID was given, but a branch name was, we use the latest commit in the branch
-	if commit == "" && branchName != "" {
-		branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	} else {
+		// No branch name was given, so retrieve the default for the database
+		branchName, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+
+	// If no commit ID was given, we use the latest commit in the branch
+	if commit == "" {
 		branch, ok := branchList[branchName]
 		if !ok {
 			http.Error(w, "Unknown branch name", http.StatusNotFound)
+			return
 		}
 		commit = branch.Commit
 	}
 
-	// If neither a commit ID nor branch was given, we use the commit ID of the latest database from the default branch
-	if commit == "" && branchName == "" {
-		commit, err = com.DefaultCommit(dbOwner, dbFolder, dbName)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	// Check that the commit is known to the database
+	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, ok := commitList[commit]
+	if !ok {
+		http.Error(w, "Commit not found", http.StatusNotFound)
+		return
 	}
 
 	// A specific database was requested, so send it to the user
