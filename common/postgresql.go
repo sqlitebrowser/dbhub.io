@@ -160,7 +160,7 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 		WHERE database_stars.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE lower(user_name) = lower($1)
+				WHERE lower(user_name) = lower($4)
 			)
 			AND database_stars.db_id = (
 					SELECT db_id
@@ -168,13 +168,13 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 					WHERE user_id = (
 							SELECT user_id
 							FROM users
-							WHERE lower(user_name) = lower($2)
+							WHERE lower(user_name) = lower($1)
 						)
-						AND folder = $3
-						AND db_name = $4
+						AND folder = $2
+						AND db_name = $3
 						AND is_deleted = false)`
 	var starCount int
-	err := pdb.QueryRow(dbQuery, loggedInUser, dbOwner, dbFolder, dbName).Scan(&starCount)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser).Scan(&starCount)
 	if err != nil {
 		log.Printf("Error looking up star count for database. User: '%s' DB: '%s/%s'. Error: %v\n",
 			loggedInUser, dbOwner, dbName, err)
@@ -186,6 +186,43 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 	}
 
 	// Database HAS been starred by the user
+	return true, nil
+}
+
+// Check if a database is being watched by a given user.  The boolean return value is only valid when err is nil.
+func CheckDBWatched(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
+	dbQuery := `
+		SELECT count(db_id)
+		FROM watchers
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($4)
+			)
+			AND db_id = (
+					SELECT db_id
+					FROM sqlite_databases
+					WHERE user_id = (
+							SELECT user_id
+							FROM users
+							WHERE lower(user_name) = lower($1)
+						)
+						AND folder = $2
+						AND db_name = $3
+						AND is_deleted = false)`
+	var watchCount int
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser).Scan(&watchCount)
+	if err != nil {
+		log.Printf("Error looking up watchers count for database. User: '%s' DB: '%s%s%s'. Error: %v\n",
+			loggedInUser, dbOwner, dbFolder, dbName, err)
+		return true, err
+	}
+	if watchCount == 0 {
+		// Database isn't being watched by the user
+		return false, nil
+	}
+
+	// Database IS being watched by the user
 	return true, nil
 }
 
@@ -494,6 +531,29 @@ func DBStars(dbOwner string, dbFolder string, dbName string) (starCount int, err
 		return -1, err
 	}
 	return starCount, nil
+}
+
+// Returns the watchers count for a given database.
+func DBWatchers(dbOwner string, dbFolder string, dbName string) (watcherCount int, err error) {
+	// Retrieve the updated watchers count
+	dbQuery := `
+		SELECT watchers
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)
+			AND folder = $2
+			AND db_name = $3
+			AND is_deleted = false`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&watcherCount)
+	if err != nil {
+		log.Printf("Error looking up watcher count for database '%s%s%s'. Error: %v\n", dbOwner, dbFolder,
+			dbName, err)
+		return -1, err
+	}
+	return watcherCount, nil
 }
 
 // Retrieve the default commit ID for a specific database
@@ -2995,6 +3055,112 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 	return nil
 }
 
+// Toggle on or off the watching of a database by a user.
+func ToggleDBWatch(loggedInUser string, dbOwner string, dbFolder string, dbName string) error {
+	// Check if the database is already being watched
+	watched, err := CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		return err
+	}
+
+	// Add or remove the user from the watchers list
+	if !watched {
+		// Watch the database
+		insertQuery := `
+			WITH u AS (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($4)
+			), d AS (
+				SELECT db_id
+				FROM sqlite_databases
+				WHERE user_id = (
+						SELECT user_id
+						FROM users
+						WHERE lower(user_name) = lower($1)
+					)
+					AND folder = $2
+					AND db_name = $3
+					AND is_deleted = false
+			)
+			INSERT INTO watchers (db_id, user_id)
+			SELECT d.db_id, u.user_id
+			FROM d, u`
+		commandTag, err := pdb.Exec(insertQuery, dbOwner, dbFolder, dbName, loggedInUser)
+		if err != nil {
+			log.Printf("Adding '%s' to watchers list for database '%s%s%s' failed: Error '%v'\n", loggedInUser,
+				dbOwner, dbFolder, dbName, err)
+			return err
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf("Wrong # of rows affected (%v) when adding '%s' to watchers list for database '%s%s%s'",
+				numRows, loggedInUser, dbOwner, dbFolder, dbName)
+		}
+	} else {
+		// Unwatch the database
+		deleteQuery := `
+		DELETE FROM watchers
+		WHERE db_id = (
+				SELECT db_id
+				FROM sqlite_databases
+				WHERE user_id = (
+						SELECT user_id
+						FROM users
+						WHERE lower(user_name) = lower($1)
+					)
+					AND folder = $2
+					AND db_name = $3
+					AND is_deleted = false
+			)
+			AND user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($4)
+			)`
+		commandTag, err := pdb.Exec(deleteQuery, dbOwner, dbFolder, dbName, loggedInUser)
+		if err != nil {
+			log.Printf("Removing '%s' from watchers list for database '%s%s%s' failed: Error '%v'\n",
+				loggedInUser, dbOwner, dbFolder, dbName, err)
+			return err
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf("Wrong # of rows affected (%v) when removing '%s' from watchers list for database '%s%s%s'",
+				numRows, loggedInUser, dbOwner, dbFolder, dbName)
+		}
+	}
+
+	// Refresh the main database table with the updated watchers count
+	updateQuery := `
+		WITH d AS (
+				SELECT db_id
+				FROM sqlite_databases
+				WHERE user_id = (
+						SELECT user_id
+						FROM users
+						WHERE lower(user_name) = lower($1)
+					)
+					AND folder = $2
+					AND db_name = $3
+					AND is_deleted = false
+		)
+		UPDATE sqlite_databases
+		SET watchers = (
+			SELECT count(db_id)
+			FROM watchers
+			WHERE db_id = (SELECT db_id FROM d)
+		) WHERE db_id = (SELECT db_id FROM d)`
+	commandTag, err := pdb.Exec(updateQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Updating watchers count for '%s%s%s' failed: %v", dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong # of rows affected (%v) when updating watchers count for '%s%s%s'", numRows, dbOwner,
+			dbFolder, dbName)
+	}
+	return nil
+}
+
 // Updates the Avatar URL for a user.
 func UpdateAvatarURL(userName string, avatarURL string) error {
 	dbQuery := `
@@ -3438,7 +3604,7 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 			WHERE st.user_id = u.user_id
 		),
 		db_users AS (
-			SELECT db.user_id, db.db_id, db.folder, db.db_name, stars.date_starred
+			SELECT db.user_id, db.folder, db.db_name, stars.date_starred
 			FROM sqlite_databases AS db, stars
 			WHERE db.db_id = stars.db_id
 		)
@@ -3486,7 +3652,8 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 		)
 		SELECT users.user_name, users.display_name, star_users.date_starred
 		FROM users, star_users
-		WHERE users.user_id = star_users.user_id`
+		WHERE users.user_id = star_users.user_id
+		ORDER BY star_users.date_starred DESC`
 	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
@@ -3510,6 +3677,96 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 		}
 		list = append(list, oneRow)
 	}
+	return list, nil
+}
+
+// Returns the list of users watching a database.
+func UsersWatchingDB(dbOwner string, dbFolder string, dbName string) (list []DBEntry, err error) {
+	dbQuery := `
+		WITH lst AS (
+			SELECT user_id, date_watched
+			FROM watchers
+			WHERE db_id = (
+				SELECT db_id
+				FROM sqlite_databases
+				WHERE user_id = (
+						SELECT user_id
+						FROM users
+						WHERE lower(user_name) = lower($1)
+					)
+					AND folder = $2
+					AND db_name = $3
+					AND is_deleted = false
+				)
+		)
+		SELECT users.user_name, users.display_name, lst.date_watched
+		FROM users, lst
+		WHERE users.user_id = lst.user_id
+		ORDER BY lst.date_watched DESC`
+	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var oneRow DBEntry
+		var dn pgx.NullString
+		err = rows.Scan(&oneRow.Owner, &dn, &oneRow.DateEntry)
+		if err != nil {
+			log.Printf("Error retrieving list of watchers for %s%s%s: %v\n", dbOwner, dbFolder, dbName, err)
+			return nil, err
+		}
+
+		// If the user hasn't filled out their display name, use their username instead
+		if dn.Valid {
+			oneRow.OwnerDisplayName = dn.String
+		} else {
+			oneRow.OwnerDisplayName = oneRow.Owner
+		}
+		list = append(list, oneRow)
+	}
+	return list, nil
+}
+
+// Returns the list of databases watched by a user.
+func UserWatchingDBs(userName string) (list []DBEntry, err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		),
+		watching AS (
+			SELECT w.db_id, w.date_watched
+			FROM watchers AS w, u
+			WHERE w.user_id = u.user_id
+		),
+		db_users AS (
+			SELECT db.user_id, db.folder, db.db_name, watching.date_watched
+			FROM sqlite_databases AS db, watching
+			WHERE db.db_id = watching.db_id
+		)
+		SELECT users.user_name, db_users.folder, db_users.db_name, db_users.date_watched
+		FROM users, db_users
+		WHERE users.user_id = db_users.user_id
+		ORDER BY date_watched DESC`
+	rows, err := pdb.Query(dbQuery, userName)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var oneRow DBEntry
+		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.DateEntry)
+		if err != nil {
+			log.Printf("Error retrieving database watch list for user: %v\n", err)
+			return nil, err
+		}
+		list = append(list, oneRow)
+	}
+
 	return list, nil
 }
 

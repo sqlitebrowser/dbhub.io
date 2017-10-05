@@ -344,6 +344,17 @@ ALTER SEQUENCE users_user_id_seq OWNED BY users.user_id;
 
 
 --
+-- Name: watchers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE watchers (
+    db_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    date_watched timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: database_downloads dl_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -494,6 +505,14 @@ ALTER TABLE ONLY users
 
 ALTER TABLE ONLY users
     ADD CONSTRAINT users_user_name_key UNIQUE (user_name);
+
+
+--
+-- Name: watchers watchers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY watchers
+    ADD CONSTRAINT watchers_pkey PRIMARY KEY (db_id, user_id);
 
 
 --
@@ -697,6 +716,22 @@ ALTER TABLE ONLY discussions
 
 ALTER TABLE ONLY sqlite_databases
     ADD CONSTRAINT sqlite_databases_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: watchers watchers_db_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY watchers
+    ADD CONSTRAINT watchers_db_id_fkey FOREIGN KEY (db_id) REFERENCES sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: watchers watchers_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY watchers
+    ADD CONSTRAINT watchers_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

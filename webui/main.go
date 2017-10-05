@@ -3088,6 +3088,7 @@ func main() {
 	http.HandleFunc("/stars/", logReq(starsPage))
 	http.HandleFunc("/tags/", logReq(tagsPage))
 	http.HandleFunc("/upload/", logReq(uploadPage))
+	http.HandleFunc("/watchers/", logReq(watchersPage))
 	http.HandleFunc("/x/branchnames", logReq(branchNamesHandler))
 	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
 	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
@@ -3121,6 +3122,7 @@ func main() {
 	http.HandleFunc("/x/updaterelease/", logReq(updateReleaseHandler))
 	http.HandleFunc("/x/updatetag/", logReq(updateTagHandler))
 	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
+	http.HandleFunc("/x/watch/", logReq(watchToggleHandler))
 
 	// CSS
 	http.HandleFunc("/css/bootstrap-3.3.7.min.css", logReq(func(w http.ResponseWriter, r *http.Request) {
@@ -5261,4 +5263,66 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Database upload succeeded.  Bounce the user to the page for their new database
 	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, "/", dbName), http.StatusSeeOther)
+}
+
+// Handles JSON requests from the front end to toggle watching of a database.
+func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
+	// Extract the user and database name
+	// TODO: Add folder support
+	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/watch/" at the start of the URL
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbFolder := "/"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		// No logged in username, so nothing to update
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Toggle on or off the watching of a database by a user
+	err = com.ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Invalidate the old memcached entry for the database
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		// Something went wrong when invalidating memcached entries for the database
+		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Return the updated watchers count
+	newStarCount, err := com.DBWatchers(dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, newStarCount)
+	return
 }

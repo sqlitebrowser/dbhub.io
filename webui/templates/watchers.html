@@ -1,0 +1,54 @@
+[[ define "watchersPage" ]]
+<!doctype html>
+<html ng-app="DBHub" ng-controller="watchersView">
+[[ template "head" . ]]
+<body>
+[[ template "header" . ]]
+<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row">
+        <div class="col-md-2">
+            &nbsp;
+        </div>
+        <div class="col-md-8">
+            <h2 style="text-align: center;">
+                People watching
+                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
+                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+            </h2>
+            <table class="table table-bordered table-striped table-responsive">
+                <tr ng-repeat="row in watchers.Watchers">
+                    <td>
+                        <h4>• <a class="blackLink" href="/{{ row.Owner }}">{{ row.display_name}}</a></h4>
+                        Started watching <span title="{{ row.DateEntry | date : 'medium' }}">{{ getTimePeriodTxt(row.DateEntry, true) }}</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="col-md-2">
+            &nbsp;
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+        app.controller('watchersView', function($scope) {
+            $scope.watchers = { Watchers: [[ .Watchers ]] }
+
+            // Returns a nicely presented "time elapsed" string
+            $scope.getTimePeriodTxt = function(date1, includeOn) {
+                return getTimePeriod(date1, includeOn)
+            };
+
+            var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+                redirectUrl: "[[ .Auth0.CallbackURL]]"
+            }});
+
+            $scope.showLock = function() {
+                lock.show();
+            };
+        });
+</script>
+</body>
+</html>
+[[ end ]]

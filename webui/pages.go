@@ -1162,11 +1162,12 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageName := "Render database page"
 
 	var pageData struct {
-		Auth0  com.Auth0Set
-		Data   com.SQLiteRecordSet
-		DB     com.SQLiteDBinfo
-		Meta   com.MetaInfo
-		MyStar bool
+		Auth0   com.Auth0Set
+		Data    com.SQLiteRecordSet
+		DB      com.SQLiteDBinfo
+		Meta    com.MetaInfo
+		MyStar  bool
+		MyWatch bool
 	}
 
 	// Retrieve session data (if any)
@@ -1390,7 +1391,14 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// Check if the database was starred by the logged in user
 	myStar, err := com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database star status")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	myWatch, err := com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -1697,8 +1705,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
-	// Update database star status for the logged in user
+	// Update database star and watch status for the logged in user
 	pageData.MyStar = myStar
+	pageData.MyWatch = myWatch
 
 	// Render the full description as markdown
 	pageData.DB.Info.FullDesc = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
@@ -2510,6 +2519,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		PrivateDBs []com.DBInfo
 		PublicDBs  []com.DBInfo
 		Stars      []com.DBEntry
+		Watching   []com.DBEntry
 	}
 	pageData.Meta.Server = com.Conf.Web.ServerName
 	pageData.Meta.LoggedInUser = userName
@@ -2543,6 +2553,13 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 
 	// Retrieve the list of starred databases for the user
 	pageData.Stars, err = com.UserStarredDBs(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+
+	// Retrieve the list of databases being watched by the user
+	pageData.Watching, err = com.UserWatchingDBs(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -3368,6 +3385,89 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 
 	// Render the page
 	t := tmpl.Lookup("userPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+// Present the watchers page to the user.
+func watchersPage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		Auth0    com.Auth0Set
+		Meta     com.MetaInfo
+		Watchers []com.DBEntry
+	}
+	pageData.Meta.Title = "Watchers"
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+	}
+
+	// Retrieve owner and database name
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/watchers/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	pageData.Meta.Database = dbName
+
+	// Check if the database exists
+	// TODO: Add folder support
+	dbFolder := "/"
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, "That database doesn't seem to exist")
+		return
+	}
+
+	// Retrieve list of users watching the database
+	pageData.Watchers, err = com.UsersWatchingDB(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+
+	// Retrieve correctly capitalised username for the database owner
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+
+	// Render the page
+	t := tmpl.Lookup("watchersPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)

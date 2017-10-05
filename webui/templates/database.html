@@ -36,8 +36,8 @@
                 </div>
                 <div class="pull-right">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-disabled="true" ng-click="toggleWatch()"><i class="fa fa-eye"></i> Watch</button>
-                        <button type="button" class="btn btn-default" ng-bind="meta.Watchers"></button>
+                        <button type="button" class="btn btn-default" ng-bind-html="watchersText" ng-click="toggleWatchers()"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Watchers" ng-click="watchersPage()"></button>
                     </div>
                     <div class="btn-group">
                         <button type="button" class="btn btn-default" ng-bind-html="starsText" ng-click="toggleStars()"></button>
@@ -261,31 +261,32 @@
     app.controller('databaseView', function($scope, $http) {
         // Pre-filled database metadata
         $scope.meta = {
-            Branch: "[[ .DB.Info.Branch ]]",
-            Branches: "[[ .DB.Info.Branches ]]",
-            BranchList: [[ .DB.Info.BranchList ]],
-            CommitID: "[[ .DB.Info.CommitID ]]",
-            Commits: "[[ .DB.Info.Commits ]]",
+            Branch:       "[[ .DB.Info.Branch ]]",
+            Branches:     "[[ .DB.Info.Branches ]]",
+            BranchList:   [[ .DB.Info.BranchList ]],
+            CommitID:     "[[ .DB.Info.CommitID ]]",
+            Commits:      "[[ .DB.Info.Commits ]]",
             Contributors: "[[ .DB.Info.Contributors ]]",
-            Database: "[[ .Meta.Database ]]",
-            Discussions: "[[ .DB.Info.Discussions ]]",
-            Forks: "[[ .DB.Info.Forks ]]",
-            FullDesc: "[[ .DB.Info.FullDesc ]]",
-            Licence: "[[ .DB.Info.Licence ]]",
-            LicenceURL: "[[ .DB.Info.LicenceURL ]]",
-            MaxRows: "[[ .DB.MaxRows ]]",
-            MRs: "[[ .DB.Info.MRs ]]",
-            MyStar: "[[  .MyStar ]]",
-            OneLineDesc: "[[ .DB.Info.OneLineDesc ]]",
-            Owner: "[[ .Meta.Owner ]]",
-            Public: "",
-            Releases: "[[ .DB.Info.Releases ]]",
-            Size: "[[ .DB.Info.DBEntry.Size ]]",
-            SourceURL: "[[ .DB.Info.SourceURL ]]",
-            Stars: "[[ .DB.Info.Stars ]]",
-            Watchers: "[[ .DB.Info.Watchers ]]",
-            Tables: [[ .DB.Info.Tables ]],
-            Tags: "[[ .DB.Info.Tags ]]",
+            Database:     "[[ .Meta.Database ]]",
+            Discussions:  "[[ .DB.Info.Discussions ]]",
+            Forks:        "[[ .DB.Info.Forks ]]",
+            FullDesc:     "[[ .DB.Info.FullDesc ]]",
+            Licence:      "[[ .DB.Info.Licence ]]",
+            LicenceURL:   "[[ .DB.Info.LicenceURL ]]",
+            MaxRows:      "[[ .DB.MaxRows ]]",
+            MRs:          "[[ .DB.Info.MRs ]]",
+            MyStar:       "[[ .MyStar ]]",
+            MyWatch:      "[[ .MyWatch ]]",
+            OneLineDesc:  "[[ .DB.Info.OneLineDesc ]]",
+            Owner:        "[[ .Meta.Owner ]]",
+            Public:       "",
+            Releases:     "[[ .DB.Info.Releases ]]",
+            Size:         "[[ .DB.Info.DBEntry.Size ]]",
+            SourceURL:    "[[ .DB.Info.SourceURL ]]",
+            Stars:        "[[ .DB.Info.Stars ]]",
+            Watchers:     "[[ .DB.Info.Watchers ]]",
+            Tables:       [[ .DB.Info.Tables ]],
+            Tags:         "[[ .DB.Info.Tags ]]",
             [[ if .Meta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
@@ -538,36 +539,48 @@
             if ($scope.meta.Loggedin != "true") {
                 // User needs to be logged in
                 lock.show();
-            } else {
-                $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
-                    .then(function (response) {
-                        var tempval = response.data;
-                        if (tempval != "-1") {
-                            // Update star button text
-                            if ($scope.meta.MyStar != "true") {
-                                $scope.meta.MyStar = "true";
-                            } else {
-                                $scope.meta.MyStar = "false";
-                            }
-                            $scope.updateStarsText();
-
-                            // Update displayed star count
-                            $scope.meta.Stars = tempval;
-                        }
-                    })
+                return;
             }
+            $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
+                .then(function (response) {
+                    var tempval = response.data;
+                    if (tempval != "-1") {
+                        // Update star button text
+                        if ($scope.meta.MyStar != "true") {
+                            $scope.meta.MyStar = "true";
+                        } else {
+                            $scope.meta.MyStar = "false";
+                        }
+                        $scope.updateStarsText();
+
+                        // Update displayed star count
+                        $scope.meta.Stars = tempval;
+                    }
+                })
         };
 
         // Turns on watching for a database
-        $scope.toggleWatch = function() {
-            // Check if the user is logged in
+        $scope.toggleWatchers = function() {
             if ($scope.meta.Loggedin != "true") {
                 // User needs to be logged in
                 lock.show();
                 return;
             }
 
-            // TODO: Write the rest of the watch toggling code
+            // Retrieve the branch list for the newly selected database
+            $http.get("/x/watch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
+                .then(function (response) {
+                    // Update watch button text
+                    if ($scope.meta.MyWatch != "true") {
+                        $scope.meta.MyWatch = "true";
+                    } else {
+                        $scope.meta.MyWatch = "false";
+                    }
+                    $scope.updateWatchersText();
+
+                    // Update displayed watcher count
+                    $scope.meta.Watchers = response.data;
+                });
         };
 
         // Update star button text to say "Stars" or "Unstar"
@@ -610,6 +623,17 @@
         };
         $scope.updateTableArrows();
 
+        // Update watchers button text to say "Watch" or "Unwatch"
+        $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
+        $scope.updateWatchersText = function() {
+            if ($scope.meta.MyWatch != "true") {
+                $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
+            } else {
+                $scope.watchersText = "<i class=\"fa fa-eye\"></i> Unwatch";
+            }
+        };
+        $scope.updateWatchersText();
+
 //        // Switch to the upload database page
 //        $scope.uploadForm = function() {
 //            if ($scope.meta.Loggedin != "true") {
@@ -619,6 +643,11 @@
 //                window.location = '/upload/';
 //            }
 //        };
+
+        // Sends the user to the watchers page for the database
+        $scope.watchersPage = function() {
+            window.location = "/watchers/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+        };
 
         // Auth0 authentication
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
