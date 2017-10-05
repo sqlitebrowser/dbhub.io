@@ -15,7 +15,7 @@
                 <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
                 <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
             </h2>
-            <table class="table table-bordered table-striped table-responsive">
+            <table ng-if="stars.Stars != ''" class="table table-striped table-responsive profileTable">
                 <tr ng-repeat="row in stars.Stars">
                     <td>
                         <h4>• <a class="blackLink" href="/{{ row.Owner }}">{{ row.display_name}}</a></h4>
@@ -23,6 +23,7 @@
                     </td>
                 </tr>
             </table>
+            <h3 ng-if="stars.Stars === null" style="text-align: center;">No-one has starred [[ .Meta.Owner ]]/[[ .Meta.Database ]] yet</h3>
         </div>
         <div class="col-md-2">
             &nbsp;
