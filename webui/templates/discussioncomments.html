@@ -132,7 +132,7 @@
                                 </td>
                                 <td style="border: none; padding: 8px 8px 8px 0;">
                                     <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
-                                        <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> commented <span title="{{ row.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.creation_date, true) }}</span>
+                                        <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <a name="c{{ row.com_id }}" href="#c{{ row.com_id }}" style="color: #333;">commented</a> <span title="{{ row.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.creation_date, true) }}</span>
                                         <span ng-if="row.commenter == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
                                             <a class="blackLink" ng-click="editComment(row.com_id)"><i class="fa fa-pencil fa-fw"></i></a>
                                             <a class="blackLink" ng-click="deleteComment(row.com_id)"><i class="fa fa-trash-o fa-fw"></i></a>
