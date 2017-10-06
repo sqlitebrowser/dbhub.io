@@ -2875,6 +2875,15 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Add the user to the watch list for the forked database
+	if !exists {
+		err = com.ToggleDBWatch(loggedInUser, loggedInUser, dbFolder, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	// Invalidate the old memcached entry for the database
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
