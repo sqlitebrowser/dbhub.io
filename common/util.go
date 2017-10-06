@@ -332,6 +332,14 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 		}
 	}
 
+	// If the database didn't previous exist, add the user to the watch list for the database
+	if !exists {
+		err = ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName)
+		if err != nil {
+			return 0, "", err
+		}
+	}
+
 	// Was a user agent part of the request?
 	var userAgent string
 	ua, ok := r.Header["User-Agent"]
