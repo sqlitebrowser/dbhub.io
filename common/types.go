@@ -63,6 +63,7 @@ type TomlConfig struct {
 	Auth0     Auth0Info
 	DB4S      DB4SInfo
 	DiskCache DiskCacheInfo
+	Event     EventProcessingInfo
 	Memcache  MemcacheInfo
 	Minio     MinioInfo
 	Pg        PGInfo
@@ -97,6 +98,11 @@ type DB4SInfo struct {
 // Disk cache info
 type DiskCacheInfo struct {
 	Directory string
+}
+
+// Event processing loop
+type EventProcessingInfo struct {
+	Delay time.Duration `toml:"delay"`
 }
 
 // Memcached connection parameters
@@ -283,7 +289,7 @@ type DiscussionCommentEntry struct {
 type DiscussionType int
 
 const (
-	DISCUSSION    DiscussionType = 0
+	DISCUSSION    DiscussionType = 0 // These are not iota, as it would be seriously bad for these numbers to change
 	MERGE_REQUEST                = 1
 )
 
@@ -301,6 +307,29 @@ type DiscussionEntry struct {
 	Title        string            `json:"title"`
 	Type         DiscussionType    `json:"discussion_type"`
 }
+
+type EventDetails struct {
+	DBName    string    `json:"database_name"`
+	DiscID    int       `json:"discussion_id"`
+	Folder    string    `json:"database_folder"`
+	ID        string    `json:"event_id"`
+	Message   string    `json:"message"`
+	Owner     string    `json:"database_owner"`
+	Timestamp time.Time `json:"event_timestamp"`
+	Title     string    `json:"title"`
+	Type      EventType `json:"event_type"`
+	URL       string    `json:"event_url"`
+	UserName  string    `json:"username"`
+}
+
+type EventType int
+
+const (
+	EVENT_NEW_DISCUSSION    EventType = 0 // These are not iota, as it would be seriously bad for these numbers to change
+	EVENT_NEW_MERGE_REQUEST           = 1
+	EVENT_NEW_COMMENT                 = 2
+	EVENT_NEW_RELEASE                 = 3
+)
 
 type ForkEntry struct {
 	DBName     string     `json:"database_name"`
@@ -325,7 +354,7 @@ type LicenceEntry struct {
 type MergeRequestState int
 
 const (
-	OPEN                 MergeRequestState = 0
+	OPEN                 MergeRequestState = 0 // These are not iota, as it would be seriously bad for these numbers to change
 	CLOSED_WITH_MERGE                      = 1
 	CLOSED_WITHOUT_MERGE                   = 2
 )
@@ -342,17 +371,18 @@ type MergeRequestEntry struct {
 }
 
 type MetaInfo struct {
-	AvatarURL    string
-	Database     string
-	ForkDatabase string
-	ForkDeleted  bool
-	ForkFolder   string
-	ForkOwner    string
-	LoggedInUser string
-	Owner        string
-	Protocol     string
-	Server       string
-	Title        string
+	AvatarURL        string
+	Database         string
+	ForkDatabase     string
+	ForkDeleted      bool
+	ForkFolder       string
+	ForkOwner        string
+	LoggedInUser     string
+	NumStatusUpdates int
+	Owner            string
+	Protocol         string
+	Server           string
+	Title            string
 }
 
 type ReleaseEntry struct {
@@ -381,6 +411,12 @@ type SQLiteRecordSet struct {
 	SortDir   string
 	Tablename string
 	TotalRows int
+}
+
+type StatusUpdateEntry struct {
+	DiscID int    `json:"discussion_id"`
+	Title  string `json:"title"`
+	URL    string `json:"event_url"`
 }
 
 type TagEntry struct {

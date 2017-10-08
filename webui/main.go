@@ -612,6 +612,23 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate an event about the new discussion
+	details := com.EventDetails{
+		DBName:   dbName,
+		DiscID:   id,
+		Folder:   dbFolder,
+		Owner:    dbOwner,
+		Title:    discTitle,
+		Type:     com.EVENT_NEW_DISCUSSION,
+		URL:      fmt.Sprintf("/discuss/%s%s%s?id=%d", dbOwner, dbFolder, dbName, id),
+		UserName: loggedInUser,
+	}
+	err = com.NewEvent(details)
+	if err != nil {
+		log.Printf("Error when creating a new event: %s\n", err.Error())
+		return
+	}
+
 	// Invalidate the memcache data for the database, so the new discussion count gets picked up
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
@@ -889,6 +906,23 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Generate an event about the new merge request
+	details := com.EventDetails{
+		DBName:   destDBName,
+		DiscID:   x.ID,
+		Folder:   destFolder,
+		Owner:    destOwner,
+		Title:    title,
+		Type:     com.EVENT_NEW_MERGE_REQUEST,
+		URL:      fmt.Sprintf("/merge/%s%s%s?id=%d", destOwner, destFolder, destDBName, x.ID),
+		UserName: loggedInUser,
+	}
+	err = com.NewEvent(details)
+	if err != nil {
+		log.Printf("Error when creating a new event: %s\n", err.Error())
 		return
 	}
 
@@ -3074,6 +3108,9 @@ func main() {
 	// Start the view count flushing routine in the background
 	go com.FlushViewCount()
 
+	// Start the status update processing routine in the background (will likely need moving into a separate daemon)
+	go com.StatusUpdatesLoop()
+
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))
 	http.HandleFunc("/about", logReq(aboutPage))
@@ -3096,6 +3133,7 @@ func main() {
 	http.HandleFunc("/settings/", logReq(settingsPage))
 	http.HandleFunc("/stars/", logReq(starsPage))
 	http.HandleFunc("/tags/", logReq(tagsPage))
+	http.HandleFunc("/updates/", logReq(updatesPage))
 	http.HandleFunc("/upload/", logReq(uploadPage))
 	http.HandleFunc("/watchers/", logReq(watchersPage))
 	http.HandleFunc("/x/branchnames", logReq(branchNamesHandler))

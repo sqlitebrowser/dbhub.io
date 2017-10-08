@@ -248,6 +248,38 @@ ALTER SEQUENCE discussions_disc_id_seq OWNED BY discussions.internal_id;
 
 
 --
+-- Name: events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE events (
+    event_id bigint NOT NULL,
+    db_id bigint,
+    event_type integer NOT NULL,
+    event_data jsonb NOT NULL,
+    event_timestamp timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: events_event_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE events_event_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: events_event_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE events_event_id_seq OWNED BY events.event_id;
+
+
+--
 -- Name: sqlite_databases; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -320,7 +352,8 @@ CREATE TABLE users (
     watchers bigint DEFAULT 0 NOT NULL,
     default_licence integer,
     display_name text,
-    avatar_url text
+    avatar_url text,
+    status_updates jsonb
 );
 
 
@@ -387,6 +420,13 @@ ALTER TABLE ONLY discussion_comments ALTER COLUMN com_id SET DEFAULT nextval('di
 --
 
 ALTER TABLE ONLY discussions ALTER COLUMN internal_id SET DEFAULT nextval('discussions_disc_id_seq'::regclass);
+
+
+--
+-- Name: events event_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY events ALTER COLUMN event_id SET DEFAULT nextval('events_event_id_seq'::regclass);
 
 
 --
@@ -468,6 +508,14 @@ ALTER TABLE ONLY discussions
 
 
 --
+-- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY events
+    ADD CONSTRAINT events_pkey PRIMARY KEY (event_id);
+
+
+--
 -- Name: sqlite_databases sqlite_databases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -544,6 +592,13 @@ CREATE INDEX discussions_discussion_type_idx ON discussions USING btree (discuss
 
 
 --
+-- Name: events_event_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX events_event_id_idx ON events USING btree (event_id);
+
+
+--
 -- Name: fki_database_downloads_db_id_fkey; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -604,6 +659,13 @@ CREATE INDEX users_user_id_idx ON users USING btree (user_id);
 --
 
 CREATE INDEX users_user_name_idx ON users USING btree (user_name);
+
+
+--
+-- Name: watchers_db_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX watchers_db_id_idx ON watchers USING btree (db_id);
 
 
 --
@@ -708,6 +770,14 @@ ALTER TABLE ONLY discussions
 
 ALTER TABLE ONLY discussions
     ADD CONSTRAINT discussions_user_id_fkey FOREIGN KEY (creator) REFERENCES users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: events events_db_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY events
+    ADD CONSTRAINT events_db_id_fkey FOREIGN KEY (db_id) REFERENCES sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

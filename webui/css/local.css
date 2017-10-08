@@ -12,6 +12,16 @@
     text-decoration: underline;
 }
 
+.inBox {
+    color: #181818;
+    cursor: pointer;
+}
+
+.inBox:hover {
+    color: #23527c;
+    text-decoration: none;
+}
+
 .minHeight {
     min-height: 80px;
 }

@@ -119,20 +119,26 @@ func ReadConfig() error {
 
 	// Warn if the certificate validity period isn't set in the config file
 	if Conf.Sign.CertDaysValid == 0 {
-		log.Printf("WARN: Cert validity period for cert signing isn't set in the config file. Defaulting to 60 days.\n")
+		log.Printf("WARN: Cert validity period for cert signing isn't set in the config file. Defaulting to 60 days.")
 		Conf.Sign.CertDaysValid = 60
 	}
 
 	// Warn if the default Memcache cache time isn't set in the config file
 	if Conf.Memcache.DefaultCacheTime == 0 {
-		log.Printf("WARN: Default Memcache cache time isn't set in the config file. Defaulting to 30 days.\n")
+		log.Printf("WARN: Default Memcache cache time isn't set in the config file. Defaulting to 30 days.")
 		Conf.Memcache.DefaultCacheTime = 2592000
 	}
 
 	// Warn if the view count flush delay isn't set in the config file
 	if Conf.Memcache.ViewCountFlushDelay == 0 {
-		log.Printf("WARN: Memcache view count flush delay isn't set in the config file. Defaulting to 2 minutes.\n")
+		log.Printf("WARN: Memcache view count flush delay isn't set in the config file. Defaulting to 2 minutes.")
 		Conf.Memcache.ViewCountFlushDelay = 120
+	}
+
+	// Warn if the event processing loop delay isn't set in the config file
+	if Conf.Event.Delay == 0 {
+		log.Printf("WARN: Event processing delay isn't set in the config file. Defaulting to 3 seconds.")
+		Conf.Event.Delay = 3
 	}
 
 	// Set the PostgreSQL configuration values

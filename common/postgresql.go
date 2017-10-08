@@ -2156,6 +2156,30 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 	return
 }
 
+// Adds an event entry to PostgreSQL
+func NewEvent(details EventDetails) (err error) {
+	dbQuery := `
+		WITH d AS (
+			SELECT db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE lower(user_name) = lower($1)
+				)
+				AND folder = $2
+				AND db_name = $3
+				AND is_deleted = false
+		)
+		INSERT INTO events (db_id, event_type, event_data)
+		VALUES ((SELECT db_id FROM d), $4, $5)`
+	_, err = pdb.Exec(dbQuery, details.Owner, details.Folder, details.DBName, details.Type, details)
+	if err != nil {
+		return err
+	}
+	return
+}
+
 // Return the user's preference for maximum number of SQLite rows to display.
 func PrefUserMaxRows(loggedInUser string) int {
 	// Retrieve the user preference data
@@ -2354,6 +2378,208 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 	return 0, st, fo, nil
 }
 
+// Retrieve the list of outstanding status updates for a user
+func StatusUpdates(loggedInUser string) (statusUpdates map[string][]StatusUpdateEntry, err error) {
+	dbQuery := `
+		SELECT status_updates
+		FROM users
+		WHERE user_name = $1`
+	err = pdb.QueryRow(dbQuery, loggedInUser).Scan(&statusUpdates)
+	if err != nil {
+		log.Printf("Error retrieving status updates list for user '%s': %v", loggedInUser, err)
+		return
+	}
+	return
+}
+
+// Periodically generates status updates (alert emails TBD) from the event queue
+func StatusUpdatesLoop() {
+	// Ensure a warning message is displayed on the console if the status update loop exits
+	defer func() {
+		log.Printf("WARN: Status update loop exited")
+	}()
+
+	// Log the start of the loop
+	log.Printf("Status update processing loop started.  %d second refresh.", Conf.Event.Delay)
+
+	// Start the endless status update processing loop
+	var rows *pgx.Rows
+	var err error
+	type evEntry struct {
+		dbID      int64
+		details   EventDetails
+		eType     EventType
+		eventID   int64
+		timeStamp time.Time
+	}
+	for true {
+
+		// Begin a transaction
+		var tx *pgx.Tx
+		tx, err = pdb.Begin()
+		if err != nil {
+			log.Printf("Couldn't begin database transaction for status update processing loop: %s", err.Error())
+			continue
+		}
+
+		// Retrieve the list of outstanding events
+		// NOTE - We gather the db_id here instead of dbOwner/dbFolder/dbName as it should be faster for PG to deal
+		//        with when generating the watcher list
+		dbQuery := `
+			SELECT event_id, event_timestamp, db_id, event_type, event_data
+			FROM events
+			ORDER BY event_id ASC`
+		rows, err = tx.Query(dbQuery)
+		if err != nil {
+			log.Printf("Generating status update event list failed: %v\n", err)
+			tx.Rollback()
+			continue
+		}
+		evList := make(map[int64]evEntry)
+		for rows.Next() {
+			var ev evEntry
+			err = rows.Scan(&ev.eventID, &ev.timeStamp, &ev.dbID, &ev.eType, &ev.details)
+			if err != nil {
+				log.Printf("Error retrieving event list for status updates thread: %v\n", err)
+				rows.Close()
+				tx.Rollback()
+				continue
+			}
+			evList[ev.eventID] = ev
+		}
+		rows.Close()
+
+		// For each event, add a status update to the status_updates list for each watcher it's for
+		for id, ev := range evList {
+
+			// Retrieve the list of watchers for the database the event occurred on
+			dbQuery := `
+				SELECT user_id
+				FROM watchers
+				WHERE db_id = $1`
+			rows, err = tx.Query(dbQuery, ev.dbID)
+			if err != nil {
+				log.Printf("Database query failed: %v\n", err)
+				tx.Rollback()
+				continue
+			}
+			var users []int64
+			for rows.Next() {
+				var user int64
+				err = rows.Scan(&user)
+				if err != nil {
+					log.Printf("Error retrieving user list for status updates thread: %v\n", err)
+					rows.Close()
+					tx.Rollback()
+					continue
+				}
+				users = append(users, user)
+			}
+			rows.Close()
+
+			// For each watcher, add the new status update to their existing list
+			// TODO: It might be better to store this list in Memcached instead of hitting the database like this
+			for _, u := range users {
+				// Retrieve the current status updates list for the user
+				dbQuery := `
+					SELECT user_name, status_updates
+					FROM users
+					WHERE user_id = $1`
+				userEvents := make(map[string][]StatusUpdateEntry)
+				var userName string
+				err := tx.QueryRow(dbQuery, u).Scan(&userName, &userEvents)
+				if err != nil {
+					log.Printf("Database query failed: %v\n", err)
+					tx.Rollback()
+					continue
+				}
+
+				// * Add the new event to the users status updates list *
+
+				// Group the status updates by database, and coalesce multiple updates for the same discussion or MR
+				// into a single entry (keeping the most recent one of each)
+				dbName := fmt.Sprintf("%s%s%s", ev.details.Owner, ev.details.Folder, ev.details.DBName)
+				var a StatusUpdateEntry
+				lst, ok := userEvents[dbName]
+				if ev.details.Type == EVENT_NEW_DISCUSSION || ev.details.Type == EVENT_NEW_MERGE_REQUEST || ev.details.Type == EVENT_NEW_COMMENT {
+					if ok {
+						// Check if an entry already exists for the discussion/MR/comment
+						for i, j := range lst {
+							if j.DiscID == ev.details.DiscID {
+								// Yes, there's already an existing entry for the discussion/MR/comment so delete the old entry
+								lst = append(lst[:i], lst[i+1:]...) // Delete the old element
+							}
+						}
+					}
+				}
+				// Add the new entry
+				a.DiscID = ev.details.DiscID
+				a.Title = ev.details.Title
+				a.URL = ev.details.URL
+				lst = append(lst, a)
+				userEvents[dbName] = lst
+
+				// Save the updated list for the user back to PG
+				dbQuery = `
+					UPDATE users
+					SET status_updates = $2
+					WHERE user_id = $1`
+				commandTag, err := tx.Exec(dbQuery, u, userEvents)
+				if err != nil {
+					log.Printf("Adding status update for database ID '%d' to user '%s' failed: %v", ev.dbID,
+						u, err)
+					tx.Rollback()
+					continue
+				}
+				if numRows := commandTag.RowsAffected(); numRows != 1 {
+					log.Printf("Wrong number of rows affected (%v) when adding status update for database ID "+
+						"'%d' to user '%s'", numRows, ev.dbID, u)
+					tx.Rollback()
+					continue
+				}
+
+				// Count the number of status updates for the user, to be displayed in the webUI header row
+				var numUpdates int
+				for _, i := range userEvents {
+					numUpdates += len(i)
+				}
+
+				// Add an entry to memcached for the user, indicating they have outstanding status updates available
+				err = SetUserStatusUpdates(userName, numUpdates)
+				if err != nil {
+					log.Printf("Error when updating user status updates # in memcached: %v", err)
+					continue
+				}
+			}
+
+			// Remove the processed event from PG
+			dbQuery = `
+				DELETE FROM events
+				WHERE event_id = $1`
+			commandTag, err := tx.Exec(dbQuery, id)
+			if err != nil {
+				log.Printf("Removing event ID '%d' failed: %v", id, err)
+				continue
+			}
+			if numRows := commandTag.RowsAffected(); numRows != 1 {
+				log.Printf("Wrong number of rows affected (%v) when removing event ID '%d'", numRows, id)
+				continue
+			}
+		}
+
+		// Commit the transaction
+		err = tx.Commit()
+		if err != nil {
+			log.Printf("Could not commit transaction when processing status updates: %v", err.Error())
+			continue
+		}
+
+		// Wait before running the loop again
+		time.Sleep(Conf.Event.Delay * time.Second)
+	}
+	return
+}
+
 // Updates the branches list for a database.
 func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry) error {
 	dbQuery := `
@@ -2391,38 +2617,37 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 	// Set up an automatic transaction roll back if the function exits without committing
 	defer tx.Rollback()
 
-	// If the discussion is to be closed or reopened, ensure the person doing so is either the database owner or the
-	// person who started the discussion
-	var dbQuery string
+	// Get the current details for the discussion or MR
+	var discCreator string
 	var discState bool
 	var discType int64
-	if discClose == true {
-		// Get the current details for the discussion
-		var discCreator string
-		dbQuery := `
-			SELECT disc.open, u.user_name, disc.discussion_type
-			FROM discussions AS disc, users AS u
-			WHERE disc.db_id = (
-					SELECT db.db_id
-					FROM sqlite_databases AS db
-					WHERE db.user_id = (
-							SELECT user_id
-							FROM users
-							WHERE lower(user_name) = lower($1)
-						)
-						AND folder = $2
-						AND db_name = $3
-				)
-				AND disc.disc_id = $4
-				AND disc.creator = u.user_id`
-		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState, &discCreator, &discType)
-		if err != nil {
-			log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", dbOwner,
-				dbFolder, dbName, discID, err)
-			return err
-		}
+	var discTitle string
+	dbQuery := `
+		SELECT disc.open, u.user_name, disc.discussion_type, disc.title
+		FROM discussions AS disc, users AS u
+		WHERE disc.db_id = (
+				SELECT db.db_id
+				FROM sqlite_databases AS db
+				WHERE db.user_id = (
+						SELECT user_id
+						FROM users
+						WHERE lower(user_name) = lower($1)
+					)
+					AND folder = $2
+					AND db_name = $3
+			)
+			AND disc.disc_id = $4
+			AND disc.creator = u.user_id`
+	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState, &discCreator, &discType, &discTitle)
+	if err != nil {
+		log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", dbOwner,
+			dbFolder, dbName, discID, err)
+		return err
+	}
 
-		// Ensure only the database owner or discussion starter can close/reopen databases
+	// If the discussion is to be closed or reopened, ensure the person doing so is either the database owner or the
+	// person who started the discussion
+	if discClose == true {
 		if (strings.ToLower(commenter) != strings.ToLower(dbOwner)) && (strings.ToLower(commenter) != strings.ToLower(discCreator)) {
 			return errors.New("Not authorised")
 		}
@@ -2430,6 +2655,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 
 	// If comment text was provided, insert it into the database
 	var commandTag pgx.CommandTag
+	var comID int64
 	if comText != "" {
 		dbQuery = `
 			WITH d AS (
@@ -2449,17 +2675,13 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 				AND disc_id = $5
 			)
 			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
-			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $6, 'txt'`
-		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, comText)
+			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $6, 'txt'
+			RETURNING com_id`
+		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, comText).Scan(&comID)
 		if err != nil {
 			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
 				dbName, discID, err)
 			return err
-		}
-		if numRows := commandTag.RowsAffected(); numRows != 1 {
-			log.Printf(
-				"Wrong number of rows (%v) affected when adding a comment to database '%s%s%s', discussion '%d'\n",
-				numRows, dbOwner, dbFolder, dbName, discID)
 		}
 	}
 
@@ -2619,6 +2841,31 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating discussion count for database '%s%s%s'\n",
 			numRows, dbOwner, dbFolder, dbName)
+	}
+
+	// If comment text was provided, generate an event about the new comment
+	if comText != "" {
+		var url string
+		if discType == MERGE_REQUEST {
+			url = fmt.Sprintf("/merge/%s%s%s?id=%d#c%d", dbOwner, dbFolder, dbName, discID, comID)
+		} else {
+			url = fmt.Sprintf("/discuss/%s%s%s?id=%d#c%d", dbOwner, dbFolder, dbName, discID, comID)
+		}
+		details := EventDetails{
+			DBName:   dbName,
+			DiscID:   discID,
+			Folder:   dbFolder,
+			Owner:    dbOwner,
+			Type:     EVENT_NEW_COMMENT,
+			Title:    discTitle,
+			URL:      url,
+			UserName: commenter,
+		}
+		err = NewEvent(details)
+		if err != nil {
+			log.Printf("Error when creating a new event: %s\n", err.Error())
+			return err
+		}
 	}
 
 	// Commit the transaction
@@ -2950,6 +3197,25 @@ func StoreReleases(dbOwner string, dbFolder string, dbName string, releases map[
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when storing releases for database: '%s%s%s'\n", numRows,
 			dbOwner, dbFolder, dbName)
+	}
+	return nil
+}
+
+// Store the status updates list for a user
+func StoreStatusUpdates(userName string, statusUpdates map[string][]StatusUpdateEntry) error {
+	dbQuery := `
+		UPDATE users
+		SET status_updates = $2
+		WHERE user_name = $1`
+	commandTag, err := pdb.Exec(dbQuery, userName, statusUpdates)
+	if err != nil {
+		log.Printf("Adding status update for user '%s' failed: %v", userName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows affected (%v) when storing status update for user '%s'", numRows,
+			userName)
+		return err
 	}
 	return nil
 }

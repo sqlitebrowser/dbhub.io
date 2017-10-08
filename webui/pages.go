@@ -32,7 +32,7 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -41,6 +41,11 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -163,7 +168,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 		pageData.Branches = append(pageData.Branches, k)
 	}
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -172,6 +177,11 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -370,7 +380,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -379,6 +389,11 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -544,7 +559,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -553,6 +568,11 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -711,16 +731,19 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
+	// Retrieve the details and status updates count for the logged in user
+	ur, err := com.User(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ur.AvatarURL != "" {
+		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+	}
+	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	// Fill out metadata for the page to be rendered
@@ -859,7 +882,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -868,6 +891,11 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -949,16 +977,19 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
+	// Retrieve the details and status updates count for the logged in user
+	ur, err := com.User(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ur.AvatarURL != "" {
+		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+	}
+	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	// Fill out metadata for the page to be rendered
@@ -1036,7 +1067,7 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -1045,6 +1076,11 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -1129,16 +1165,19 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
+	// Retrieve the details and status updates count for the logged in user
+	ur, err := com.User(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ur.AvatarURL != "" {
+		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+	}
+	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	// Fill out metadata for the page to be rendered
@@ -1520,6 +1559,15 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			return
 		}
 
+		// Retrieve the status updates count for the logged in user
+		if loggedInUser != "" {
+			pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
 		// Ensure the correct Avatar URL is displayed
 		pageData.Meta.AvatarURL = avatarURL
 
@@ -1643,6 +1691,15 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// Ensure the correct Avatar URL is displayed
 	pageData.Meta.AvatarURL = avatarURL
 
+	// Retrieve the status updates count for the logged in user
+	if loggedInUser != "" {
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	// Fill out various metadata fields
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = com.Conf.Web.ServerName
@@ -1762,6 +1819,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		Meta           com.MetaInfo
 		SelectedID     int
 		MyStar         bool
+		MyWatch        bool
 	}
 
 	// Retrieve session data (if any)
@@ -1837,6 +1895,13 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
+		return
+	}
+
 	// Retrieve the list of discussions for this database
 	pageData.DiscussionList, err = com.Discussions(dbOwner, dbFolder, dbName, com.DISCUSSION, pageData.SelectedID)
 	if err != nil {
@@ -1859,7 +1924,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -1868,6 +1933,11 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -1913,6 +1983,15 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// If this discussion matches one of the user's status updates, remove the status update from the list
+		if loggedInUser != "" {
+			pageData.Meta.NumStatusUpdates, err = com.StatusUpdateCheck(dbOwner, dbFolder, dbName, pageData.SelectedID, loggedInUser)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
 		// Render the discussion comments page
 		t := tmpl.Lookup("discussCommentsPage")
 		err = t.Execute(w, pageData)
@@ -1953,7 +2032,7 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -1962,6 +2041,11 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -2038,7 +2122,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -2047,6 +2131,11 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -2102,7 +2191,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -2111,6 +2200,11 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -2139,6 +2233,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		SourceBranchOK      bool
 		SourceDBOK          bool
 		MyStar              bool
+		MyWatch             bool
 	}
 
 	// Retrieve session data (if any)
@@ -2214,6 +2309,13 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
+		return
+	}
+
 	// Retrieve the list of MRs for this database
 	pageData.MRList, err = com.Discussions(dbOwner, dbFolder, dbName, com.MERGE_REQUEST, pageData.SelectedID)
 	if err != nil {
@@ -2236,7 +2338,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -2245,6 +2347,11 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -2436,6 +2543,15 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// If this MR matches one of the user's status updates, remove the status update from the list
+		if loggedInUser != "" {
+			pageData.Meta.NumStatusUpdates, err = com.StatusUpdateCheck(dbOwner, dbFolder, dbName, pageData.SelectedID, loggedInUser)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
 		// Render the MR comments page
 		t := tmpl.Lookup("mergeRequestCommentsPage")
 		err = t.Execute(w, pageData)
@@ -2487,16 +2603,19 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	// Retrieve the user preference data
 	pageData.MaxRows = com.PrefUserMaxRows(loggedInUser)
 
-	// Retrieve the details for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
+	// Retrieve the details and status updates count for the logged in user
+	ur, err := com.User(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ur.AvatarURL != "" {
+		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+	}
+	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	// Add Auth0 info to the page data
@@ -2573,6 +2692,21 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 	if usr.AvatarURL != "" {
 		pageData.Meta.AvatarURL = usr.AvatarURL + "&s=48"
+	}
+
+	// Retrieve the details and status updates count for the logged in user
+	ur, err := com.User(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ur.AvatarURL != "" {
+		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+	}
+	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 	pageData.Meta.Owner = usr.Username
 	pageData.Meta.Title = usr.Username
@@ -2720,7 +2854,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -2729,6 +2863,11 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -2953,16 +3092,19 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
+	// Retrieve the details and status updates count for the logged in user
+	ur, err := com.User(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ur.AvatarURL != "" {
+		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+	}
+	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	// Fill out the metadata
@@ -3044,7 +3186,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -3053,6 +3195,11 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -3197,7 +3344,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -3206,6 +3353,11 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -3216,6 +3368,76 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Render the page
 	t := tmpl.Lookup("tagsPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+// This function presents the status updates page to logged in users.
+func updatesPage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		Auth0   com.Auth0Set
+		Meta    com.MetaInfo
+		Updates map[string][]com.StatusUpdateEntry
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	validSession := false
+	sess, err := store.Get(r, "dbhub-user")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	u := sess.Values["UserName"]
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		return
+	}
+
+	// Retrieve the list of status updates for the user
+	pageData.Updates, err = com.StatusUpdates(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve the details for the logged in user
+	ur, err := com.User(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ur.AvatarURL != "" {
+		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+	}
+
+	// Check if there are any status updates for the user
+	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Fill out page metadata
+	pageData.Meta.Title = "Status updates"
+	pageData.Meta.LoggedInUser = loggedInUser
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+
+	// Render the page
+	t := tmpl.Lookup("updatesPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
@@ -3276,15 +3498,20 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	pageData.NumLicences = len(pageData.Licences)
 
 	// Retrieve the details for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
+	ur, err := com.User(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ur.AvatarURL != "" {
+		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+	}
+
+	// Check if there are any status updates for the user
+	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	// Fill out page metadata
@@ -3346,15 +3573,20 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
-		u, err := com.User(loggedInUser)
+		ur, err := com.User(loggedInUser)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		if u.AvatarURL != "" {
-			pageData.Meta.AvatarURL = u.AvatarURL + "&s=48"
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
@@ -3449,7 +3681,7 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details for the logged in user
+	// Retrieve the details and status updates count for the logged in user
 	if loggedInUser != "" {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
@@ -3458,6 +3690,11 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 		}
 		if ur.AvatarURL != "" {
 			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 

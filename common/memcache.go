@@ -226,6 +226,26 @@ func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbFold
 	return hex.EncodeToString(tempArr[:])
 }
 
+// Increments the view counter in memcached for a database
+func SetUserStatusUpdates(userName string, numUpdates int) error {
+	// Generate the cache key
+	cacheString := fmt.Sprintf("status-updates-%s", userName)
+	tempArr := md5.Sum([]byte(cacheString))
+	cacheKey := hex.EncodeToString(tempArr[:])
+
+	// Create a memcached entry with the new user status updates count
+	cachedData := memcache.Item{
+		Key:        cacheKey,
+		Value:      []byte(fmt.Sprintf("%d", numUpdates)),
+		Expiration: int32(Conf.Memcache.DefaultCacheTime),
+	}
+	err := memCache.Set(&cachedData)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Generate a predictable cache key for SQLite row data
 func TableRowsCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string, dbTable string, rows int) string {
 	var cacheString string
@@ -239,4 +259,49 @@ func TableRowsCacheKey(prefix string, loggedInUser string, dbOwner string, dbFol
 	}
 	tempArr := md5.Sum([]byte(cacheString))
 	return hex.EncodeToString(tempArr[:])
+}
+
+// Returns the number of status updates outstanding for a user
+func UserStatusUpdates(userName string) (numUpdates int, err error) {
+	// Generate the cache key
+	cacheString := fmt.Sprintf("status-updates-%s", userName)
+	tempArr := md5.Sum([]byte(cacheString))
+	cacheKey := hex.EncodeToString(tempArr[:])
+
+	// Retrieve the status updates counter
+	data, err := memCache.Get(cacheKey)
+	if err != nil {
+		if err != memcache.ErrCacheMiss {
+			// A real error occurred
+			return 0, err
+		}
+
+		// There isn't a cached value for the user, so retrieve the list from PG and create an initial value
+		lst, err := StatusUpdates(userName)
+		if err != nil {
+			return 0, err
+		}
+		for _, i := range lst {
+			numUpdates += len(i)
+		}
+
+		// Set the initial number of updates
+		cachedData := memcache.Item{
+			Key:        cacheKey,
+			Value:      []byte(fmt.Sprintf("%d", numUpdates)),
+			Expiration: int32(Conf.Memcache.DefaultCacheTime),
+		}
+		err = memCache.Set(&cachedData)
+		if err != nil {
+			return 0, err
+		}
+		return numUpdates, nil
+	}
+
+	// Convert the string value to int, and return it
+	numUpdates, err = strconv.Atoi(string(data.Value))
+	if err != nil {
+		return 0, err
+	}
+	return numUpdates, nil
 }

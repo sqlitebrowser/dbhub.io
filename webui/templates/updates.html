@@ -1,0 +1,63 @@
+[[ define "updatesPage" ]]
+<!doctype html>
+<html ng-app="DBHub" ng-controller="updatesView">
+[[ template "head" . ]]
+<body>
+[[ template "header" . ]]
+<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row" style="margin-bottom: 10px;">
+        <div class="col-md-12">
+            <h2 id="viewuser" style="margin-top: 10px;">
+                <div class="pull-left">
+                    Status updates
+                </div>
+            </h2>
+        </div>
+    </div>
+    [[ if .Updates ]]
+        <div ng-repeat="(dbname, entries) in updates" class="row">
+            <div class="col-md-12">
+                <table class="table table-striped table-responsive profileTable">
+                    <tr>
+                        <td style="background-color: #DCDCDC;"><a class="blackLink" href="/{{ dbname }}" style="font-weight: bold;" ng-bind="dbname"></a></td>
+                    </tr>
+                    <tr ng-repeat="row in entries">
+                        <td><a class="blackLink" href="{{ row.event_url }}" ng-bind="row.title"></a></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    [[ else ]]
+        <table class="table table-striped table-responsive profileTable">
+            <tr>
+                <td>
+                    <h4>No new status updates</h4>
+                </td>
+            </tr>
+        </table>
+    [[ end ]]
+</div>
+[[ template "footer" . ]]
+<script>
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('updatesView', function($scope) {
+        $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
+        $scope.updates = [[ .Updates ]];
+
+        // Returns a nicely presented "time elapsed" string
+        $scope.getTimePeriodTxt = function(date1, includeOn) {
+            return getTimePeriod(date1, includeOn)
+        };
+
+        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+
+        $scope.showLock = function() {
+            lock.show();
+        };
+    });
+</script>
+</body>
+</html>
+[[ end ]]

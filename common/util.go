@@ -906,3 +906,50 @@ func RandomString(length int) string {
 
 	return string(randomString)
 }
+
+// Checks if a status update for the user exists for a given discussion or MR, and if so then removes it
+func StatusUpdateCheck(dbOwner string, dbFolder string, dbName string, thisID int, userName string) (numStatusUpdates int, err error) {
+	var lst map[string][]StatusUpdateEntry
+	lst, err = StatusUpdates(userName)
+	if err != nil {
+		return
+	}
+	db := fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName)
+	b, ok := lst[db]
+	if ok {
+		for i, j := range b {
+			if j.DiscID == thisID {
+				// Delete the matching status update
+				b = append(b[:i], b[i+1:]...)
+				if len(b) > 0 {
+					lst[db] = b
+				} else {
+					delete(lst, db)
+				}
+
+				// Store the updated list for the user
+				err = StoreStatusUpdates(userName, lst)
+				if err != nil {
+					return
+				}
+
+				// Update the status updates # stored in memcached
+				for _, z := range lst {
+					numStatusUpdates += len(z)
+				}
+				err = SetUserStatusUpdates(userName, numStatusUpdates)
+				if err != nil {
+					log.Printf("Error when updating user status updates # in memcached: %v", err)
+					return
+				}
+				return
+			}
+		}
+	}
+
+	// Return the # of status updates for the user
+	for _, z := range lst {
+		numStatusUpdates += len(z)
+	}
+	return
+}

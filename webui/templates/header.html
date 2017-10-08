@@ -8,14 +8,16 @@
             </div>
         </div>
         <div id="auth" class="col-md-6">
-            <div class="pull-right">
+            <span class="pull-right">
                 [[ if .Meta.LoggedInUser ]]
                     [[ if .Meta.AvatarURL ]]<img src="[[ .Meta.AvatarURL ]]" height="18" width="18" style="border: 1px solid #8c8c8c;"/>[[ end ]]
+                    <a ng-if="[[ .Meta.NumStatusUpdates ]] === 0" href="/updates" class="inBox" style="vertical-align: middle;"><i class="fa fa-inbox fa-fw" style="font-size: large;"></i></a>
+                    <a ng-if="[[ .Meta.NumStatusUpdates ]] > 0" href="/updates" class="inBox" style="vertical-align: middle; border-bottom: 1px grey dotted;"><i class="fa fa-inbox fa-fw" style="font-size: large;"></i>[[ .Meta.NumStatusUpdates ]]</a>
                     <a href="/pref" style="color: black; vertical-align: middle;">Preferences</a> | <a href="/[[ .Meta.LoggedInUser ]]" style="color: black; vertical-align: middle;">Home</a> | <a href="/logout" style="color: black; vertical-align: middle;">Log out</a>
                 [[ else ]]
                     <a href="" ng-click="showLock()" style="color: black;">Login / Register</a>
                 [[  end ]]
-            </div>
+            </span>
         </div>
     </div>
 </div>

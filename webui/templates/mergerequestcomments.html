@@ -1,7 +1,7 @@
 [[ define "mergeRequestCommentsPage" ]]
 <!doctype html>
 <html ng-app="DBHub" ng-controller="mergeRequestCommentsView">
-[[ template "headawesome" . ]]
+[[ template "head" . ]]
 <body>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
@@ -26,8 +26,8 @@
                 </div>
                 <div class="pull-right">
                     <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-disabled="true" ng-click="toggleWatch()"><i class="fa fa-eye"></i> Watch</button>
-                        <button type="button" class="btn btn-default" ng-bind="meta.Watchers"></button>
+                        <button type="button" class="btn btn-default" ng-bind-html="watchersText" ng-click="toggleWatchers()"></button>
+                        <button type="button" class="btn btn-default" ng-bind="meta.Watchers" ng-click="watchersPage()"></button>
                     </div>
                     <div class="btn-group">
                         <button type="button" class="btn btn-default" ng-bind-html="starsText" ng-click="toggleStars()"></button>
@@ -286,19 +286,20 @@
     app.controller('mergeRequestCommentsView', function($scope, $http, $httpParamSerializerJQLike) {
         // Pre-filled data
         $scope.meta = {
-            Database: "[[ .Meta.Database ]]",
+            Database:         "[[ .Meta.Database ]]",
             DestBranchNameOK: [[ .DestBranchNameOK ]],
             DestBranchUsable: [[ .DestBranchUsable ]],
-            Discussions: "[[ .DB.Info.Discussions ]]",
-            Forks: "[[ .DB.Info.Forks ]]",
-            MRs: "[[ .DB.Info.MRs ]]",
-            MyStar: "[[  .MyStar ]]",
-            Owner: "[[ .Meta.Owner ]]",
-            SelectedID: "[[ .SelectedID ]]",
-            SourceBranchOK: [[ .SourceBranchOK ]],
-            SourceDBOK: [[ .SourceDBOK ]],
-            Stars: "[[ .DB.Info.Stars ]]",
-            Watchers: "[[ .DB.Info.Watchers ]]",
+            Discussions:      "[[ .DB.Info.Discussions ]]",
+            Forks:            "[[ .DB.Info.Forks ]]",
+            MRs:              "[[ .DB.Info.MRs ]]",
+            MyStar:           "[[ .MyStar ]]",
+            MyWatch:          "[[ .MyWatch ]]",
+            Owner:            "[[ .Meta.Owner ]]",
+            SelectedID:       "[[ .SelectedID ]]",
+            SourceBranchOK:   [[ .SourceBranchOK ]],
+            SourceDBOK:       [[ .SourceDBOK ]],
+            Stars:            "[[ .DB.Info.Stars ]]",
+            Watchers:         "[[ .DB.Info.Watchers ]]",
             [[ if .Meta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
@@ -616,15 +617,27 @@
         };
 
         // Turns on watching for a database
-        $scope.toggleWatch = function() {
-            // Check if the user is logged in
+        $scope.toggleWatchers = function() {
             if ($scope.meta.Loggedin != "true") {
                 // User needs to be logged in
                 lock.show();
                 return;
             }
 
-            // TODO: Write the rest of the watch toggling code
+            // Retrieve the branch list for the newly selected database
+            $http.get("/x/watch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
+                .then(function (response) {
+                    // Update watch button text
+                    if ($scope.meta.MyWatch != "true") {
+                        $scope.meta.MyWatch = "true";
+                    } else {
+                        $scope.meta.MyWatch = "false";
+                    }
+                    $scope.updateWatchersText();
+
+                    // Update displayed watcher count
+                    $scope.meta.Watchers = response.data;
+                });
         };
 
         // Update the close button label as appropriate for text area content
@@ -724,6 +737,22 @@
             }
         };
         $scope.updateStarsText();
+
+        // Update watchers button text to say "Watch" or "Unwatch"
+        $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
+        $scope.updateWatchersText = function() {
+            if ($scope.meta.MyWatch != "true") {
+                $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
+            } else {
+                $scope.watchersText = "<i class=\"fa fa-eye\"></i> Unwatch";
+            }
+        };
+        $scope.updateWatchersText();
+
+        // Sends the user to the watchers page for the database
+        $scope.watchersPage = function() {
+            window.location = "/watchers/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+        };
 
         // Auth0
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
