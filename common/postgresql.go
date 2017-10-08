@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hectane/hectane/email"
+	"github.com/hectane/hectane/queue"
 	"github.com/jackc/pgx"
 	gfm "github.com/justinclift/github_flavored_markdown"
 	"golang.org/x/crypto/bcrypt"
@@ -2293,6 +2295,89 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc
 	return nil
 }
 
+// Sends status update emails to people watching databases
+func SendEmails() {
+	// Create Hectane email queue
+	cfg := &queue.Config{
+		Directory:              Conf.Event.EmailQueueDir,
+		DisableSSLVerification: true,
+	}
+	q, err := queue.NewQueue(cfg)
+	if err != nil {
+		log.Printf("Couldn't start Hectane queue: %s", err.Error())
+		return
+	}
+	log.Printf("Created Hectane email queue in '%s'.  Queue proccesing loop refreshes every %d seconds",
+		Conf.Event.EmailQueueDir, Conf.Event.EmailQueueProcessingDelay)
+
+	for {
+		// Retrieve unsent emails from the email_queue
+		type eml struct {
+			Address string
+			Body    string
+			ID      int64
+			Subject string
+		}
+		var emailList []eml
+		dbQuery := `
+				SELECT email_id, mail_to, subject, body
+				FROM email_queue
+				WHERE sent = false`
+		rows, err := pdb.Query(dbQuery)
+		if err != nil {
+			log.Printf("Database query failed: %v", err.Error())
+			return // Abort, as we don't want to continuously resend the same emails
+		}
+		for rows.Next() {
+			var oneRow eml
+			err = rows.Scan(&oneRow.ID, &oneRow.Address, &oneRow.Subject, &oneRow.Body)
+			if err != nil {
+				log.Printf("Error retrieving queued emails: %v", err.Error())
+				rows.Close()
+				return // Abort, as we don't want to continuously resend the same emails
+			}
+			emailList = append(emailList, oneRow)
+		}
+		rows.Close()
+
+		// Send emails
+		for _, j := range emailList {
+			e := &email.Email{
+				From:    "updates@dbhub.io",
+				To:      []string{j.Address},
+				Subject: j.Subject,
+				Text:    j.Body,
+			}
+			msgs, err := e.Messages(q.Storage)
+			if err != nil {
+				log.Printf("Queuing email in Hectane failed: %v", err.Error())
+				return // Abort, as we don't want to continuously resend the same emails
+			}
+			for _, m := range msgs {
+				q.Deliver(m)
+			}
+
+			// Mark message as sent
+			dbQuery := `
+				UPDATE email_queue
+				SET sent = true, sent_timestamp = now()
+				WHERE email_id = $1`
+			commandTag, err := pdb.Exec(dbQuery, j.ID)
+			if err != nil {
+				log.Printf("Changing email status to sent failed for email '%v': '%v'", j.ID, err.Error())
+				return // Abort, as we don't want to continuously resend the same emails
+			}
+			if numRows := commandTag.RowsAffected(); numRows != 1 {
+				log.Printf("Wrong # of rows (%v) affected when changing email status to sent for email '%v'",
+					numRows, j.ID)
+			}
+		}
+
+		// Pause before running the loop again
+		time.Sleep(Conf.Event.EmailQueueProcessingDelay * time.Second)
+	}
+}
+
 // Stores a certificate for a given client.
 func SetClientCert(newCert []byte, userName string) error {
 	SQLQuery := `
@@ -2412,8 +2497,7 @@ func StatusUpdatesLoop() {
 		eventID   int64
 		timeStamp time.Time
 	}
-	for true {
-
+	for {
 		// Begin a transaction
 		var tx *pgx.Tx
 		tx, err = pdb.Begin()
@@ -2481,13 +2565,14 @@ func StatusUpdatesLoop() {
 			// TODO: It might be better to store this list in Memcached instead of hitting the database like this
 			for _, u := range users {
 				// Retrieve the current status updates list for the user
+				var eml pgx.NullString
 				dbQuery := `
-					SELECT user_name, status_updates
+					SELECT user_name, email, status_updates
 					FROM users
 					WHERE user_id = $1`
 				userEvents := make(map[string][]StatusUpdateEntry)
 				var userName string
-				err := tx.QueryRow(dbQuery, u).Scan(&userName, &userEvents)
+				err := tx.QueryRow(dbQuery, u).Scan(&userName, &eml, &userEvents)
 				if err != nil {
 					log.Printf("Database query failed: %v\n", err)
 					tx.Rollback()
@@ -2549,6 +2634,49 @@ func StatusUpdatesLoop() {
 				if err != nil {
 					log.Printf("Error when updating user status updates # in memcached: %v", err)
 					continue
+				}
+
+				// TODO: Add a email for the status notification to the outgoing email queue
+				var msg, subj string
+				switch ev.details.Type {
+				case EVENT_NEW_DISCUSSION:
+					msg = fmt.Sprintf("A new discussion has been created for %s%s%s.\n\nVisit https://%s%s "+
+						"for the details", ev.details.Owner, ev.details.Folder, ev.details.DBName, Conf.Web.ServerName,
+						ev.details.URL)
+					subj = fmt.Sprintf("DBHub.io: New discussion created on %s%s%s", ev.details.Owner,
+						ev.details.Folder, ev.details.DBName)
+				case EVENT_NEW_MERGE_REQUEST:
+					msg = fmt.Sprintf("A new merge request has been created for %s%s%s.\n\nVisit https://%s%s "+
+						"for the details", ev.details.Owner, ev.details.Folder, ev.details.DBName, Conf.Web.ServerName,
+						ev.details.URL)
+					subj = fmt.Sprintf("DBHub.io: New merge request created on %s%s%s", ev.details.Owner,
+						ev.details.Folder, ev.details.DBName)
+				case EVENT_NEW_COMMENT:
+					msg = fmt.Sprintf("A new comment has been created for %s%s%s.\n\nVisit https://%s%s for "+
+						"the details", ev.details.Owner, ev.details.Folder, ev.details.DBName, Conf.Web.ServerName,
+						ev.details.URL)
+					subj = fmt.Sprintf("DBHub.io: New comment on %s%s%s", ev.details.Owner, ev.details.Folder,
+						ev.details.DBName)
+				default:
+					log.Printf("Unknown message type when creating email message")
+				}
+				if eml.Valid {
+					// TODO: Check if the email is username@thisserver, which indicates a non-functional email address
+					dbQuery = `
+						INSERT INTO email_queue (mail_to, subject, body)
+						VALUES ($1, $2, $3)`
+					commandTag, err = tx.Exec(dbQuery, eml.String, subj, msg)
+					if err != nil {
+						log.Printf("Adding status update to email queue for user '%s' failed: %v", u, err)
+						tx.Rollback()
+						continue
+					}
+					if numRows := commandTag.RowsAffected(); numRows != 1 {
+						log.Printf("Wrong number of rows affected (%v) when adding status update to email"+
+							"queue for user '%s'", numRows, u)
+						tx.Rollback()
+						continue
+					}
 				}
 			}
 

@@ -3108,8 +3108,11 @@ func main() {
 	// Start the view count flushing routine in the background
 	go com.FlushViewCount()
 
-	// Start the status update processing routine in the background (will likely need moving into a separate daemon)
+	// Start the status update processing goroutine in the background (will likely need moving into a separate daemon)
 	go com.StatusUpdatesLoop()
+
+	// Start the email sending goroutine in the background
+	go com.SendEmails()
 
 	// Our pages
 	http.HandleFunc("/", logReq(mainHandler))

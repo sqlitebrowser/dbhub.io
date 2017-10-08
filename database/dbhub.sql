@@ -248,6 +248,40 @@ ALTER SEQUENCE discussions_disc_id_seq OWNED BY discussions.internal_id;
 
 
 --
+-- Name: email_queue; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE email_queue (
+    email_id bigint NOT NULL,
+    queued_timestamp timestamp with time zone DEFAULT now() NOT NULL,
+    mail_to text NOT NULL,
+    body text NOT NULL,
+    sent boolean DEFAULT false NOT NULL,
+    sent_timestamp timestamp with time zone,
+    subject text NOT NULL
+);
+
+
+--
+-- Name: email_queue_email_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE email_queue_email_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: email_queue_email_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE email_queue_email_id_seq OWNED BY email_queue.email_id;
+
+
+--
 -- Name: events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -423,6 +457,13 @@ ALTER TABLE ONLY discussions ALTER COLUMN internal_id SET DEFAULT nextval('discu
 
 
 --
+-- Name: email_queue email_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY email_queue ALTER COLUMN email_id SET DEFAULT nextval('email_queue_email_id_seq'::regclass);
+
+
+--
 -- Name: events event_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -505,6 +546,14 @@ ALTER TABLE ONLY discussions
 
 ALTER TABLE ONLY discussions
     ADD CONSTRAINT discussions_pkey PRIMARY KEY (internal_id);
+
+
+--
+-- Name: email_queue email_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY email_queue
+    ADD CONSTRAINT email_queue_pkey PRIMARY KEY (email_id);
 
 
 --

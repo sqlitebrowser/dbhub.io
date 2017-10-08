@@ -102,7 +102,9 @@ type DiskCacheInfo struct {
 
 // Event processing loop
 type EventProcessingInfo struct {
-	Delay time.Duration `toml:"delay"`
+	Delay                     time.Duration `toml:"delay"`
+	EmailQueueDir             string        `toml:"email_queue_dir"`
+	EmailQueueProcessingDelay time.Duration `toml:"email_queue_processing_delay"`
 }
 
 // Memcached connection parameters

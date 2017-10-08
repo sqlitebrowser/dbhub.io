@@ -141,6 +141,18 @@ func ReadConfig() error {
 		Conf.Event.Delay = 3
 	}
 
+	// Warn if the email queue processing isn't set in the config file
+	if Conf.Event.EmailQueueProcessingDelay == 0 {
+		log.Printf("WARN: Email queue processing delay isn't set in the config file. Defaulting to 10 seconds.")
+		Conf.Event.EmailQueueProcessingDelay = 10
+	}
+
+	// Warn if the email queue directory isn't set in the config file
+	if Conf.Event.EmailQueueDir == "" {
+		log.Printf("WARN: Email queue directory isn't set in the config file. Defaulting to /tmp.")
+		Conf.Event.EmailQueueDir = "/tmp"
+	}
+
 	// Set the PostgreSQL configuration values
 	pgConfig.Host = Conf.Pg.Server
 	pgConfig.Port = uint16(Conf.Pg.Port)
