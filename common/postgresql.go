@@ -2307,7 +2307,7 @@ func SendEmails() {
 		log.Printf("Couldn't start Hectane queue: %s", err.Error())
 		return
 	}
-	log.Printf("Created Hectane email queue in '%s'.  Queue proccesing loop refreshes every %d seconds",
+	log.Printf("Created Hectane email queue in '%s'.  Queue processing loop refreshes every %d seconds",
 		Conf.Event.EmailQueueDir, Conf.Event.EmailQueueProcessingDelay)
 
 	for {
@@ -2535,7 +2535,6 @@ func StatusUpdatesLoop() {
 
 		// For each event, add a status update to the status_updates list for each watcher it's for
 		for id, ev := range evList {
-
 			// Retrieve the list of watchers for the database the event occurred on
 			dbQuery := `
 				SELECT user_id
