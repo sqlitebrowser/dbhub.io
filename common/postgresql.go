@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -2972,11 +2973,13 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 
 	// If comment text was provided, generate an event about the new comment
 	if comText != "" {
-		var url string
+		var commentURL string
 		if discType == MERGE_REQUEST {
-			url = fmt.Sprintf("/merge/%s%s%s?id=%d#c%d", dbOwner, dbFolder, dbName, discID, comID)
+			commentURL = fmt.Sprintf("/merge/%s%s%s?id=%d#c%d", url.PathEscape(dbOwner), dbFolder,
+				url.PathEscape(dbName), discID, comID)
 		} else {
-			url = fmt.Sprintf("/discuss/%s%s%s?id=%d#c%d", dbOwner, dbFolder, dbName, discID, comID)
+			commentURL = fmt.Sprintf("/discuss/%s%s%s?id=%d#c%d", url.PathEscape(dbOwner), dbFolder,
+				url.PathEscape(dbName), discID, comID)
 		}
 		details := EventDetails{
 			DBName:   dbName,
@@ -2985,7 +2988,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 			Owner:    dbOwner,
 			Type:     EVENT_NEW_COMMENT,
 			Title:    discTitle,
-			URL:      url,
+			URL:      commentURL,
 			UserName: commenter,
 		}
 		err = NewEvent(details)
