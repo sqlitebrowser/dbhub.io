@@ -34,7 +34,7 @@ func ConnectMinio() (err error) {
 
 // Get a handle from Minio for a SQLite database object.
 func MinioHandle(bucket string, id string) (*minio.Object, error) {
-	userDB, err := minioClient.GetObject(bucket, id)
+	userDB, err := minioClient.GetObject(bucket, id, minio.GetObjectOptions{})
 	if err != nil {
 		log.Printf("Error retrieving DB from Minio: %v\n", err)
 		return nil, errors.New("Error retrieving database from internal storage")
@@ -151,7 +151,7 @@ func StoreDatabaseFile(db *os.File, sha string, dbSize int64) error {
 	}
 
 	// Store the SQLite database file in Minio
-	numBytes, err := minioClient.PutObject(bkt, id, db, "application/x-sqlite3")
+	numBytes, err := minioClient.PutObject(bkt, id, db, dbSize, minio.PutObjectOptions{ContentType:"application/x-sqlite3"})
 	if err != nil {
 		log.Printf("Storing file in Minio failed: %v\n", err)
 		return err
