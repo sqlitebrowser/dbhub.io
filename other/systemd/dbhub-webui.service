@@ -1,0 +1,27 @@
+[Unit]
+Description=DBHub.io Website User Interface
+Documentation=https://github.com/sqlitebrowser/dbhub.io
+Requires=dbhub-webui.socket
+Wants=network-online.target
+After=network-online.target
+AssertFileIsExecutable=/usr/local/bin/webui
+
+[Service]
+ExecStart=/usr/local/bin/webui
+WorkingDirectory=/home/dbhub/go/src/github.com/sqlitebrowser/dbhub.io
+User=dbhub
+Group=dbhub
+PermissionsStartOnly=true
+NonBlocking=true
+StandardOutput=journal
+StandardError=inherit
+SuccessExitStatus=0
+
+# Let systemd restart this service only if it has ended with the clean exit code or signal.
+Restart=on-success
+
+# Specifies the maximum file descriptor number that can be opened by this process
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

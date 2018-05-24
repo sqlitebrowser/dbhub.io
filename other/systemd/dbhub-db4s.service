@@ -1,0 +1,26 @@
+[Unit]
+Description=DBHub.io DB4S connector
+Documentation=https://github.com/sqlitebrowser/dbhub.io
+Wants=network-online.target
+After=network-online.target
+AssertFileIsExecutable=/usr/local/bin/db4s
+
+[Service]
+ExecStart=/usr/local/bin/db4s
+WorkingDirectory=/home/dbhub/go/src/github.com/sqlitebrowser/dbhub.io
+User=dbhub
+Group=dbhub
+PermissionsStartOnly=true
+NonBlocking=true
+SuccessExitStatus=0
+StandardOutput=journal
+StandardError=inherit
+
+# Let systemd restart this service only if it has ended with the clean exit code or signal.
+Restart=on-success
+
+# Specifies the maximum file descriptor number that can be opened by this process
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
