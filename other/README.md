@@ -21,7 +21,7 @@ The dbhub-webui service binds to port 443.
 * On FreeBSD, this can be done by changing the reserved port range
   to exclude 443:
 
-      $ sudo sysctl net.inet.ip.portrange.reservedhigh=79
+      $ sudo sysctl net.inet.ip.portrange.reservedhigh=442
 
   Remember to set that in /etc/sysctl.conf too, so the change is
   automatically applied at boot.
