@@ -1,8 +1,10 @@
 [Unit]
 Description=DBHub.io DB4S connector
 Documentation=https://github.com/sqlitebrowser/dbhub.io
+Requires=postgresql-10.service
+Requires=memcached.service
 Wants=network-online.target
-After=network-online.target
+After=postgresql-10.service
 AssertFileIsExecutable=/usr/local/bin/db4s
 
 [Service]

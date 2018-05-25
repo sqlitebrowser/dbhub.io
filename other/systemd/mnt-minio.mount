@@ -1,0 +1,12 @@
+[Unit]
+Description=Mount NDB Volume at boot
+
+[Mount]
+What=UUID="20866fb9-1faf-4fcf-9826-2802af96e5f6"
+Where=/mnt/minio
+Type=ext4
+Options=noatime,nodiratime
+
+[Install]
+WantedBy=multi-user.target
+

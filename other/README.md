@@ -11,8 +11,8 @@ The dbhub-webui service binds to port 443.
   "CAP_NET_BIND_SERVICE" applied to it, otherwise it won't be
   able to start.
 
-  The dbhub-webui.service file takes care of this for SystemD
-  (tested on CentOS 7).  If you're not using SystemD, then the
+  The dbhub-webui.service file takes care of this for systemd
+  (tested on CentOS 7).  If you're not using systemd, then the
   capability can be applied manually prior to starting the
   daemon:
 

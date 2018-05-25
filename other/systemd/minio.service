@@ -1,0 +1,45 @@
+[Unit]
+Description=Minio
+Documentation=https://docs.minio.io
+Requires=mnt-minio.mount
+Wants=network-online.target
+After=network-online.target
+After=mnt-minio.mount
+AssertFileIsExecutable=/usr/local/bin/minio
+
+[Service]
+WorkingDirectory=/usr/local/
+
+User=minio-user
+Group=minio-user
+
+PermissionsStartOnly=true
+
+EnvironmentFile=-/etc/default/minio
+ExecStartPre=/bin/bash -c "[ -n \"${MINIO_VOLUMES}\" ] || echo \"Variable MINIO_VOLUMES not set in /etc/default/minio\""
+
+ExecStart=/usr/local/bin/minio server $MINIO_OPTS $MINIO_VOLUMES
+
+# Let systemd restart this service only if it has ended with the clean exit code or signal.
+Restart=on-success
+
+StandardOutput=journal
+StandardError=inherit
+
+# Specifies the maximum file descriptor number that can be opened by this process
+LimitNOFILE=65536
+
+# Disable timeout logic and wait until process is stopped
+TimeoutStopSec=0
+
+# SIGTERM signal is used to stop Minio
+KillSignal=SIGTERM
+
+SendSIGKILL=no
+
+SuccessExitStatus=0
+
+[Install]
+WantedBy=multi-user.target
+
+# Built for ${project.name}-${project.version} (${project.name})

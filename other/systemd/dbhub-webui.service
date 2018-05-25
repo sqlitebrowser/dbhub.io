@@ -1,9 +1,13 @@
 [Unit]
 Description=DBHub.io Website User Interface
 Documentation=https://github.com/sqlitebrowser/dbhub.io
-#Requires=dbhub-webui.socket
+Requires=postgresql-10.service
+Requires=memcached.service
+Requires=minio.service
 Wants=network-online.target
-After=network-online.target
+After=postgresql-10.service
+After=memcached.service
+After=minio.service
 AssertFileIsExecutable=/usr/local/bin/webui
 
 [Service]
