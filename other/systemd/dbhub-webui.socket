@@ -1,6 +1,0 @@
-[Unit]
-Description=Socket that allows the DBHub.io WebUI to bind to port 443
-
-[Socket]
-ListenStream=443
-NoDelay=true
