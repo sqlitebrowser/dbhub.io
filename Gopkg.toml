@@ -1,0 +1,3 @@
+[[constraint]]
+  name = "github.com/jackc/pgx"
+  version = "v2.11.0"
