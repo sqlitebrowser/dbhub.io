@@ -64,6 +64,7 @@ type TomlConfig struct {
 	DB4S      DB4SInfo
 	DiskCache DiskCacheInfo
 	Event     EventProcessingInfo
+	License   LicenseInfo
 	Memcache  MemcacheInfo
 	Minio     MinioInfo
 	Pg        PGInfo
@@ -107,6 +108,11 @@ type EventProcessingInfo struct {
 	EmailQueueProcessingDelay time.Duration `toml:"email_queue_processing_delay"`
 }
 
+// Path to the license files
+type LicenseInfo struct {
+	LicenseDir string `toml:"license_dir"`
+}
+
 // Memcached connection parameters
 type MemcacheInfo struct {
 	DefaultCacheTime    int           `toml:"default_cache_time"`
@@ -141,6 +147,7 @@ type SigningInfo struct {
 }
 
 type WebInfo struct {
+	BaseDir              string `toml:"base_dir"`
 	BindAddress          string `toml:"bind_address"`
 	Certificate          string `toml:"certificate"`
 	CertificateKey       string `toml:"certificate_key"`

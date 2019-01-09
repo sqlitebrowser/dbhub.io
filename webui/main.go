@@ -3069,7 +3069,7 @@ func main() {
 
 	// Parse our template files
 	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
-		filepath.Join("webui", "templates", "*.html")))
+		filepath.Join(com.Conf.Web.BaseDir, "webui", "templates", "*.html")))
 
 	// Connect to Minio server
 	err = com.ConnectMinio()
@@ -3176,76 +3176,76 @@ func main() {
 
 	// CSS
 	http.HandleFunc("/css/bootstrap-3.3.7.min.css", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "css", "bootstrap-3.3.7.min.css"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "bootstrap-3.3.7.min.css"))
 	}))
 	http.HandleFunc("/css/bootstrap.min.css.map", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "css", "bootstrap-3.3.7.min.css.map"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "bootstrap-3.3.7.min.css.map"))
 	}))
 	http.HandleFunc("/css/font-awesome-4.7.0.min.css", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "css", "font-awesome-4.7.0.min.css"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "font-awesome-4.7.0.min.css"))
 	}))
 	http.HandleFunc("/css/local.css", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "css", "local.css"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "local.css"))
 	}))
 
 	// Fonts
 	http.HandleFunc("/css/FontAwesome.otf", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "fonts", "FontAwesome-4.7.0.otf"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "FontAwesome-4.7.0.otf"))
 	}))
 	http.HandleFunc("/css/fontawesome-webfont.eot", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.eot"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.eot"))
 	}))
 	http.HandleFunc("/css/fontawesome-webfont.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.svg"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.svg"))
 	}))
 	http.HandleFunc("/css/fontawesome-webfont.ttf", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.ttf"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.ttf"))
 	}))
 	http.HandleFunc("/css/fontawesome-webfont.woff", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.woff"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.woff"))
 	}))
 	http.HandleFunc("/css/fontawesome-webfont.woff2", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "fonts", "fontawesome-webfont-4.7.0.woff2"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.woff2"))
 	}))
 
 	// Javascript
 	http.HandleFunc("/js/angular-1.6.6.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.6.6.min.js"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-1.6.6.min.js"))
 	}))
 	http.HandleFunc("/js/angular.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-1.6.6.min.js.map"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-1.6.6.min.js.map"))
 	}))
 	http.HandleFunc("/js/angular-sanitize-1.6.6.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.6.6.min.js"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.6.6.min.js"))
 	}))
 	http.HandleFunc("/js/angular-sanitize.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "angular-sanitize-1.6.6.min.js.map"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.6.6.min.js.map"))
 	}))
 	http.HandleFunc("/js/local.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "local.js"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "local.js"))
 	}))
 	http.HandleFunc("/js/lock-10.20.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.20.min.js"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-10.20.min.js"))
 	}))
 	http.HandleFunc("/js/lock.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "lock-10.20.min.js.map"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-10.20.min.js.map"))
 	}))
 	http.HandleFunc("/js/ui-bootstrap-tpls-2.5.0.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "js", "ui-bootstrap-tpls-2.5.0.min.js"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "ui-bootstrap-tpls-2.5.0.min.js"))
 	}))
 
 	// Other static files
 	http.HandleFunc("/images/auth0.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "images", "auth0.svg"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "auth0.svg"))
 	}))
 	http.HandleFunc("/images/sqlitebrowser.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "images", "sqlitebrowser.svg"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "sqlitebrowser.svg"))
 	}))
 	http.HandleFunc("/favicon.ico", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "favicon.ico"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "favicon.ico"))
 	}))
 	http.HandleFunc("/robots.txt", logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("webui", "robots.txt"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "robots.txt"))
 	}))
 
 	// Start webUI server

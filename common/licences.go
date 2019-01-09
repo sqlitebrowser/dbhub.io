@@ -72,7 +72,7 @@ func AddDefaultLicences() (err error) {
 		txt := []byte{}
 		if l.Path != "" {
 			// Read the file contents
-			txt, err = ioutil.ReadFile(filepath.Join("default_licences", l.Path))
+			txt, err = ioutil.ReadFile(filepath.Join(Conf.License.LicenseDir, l.Path))
 			if err != nil {
 				return err
 			}

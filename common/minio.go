@@ -151,7 +151,7 @@ func StoreDatabaseFile(db *os.File, sha string, dbSize int64) error {
 	}
 
 	// Store the SQLite database file in Minio
-	numBytes, err := minioClient.PutObject(bkt, id, db, dbSize, minio.PutObjectOptions{ContentType:"application/x-sqlite3"})
+	numBytes, err := minioClient.PutObject(bkt, id, db, dbSize, minio.PutObjectOptions{ContentType: "application/x-sqlite3"})
 	if err != nil {
 		log.Printf("Storing file in Minio failed: %v\n", err)
 		return err
