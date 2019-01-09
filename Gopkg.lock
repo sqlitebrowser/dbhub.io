@@ -224,6 +224,14 @@
   version = "v3.0.0"
 
 [[projects]]
+  digest = "1:096a8a9182648da3d00ff243b88407838902b6703fc12657f76890e08d1899bf"
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  pruneopts = ""
+  revision = "ae18d6b8b3205b561c79e8e5f69bff09736185f4"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:a5484d4fa43127138ae6e7b2299a6a52ae006c7f803d98d717f60abf3e97192e"
   name = "github.com/pborman/uuid"
   packages = ["."]
@@ -411,8 +419,8 @@
     "github.com/hectane/hectane/queue",
     "github.com/jackc/pgx",
     "github.com/justinclift/github_flavored_markdown",
-    "github.com/minio/go-homedir",
     "github.com/minio/minio-go",
+    "github.com/mitchellh/go-homedir",
     "github.com/pkg/errors",
     "golang.org/x/crypto/bcrypt",
     "golang.org/x/oauth2",

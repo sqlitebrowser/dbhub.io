@@ -10,7 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/jackc/pgx"
-	"github.com/minio/go-homedir"
+	"github.com/mitchellh/go-homedir"
 )
 
 var (
