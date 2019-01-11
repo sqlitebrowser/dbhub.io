@@ -496,6 +496,7 @@ func main() {
 	// the first would barf with PG errors about trying to insert multiple "default" users violating unique
 	// constraints.  It would be solvable by creating a special purpose PL/pgSQL function just for this one use case...
 	// or we could just ignore failures here. ;)
+	// TODO: We might be able to use an "ON CONFLICT" PG clause instead, to (eg) "DO NOTHING"
 	com.AddDefaultUser()
 
 	// Add the default licences to PostgreSQL
@@ -589,6 +590,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Check whether the uploaded database is too large
+	// TODO: Have a list of users (from the config.toml file) which don't have this check applied
 	if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
 		http.Error(w,
 			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
