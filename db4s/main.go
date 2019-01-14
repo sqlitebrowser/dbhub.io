@@ -862,7 +862,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	log.Printf("Database uploaded: '%s%s%s', bytes: %v\n", userAcc, targetFolder, targetDB, numBytes)
 
 	// Construct message data for returning to DB4S
-	u := filepath.Join(server, targetUser, targetFolder, targetDB)
+	u := server + filepath.Join("/", targetUser, targetFolder, targetDB)
 	u += fmt.Sprintf(`?branch=%s&commit=%s`, branchName, commitID)
 	m := map[string]string{"commit_id": commitID, "url": u}
 
