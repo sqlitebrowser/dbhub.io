@@ -23,14 +23,20 @@ var (
 
 // Read the server configuration file.
 func ReadConfig() error {
-	// Reads the server configuration from disk
-	// TODO: Might be a good idea to add permission checks of the dir & conf file, to ensure they're not
-	// TODO: world readable.  Similar in concept to what ssh does for its config files.
-	userHome, err := homedir.Dir()
-	if err != nil {
-		return fmt.Errorf("User home directory couldn't be determined: %s", "\n")
+	// Override config file location via environment variables
+	var err error
+	configFile := os.Getenv("CONFIG_FILE")
+	if configFile == "" {
+		// TODO: Might be a good idea to add permission checks of the dir & conf file, to ensure they're not
+		//       world readable.  Similar in concept to what ssh does for its config files.
+		userHome, err := homedir.Dir()
+		if err != nil {
+			log.Fatalf("User home directory couldn't be determined: %s", "\n")
+		}
+		configFile = filepath.Join(userHome, ".dbhub", "config.toml")
 	}
-	configFile := filepath.Join(userHome, ".dbhub", "config.toml")
+
+	// Reads the server configuration from disk
 	if _, err := toml.DecodeFile(configFile, &Conf); err != nil {
 		return fmt.Errorf("Config file couldn't be parsed: %v\n", err)
 	}
