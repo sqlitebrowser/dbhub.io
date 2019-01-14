@@ -17,7 +17,7 @@ var (
 	regexFolder         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
 	regexLicence        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexMarkDownSource = regexp.MustCompile(`^[a-z,A-Z,0-9` + ",`," + `‘,’,“,”,\.,\-,\_,\/,\(,\),\[,\],\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
-	regexPGTable        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\ ]+$`)
+	regexPGTable        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexUsername       = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
 	// For input validation
