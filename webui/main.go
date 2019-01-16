@@ -223,13 +223,18 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -305,13 +310,18 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -427,13 +437,18 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -545,13 +560,18 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -645,13 +665,18 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -949,13 +974,18 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -1358,13 +1388,18 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -1759,13 +1794,18 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -1871,13 +1911,18 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -2089,13 +2134,18 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -2176,13 +2226,18 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -2272,13 +2327,18 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -2366,12 +2426,17 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 	}
@@ -2632,13 +2697,18 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -2689,12 +2759,17 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 	}
@@ -2761,12 +2836,17 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 	}
@@ -2853,13 +2933,18 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -2937,13 +3022,18 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -3034,6 +3124,10 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 			loggedInUser = u.(string)
 		} else {
 			loggedInUser = "-"
+		}
+
+		if com.Conf.Environment.Environment == "docker" {
+			loggedInUser = "default"
 		}
 
 		// Write request details to the request log
@@ -3335,13 +3429,18 @@ func markdownPreview(w http.ResponseWriter, r *http.Request) {
 func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -3523,13 +3622,18 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -3563,7 +3667,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate submitted form data
-	err = com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
+	err := com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
 	if err != nil {
 		log.Printf("%s: Maximum rows value failed validation: %s\n", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing maximum rows preference value")
@@ -3624,13 +3728,18 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -3966,13 +4075,18 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -4067,13 +4181,18 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -4115,13 +4234,18 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -4339,12 +4463,17 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 	}
@@ -4518,13 +4647,18 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -4667,13 +4801,18 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -4778,13 +4917,18 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -4898,13 +5042,18 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -5027,13 +5176,18 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -5161,13 +5315,18 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
@@ -5325,13 +5484,18 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true

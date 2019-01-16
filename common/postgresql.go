@@ -30,7 +30,7 @@ func AddDefaultUser() error {
 	dbQuery := `
 		INSERT INTO users (auth0_id, user_name, email, password_hash, client_cert, display_name)
 		VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := pdb.Exec(dbQuery, RandomString(16), "default", "", RandomString(16), "",
+	_, err := pdb.Exec(dbQuery, RandomString(16), "default", "default@dbhub.io", RandomString(16), "",
 		"Default system user")
 	if err != nil {
 		// For now, don't bother logging a failure here.  This *might* need changing later on

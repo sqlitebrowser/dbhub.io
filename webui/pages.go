@@ -21,12 +21,17 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -58,7 +63,7 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 
 	// Render the page
 	t := tmpl.Lookup("aboutPage")
-	err = t.Execute(w, pageData)
+	err := t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -84,12 +89,17 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -226,12 +236,17 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -441,13 +456,18 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -677,13 +697,18 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -782,12 +807,17 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -923,13 +953,18 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -1019,13 +1054,18 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -1111,13 +1151,18 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -1211,12 +1256,17 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -1824,12 +1874,17 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -2021,12 +2076,17 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		fmt.Fprintf(w, "An error occurred when calling errorPage(): %s", err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			fmt.Fprintf(w, "An error occurred when calling errorPage(): %s", err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -2057,7 +2117,7 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 	// Render the page
 	w.WriteHeader(httpCode)
 	t := tmpl.Lookup("errorPage")
-	err = t.Execute(w, pageData)
+	err := t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -2083,12 +2143,17 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -2163,12 +2228,17 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -2238,12 +2308,17 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -2747,12 +2822,17 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -2953,13 +3033,18 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -3139,12 +3224,17 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -3238,12 +3328,17 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -3384,13 +3479,18 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -3404,6 +3504,7 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of status updates for the user
+	var err error
 	pageData.Updates, err = com.StatusUpdates(loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -3458,13 +3559,18 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
+	var u interface{}
 	validSession := false
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
@@ -3544,12 +3650,17 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		if strings.ToLower(loggedInUser) == strings.ToLower(userName) {
@@ -3634,12 +3745,17 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	sess, err := store.Get(r, "dbhub-user")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
 	}
-	u := sess.Values["UserName"]
 	if u != nil {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
