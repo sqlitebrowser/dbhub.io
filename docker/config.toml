@@ -1,9 +1,9 @@
 [db4s]
 server = "docker-dev.dbhub.io"
 port = 5550
-certificate = "/go/src/github.com/sqlitebrowser/dbhub.io/certs/docker-dev.dbhub.io.cert.pem"
-certificate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/ssl/certs/docker-dev.dbhub.io.key.pem"
-ca_chain = "/go/src/github.com/sqlitebrowser/dbhub.io/ssl/certs/ca-chain-docker.cert.pem"
+certificate = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/docker-dev.dbhub.io.cert.pem"
+certificate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/docker-dev.dbhub.io.key.pem"
+ca_chain = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/ca-chain-docker.cert.pem"
 
 [diskcache]
 directory = "/tmp/disk_cache"
@@ -38,14 +38,14 @@ username = "dbhub"
 
 [sign]
 cert_days_valid = 365
-intermediate_cert = "/go/src/github.com/sqlitebrowser/dbhub.io/ssl/certs/intermediate-docker.cert.pem"
-intermediate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/ssl/certs/intermediate-docker.key.pem"
+intermediate_cert = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/intermediate-docker.cert.pem"
+intermediate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/intermediate-docker.key.pem"
 
 [web]
 base_dir = "/go/src/github.com/sqlitebrowser/dbhub.io"
 bind_address = ":8443"
 server_name = "localhost:8443"
-certificate = "/go/src/github.com/sqlitebrowser/dbhub.io/ssl/certs/docker-dev.dbhub.io.cert.pem"
-certificate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/ssl/certs/docker-dev.dbhub.io.key.pem"
+certificate = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/docker-dev.dbhub.io.cert.pem"
+certificate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/docker-dev.dbhub.io.key.pem"
 request_log = "/var/log/dbhub/request.log"
 session_store_password = "example"
