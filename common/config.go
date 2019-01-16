@@ -108,9 +108,6 @@ func ReadConfig() error {
 	if Conf.Pg.Username == "" {
 		missingConfig = append(missingConfig, "PostgreSQL username string")
 	}
-	if Conf.Pg.Password == "" && Conf.Environment.Environment != "docker" {
-		missingConfig = append(missingConfig, "PostgreSQL password string")
-	}
 	if Conf.Pg.Database == "" {
 		missingConfig = append(missingConfig, "PostgreSQL database string")
 	}
