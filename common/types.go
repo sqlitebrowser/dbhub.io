@@ -59,17 +59,18 @@ const MinioFolderChars = 6
 
 // Configuration file
 type TomlConfig struct {
-	Admin     AdminInfo
-	Auth0     Auth0Info
-	DB4S      DB4SInfo
-	DiskCache DiskCacheInfo
-	Event     EventProcessingInfo
-	License   LicenseInfo
-	Memcache  MemcacheInfo
-	Minio     MinioInfo
-	Pg        PGInfo
-	Sign      SigningInfo
-	Web       WebInfo
+	Admin       AdminInfo
+	Auth0       Auth0Info
+	DB4S        DB4SInfo
+	Environment EnvInfo
+	DiskCache   DiskCacheInfo
+	Event       EventProcessingInfo
+	License     LicenseInfo
+	Memcache    MemcacheInfo
+	Minio       MinioInfo
+	Pg          PGInfo
+	Sign        SigningInfo
+	Web         WebInfo
 }
 
 // Config info for the admin server
@@ -99,6 +100,11 @@ type DB4SInfo struct {
 // Disk cache info
 type DiskCacheInfo struct {
 	Directory string
+}
+
+// Environment info
+type EnvInfo struct {
+	Environment string
 }
 
 // Event processing loop

@@ -93,10 +93,10 @@ func ReadConfig() error {
 	if Conf.Minio.Server == "" {
 		missingConfig = append(missingConfig, "Minio server:port string")
 	}
-	if Conf.Minio.AccessKey == "" {
+	if Conf.Minio.AccessKey == "" && Conf.Environment.Environment != "docker" {
 		missingConfig = append(missingConfig, "Minio access key string")
 	}
-	if Conf.Minio.Secret == "" {
+	if Conf.Minio.Secret == "" && Conf.Environment.Environment != "docker" {
 		missingConfig = append(missingConfig, "Minio secret string")
 	}
 	if Conf.Pg.Server == "" {
@@ -108,7 +108,7 @@ func ReadConfig() error {
 	if Conf.Pg.Username == "" {
 		missingConfig = append(missingConfig, "PostgreSQL username string")
 	}
-	if Conf.Pg.Password == "" {
+	if Conf.Pg.Password == "" && Conf.Environment.Environment != "docker" {
 		missingConfig = append(missingConfig, "PostgreSQL password string")
 	}
 	if Conf.Pg.Database == "" {
