@@ -6,7 +6,7 @@ certificate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/docker
 ca_chain = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/ca-chain-docker.cert.pem"
 
 [diskcache]
-directory = "/tmp/disk_cache"
+directory = "/home/dbhub/.dbhub/disk_cache"
 
 [environment]
 environment = "docker"
@@ -14,7 +14,7 @@ environment = "docker"
 [event]
 delay = 2
 email_queue_processing_delay = 5
-email_queue_dir = "/tmp/email_queue"
+email_queue_dir = "/home/dbhub/.dbhub/email_queue"
 
 [license]
 license_dir = "/go/src/github.com/sqlitebrowser/dbhub.io/default_licences"
@@ -26,6 +26,8 @@ view_count_flush_delay = 120
 
 [minio]
 server = "localhost:9000"
+access_key = "minio"
+secret = "minio123"
 https = false
 
 [pg]

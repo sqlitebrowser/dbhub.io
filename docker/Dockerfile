@@ -75,10 +75,10 @@ ENV GOPATH /go
 RUN mkdir -p /go/bin && \
     curl -L https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 
-# Create directory for the DBHub logs
-RUN mkdir -p /var/log/dbhub && \
-    chown -R dbhub:dbhub /var/log/dbhub && \
-    chmod 700 /var/log/dbhub
+# Create directores for the DBHub daemons
+RUN mkdir -p /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue && \
+    chown -R dbhub:dbhub /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue && \
+    chmod 700 /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue
 
 # Build the DBHub.io daemons
 RUN mkdir -p /go/src/github.com/sqlitebrowser && \
