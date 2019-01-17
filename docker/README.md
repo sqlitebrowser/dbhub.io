@@ -67,7 +67,7 @@ local desktops /etc/hosts, pointing at the running docker image.
 
 This way, when your web browser (Firefox, etc) tries to visit:
 
-    https://docker-dev.dbhub.io
+    https://docker-dev.dbhub.io:8443
 
 ... it will go to the docker image, using the name expected by the
 server certificate.  Having the name match correctly is useful.
