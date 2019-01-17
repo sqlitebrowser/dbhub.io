@@ -44,7 +44,7 @@ intermediate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/inter
 [web]
 base_dir = "/go/src/github.com/sqlitebrowser/dbhub.io"
 bind_address = ":8443"
-server_name = "localhost:8443"
+server_name = "docker-dev.dbhub.io:8443"
 certificate = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/docker-dev.dbhub.io.cert.pem"
 certificate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/docker-dev.dbhub.io.key.pem"
 request_log = "/var/log/dbhub/request.log"
