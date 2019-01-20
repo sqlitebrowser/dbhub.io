@@ -161,7 +161,7 @@
 
 [[projects]]
   digest = "1:015013adc370f461eb789990dc63f751bd1bdeeb9e7a6db0dff46b546363a374"
-  name = "github.com/justinclift/blackfriday"
+  name = "github.com/sqlitebrowser/blackfriday"
   packages = ["."]
   pruneopts = ""
   revision = "1e5d9ef9994da39efd7c319295415cc7058a6878"
@@ -170,7 +170,7 @@
 [[projects]]
   branch = "master"
   digest = "1:55f7535f436025ac322bd51dd2946fed9a092fe2e4bcb7b63658a609ab9f0169"
-  name = "github.com/justinclift/github_flavored_markdown"
+  name = "github.com/sqlitebrowser/github_flavored_markdown"
   packages = ["."]
   pruneopts = ""
   revision = "b0541819f69bb511daa2be7c152b6bf1ba2bc37e"
@@ -453,7 +453,7 @@
     "github.com/hectane/hectane/email",
     "github.com/hectane/hectane/queue",
     "github.com/jackc/pgx",
-    "github.com/justinclift/github_flavored_markdown",
+    "github.com/sqlitebrowser/github_flavored_markdown",
     "github.com/minio/minio-go",
     "github.com/mitchellh/go-homedir",
     "github.com/pkg/errors",

@@ -15,7 +15,7 @@ import (
 	"github.com/hectane/hectane/email"
 	"github.com/hectane/hectane/queue"
 	"github.com/jackc/pgx"
-	gfm "github.com/justinclift/github_flavored_markdown"
+	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"golang.org/x/crypto/bcrypt"
 )
 

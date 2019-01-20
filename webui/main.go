@@ -19,7 +19,7 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	"github.com/gwenn/gosqlite"
-	gfm "github.com/justinclift/github_flavored_markdown"
+	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"golang.org/x/oauth2"
 )
@@ -3344,7 +3344,8 @@ func main() {
 
 	// Start webUI server
 	log.Printf("DBHub server starting on https://%s\n", com.Conf.Web.ServerName)
-	err = http.ListenAndServeTLS(com.Conf.Web.BindAddress, com.Conf.Web.Certificate, com.Conf.Web.CertificateKey, nil)
+	err = http.ListenAndServe(com.Conf.Web.BindAddress, nil)
+	//err = http.ListenAndServeTLS(com.Conf.Web.BindAddress, com.Conf.Web.Certificate, com.Conf.Web.CertificateKey, nil)
 
 	// Shut down nicely
 	com.DisconnectPostgreSQL()

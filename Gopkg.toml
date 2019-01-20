@@ -3,5 +3,5 @@
   version = "v2.11.0"
 
 [[override]]
-  name = "github.com/justinclift/blackfriday"
+  name = "github.com/sqlitebrowser/blackfriday"
   version = "v9.0.0"

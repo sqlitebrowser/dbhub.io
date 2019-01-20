@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	gfm "github.com/justinclift/github_flavored_markdown"
+	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
