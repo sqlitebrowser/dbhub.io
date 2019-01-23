@@ -2781,6 +2781,19 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure the database being requested isn't overly large
+	var tmp com.SQLiteDBinfo
+	err = com.DBDetails(&tmp, loggedInUser, dbOwner, "/", dbName, commitID)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	size := tmp.Info.DBEntry.Size
+	if size >= 100000000 {
+		errorPage(w, r, http.StatusBadRequest, "CSV export not allowed for this database due to size restrictions.")
+		return
+	}
+
 	// Get a handle from Minio for the database object
 	sdb, err := com.OpenMinioObject(bucket, id)
 	if err != nil {
@@ -2955,6 +2968,20 @@ func downloadRedashJSONHandler(w http.ResponseWriter, r *http.Request) {
 	bucket, id, _, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Ensure the database being requested isn't overly large
+	var tmp com.SQLiteDBinfo
+	err = com.DBDetails(&tmp, loggedInUser, dbOwner, "/", dbName, commitID)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	size := tmp.Info.DBEntry.Size
+	if size >= 100000000 {
+		errorPage(w, r, http.StatusBadRequest, "Redash JSON export not allowed for this database due to size "+
+			"restrictions.")
 		return
 	}
 
