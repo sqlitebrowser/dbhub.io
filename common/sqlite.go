@@ -7,6 +7,7 @@ import (
 	"log"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/gwenn/gosqlite"
 )
@@ -320,6 +321,111 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 
 	// Return the results
 	return resultSet, nil
+}
+
+// This is a specialised variation of the ReadSQLiteDB() function, just for our Redash JSON exporting code. It'll probably
+// need to be merged with the above function at some point.
+func ReadSQLiteDBRedash(sdb *sqlite.Conn, dbTable string) (dash RedashTableData, err error) {
+	// Retrieve all of the data from the selected database table
+	stmt, err := sdb.Prepare(`SELECT * FROM "` + dbTable + `"`)
+	if err != nil {
+		log.Printf("Error when preparing statement for database: %s\n", err)
+		return RedashTableData{}, err
+	}
+
+	// Process each row
+	fieldCount := -1
+	err = stmt.Select(func(s *sqlite.Stmt) error {
+
+		// Get the number of fields in the result
+		if fieldCount == -1 {
+			fieldCount = stmt.DataCount()
+		}
+
+		// Retrieve the (table level) type declaration for the result fields
+		if dash.Columns == nil {
+			for i := 0; i < fieldCount; i++ {
+				var c RedashColumnMeta
+				c.Name = stmt.ColumnName(i)
+				c.FriendlyName = stmt.ColumnName(i)
+
+				// Map common SQLite data types to Redash JSON acceptable equivalent
+				t := strings.ToLower(stmt.ColumnDeclaredType(i))
+				switch t {
+				case "numeric":
+					c.Type = "float"
+				case "real":
+					c.Type = "float"
+				case "text":
+					c.Type = "string"
+				default:
+					c.Type = t
+				}
+
+				dash.Columns = append(dash.Columns, c)
+			}
+		}
+
+		// Retrieve the data for each row
+		row := make(map[string]interface{})
+		for i := 0; i < fieldCount; i++ {
+
+			// Retrieve the name of the field
+			fieldName := stmt.ColumnName(i)
+
+			// Retrieve the data type for the field
+			fieldType := stmt.ColumnType(i)
+
+			isNull := false
+			switch fieldType {
+			case sqlite.Integer:
+				var val int
+				val, isNull, err = s.ScanInt(i)
+				if err != nil {
+					log.Printf("Something went wrong with ScanInt(): %v\n", err)
+					break
+				}
+				if !isNull {
+					row[fieldName] = val
+				}
+			case sqlite.Float:
+				var val float64
+				val, isNull, err = s.ScanDouble(i)
+				if err != nil {
+					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
+					break
+				}
+				if !isNull {
+					row[fieldName] = val
+				}
+			case sqlite.Text:
+				var val string
+				val, isNull = s.ScanText(i)
+				if !isNull {
+					row[fieldName] = val
+				}
+			case sqlite.Blob:
+				var val []byte
+				val, isNull = s.ScanBlob(i)
+				if !isNull {
+					// Base64 encode the value
+					row[fieldName] = base64.StdEncoding.EncodeToString(val)
+				}
+			case sqlite.Null:
+				isNull = true
+			}
+		}
+		dash.Rows = append(dash.Rows, row)
+		return nil
+	})
+	if err != nil {
+		log.Printf("Error when reading data from database: %s\n", err)
+		return RedashTableData{}, err
+	}
+	defer stmt.Finalize()
+
+	// Return the results
+	return dash, nil
 }
 
 // Performs basic sanity checks of an uploaded database.

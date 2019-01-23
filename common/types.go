@@ -400,6 +400,19 @@ type MetaInfo struct {
 	Title            string
 }
 
+// When SQLite data is prepared for sending to Redash (as JSON), the RedashColumnMeta and RedashTableData structures
+// are used to hold it
+type RedashColumnMeta struct {
+	Name         string `json:"name"`
+	Type         string `json:"type"`
+	FriendlyName string `json:"friendly_name"`
+}
+
+type RedashTableData struct {
+	Columns []RedashColumnMeta       `json:"columns"`
+	Rows    []map[string]interface{} `json:"rows"`
+}
+
 type ReleaseEntry struct {
 	Commit        string    `json:"commit"`
 	Date          time.Time `json:"date"`
