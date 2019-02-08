@@ -2693,51 +2693,6 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(y))
 }
 
-// Sends the X509 DB4S certificate to the user
-func downloadCertHandler(w http.ResponseWriter, r *http.Request) {
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = "default"
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
-	}
-
-	// Ensure we have a valid logged in user
-	if validSession != true {
-		// No logged in user, so error out
-		errorPage(w, r, http.StatusBadRequest, "Not logged in")
-		return
-	}
-
-	// Retrieve the client certificate from the PG database
-	cert, err := com.ClientCert(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf("Retrieving client cert from "+
-			"database failed for user: %v", loggedInUser))
-		return
-	}
-
-	// Send the client certificate to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.cert.pem"`, loggedInUser))
-	// Note, don't use "application/x-x509-user-cert", otherwise the browser may try to install it!
-	// Useful reference info: https://pki-tutorial.readthedocs.io/en/latest/mime.html
-	w.Header().Set("Content-Type", "application/x-pem-file")
-	w.Write(cert)
-	return
-}
-
 func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Download CSV"
 
@@ -3162,13 +3117,6 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store the new certificate in the database
-	err = com.SetClientCert(newCert, loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Storing the new client certificate failed")
-		return
-	}
-
 	// Send the client certificate to the user
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.cert.pem"`, loggedInUser))
 	// Note, don't use "application/x-x509-user-cert", otherwise the browser may try to install it!
@@ -3357,7 +3305,6 @@ func main() {
 	http.HandleFunc("/x/deletetag/", logReq(deleteTagHandler))
 	http.HandleFunc("/x/diffcommitlist/", logReq(diffCommitListHandler))
 	http.HandleFunc("/x/download/", logReq(downloadHandler))
-	http.HandleFunc("/x/downloadcert", logReq(downloadCertHandler))
 	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
 	http.HandleFunc("/x/downloadredashjson/", logReq(downloadRedashJSONHandler))
 	http.HandleFunc("/x/forkdb/", logReq(forkDBHandler))
