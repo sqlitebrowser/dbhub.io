@@ -5,10 +5,10 @@
 An early stage (in development) "Cloud" for SQLite databases, with special
 integration for [DB Browser for SQLite](http://sqlitebrowser.org).
 
-You can try out our beta testing server at [https://db4s-beta.dbhub.io](https://db4s-beta.dbhub.io/justinclift/DB4S%20download%20stats.sqlite),
+You can try out our live testing server at [https://db4s.dbhub.io](https://db4s.dbhub.io/justinclift/DB4S%20download%20stats.sqlite),
 or run it locally for your own users.
 
-**Note** - Don't store important data on the beta server.  We're still changing things
+**Note** - Don't store important data on the live server.  We're still changing things
 around on it quite often, and haven't yet put time into setting up backups (etc).
 
 When the core code is more fully featured (end of October 2017 target), we'll start
@@ -37,16 +37,3 @@ putting "production" servers online for people to store their data.
   interacting with DBHub.io.
 * [webui](webui/) - The main public facing webUI.
 
-## Related mailing lists
-
-### Announcements
-
-A low volume announcements only mailing list:
-
-* https://lists.sqlitebrowser.org/mailman/listinfo/dbhub-announce
-
-### Developers
-
-For development related discussion about DB4S and DBHub.io:
-
-* https://lists.sqlitebrowser.org/mailman/listinfo/db4s-dev
