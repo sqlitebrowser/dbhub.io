@@ -21,8 +21,9 @@ import (
 // The main function which handles database upload processing for both the webUI and DB4S end points
 func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder string, dbName string,
 	createBranch bool, branchName string, commitID string, public bool, licenceName string, commitMsg string,
-	sourceURL string, newDB io.Reader, serverSw string, lastModified time.Time) (numBytes int64, newCommitID string,
-	err error) {
+	sourceURL string, newDB io.Reader, serverSw string, lastModified time.Time, commitTime time.Time,
+	authorName string, authorEmail string, committerName string, committerEmail string, otherParents []string,
+	dbSha string) (numBytes int64, newCommitID string, err error) {
 
 	// Create a temporary file to store the database in
 	tempDB, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
@@ -72,6 +73,12 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	}
 	sha := hex.EncodeToString(s.Sum(nil))
 
+	// If we were given a SHA256 for the file, make sure it matches our calculated one
+	if dbSha != "" && dbSha != sha {
+		return 0, "",
+			fmt.Errorf("SHA256 given (%s) for uploaded file doesn't match the calculated value (%s)", dbSha, sha)
+	}
+
 	// Check if the database already exists in the system
 	var defBranch string
 	needDefaultBranchCreated := false
@@ -111,7 +118,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	e.EntryType = DATABASE
 	e.Name = dbName
 	e.Sha256 = sha
-	e.LastModified = lastModified
+	e.LastModified = lastModified.UTC()
 	e.Size = int(numBytes)
 	if licenceName == "" || licenceName == "Not specified" {
 		// No licence was specified by the client, so check if the database is already in the system and
@@ -185,11 +192,32 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 
 	// Construct a commit structure pointing to the tree
 	var c CommitEntry
-	c.AuthorName = usr.DisplayName
-	c.AuthorEmail = usr.Email
+	if authorName != "" {
+		c.AuthorName = authorName
+	} else {
+		c.AuthorName = usr.DisplayName
+	}
+	if authorEmail != "" {
+		c.AuthorEmail = authorEmail
+	} else {
+		c.AuthorEmail = usr.Email
+	}
 	c.Message = commitMsg
-	c.Timestamp = time.Now()
+	if !commitTime.IsZero() {
+		c.Timestamp = commitTime.UTC()
+	} else {
+		c.Timestamp = time.Now().UTC()
+	}
 	c.Tree = t
+	if committerName != "" {
+		c.CommitterName = committerName
+	}
+	if committerEmail != "" {
+		c.CommitterEmail = committerEmail
+	}
+	if otherParents != nil {
+		c.OtherParents = otherParents
+	}
 
 	// If the database already exists, determine the commit ID to use as the parent
 	if exists {
@@ -348,7 +376,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	}
 
 	// Make a record of the upload
-	err = LogUpload(loggedInUser, dbFolder, dbName, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now(), sha)
+	err = LogUpload(loggedInUser, dbFolder, dbName, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now().UTC(), sha)
 	if err != nil {
 		return 0, "", err
 	}
@@ -397,10 +425,10 @@ func CreateCommitID(c CommitEntry) string {
 		b.WriteString(fmt.Sprintf("parent %s\n", j))
 	}
 	b.WriteString(fmt.Sprintf("author %s <%s> %v\n", c.AuthorName, c.AuthorEmail,
-		c.Timestamp.Format(time.UnixDate)))
+		c.Timestamp.UTC().Format(time.UnixDate)))
 	if c.CommitterEmail != "" {
 		b.WriteString(fmt.Sprintf("committer %s <%s> %v\n", c.CommitterName, c.CommitterEmail,
-			c.Timestamp.Format(time.UnixDate)))
+			c.Timestamp.UTC().Format(time.UnixDate)))
 	}
 	b.WriteString("\n" + c.Message)
 	b.WriteByte(0)
@@ -822,6 +850,10 @@ func IsCommitInBranchHistory(dbOwner string, dbFolder string, dbName string, bra
 	if !ok {
 		// The head commit wasn't found in the commit list.  This shouldn't happen
 		return false, fmt.Errorf("Head commit not found in database commit list.  This shouldn't happen")
+	}
+	if c.ID == commitID {
+		// The commit was found
+		found = true
 	}
 	for c.Parent != "" {
 		c, ok = commitList[c.Parent]

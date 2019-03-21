@@ -160,22 +160,6 @@
   version = "v2.11.0"
 
 [[projects]]
-  digest = "1:015013adc370f461eb789990dc63f751bd1bdeeb9e7a6db0dff46b546363a374"
-  name = "github.com/sqlitebrowser/blackfriday"
-  packages = ["."]
-  pruneopts = ""
-  revision = "1e5d9ef9994da39efd7c319295415cc7058a6878"
-  version = "v9.0.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:55f7535f436025ac322bd51dd2946fed9a092fe2e4bcb7b63658a609ab9f0169"
-  name = "github.com/sqlitebrowser/github_flavored_markdown"
-  packages = ["."]
-  pruneopts = ""
-  revision = "b0541819f69bb511daa2be7c152b6bf1ba2bc37e"
-
-[[projects]]
   digest = "1:717859f53ed0a55fab7284704ecaac4b0d292f4caca5ceaa2afd512be49189ea"
   name = "github.com/kennygrant/sanitize"
   packages = ["."]
@@ -344,6 +328,22 @@
   revision = "bd320f5d308e1a3c4314c678d8227a0d72574ae7"
 
 [[projects]]
+  digest = "1:015013adc370f461eb789990dc63f751bd1bdeeb9e7a6db0dff46b546363a374"
+  name = "github.com/sqlitebrowser/blackfriday"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1e5d9ef9994da39efd7c319295415cc7058a6878"
+  version = "v9.0.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:55f7535f436025ac322bd51dd2946fed9a092fe2e4bcb7b63658a609ab9f0169"
+  name = "github.com/sqlitebrowser/github_flavored_markdown"
+  packages = ["."]
+  pruneopts = ""
+  revision = "b0541819f69bb511daa2be7c152b6bf1ba2bc37e"
+
+[[projects]]
   branch = "master"
   digest = "1:59b49c47c11a48f1054529207f65907c014ecf5f9a7c0d9c0f1616dec7b062ed"
   name = "golang.org/x/crypto"
@@ -453,10 +453,10 @@
     "github.com/hectane/hectane/email",
     "github.com/hectane/hectane/queue",
     "github.com/jackc/pgx",
-    "github.com/sqlitebrowser/github_flavored_markdown",
     "github.com/minio/minio-go",
     "github.com/mitchellh/go-homedir",
     "github.com/pkg/errors",
+    "github.com/sqlitebrowser/github_flavored_markdown",
     "golang.org/x/crypto/bcrypt",
     "golang.org/x/oauth2",
     "gopkg.in/go-playground/validator.v9",

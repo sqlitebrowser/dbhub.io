@@ -90,7 +90,7 @@ func GetFormCommit(r *http.Request) (string, error) {
 	if c == "" {
 		return "", nil
 	}
-	err := Validate.Var(c, "hexadecimal,min=64,max=64")
+	err := ValidateCommitID(c)
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Invalid database commit: '%v'", c))
 	}

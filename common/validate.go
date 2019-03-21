@@ -9,16 +9,17 @@ import (
 )
 
 var (
-	regexBraTagName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\:,\&,\ )]+$`)
-	regexDBName         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\+,\ ]+$`)
-	regexDiscussTitle   = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\',\!,\@,\#,\&,\$,\+,\:,\;,\?,\ )]+$`)
-	regexDisplayName    = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\,,\',\ ]+$`)
-	regexFieldName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
-	regexFolder         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
-	regexLicence        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
-	regexMarkDownSource = regexp.MustCompile(`^[a-z,A-Z,0-9` + ",`," + `‘,’,“,”,\.,\-,\_,\/,\(,\),\[,\],\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
-	regexPGTable        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
-	regexUsername       = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+	regexBraTagName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\:,\&,\ )]+$`)
+	regexDBName          = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\+,\ ]+$`)
+	regexDiscussTitle    = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\',\!,\@,\#,\&,\$,\+,\:,\;,\?,\ )]+$`)
+	regexDisplayName     = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\,,\',\ ]+$`)
+	regexFieldName       = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
+	regexFolder          = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
+	regexLicence         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
+	regexLicenceFullName = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
+	regexMarkDownSource  = regexp.MustCompile(`^[a-z,A-Z,0-9` + ",`," + `‘,’,“,”,\.,\-,\_,\/,\(,\),\[,\],\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
+	regexPGTable         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
+	regexUsername        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
 	// For input validation
 	Validate *valid.Validate
@@ -34,6 +35,7 @@ func init() {
 	Validate.RegisterValidation("fieldname", checkFieldName)
 	Validate.RegisterValidation("folder", checkFolder)
 	Validate.RegisterValidation("licence", checkLicence)
+	Validate.RegisterValidation("licencefullname", checkLicenceFullName)
 	Validate.RegisterValidation("markdownsource", checkMarkDownSource)
 	Validate.RegisterValidation("pgtable", checkPGTableName)
 	Validate.RegisterValidation("username", checkUsername)
@@ -78,10 +80,16 @@ func checkFolder(fl valid.FieldLevel) bool {
 	return regexFolder.MatchString(fl.Field().String())
 }
 
-// Custom validation function for licence names.
+// Custom validation function for licence (ID) names.
 // At the moment it allows alphanumeric and ".-_() " chars.  Will probably need more characters added.
 func checkLicence(fl valid.FieldLevel) bool {
 	return regexLicence.MatchString(fl.Field().String())
+}
+
+// Custom validation function for licence full names.
+// At the moment it allows alphanumeric and ".-_() " chars.
+func checkLicenceFullName(fl valid.FieldLevel) bool {
+	return regexLicenceFullName.MatchString(fl.Field().String())
 }
 
 // Custom validation function for Markdown source text.
@@ -126,9 +134,9 @@ func ValidateBranchName(fieldName string) error {
 	return nil
 }
 
-// Validate the SQLite field name.
-func ValidateFieldName(fieldName string) error {
-	err := Validate.Var(fieldName, "required,fieldname,min=1,max=63") // 63 char limit seems reasonable
+// Validate the provided commit ID.
+func ValidateCommitID(fieldName string) error {
+	err := Validate.Var(fieldName, "hexadecimal,min=64,max=64") // Always 64 alphanumeric characters
 	if err != nil {
 		return err
 	}
@@ -146,9 +154,29 @@ func ValidateDB(dbName string) error {
 	return nil
 }
 
+// Validate a provided full name.
+func ValidateDisplayName(dbName string) error {
+	err := Validate.Var(dbName, "required,displayname,min=1,max=80") // 80 char limit seems reasonable
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Validate the provided email address.
 func ValidateEmail(email string) error {
 	err := Validate.Var(email, "required,email")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Validate the SQLite field name.
+func ValidateFieldName(fieldName string) error {
+	err := Validate.Var(fieldName, "required,fieldname,min=1,max=63") // 63 char limit seems reasonable
 	if err != nil {
 		return err
 	}
@@ -166,9 +194,9 @@ func ValidateFolder(folder string) error {
 	return nil
 }
 
-// Validate the provided licence name.
+// Validate the provided licence name (ID).
 func ValidateLicence(licence string) error {
-	err := Validate.Var(licence, "licence,min=3,max=13") // 13 is the length of our longest licence name (thus far)
+	err := Validate.Var(licence, "licence,min=1,max=13") // 13 is the length of our longest licence name (thus far)
 	if err != nil {
 		return err
 	}
@@ -176,7 +204,17 @@ func ValidateLicence(licence string) error {
 	return nil
 }
 
-// Validate the provided markdown .
+// Validate the provided licence full name.
+func ValidateLicenceFullName(licence string) error {
+	err := Validate.Var(licence, "licencefullname,min=1,max=70") // Our longest licence full name (thus far) is 61 chars, so 70 is a reasonable start
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Validate the provided markdown.
 func ValidateMarkdown(fieldName string) error {
 	err := Validate.Var(fieldName, "markdownsource,max=1024") // 1024 seems like a reasonable first guess
 	if err != nil {

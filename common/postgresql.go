@@ -253,6 +253,36 @@ func CheckEmailExists(email string) (bool, error) {
 
 }
 
+// Checks if a licence exists in our system.
+func CheckLicenceExists(userName string, licenceName string) (exists bool, err error) {
+	dbQuery := `
+		SELECT count(*)
+		FROM database_licences
+		WHERE friendly_name = $2
+			AND (user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = 'default'
+			)
+			OR user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			))`
+	var count int
+	err = pdb.QueryRow(dbQuery, userName, licenceName).Scan(&count)
+	if err != nil {
+		log.Printf("Error checking if licence '%s' exists for user '%s' in database: %v\n", licenceName,
+			userName, err)
+		return false, err
+	}
+	if count == 0 {
+		// The requested licence wasn't found
+		return false, nil
+	}
+	return true, nil
+}
+
 // Check if a username already exists in our system.  Returns true if the username is already taken, false if not.
 // If an error occurred, the true/false value should be ignored, and only the error return code used.
 func CheckUserExists(userName string) (bool, error) {
@@ -450,7 +480,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	// Retrieve the requested database details
 	var defTable, fullDesc, oneLineDesc, sourceURL pgx.NullString
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
-		&DB.Info.LastModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
+		&DB.Info.RepoModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
 		&DB.Info.CommitID,
 		&DB.Info.DBEntry,
 		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
@@ -873,6 +903,132 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 
 	// Log the database deletion
 	log.Printf("(Forked) database '%s%s%s' deleted\n", dbOwner, dbFolder, dbName)
+	return nil
+}
+
+// Removes a (user supplied) database licence from the system.
+func DeleteLicence(userName string, licenceName string) (err error) {
+	// Begin a transaction
+	tx, err := pdb.Begin()
+	if err != nil {
+		return err
+	}
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// Don't allow deletion of the default licences
+	switch licenceName {
+	case "Not specified":
+	case "CC0":
+	case "CC-BY-4.0":
+	case "CC-BY-SA-4.0":
+	case "CC-BY-NC-4.0":
+	case "CC-BY-IGO-3.0":
+	case "ODbL-1.0":
+	case "UK-OGL-3":
+		return errors.New("Default licences can't be removed")
+	}
+
+	// Retrieve the SHA256 for the licence
+	licSHA, err := GetLicenceSha256FromName(userName, licenceName)
+	if err != nil {
+		return err
+	}
+
+	// * Check if there are databases present which use this licence.  If there are, then abort. *
+
+	// TODO: Get around to adding appropriate GIN indexes
+
+	// Note - This uses the JsQuery extension for PostgreSQL, which needs compiling on the server and adding in.
+	//        However, this seems like it'll be much more straight forward and usable for writing queries with than
+	//        than to use straight PG SQL
+	//        JsQuery repo: https://github.com/postgrespro/jsquery
+	//        Some useful examples: https://postgrespro.ru/media/2017/04/04/jsonb-pgconf.us-2017.pdf
+	dbQuery := `
+		SELECT DISTINCT count(*)
+		FROM sqlite_databases AS db
+		WHERE db.commit_list @@ '*.licence = %s'
+			AND (user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = 'default'
+			)
+			OR user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			))`
+	// We do this because licSHA needs to be unquoted for JsQuery to work, and the Go PG driver mucks things
+	// up if it's given as a parameter to that (eg as $2)
+	dbQuery = fmt.Sprintf(dbQuery, licSHA)
+
+	// The same query in straight PG:
+	//dbQuery := `
+	//	WITH working_set AS (
+	//		SELECT DISTINCT db.db_id
+	//		FROM sqlite_databases AS db
+	//			CROSS JOIN jsonb_each(db.commit_list) AS firstjoin
+	//			CROSS JOIN jsonb_array_elements(firstjoin.value -> 'tree' -> 'entries') AS secondjoin
+	//		WHERE secondjoin ->> 'licence' = $2
+	//			AND (
+	//				user_id = (
+	//					SELECT user_id
+	//					FROM users
+	//					WHERE user_name = 'default'
+	//				)
+	//				OR user_id = (
+	//					SELECT user_id
+	//					FROM users
+	//					WHERE lower(user_name) = lower($1)
+	//				)
+	//			)
+	//	)
+	//	SELECT count(*)
+	//	FROM working_set`
+
+	var DBCount int
+	err = pdb.QueryRow(dbQuery, userName).Scan(&DBCount)
+	if err != nil {
+		log.Printf("Checking if the licence is in use failed: %v\n", err)
+		return err
+	}
+	if DBCount != 0 {
+		// Database isn't in our system
+		return errors.New("Can't delete the licence, as it's already being used by databases")
+	}
+
+	// Delete the licence
+	dbQuery = `
+		DELETE FROM database_licences
+		WHERE lic_sha256 = $2
+			AND friendly_name = $3
+			AND (user_id = (
+				SELECT user_id
+				FROM users
+				WHERE user_name = 'default'
+			)
+			OR user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			))`
+	commandTag, err := tx.Exec(dbQuery, userName, licSHA, licenceName)
+	if err != nil {
+		log.Printf("Error when retrieving sha256 for licence '%s', user '%s' from database: %v\n", licenceName,
+			userName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected when deleting licence '%s' for user '%s'\n",
+			numRows, licenceName, userName)
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -1750,7 +1906,7 @@ func GetLicence(userName string, licenceName string) (txt string, format string,
 	dbQuery := `
 		SELECT licence_text, file_format
 		FROM database_licences
-		WHERE friendly_name = $2
+		WHERE friendly_name ILIKE $2
 		AND (
 				user_id = (
 					SELECT user_id
@@ -1765,12 +1921,12 @@ func GetLicence(userName string, licenceName string) (txt string, format string,
 			)`
 	err = pdb.QueryRow(dbQuery, userName, licenceName).Scan(&txt, &format)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			// The requested licence text wasn't found
+			return "", "", errors.New("unknown licence")
+		}
 		log.Printf("Error when retrieving licence '%s', user '%s': %v\n", licenceName, userName, err)
 		return "", "", err
-	}
-	if txt == "" {
-		// The requested licence text wasn't found
-		return "", "", errors.New("Licence text not found")
 	}
 	return txt, format, nil
 }
@@ -3902,7 +4058,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	for rows.Next() {
 		var defBranch, desc, source pgx.NullString
 		var oneRow DBInfo
-		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.LastModified, &oneRow.Public,
+		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.RepoModified, &oneRow.Public,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Branches,
 			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.DBEntry, &source,
 			&defBranch)
@@ -3919,6 +4075,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		if source.Valid {
 			oneRow.SourceURL = source.String
 		}
+		oneRow.LastModified = oneRow.DBEntry.LastModified
 		oneRow.Size = oneRow.DBEntry.Size
 		oneRow.SHA256 = oneRow.DBEntry.Sha256
 

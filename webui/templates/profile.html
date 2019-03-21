@@ -39,7 +39,7 @@
                             {{ row.OneLineDesc }}
                             <div uib-collapse="isCollapsedPub" style="padding-top: 5px;">
                                 <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
-                                <b>Last modified:</b> <span title="{{ row.LastModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.LastModified, false) }}</span> &nbsp;
+                                <b>Updated:</b> <span title="{{ row.RepoModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.RepoModified, false) }}</span> &nbsp;
                                 <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
                                 <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
                                 <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
@@ -81,7 +81,7 @@
                             {{ row.OneLineDesc }}
                             <div uib-collapse="isCollapsedPriv" style="padding-top: 5px;">
                                 <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
-                                <b>Last modified:</b> <span title="{{ row.LastModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.LastModified, false) }}</span> &nbsp;
+                                <b>Updated:</b> <span title="{{ row.RepoModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.RepoModified, false) }}</span> &nbsp;
                                 <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
                                 <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
                                 <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 )
 
 // Renders the "About Us" page.

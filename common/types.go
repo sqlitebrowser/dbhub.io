@@ -48,6 +48,9 @@ const DefaultNumDisplayRows = 25
 // The maximum database size accepted for upload (in MB)
 const MaxDatabaseSize = 100
 
+// The maximum licence size accepted for upload (in MB)
+const MaxLicenceSize = 1
+
 // The number of leading characters of a files' sha256 used as the Minio folder name
 // eg: When set to 6, then "34f4255a737156147fbd0a44323a895d18ade79d4db521564d1b0dbb8764cbbc"
 //        -> Minio folder: "34f425"
@@ -65,7 +68,7 @@ type TomlConfig struct {
 	Environment EnvInfo
 	DiskCache   DiskCacheInfo
 	Event       EventProcessingInfo
-	License     LicenseInfo
+	Licence     LicenceInfo
 	Memcache    MemcacheInfo
 	Minio       MinioInfo
 	Pg          PGInfo
@@ -114,9 +117,9 @@ type EventProcessingInfo struct {
 	EmailQueueProcessingDelay time.Duration `toml:"email_queue_processing_delay"`
 }
 
-// Path to the license files
-type LicenseInfo struct {
-	LicenseDir string `toml:"license_dir"`
+// Path to the licence files
+type LicenceInfo struct {
+	LicenceDir string `toml:"licence_dir"`
 }
 
 // Memcached connection parameters
@@ -273,6 +276,7 @@ type DBInfo struct {
 	MRs           int
 	OneLineDesc   string
 	Public        bool
+	RepoModified  time.Time
 	Releases      int
 	SHA256        string
 	Size          int

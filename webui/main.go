@@ -396,7 +396,11 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	c := commitList[commit]
+	c, ok := commitList[commit]
+	if !ok {
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprint("The given commit ID doesn't exist"))
+		return
+	}
 	commitCount := 1
 	for c.Parent != "" {
 		commitCount++
@@ -3627,7 +3631,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 		srcDBName, branchName)
 	mrg.Parent = commitDiffList[0].ID
 	mrg.OtherParents = append(mrg.OtherParents, destCommitID)
-	mrg.Timestamp = time.Now()
+	mrg.Timestamp = time.Now().UTC()
 	mrg.ID = com.CreateCommitID(mrg)
 
 	// Add the new commit to the destination db commit list, and update the branch list with it
@@ -3735,7 +3739,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing preference data")
 		return
 	}
-	err = com.Validate.Var(displayName, "required,displayname,min=1,max=80")
+	err = com.ValidateDisplayName(displayName)
 	if err != nil {
 		log.Printf("%s: Display name '%s' failed validation: %s\n", pageName, displayName, err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing full name value")
@@ -4027,7 +4031,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			// Create a new dbTree entry for the database file
 			var e com.DBTreeEntry
 			e.EntryType = com.DATABASE
-			e.LastModified = dbEntry.LastModified
+			e.LastModified = dbEntry.LastModified.UTC()
 			e.LicenceSHA = newLicSHA
 			e.Name = dbEntry.Name
 			e.Sha256 = dbEntry.Sha256
@@ -4050,7 +4054,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 				CommitterEmail: c.AuthorEmail,
 				Message:        fmt.Sprintf("Licence changed from '%s' to '%s'.", oldLic, newLic),
 				Parent:         bEntry.Commit,
-				Timestamp:      time.Now(),
+				Timestamp:      time.Now().UTC(),
 				Tree:           t,
 			}
 			newCom.AuthorName = usr.DisplayName
@@ -5513,7 +5517,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Sanity check the uploaded database, and if ok then add it to the system
 	numBytes, _, err := com.AddDatabase(r, loggedInUser, loggedInUser, dbFolder, dbName, createBranch, branchName,
-		commitID, public, licenceName, commitMsg, sourceURL, tempFile, "webui", time.Now())
+		commitID, public, licenceName, commitMsg, sourceURL, tempFile, "webui", time.Now(), time.Time{},
+		"", "", "", "", nil, "")
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

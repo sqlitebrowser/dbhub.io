@@ -24,7 +24,7 @@
                     <td>
                         <h4>•<a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
                         <div ng-if="row.OneLineDesc != ''" style="padding-bottom: 5px;">{{ row.OneLineDesc }}</div>
-                        <b>Last modified:</b> <span title="{{ row.LastModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.LastModified, false) }}</span> &nbsp;
+                        <b>Updated:</b> <span title="{{ row.RepoModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.RepoModified, false) }}</span> &nbsp;
                         <b>Licence:</b>
                         <span ng-if="row.LicenceURL == ''">{{ row.Licence }}</span>
                         <span ng-if="row.LicenceURL != ''"><a class="blackLink" href="{{ row.LicenceURL }}">{{ row.Licence }}</a></span> &nbsp;
