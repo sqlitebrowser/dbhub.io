@@ -46,7 +46,7 @@ const (
 const DefaultNumDisplayRows = 25
 
 // The maximum database size accepted for upload (in MB)
-const MaxDatabaseSize = 100
+const MaxDatabaseSize = 512
 
 // The maximum licence size accepted for upload (in MB)
 const MaxLicenceSize = 1
