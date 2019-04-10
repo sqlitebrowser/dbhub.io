@@ -53,6 +53,12 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	code := r.URL.Query().Get("code")
+	if code == "" {
+		log.Printf("Login failure from '%v', probably due to blocked 3rd party cookies\n", r.RemoteAddr)
+		errorPage(w, r, http.StatusInternalServerError,
+			"Login failure.  Please allow 3rd party cookies from https://dbhub.eu.auth0.com then try again (it should then work).")
+		return
+	}
 	token, err := conf.Exchange(oauth2.NoContext, code)
 	if err != nil {
 		log.Printf("Login failure: %s\n", err.Error())
