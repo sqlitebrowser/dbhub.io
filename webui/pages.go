@@ -2244,7 +2244,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
-	// Retrieve the list of most forked and starred databases
+	// Retrieve the database activity stats
 	pageData.Stats = make(map[com.ActivityRange]com.ActivityStats)
 	statsAll, err := com.GetActivityStats()
 	if err != nil {

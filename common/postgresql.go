@@ -1435,7 +1435,6 @@ func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName str
 	}
 	defer rows.Close()
 	dbList := make(map[int]ForkEntry)
-	//var dbList []ForkEntry
 	for rows.Next() {
 		var frk pgx.NullInt64
 		var oneRow ForkEntry
@@ -1449,7 +1448,6 @@ func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName str
 			oneRow.ForkedFrom = int(frk.Int64)
 		}
 		dbList[oneRow.ID] = oneRow
-		//dbList = append(dbList, oneRow)
 	}
 
 	// Safety check
@@ -4027,7 +4025,8 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
 				db.watchers, db.stars, db.discussions, db.merge_requests, db.branches, db.release_count, db.tags,
 				db.contributors, db.one_line_description, default_commits.id,
-				db.commit_list->default_commits.id->'tree'->'entries'->0, db.source_url, db.default_branch
+				db.commit_list->default_commits.id->'tree'->'entries'->0, db.source_url, db.default_branch,
+				db.download_count, db.page_views
 			FROM sqlite_databases AS db, default_commits
 			WHERE db.db_id = default_commits.db_id
 				AND db.is_deleted = false`
@@ -4061,7 +4060,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.RepoModified, &oneRow.Public,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Branches,
 			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.DBEntry, &source,
-			&defBranch)
+			&defBranch, &oneRow.Downloads, &oneRow.Views)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err

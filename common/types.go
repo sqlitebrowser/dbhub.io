@@ -267,6 +267,7 @@ type DBInfo struct {
 	DefaultBranch string
 	DefaultTable  string
 	Discussions   int
+	Downloads     int
 	Folder        string
 	Forks         int
 	FullDesc      string
@@ -284,6 +285,7 @@ type DBInfo struct {
 	Stars         int
 	Tables        []string
 	Tags          int
+	Views         int
 	Watchers      int
 }
 

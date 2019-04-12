@@ -41,18 +41,19 @@
                                 <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
                                 <b>Updated:</b> <span title="{{ row.RepoModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.RepoModified, false) }}</span> &nbsp;
                                 <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
-                                <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
+                                <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }} &nbsp;</a>
+                                <b>Discussions:</b> <a class="blackLink" href="/discuss/{{ meta.Owner + '/' + row.Database }}">{{ row. Discussions }}</a><br />
                                 <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
                                 <b>Licence:</b> <a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}">{{ row.Licence }}</a> &nbsp;
                                 <b>Watchers:</b> {{ row.Watchers }} &nbsp;
                                 <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
                                 <br />
                                 <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
-                                <b>Discussions:</b> <a class="blackLink" href="/discuss/{{ meta.Owner + '/' + row.Database }}">{{ row. Discussions }}</a> &nbsp;
                                 <b>MRs:</b> {{ row.MRs }} &nbsp;
                                 <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
                                 <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
                                 <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
+                                <b>Downloads:</b> {{ row.Downloads }} &nbsp; <b>Views:</b> {{ row.Views }} &nbsp;
                             </div>
                         </td>
                     </tr>
@@ -83,18 +84,19 @@
                                 <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
                                 <b>Updated:</b> <span title="{{ row.RepoModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.RepoModified, false) }}</span> &nbsp;
                                 <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
-                                <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}<br /></a>
+                                <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}</a> &nbsp;
+                                <b>Discussions:</b> <a class="blackLink" href="/discuss/{{ meta.Owner + '/' + row.Database }}">{{ row. Discussions }}</a><br />
                                 <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
                                 <b>Licence:</b> <a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}">{{ row.Licence }}</a> &nbsp;
                                 <b>Watchers:</b> {{ row.Watchers }} &nbsp;
                                 <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
                                 <br />
                                 <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
-                                <b>Discussions:</b> <a class="blackLink" href="/discuss/{{ meta.Owner + '/' + row.Database }}">{{ row. Discussions }}</a> &nbsp;
                                 <b>MRs:</b> {{ row.MRs }} &nbsp;
                                 <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
                                 <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
                                 <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
+                                <b>Downloads:</b> {{ row.Downloads }} &nbsp; <b>Views:</b> {{ row.Views }} &nbsp;
                             </div>
                         </td>
                     </tr>
