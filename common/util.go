@@ -119,7 +119,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	e.Name = dbName
 	e.Sha256 = sha
 	e.LastModified = lastModified.UTC()
-	e.Size = int(numBytes)
+	e.Size = numBytes
 	if licenceName == "" || licenceName == "Not specified" {
 		// No licence was specified by the client, so check if the database is already in the system and
 		// already has one.  If so, we use that.

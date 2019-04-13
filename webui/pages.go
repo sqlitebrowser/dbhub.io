@@ -2810,7 +2810,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		DescriptionMarkdown string    `json:"description_markdown"`
 		ReleaserUserName    string    `json:"releaser_user_name"`
 		ReleaserDisplayName string    `json:"releaser_display_name"`
-		Size                int       `json:"size"`
+		Size                int64     `json:"size"`
 	}
 	var pageData struct {
 		Auth0       com.Auth0Set

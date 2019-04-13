@@ -1343,7 +1343,7 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 		Public       bool   `json:"public"`
 		RepoModified string `json:"repo_modified"`
 		SHA256       string `json:"sha256"`
-		Size         int    `json:"size"`
+		Size         int64  `json:"size"`
 		Type         string `json:"type"`
 		URL          string `json:"url"`
 	}

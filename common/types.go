@@ -251,7 +251,7 @@ type DBTreeEntry struct {
 	LicenceSHA   string          `json:"licence"`
 	Name         string          `json:"name"`
 	Sha256       string          `json:"sha256"`
-	Size         int             `json:"size"`
+	Size         int64           `json:"size"`
 }
 
 type DBInfo struct {
@@ -280,7 +280,7 @@ type DBInfo struct {
 	RepoModified  time.Time
 	Releases      int
 	SHA256        string
-	Size          int
+	Size          int64
 	SourceURL     string
 	Stars         int
 	Tables        []string
@@ -425,7 +425,7 @@ type ReleaseEntry struct {
 	Description   string    `json:"description"`
 	ReleaserEmail string    `json:"email"`
 	ReleaserName  string    `json:"name"`
-	Size          int       `json:"size"`
+	Size          int64     `json:"size"`
 }
 
 type SQLiteDBinfo struct {
