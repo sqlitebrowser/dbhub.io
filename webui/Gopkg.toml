@@ -1,0 +1,10 @@
+ignored = ["github.com/justinclift/github_flavored_markdown"]
+
+[[override]]
+  name = "github.com/jackc/pgx"
+  version = "v2.11.0"
+
+[[override]]
+  name = "github.com/sqlitebrowser/blackfriday"
+  version = "v9.0.0"
+
