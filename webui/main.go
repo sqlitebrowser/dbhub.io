@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	gz "github.com/NYTimes/gziphandler"
 	"github.com/bradfitz/gomemcache/memcache"
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	"github.com/gwenn/gosqlite"
@@ -3275,138 +3276,138 @@ func main() {
 	go com.SendEmails()
 
 	// Our pages
-	http.HandleFunc("/", logReq(mainHandler))
-	http.HandleFunc("/about", logReq(aboutPage))
-	http.HandleFunc("/branches/", logReq(branchesPage))
-	http.HandleFunc("/commits/", logReq(commitsPage))
-	http.HandleFunc("/compare/", logReq(comparePage))
-	http.HandleFunc("/confirmdelete/", logReq(confirmDeletePage))
-	http.HandleFunc("/contributors/", logReq(contributorsPage))
-	http.HandleFunc("/createbranch/", logReq(createBranchPage))
-	http.HandleFunc("/creatediscuss/", logReq(createDiscussionPage))
-	http.HandleFunc("/createtag/", logReq(createTagPage))
-	http.HandleFunc("/discuss/", logReq(discussPage))
-	http.HandleFunc("/forks/", logReq(forksPage))
-	http.HandleFunc("/logout", logReq(logoutHandler))
-	http.HandleFunc("/merge/", logReq(mergePage))
-	http.HandleFunc("/pref", logReq(prefHandler))
-	http.HandleFunc("/register", logReq(createUserHandler))
-	http.HandleFunc("/releases/", logReq(releasesPage))
-	http.HandleFunc("/selectusername", logReq(selectUserNamePage))
-	http.HandleFunc("/settings/", logReq(settingsPage))
-	http.HandleFunc("/stars/", logReq(starsPage))
-	http.HandleFunc("/tags/", logReq(tagsPage))
-	http.HandleFunc("/updates/", logReq(updatesPage))
-	http.HandleFunc("/upload/", logReq(uploadPage))
-	http.HandleFunc("/watchers/", logReq(watchersPage))
-	http.HandleFunc("/x/branchnames", logReq(branchNamesHandler))
-	http.HandleFunc("/x/callback", logReq(auth0CallbackHandler))
-	http.HandleFunc("/x/checkname", logReq(checkNameHandler))
-	http.HandleFunc("/x/createbranch", logReq(createBranchHandler))
-	http.HandleFunc("/x/createcomment/", logReq(createCommentHandler))
-	http.HandleFunc("/x/creatediscuss", logReq(createDiscussHandler))
-	http.HandleFunc("/x/createmerge/", logReq(createMergeHandler))
-	http.HandleFunc("/x/createtag", logReq(createTagHandler))
-	http.HandleFunc("/x/deletebranch/", logReq(deleteBranchHandler))
-	http.HandleFunc("/x/deletecomment/", logReq(deleteCommentHandler))
-	http.HandleFunc("/x/deletecommit/", logReq(deleteCommitHandler))
-	http.HandleFunc("/x/deletedatabase/", logReq(deleteDatabaseHandler))
-	http.HandleFunc("/x/deleterelease/", logReq(deleteReleaseHandler))
-	http.HandleFunc("/x/deletetag/", logReq(deleteTagHandler))
-	http.HandleFunc("/x/diffcommitlist/", logReq(diffCommitListHandler))
-	http.HandleFunc("/x/download/", logReq(downloadHandler))
-	http.HandleFunc("/x/downloadcsv/", logReq(downloadCSVHandler))
-	http.HandleFunc("/x/downloadredashjson/", logReq(downloadRedashJSONHandler))
-	http.HandleFunc("/x/forkdb/", logReq(forkDBHandler))
-	http.HandleFunc("/x/gencert", logReq(generateCertHandler))
-	http.HandleFunc("/x/markdownpreview/", logReq(markdownPreview))
-	http.HandleFunc("/x/mergerequest/", logReq(mergeRequestHandler))
-	http.HandleFunc("/x/savesettings", logReq(saveSettingsHandler))
-	http.HandleFunc("/x/setdefaultbranch/", logReq(setDefaultBranchHandler))
-	http.HandleFunc("/x/star/", logReq(starToggleHandler))
-	http.HandleFunc("/x/table/", logReq(tableViewHandler))
-	http.HandleFunc("/x/tablenames/", logReq(tableNamesHandler))
-	http.HandleFunc("/x/updatebranch/", logReq(updateBranchHandler))
-	http.HandleFunc("/x/updatecomment/", logReq(updateCommentHandler))
-	http.HandleFunc("/x/updatediscuss/", logReq(updateDiscussHandler))
-	http.HandleFunc("/x/updaterelease/", logReq(updateReleaseHandler))
-	http.HandleFunc("/x/updatetag/", logReq(updateTagHandler))
-	http.HandleFunc("/x/uploaddata/", logReq(uploadDataHandler))
-	http.HandleFunc("/x/watch/", logReq(watchToggleHandler))
+	http.Handle("/", gz.GzipHandler(logReq(mainHandler)))
+	http.Handle("/about", gz.GzipHandler(logReq(aboutPage)))
+	http.Handle("/branches/", gz.GzipHandler(logReq(branchesPage)))
+	http.Handle("/commits/", gz.GzipHandler(logReq(commitsPage)))
+	http.Handle("/compare/", gz.GzipHandler(logReq(comparePage)))
+	http.Handle("/confirmdelete/", gz.GzipHandler(logReq(confirmDeletePage)))
+	http.Handle("/contributors/", gz.GzipHandler(logReq(contributorsPage)))
+	http.Handle("/createbranch/", gz.GzipHandler(logReq(createBranchPage)))
+	http.Handle("/creatediscuss/", gz.GzipHandler(logReq(createDiscussionPage)))
+	http.Handle("/createtag/", gz.GzipHandler(logReq(createTagPage)))
+	http.Handle("/discuss/", gz.GzipHandler(logReq(discussPage)))
+	http.Handle("/forks/", gz.GzipHandler(logReq(forksPage)))
+	http.Handle("/logout", gz.GzipHandler(logReq(logoutHandler)))
+	http.Handle("/merge/", gz.GzipHandler(logReq(mergePage)))
+	http.Handle("/pref", gz.GzipHandler(logReq(prefHandler)))
+	http.Handle("/register", gz.GzipHandler(logReq(createUserHandler)))
+	http.Handle("/releases/", gz.GzipHandler(logReq(releasesPage)))
+	http.Handle("/selectusername", gz.GzipHandler(logReq(selectUserNamePage)))
+	http.Handle("/settings/", gz.GzipHandler(logReq(settingsPage)))
+	http.Handle("/stars/", gz.GzipHandler(logReq(starsPage)))
+	http.Handle("/tags/", gz.GzipHandler(logReq(tagsPage)))
+	http.Handle("/updates/", gz.GzipHandler(logReq(updatesPage)))
+	http.Handle("/upload/", gz.GzipHandler(logReq(uploadPage)))
+	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))
+	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))
+	http.Handle("/x/callback", gz.GzipHandler(logReq(auth0CallbackHandler)))
+	http.Handle("/x/checkname", gz.GzipHandler(logReq(checkNameHandler)))
+	http.Handle("/x/createbranch", gz.GzipHandler(logReq(createBranchHandler)))
+	http.Handle("/x/createcomment/", gz.GzipHandler(logReq(createCommentHandler)))
+	http.Handle("/x/creatediscuss", gz.GzipHandler(logReq(createDiscussHandler)))
+	http.Handle("/x/createmerge/", gz.GzipHandler(logReq(createMergeHandler)))
+	http.Handle("/x/createtag", gz.GzipHandler(logReq(createTagHandler)))
+	http.Handle("/x/deletebranch/", gz.GzipHandler(logReq(deleteBranchHandler)))
+	http.Handle("/x/deletecomment/", gz.GzipHandler(logReq(deleteCommentHandler)))
+	http.Handle("/x/deletecommit/", gz.GzipHandler(logReq(deleteCommitHandler)))
+	http.Handle("/x/deletedatabase/", gz.GzipHandler(logReq(deleteDatabaseHandler)))
+	http.Handle("/x/deleterelease/", gz.GzipHandler(logReq(deleteReleaseHandler)))
+	http.Handle("/x/deletetag/", gz.GzipHandler(logReq(deleteTagHandler)))
+	http.Handle("/x/diffcommitlist/", gz.GzipHandler(logReq(diffCommitListHandler)))
+	http.Handle("/x/download/", gz.GzipHandler(logReq(downloadHandler)))
+	http.Handle("/x/downloadcsv/", gz.GzipHandler(logReq(downloadCSVHandler)))
+	http.Handle("/x/downloadredashjson/", gz.GzipHandler(logReq(downloadRedashJSONHandler)))
+	http.Handle("/x/forkdb/", gz.GzipHandler(logReq(forkDBHandler)))
+	http.Handle("/x/gencert", gz.GzipHandler(logReq(generateCertHandler)))
+	http.Handle("/x/markdownpreview/", gz.GzipHandler(logReq(markdownPreview)))
+	http.Handle("/x/mergerequest/", gz.GzipHandler(logReq(mergeRequestHandler)))
+	http.Handle("/x/savesettings", gz.GzipHandler(logReq(saveSettingsHandler)))
+	http.Handle("/x/setdefaultbranch/", gz.GzipHandler(logReq(setDefaultBranchHandler)))
+	http.Handle("/x/star/", gz.GzipHandler(logReq(starToggleHandler)))
+	http.Handle("/x/table/", gz.GzipHandler(logReq(tableViewHandler)))
+	http.Handle("/x/tablenames/", gz.GzipHandler(logReq(tableNamesHandler)))
+	http.Handle("/x/updatebranch/", gz.GzipHandler(logReq(updateBranchHandler)))
+	http.Handle("/x/updatecomment/", gz.GzipHandler(logReq(updateCommentHandler)))
+	http.Handle("/x/updatediscuss/", gz.GzipHandler(logReq(updateDiscussHandler)))
+	http.Handle("/x/updaterelease/", gz.GzipHandler(logReq(updateReleaseHandler)))
+	http.Handle("/x/updatetag/", gz.GzipHandler(logReq(updateTagHandler)))
+	http.Handle("/x/uploaddata/", gz.GzipHandler(logReq(uploadDataHandler)))
+	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
 	// CSS
-	http.HandleFunc("/css/bootstrap-3.3.7.min.css", logReq(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/css/bootstrap-3.3.7.min.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "bootstrap-3.3.7.min.css"))
-	}))
-	http.HandleFunc("/css/bootstrap.min.css.map", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/css/bootstrap.min.css.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "bootstrap-3.3.7.min.css.map"))
-	}))
-	http.HandleFunc("/css/font-awesome-4.7.0.min.css", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/css/font-awesome-4.7.0.min.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "font-awesome-4.7.0.min.css"))
-	}))
-	http.HandleFunc("/css/local.css", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/css/local.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "local.css"))
-	}))
+	})))
 
 	// Fonts
-	http.HandleFunc("/css/FontAwesome.otf", logReq(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/css/FontAwesome.otf", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "FontAwesome-4.7.0.otf"))
-	}))
-	http.HandleFunc("/css/fontawesome-webfont.eot", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/css/fontawesome-webfont.eot", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.eot"))
-	}))
-	http.HandleFunc("/css/fontawesome-webfont.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/css/fontawesome-webfont.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.svg"))
-	}))
-	http.HandleFunc("/css/fontawesome-webfont.ttf", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/css/fontawesome-webfont.ttf", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.ttf"))
-	}))
-	http.HandleFunc("/css/fontawesome-webfont.woff", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/css/fontawesome-webfont.woff", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.woff"))
-	}))
-	http.HandleFunc("/css/fontawesome-webfont.woff2", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/css/fontawesome-webfont.woff2", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.woff2"))
-	}))
+	})))
 
 	// Javascript
-	http.HandleFunc("/js/angular-1.7.8.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/js/angular-1.7.8.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-1.7.8.min.js"))
-	}))
-	http.HandleFunc("/js/angular.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/js/angular.min.js.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-1.7.8.min.js.map"))
-	}))
-	http.HandleFunc("/js/angular-sanitize-1.7.8.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/js/angular-sanitize-1.7.8.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.7.8.min.js"))
-	}))
-	http.HandleFunc("/js/angular-sanitize.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/js/angular-sanitize.min.js.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.7.8.min.js.map"))
-	}))
-	http.HandleFunc("/js/local.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/js/local.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "local.js"))
-	}))
-	http.HandleFunc("/js/lock-11.14.1.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/js/lock-11.14.1.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-11.14.1.min.js"))
-	}))
-	http.HandleFunc("/js/lock.min.js.map", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/js/lock.min.js.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-11.14.1.min.js.map"))
-	}))
-	http.HandleFunc("/js/ui-bootstrap-tpls-2.5.0.min.js", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/js/ui-bootstrap-tpls-2.5.0.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "ui-bootstrap-tpls-2.5.0.min.js"))
-	}))
+	})))
 
 	// Other static files
-	http.HandleFunc("/images/auth0.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/images/auth0.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "auth0.svg"))
-	}))
-	http.HandleFunc("/images/sqlitebrowser.svg", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/images/sqlitebrowser.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "sqlitebrowser.svg"))
-	}))
-	http.HandleFunc("/favicon.ico", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/favicon.ico", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "favicon.ico"))
-	}))
-	http.HandleFunc("/robots.txt", logReq(func(w http.ResponseWriter, r *http.Request) {
+	})))
+	http.Handle("/robots.txt", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "robots.txt"))
-	}))
+	})))
 
 	// Start webUI server
 	log.Printf("DBHub server starting on https://%s\n", com.Conf.Web.ServerName)
