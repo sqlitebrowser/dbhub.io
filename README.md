@@ -27,13 +27,10 @@ putting "production" servers online for people to store their data.
 
 ### Subdirectories
 
-* [api](api/) - (not yet created) Future home for our JSON API server.
 * [common](common/) - Library of functions used by the DBHub.io components.
 * [database](database/) - PostgreSQL database schema.
 * [default_licences](default_licences/) - Useful Open Source licences suitable for databases.
 * [db4s](db4s/) - REST server which [DB Browser for SQLite](http://sqlitebrowser.org)
-  connects to for the Remote panel.
-* [dio](dio/) - (not yet created) Future home for `dio`, our command line interface (cli) for
-  interacting with DBHub.io.
+  and [Dio](https://github.com/sqlitebrowser/dio) use for communicating with DBHub.io.
 * [webui](webui/) - The main public facing webUI.
 

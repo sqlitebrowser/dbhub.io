@@ -113,7 +113,7 @@ func checkUsername(fl valid.FieldLevel) bool {
 // Checks a username against the list of reserved ones.
 func ReservedUsernamesCheck(userName string) error {
 	reserved := []string{"about", "account", "accounts", "admin", "administrator", "blog", "ceo", "compare", "dbhub",
-		"default", "download", "forks", "legal", "login", "logout", "mail", "news", "pref", "printer", "public",
+		"default", "demo", "download", "forks", "legal", "login", "logout", "mail", "news", "pref", "printer", "public",
 		"reference", "register", "root", "sales", "star", "stars", "system", "table", "upload", "uploaddata", "vis",
 		"watchers"}
 	for _, word := range reserved {

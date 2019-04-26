@@ -3348,6 +3348,9 @@ func main() {
 	http.Handle("/css/local.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "local.css"))
 	})))
+	http.Handle("/css/angular-bootstrap-lightbox.min.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "angular-bootstrap-lightbox.min.css"))
+	})))
 
 	// Fonts
 	http.Handle("/css/FontAwesome.otf", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
@@ -3382,6 +3385,9 @@ func main() {
 	http.Handle("/js/angular-sanitize.min.js.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.7.8.min.js.map"))
 	})))
+	http.Handle("/js/angular-bootstrap-lightbox.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-bootstrap-lightbox.min.js"))
+	})))
 	http.Handle("/js/local.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "local.js"))
 	})))
@@ -3407,6 +3413,128 @@ func main() {
 	})))
 	http.Handle("/robots.txt", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "robots.txt"))
+	})))
+
+	// Landing page images
+	http.Handle("/images/db4s_screenshot1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot1.png"))
+	})))
+	http.Handle("/images/db4s_screenshot1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot1-50px.png"))
+	})))
+	http.Handle("/images/db4s_screenshot2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot2.png"))
+	})))
+	http.Handle("/images/db4s_screenshot2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot2-50px.png"))
+	})))
+	http.Handle("/images/db4s_screenshot3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot3.png"))
+	})))
+	http.Handle("/images/db4s_screenshot3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot3-50px.png"))
+	})))
+	http.Handle("/images/db4s_screenshot4.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot4.png"))
+	})))
+	http.Handle("/images/db4s_screenshot4-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot4-50px.png"))
+	})))
+	http.Handle("/images/pub_priv1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "pub_priv1.png"))
+	})))
+	http.Handle("/images/pub_priv1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "pub_priv1-50px.png"))
+	})))
+	http.Handle("/images/watch1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "watch1.png"))
+	})))
+	http.Handle("/images/watch1-46px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "watch1-46px.png"))
+	})))
+	http.Handle("/images/discussions1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions1.png"))
+	})))
+	http.Handle("/images/discussions1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions1-50px.png"))
+	})))
+	http.Handle("/images/discussions2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions2.png"))
+	})))
+	http.Handle("/images/discussions2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions2-50px.png"))
+	})))
+	http.Handle("/images/discussions3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions3.png"))
+	})))
+	http.Handle("/images/discussions3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions3-50px.png"))
+	})))
+	http.Handle("/images/version_control_history1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "version_control_history1.png"))
+	})))
+	http.Handle("/images/version_control_history1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "version_control_history1-50px.png"))
+	})))
+	http.Handle("/images/version_control_history2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "version_control_history2.png"))
+	})))
+	http.Handle("/images/version_control_history2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "version_control_history2-50px.png"))
+	})))
+	http.Handle("/images/merge1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge1.png"))
+	})))
+	http.Handle("/images/merge1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge1-50px.png"))
+	})))
+	http.Handle("/images/merge2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge2.png"))
+	})))
+	http.Handle("/images/merge2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge2-50px.png"))
+	})))
+	http.Handle("/images/merge3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge3.png"))
+	})))
+	http.Handle("/images/merge3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge3-50px.png"))
+	})))
+	http.Handle("/images/merge4.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge4.png"))
+	})))
+	http.Handle("/images/merge4-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge4-50px.png"))
+	})))
+	http.Handle("/images/redash1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash1.png"))
+	})))
+	http.Handle("/images/redash1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash1-50px.png"))
+	})))
+	http.Handle("/images/redash2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash2.png"))
+	})))
+	http.Handle("/images/redash2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash2-50px.png"))
+	})))
+	http.Handle("/images/redash3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash3.png"))
+	})))
+	http.Handle("/images/redash3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash3-50px.png"))
+	})))
+	http.Handle("/images/redash4.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash4.png"))
+	})))
+	http.Handle("/images/redash4-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash4-50px.png"))
+	})))
+	http.Handle("/images/dbhub-vis-720.mp4", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "dbhub-vis-720.mp4"))
+	})))
+	http.Handle("/images/dbhub-vis-720.webm", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "dbhub-vis-720.webm"))
 	})))
 
 	// Start webUI server
