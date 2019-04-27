@@ -3554,10 +3554,12 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	pathStrings := strings.Split(r.URL.Path, "/")
 
 	// numPieces will be 2 if the request was for the root directory (https://server/), or if
-	// the request included only a single path component (https://server/someuser/)
+	// the request included only a single path component (https://server/someuser) and no trailing slash
+	var dbName, userName string
 	numPieces := len(pathStrings)
-	if numPieces == 2 {
-		userName := pathStrings[1]
+	switch numPieces {
+	case 2:
+		userName = pathStrings[1]
 		// Check if the request was for the root directory
 		if pathStrings[1] == "" {
 			// Yep, root directory request
@@ -3568,23 +3570,36 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		// The request was for a user page
 		userPage(w, r, userName)
 		return
+	case 3:
+		userName = pathStrings[1]
+		dbName = pathStrings[2]
+
+		// This catches the case where a "/" is on the end of a user page URL
+		if dbName == "" {
+			// The request was for a user page
+			userPage(w, r, userName)
+			return
+		}
+	default:
+		// TODO: Add support for folders and sub folders
+		// TODO  eg: Allow for collections of databases
+		// TODO    * /user/collectionFoo/database1
+		// TODO    * /user/collectionFoo/database2
+		// TODO    * /user/collectionBar/database1
+		// TODO    * /user/collectionBar/database2
+
+		// We haven't yet added support for folders and subfolders, so bounce back to the /user/database page
+		http.Redirect(w, r, fmt.Sprintf("/%s/%s", pathStrings[1], pathStrings[2]), http.StatusTemporaryRedirect)
+		return
 	}
 
-	userName := pathStrings[1]
-	dbName := pathStrings[2]
+	userName = pathStrings[1]
+	dbName = pathStrings[2]
 
 	// Validate the user supplied user and database name
 	err := com.ValidateUserDB(userName, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Invalid user or database name")
-		return
-	}
-
-	// This catches the case where a "/" is on the end of a user page URL
-	// TODO: Refactor this and the above identical code.  Doing it this way is non-optimal
-	if pathStrings[2] == "" {
-		// The request was for a user page
-		userPage(w, r, userName)
 		return
 	}
 
