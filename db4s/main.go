@@ -441,6 +441,14 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The "public" user isn't allowed to make changes
+	if userAcc == "public" {
+		log.Printf("User from '%s' attempted to add a licence using the public certificate", r.RemoteAddr)
+		http.Error(w, "You're using the 'public' certificate, which isn't allowed to make changes on the server",
+			http.StatusUnauthorized)
+		return
+	}
+
 	// Check whether the uploaded licence file is too large
 	if r.ContentLength > (com.MaxLicenceSize * 1024 * 1024) {
 		http.Error(w,
@@ -675,6 +683,14 @@ func licenceRemoveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The "public" user isn't allowed to make changes
+	if userAcc == "public" {
+		log.Printf("User from '%s' attempted to remove a licence using the public certificate", r.RemoteAddr)
+		http.Error(w, "You're using the 'public' certificate, which isn't allowed to make changes on the server",
+			http.StatusUnauthorized)
+		return
+	}
+
 	// Make sure a licence short name was provided
 	l := r.FormValue("licence_id")
 	if l == "" {
@@ -825,6 +841,14 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// Set the maximum accepted database size for uploading
 	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+
+	// The "public" user isn't allowed to make changes
+	if userAcc == "public" {
+		log.Printf("User from '%s' attempted to add a database using the public certificate", r.RemoteAddr)
+		http.Error(w, "You're using the 'public' certificate, which isn't allowed to make changes on the server",
+			http.StatusUnauthorized)
+		return
+	}
 
 	// Split the request URL into path components
 	pathStrings := strings.Split(r.URL.Path, "/")
