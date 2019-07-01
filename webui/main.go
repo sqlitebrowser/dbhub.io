@@ -3299,6 +3299,7 @@ func main() {
 	http.Handle("/tags/", gz.GzipHandler(logReq(tagsPage)))
 	http.Handle("/updates/", gz.GzipHandler(logReq(updatesPage)))
 	http.Handle("/upload/", gz.GzipHandler(logReq(uploadPage)))
+	http.Handle("/vis/", gz.GzipHandler(logReq(visualisePage)))
 	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))
 	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))
 	http.Handle("/x/callback", gz.GzipHandler(logReq(auth0CallbackHandler)))
@@ -3399,6 +3400,14 @@ func main() {
 	})))
 	http.Handle("/js/ui-bootstrap-tpls-2.5.0.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "ui-bootstrap-tpls-2.5.0.min.js"))
+	})))
+	http.Handle("/js/wasm_exec.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "wasm_exec.js"))
+	})))
+
+	// WebAssembly files
+	http.Handle("/wasm/barchart.wasm", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "wasm", "barchart.wasm"))
 	})))
 
 	// Other static files
