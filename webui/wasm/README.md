@@ -11,3 +11,4 @@ further):
 
     $ wasm2wat barchart.wasm -o barchart.wat
     $ wat2wasm barchart.wat -o barchart.wasm
+    $ rm -f barchart.wat
