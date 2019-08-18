@@ -32,3 +32,5 @@ _testmain.go
 
 # DBHub.io generated files
 request.log
+db4s/db4s
+webui/webui
