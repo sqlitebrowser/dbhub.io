@@ -2,9 +2,17 @@ module github.com/sqlitebrowser/dbhub.io
 
 go 1.12
 
+# Solution taken from https://stackoverflow.com/questions/56032544/how-to-find-dependency-causing-sirupsen-logrus-vs-sirupsen-logrus-unexpecte
+replace (
+	github.com/Sirupsen/logrus v1.0.5 => github.com/sirupsen/logrus v1.0.5
+	github.com/Sirupsen/logrus v1.3.0 => github.com/Sirupsen/logrus v1.0.6
+	github.com/Sirupsen/logrus v1.4.0 => github.com/sirupsen/logrus v1.0.6
+)
+
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/NYTimes/gziphandler v1.1.1
+	github.com/Sirupsen/logrus v1.4.0 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
 	github.com/bradleypeabody/gorilla-sessions-memcache v0.0.0-20181103040241-659414f458e1
@@ -21,7 +29,6 @@ require (
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v2.11.0+incompatible
 	github.com/kennygrant/sanitize v1.2.4 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
@@ -30,6 +37,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.8.1
+	github.com/rogpeppe/gohack v1.0.2 // indirect
 	github.com/russross/blackfriday v2.0.0+incompatible // indirect
 	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
