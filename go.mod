@@ -2,7 +2,6 @@ module github.com/sqlitebrowser/dbhub.io
 
 go 1.12
 
-# Solution taken from https://stackoverflow.com/questions/56032544/how-to-find-dependency-causing-sirupsen-logrus-vs-sirupsen-logrus-unexpecte
 replace (
 	github.com/Sirupsen/logrus v1.0.5 => github.com/sirupsen/logrus v1.0.5
 	github.com/Sirupsen/logrus v1.3.0 => github.com/Sirupsen/logrus v1.0.6
@@ -29,15 +28,18 @@ require (
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v2.11.0+incompatible
 	github.com/kennygrant/sanitize v1.2.4 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
+	github.com/memcachier/mc v2.0.1+incompatible // indirect
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/onsi/ginkgo v1.10.2 // indirect
+	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/rogpeppe/gohack v1.0.2 // indirect
 	github.com/russross/blackfriday v2.0.0+incompatible // indirect
 	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
@@ -56,6 +58,9 @@ require (
 	github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
+	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/validator.v9 v9.29.1
 	gopkg.in/inconshreveable/log15.v2 v2.0.0-20180818164646-67afb5ed74ec // indirect
