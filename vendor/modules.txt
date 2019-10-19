@@ -1,0 +1,111 @@
+# github.com/BurntSushi/toml v0.3.1
+github.com/BurntSushi/toml
+# github.com/NYTimes/gziphandler v1.1.1
+github.com/NYTimes/gziphandler
+# github.com/Sirupsen/logrus v1.4.0 => github.com/sirupsen/logrus v1.0.6
+github.com/Sirupsen/logrus
+# github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
+github.com/bradfitz/gomemcache/memcache
+# github.com/bradleypeabody/gorilla-sessions-memcache v0.0.0-20181103040241-659414f458e1
+github.com/bradleypeabody/gorilla-sessions-memcache
+# github.com/go-ini/ini v1.46.0
+github.com/go-ini/ini
+# github.com/go-playground/locales v0.12.1
+github.com/go-playground/locales
+github.com/go-playground/locales/currency
+# github.com/go-playground/universal-translator v0.16.0
+github.com/go-playground/universal-translator
+# github.com/golang/protobuf v1.2.0
+github.com/golang/protobuf/proto
+# github.com/google/uuid v1.0.0
+github.com/google/uuid
+# github.com/gorilla/securecookie v1.1.1
+github.com/gorilla/securecookie
+# github.com/gorilla/sessions v1.2.0
+github.com/gorilla/sessions
+# github.com/gwenn/gosqlite v0.0.0-20190222165041-a2186711fe00
+github.com/gwenn/gosqlite
+# github.com/gwenn/yacr v0.0.0-20190406104508-cfb564bd6947
+github.com/gwenn/yacr
+# github.com/hectane/go-nonblockingchan v0.1.0
+github.com/hectane/go-nonblockingchan
+# github.com/hectane/hectane v0.3.1
+github.com/hectane/hectane/email
+github.com/hectane/hectane/queue
+# github.com/jackc/pgx v2.11.0+incompatible
+github.com/jackc/pgx
+# github.com/kennygrant/sanitize v1.2.4
+github.com/kennygrant/sanitize
+# github.com/leodido/go-urn v1.1.0
+github.com/leodido/go-urn
+# github.com/microcosm-cc/bluemonday v1.0.2
+github.com/microcosm-cc/bluemonday
+# github.com/minio/minio-go v6.0.14+incompatible
+github.com/minio/minio-go
+github.com/minio/minio-go/pkg/credentials
+github.com/minio/minio-go/pkg/encrypt
+github.com/minio/minio-go/pkg/s3signer
+github.com/minio/minio-go/pkg/s3utils
+github.com/minio/minio-go/pkg/set
+# github.com/mitchellh/go-homedir v1.1.0
+github.com/mitchellh/go-homedir
+# github.com/pborman/uuid v1.2.0
+github.com/pborman/uuid
+# github.com/pkg/errors v0.8.1
+github.com/pkg/errors
+# github.com/sergi/go-diff v1.0.0
+github.com/sergi/go-diff/diffmatchpatch
+# github.com/shurcooL/highlight_diff v0.0.0-20181222201841-111da2e7d480
+github.com/shurcooL/highlight_diff
+# github.com/shurcooL/highlight_go v0.0.0-20181215221002-9d8641ddf2e1
+github.com/shurcooL/highlight_go
+github.com/shurcooL/highlight_go/internal/go/scanner
+github.com/shurcooL/highlight_go/internal/go/token
+# github.com/shurcooL/octicon v0.0.0-20181222203144-9ff1a4cf27f4
+github.com/shurcooL/octicon
+# github.com/shurcooL/sanitized_anchor_name v1.0.0
+github.com/shurcooL/sanitized_anchor_name
+# github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d
+github.com/sourcegraph/annotate
+# github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e
+github.com/sourcegraph/syntaxhighlight
+# github.com/sqlitebrowser/blackfriday v9.0.0+incompatible
+github.com/sqlitebrowser/blackfriday
+# github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47
+github.com/sqlitebrowser/github_flavored_markdown
+# golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+golang.org/x/crypto/argon2
+golang.org/x/crypto/bcrypt
+golang.org/x/crypto/blake2b
+golang.org/x/crypto/blowfish
+golang.org/x/crypto/ssh/terminal
+# golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
+golang.org/x/net/context
+golang.org/x/net/context/ctxhttp
+golang.org/x/net/html
+golang.org/x/net/html/atom
+golang.org/x/net/http/httpguts
+golang.org/x/net/idna
+golang.org/x/net/publicsuffix
+# golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+golang.org/x/oauth2
+golang.org/x/oauth2/internal
+# golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a
+golang.org/x/sys/cpu
+golang.org/x/sys/unix
+golang.org/x/sys/windows
+# golang.org/x/text v0.3.0
+golang.org/x/text/secure/bidirule
+golang.org/x/text/transform
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
+# google.golang.org/appengine v1.4.0
+google.golang.org/appengine/internal
+google.golang.org/appengine/internal/base
+google.golang.org/appengine/internal/datastore
+google.golang.org/appengine/internal/log
+google.golang.org/appengine/internal/remote_api
+google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/urlfetch
+# gopkg.in/go-playground/validator.v9 v9.29.1
+gopkg.in/go-playground/validator.v9

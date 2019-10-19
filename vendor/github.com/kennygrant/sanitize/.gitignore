@@ -20,16 +20,3 @@ _cgo_export.*
 _testmain.go
 
 *.exe
-*.test
-*.prof
-
-# OSX
-.DS_Store
-
-# Jetbrains IDE settings
-.idea
-
-# DBHub.io generated files
-request.log
-db4s/db4s
-webui/webui
