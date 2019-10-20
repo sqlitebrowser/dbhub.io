@@ -36,6 +36,10 @@ func AddDefaultUser() error {
 		// For now, don't bother logging a failure here.  This *might* need changing later on
 		return err
 	}
+
+	// Log addition of the default user
+	log.Println("Added default user to the database")
+
 	return nil
 }
 
