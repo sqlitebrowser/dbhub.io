@@ -151,6 +151,7 @@ type PGInfo struct {
 // Used for signing DB4S client certificates
 type SigningInfo struct {
 	CertDaysValid    int    `toml:"cert_days_valid"`
+	Enabled          bool   `toml:"enabled"`
 	IntermediateCert string `toml:"intermediate_cert"`
 	IntermediateKey  string `toml:"intermediate_key"`
 }

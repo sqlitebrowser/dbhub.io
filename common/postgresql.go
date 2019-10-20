@@ -53,10 +53,13 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 	}
 
 	// Generate a new HTTPS client certificate for the user
-	cert, err := GenerateClientCert(userName)
-	if err != nil {
-		log.Printf("Error when generating client certificate for '%s': %v\n", userName, err)
-		return err
+	var cert []byte
+	if Conf.Sign.Enabled {
+		cert, err = GenerateClientCert(userName)
+		if err != nil {
+			log.Printf("Error when generating client certificate for '%s': %v\n", userName, err)
+			return err
+		}
 	}
 
 	// If the display name or avatar URL are an empty string, we insert a NULL instead
