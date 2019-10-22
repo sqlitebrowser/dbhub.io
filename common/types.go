@@ -405,6 +405,7 @@ type MetaInfo struct {
 	Protocol         string
 	Server           string
 	Title            string
+	WebsiteName      string
 }
 
 // When SQLite data is prepared for sending to Redash (as JSON), the RedashColumnMeta and RedashTableData structures
