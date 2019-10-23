@@ -19,8 +19,8 @@ import (
 	gz "github.com/NYTimes/gziphandler"
 	"github.com/bradfitz/gomemcache/memcache"
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
-	"github.com/gwenn/gosqlite"
-	com "github.com/sqlitebrowser/dbhub.io/common"
+	sqlite "github.com/gwenn/gosqlite"
+	com "github.com/justinclift/3dhub.io/common"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"golang.org/x/oauth2"
 )
@@ -133,7 +133,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine the DBHub.io username matching the given Auth0 ID
+	// Determine the 3DHub.io username matching the given Auth0 ID
 	userName, err := com.UserNameFromAuth0ID(auth0ID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -210,7 +210,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a session cookie for the user
-	sess, err := store.Get(r, "dbhub-user")
+	sess, err := store.Get(r, "3dhub-user")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -233,7 +233,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -320,7 +320,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -451,7 +451,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -574,7 +574,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -679,7 +679,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -988,7 +988,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -1342,7 +1342,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create normal session cookie for the user
-	sess, err = store.Get(r, "dbhub-user")
+	sess, err = store.Get(r, "3dhub-user")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -1402,7 +1402,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -1808,7 +1808,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -1925,7 +1925,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -2148,7 +2148,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -2240,7 +2240,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -2341,7 +2341,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -2439,7 +2439,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -2727,7 +2727,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -2817,7 +2817,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -2917,7 +2917,7 @@ func downloadRedashJSONHandler(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3010,7 +3010,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3099,7 +3099,7 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3140,7 +3140,7 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 // Removes the logged in users session information.
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Remove session info
-	sess, err := store.Get(r, "dbhub-user")
+	sess, err := store.Get(r, "3dhub-user")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -3163,7 +3163,7 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Check if user is logged in
 		var loggedInUser string
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			if err == memcache.ErrCacheMiss {
 				// If the memcache session token is stale (eg memcached has been restarted), delete the session
@@ -3642,7 +3642,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -3835,7 +3835,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3941,7 +3941,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -4288,7 +4288,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -4394,7 +4394,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -4447,7 +4447,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -4675,7 +4675,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -4860,7 +4860,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -5014,7 +5014,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -5130,7 +5130,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -5255,7 +5255,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -5389,7 +5389,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -5528,7 +5528,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -5698,7 +5698,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return

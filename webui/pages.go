@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	com "github.com/sqlitebrowser/dbhub.io/common"
+	com "github.com/justinclift/3dhub.io/common"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 )
 
@@ -23,7 +23,7 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -54,7 +54,7 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	pageData.Meta.Title = "What is DBHub.io?"
+	pageData.Meta.Title = "What is 3DHub.io?"
 	pageData.Meta.WebsiteName = "3DHub.io"
 
 	// Add Auth0 info to the page data
@@ -92,7 +92,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -240,7 +240,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -462,7 +462,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -704,7 +704,7 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -814,7 +814,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -962,7 +962,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -1064,7 +1064,7 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -1162,7 +1162,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -1267,7 +1267,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -1887,7 +1887,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -2091,7 +2091,7 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			fmt.Fprintf(w, "An error occurred when calling errorPage(): %s", err.Error())
 			return
@@ -2159,7 +2159,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -2245,7 +2245,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -2326,7 +2326,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -2844,7 +2844,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3058,7 +3058,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3249,7 +3249,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3354,7 +3354,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3507,7 +3507,7 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3588,7 +3588,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3679,7 +3679,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -3775,7 +3775,7 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "3dhub-user")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return

@@ -1,4 +1,4 @@
-module github.com/sqlitebrowser/dbhub.io
+module github.com/justinclift/3dhub.io
 
 go 1.12
 
