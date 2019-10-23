@@ -29,9 +29,9 @@
     <div class="row">
         <div class="col-md-12">
             <div class="col-md-6 vcenter" style="text-align: right;">
-                <h2>Share your SQLite data</h2>
-                <h2>Visualise it</h2>
-                <h2>Improve it with others</h2>
+                <h2>Share your 3D models</h2>
+                <h2>Visualise them</h2>
+                <h2>Improve them with others</h2>
                 <br />
                 <button class="btn btn-success" ng-click="uploadForm()">Get Started</button>
                 <br /><br />
@@ -49,47 +49,37 @@
     </div>
     <div class="row" style="background-color: #e7e7e7; padding: 10px; border-radius: 5px; border-style: dotted; border-width: 1px; border-color: #9d9d9d;">
         <div class="col-md-6 vtop"  style="text-align: center;">
-            <h3>Public and private databases</h3>
-            <h5>The databases you upload can be set to public access, for<br />
+            <h3>Public and private 3D models</h3>
+            <h5>The models you upload can be set to public access, for<br />
                 anyone to download, or private, so they're only for you.</h5>
             <a href="#" ng-click="openLightboxModal(0)"><img class="iborder" src="/images/pub_priv1-50px.png"/></a>
         </div><div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Integration with <a href="https://sqlitebrowser.org">DB Browser for SQLite</a></h3>
-            <h5>We're the people behind DB Browser for SQLite,<br />
-                so naturally they're integrated.</h5>
-            <a href="#" ng-click="openLightboxModal(1)"><img class="iborder" src="/images/db4s_screenshot1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(2)"><img class="iborder" src="/images/db4s_screenshot2-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(3)"><img class="iborder" src="/images/db4s_screenshot3-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(4)"><img class="iborder" src="/images/db4s_screenshot4-50px.png" height="50px" /></a>
+            [TBD]
         </div>
     </div>
     <div class="row" style="padding: 10px;">
         <div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Visualise your data</h3>
-            <h5>Chart it using <a href="https://redash.io">Redash</a>.</h5>
-            <a href="#" ng-click="openLightboxModal(5)"><img class="iborder" src="/images/redash1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(6)"><img class="iborder" src="/images/redash2-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(7)"><img class="iborder" src="/images/redash3-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(8)"><img class="iborder" src="/images/redash4-50px.png" height="50px" /></a> &nbsp;
+            <h3>Visualise your models</h3>
+            [TBD]
         </div><div class="col-md-6 vtop" style="text-align: center;">
             <h3>A powerful <a href="https://github.com/sqlitebrowser/dio" target="_blank">command line interface</a></h3>
             <h5 style="padding-bottom: 5px;">Push (upload), pull (download), create tags, releases, and<br />
                 more using <a href="https://github.com/sqlitebrowser/dio" target="_blank">Dio</a>, our fully scriptable command line interface.</h5>
             <div style="color: white; font-family: Source Code Pro,Monaco,Menlo,Consolas,monospace;">
-                <span style="background: #283542; border-radius: 5px 5px 5px 5px; border-style: none; padding: 10px 10px 5px 10px;"><span style="color: lightskyblue;">$</span> dio push mydata.sqlite&nbsp;</span><br />
-                <span style="background: #283542; border-radius: 5px 5px 5px 5px; border-style: none; padding: 5px 10px 10px 10px;"><span style="color: lightskyblue;">$</span> dio pull newdata.sqlite</span>
+                <span style="background: #283542; border-radius: 5px 5px 5px 5px; border-style: none; padding: 10px 10px 5px 10px;"><span style="color: lightskyblue;">$</span> dio push mydata.blend&nbsp;</span><br />
+                <span style="background: #283542; border-radius: 5px 5px 5px 5px; border-style: none; padding: 5px 10px 10px 10px;"><span style="color: lightskyblue;">$</span> dio pull newdata.blend</span>
             </div><br />
         </div>
     </div>
     <div class="row" style="background-color: #e7e7e7; padding: 10px; border-radius: 5px; border-style: dotted; border-width: 1px; border-color: #9d9d9d;">
         <div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Automatic alerts on data changes</h3>
-            <h5>You can easily "watch" any public database,<br />
+            <h3>Automatic alerts on changes</h3>
+            <h5>You can easily "watch" any public model,<br />
                 to alert you by email any time its changed.</h5>
             <a href="#" ng-click="openLightboxModal(9)"><img class="iborder" src="/images/watch1-46px.png"/></a> &nbsp;
         </div><div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Open discussions, or report problems in data</h3>
-            <h5>Every database has a <i>discussion</i> area, useful for asking questions,<br />
+            <h3>Open discussions, or report problems with a model</h3>
+            <h5>Every model has a <i>discussion</i> area, useful for asking questions,<br />
                 making suggestions, and pointing out potential problems.</h5>
             <a href="#" ng-click="openLightboxModal(10)"><img class="iborder" src="/images/discussions1-50px.png" height="50px" /></a> &nbsp;
             <a href="#" ng-click="openLightboxModal(11)"><img class="iborder" src="/images/discussions2-50px.png" height="50px" /></a> &nbsp;
@@ -99,14 +89,14 @@
     <div class="row" style="padding: 10px;">
         <div class="col-md-6 vtop" style="text-align: center;">
             <h3>Collaborative development</h3>
-            <h5>Submit changes to public databases, for collaborative development.</h5>
+            <h5>Submit changes to public models, for collaborative development.</h5>
             <a href="#" ng-click="openLightboxModal(13)"><img class="iborder" src="/images/merge1-50px.png" height="50px" /></a> &nbsp;
             <a href="#" ng-click="openLightboxModal(14)"><img class="iborder" src="/images/merge2-50px.png" height="50px" /></a> &nbsp;
             <a href="#" ng-click="openLightboxModal(15)"><img class="iborder" src="/images/merge3-50px.png" height="50px" /></a> &nbsp;
             <a href="#" ng-click="openLightboxModal(16)"><img class="iborder" src="/images/merge4-50px.png" height="50px" /></a>
         </div><div class="col-md-6 vtop" style="text-align: center;">
             <h3>Full version control history, for traceability</h3>
-            <h5>All data changes are recorded and<br />
+            <h5>All model changes are recorded and<br />
                 checksummed, for full traceability.</h5>
             <a href="#" ng-click="openLightboxModal(17)"><img class="iborder" src="/images/version_control_history1-50px.png" height="50px" /></a> &nbsp;
             <a href="#" ng-click="openLightboxModal(18)"><img class="iborder" src="/images/version_control_history2-50px.png" height="50px" /></a>
