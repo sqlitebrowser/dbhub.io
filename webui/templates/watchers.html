@@ -1,6 +1,6 @@
 [[ define "watchersPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="watchersView">
+<html ng-app="3DHub" ng-controller="watchersView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -32,7 +32,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
         app.controller('watchersView', function($scope) {
             $scope.watchers = { Watchers: [[ .Watchers ]] }
 

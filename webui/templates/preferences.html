@@ -1,6 +1,6 @@
 [[ define "prefPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="prefView">
+<html ng-app="3DHub" ng-controller="prefView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -48,7 +48,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('prefView', function($scope) {
 
         // If the supplied display name is blank, we set a placeholder value instead

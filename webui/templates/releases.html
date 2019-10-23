@@ -1,6 +1,6 @@
 [[ define "releasesPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="releasesView">
+<html ng-app="3DHub" ng-controller="releasesView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -105,7 +105,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('releasesView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.Releases = [[ .ReleaseList ]];
 

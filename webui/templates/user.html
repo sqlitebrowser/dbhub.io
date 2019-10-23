@@ -1,6 +1,6 @@
 [[ define "userPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="userView">
+<html ng-app="3DHub" ng-controller="userView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -50,7 +50,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('userView', function($scope) {
         $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
         $scope.db = { Databases: [[ .DBRows ]] };

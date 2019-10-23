@@ -1,6 +1,6 @@
 [[ define "databasePage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="databaseView">
+<html ng-app="3DHub" ng-controller="databaseView">
 [[ template "head" . ]]
 <body>
 <style>
@@ -250,7 +250,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
 
     // Simple filter to ensure '&nbsp;' is shown as a non-breaking space
     app.filter("fixSpaces", ['$sce', '$sanitize', function($sce, $sanitize) {

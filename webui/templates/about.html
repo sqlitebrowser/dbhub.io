@@ -1,6 +1,6 @@
 [[ define "aboutPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="aboutView">
+<html ng-app="3DHub" ng-controller="aboutView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -9,7 +9,7 @@
         <div class="col-md-10">
             <h2>About Us</h2>
 
-            <h3><a id="whatis"></a>What is DBHub.io</h3>
+            <h3><a id="whatis"></a>What is 3DHub.io</h3>
 
             <p>We - <a href="https://github.com/orgs/sqlitebrowser/people">the people</a> behind
                 <a href="http://sqlitebrowser.org">DB Browser for SQLite</a> (DB4S) - are adding an optional "Cloud"
@@ -75,7 +75,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('aboutView', function($scope) {
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"

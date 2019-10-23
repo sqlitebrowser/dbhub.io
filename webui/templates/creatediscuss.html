@@ -1,6 +1,6 @@
 [[ define "createDiscussionPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="createDiscussionView">
+<html ng-app="3DHub" ng-controller="createDiscussionView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -59,7 +59,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('createDiscussionView', function($scope, $http, $httpParamSerializerJQLike) {
         // Handler for the cancel button.  Just bounces back to the commits page
         $scope.cancelCreate = function() {

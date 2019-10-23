@@ -1,6 +1,6 @@
 [[ define "settingsPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="settingsView">
+<html ng-app="3DHub" ng-controller="settingsView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -205,7 +205,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('settingsView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
             BranchLics: [[ .BranchLics ]],

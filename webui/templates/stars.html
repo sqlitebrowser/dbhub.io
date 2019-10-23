@@ -1,6 +1,6 @@
 [[ define "starsPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="starsView">
+<html ng-app="3DHub" ng-controller="starsView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -32,7 +32,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
         app.controller('starsView', function($scope) {
             $scope.stars = { Stars: [[ .Stars ]] }
 

@@ -1,6 +1,6 @@
 [[ define "contributorsPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="contributorsView">
+<html ng-app="3DHub" ng-controller="contributorsView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -43,7 +43,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('contributorsView', function($scope) {
         $scope.Contributors = [[ .Contributors ]];
 

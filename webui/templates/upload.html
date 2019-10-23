@@ -1,6 +1,6 @@
 [[ define "uploadPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="uploadView">
+<html ng-app="3DHub" ng-controller="uploadView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -102,7 +102,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('uploadView', function($scope, $http, $httpParamSerializerJQLike) {
         // Sort the licence list into the desired display order
         var rawLicences = [[ .Licences ]];

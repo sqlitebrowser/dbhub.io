@@ -1,6 +1,6 @@
 [[ define "forksPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="forksView">
+<html ng-app="3DHub" ng-controller="forksView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -41,7 +41,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('forksView', function($scope) {
         $scope.forks = { Forks: [[ .Forks ]] }
 

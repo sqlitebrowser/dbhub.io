@@ -1,6 +1,6 @@
 [[ define "mergeRequestCommentsPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="mergeRequestCommentsView">
+<html ng-app="3DHub" ng-controller="mergeRequestCommentsView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -282,7 +282,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('mergeRequestCommentsView', function($scope, $http, $httpParamSerializerJQLike) {
         // Pre-filled data
         $scope.meta = {

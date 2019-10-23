@@ -1,6 +1,6 @@
 [[ define "errorPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="errorView">
+<html ng-app="3DHub" ng-controller="errorView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -18,7 +18,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
         app.controller('errorView', function($scope) {
             var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
                 redirectUrl: "[[ .Auth0.CallbackURL]]"

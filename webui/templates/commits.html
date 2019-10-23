@@ -1,6 +1,6 @@
 [[ define "commitsPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="commitsView">
+<html ng-app="3DHub" ng-controller="commitsView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -100,7 +100,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('commitsView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
             Branch: "[[ .Branch ]]",

@@ -1,6 +1,6 @@
 [[ define "createBranchPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="createbranchView">
+<html ng-app="3DHub" ng-controller="createbranchView">
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -59,7 +59,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('createbranchView', function($scope, $http, $httpParamSerializerJQLike) {
         // Get rendered markdown from the server, for display in the Commit Message preview tab
         $scope.markDownPreview = "";

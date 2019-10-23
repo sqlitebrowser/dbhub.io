@@ -1,6 +1,6 @@
 [[ define "rootPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="rootView">
+<html ng-app="3DHub" ng-controller="rootView">
 [[ template "headlightbox" . ]]
 <body>
 <style>
@@ -108,7 +108,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize', 'bootstrapLightbox']);
+    var app = angular.module('3DHub', ['ui.bootstrap', 'ngSanitize', 'bootstrapLightbox']);
     app.controller('rootView', function($scope, Lightbox) {
         // Activity stats
         $scope.stats = {
@@ -122,59 +122,27 @@
         $scope.images = [
             {
                 'url': '/images/pub_priv1.png', 'thumbUrl': '/images/pub_priv1-50px.png',
-                'caption': 'You choose whether your data is just for you, or accessible to everyone'
-            },
-            {
-                'url': '/images/db4s_screenshot1.png', 'thumbUrl': '/images/db4s_screenshot1-50px.png',
-                'caption': 'DB Browser for SQLite is a popular Open Source GUI for SQLite databases'
-            },
-            {
-                'url': '/images/db4s_screenshot2.png', 'thumbUrl': '/images/db4s_screenshot2-50px.png',
-                'caption': 'DB Browser for SQLite includes basic plotting capabilities'
-            },
-            {
-                'url': '/images/db4s_screenshot3.png', 'thumbUrl': '/images/db4s_screenshot3-50px.png',
-                'caption': 'When configured, DB Browser for SQLite can access your databases on DBHub.io'
-            },
-            {
-                'url': '/images/db4s_screenshot4.png', 'thumbUrl': '/images/db4s_screenshot4-50px.png',
-                'caption': 'DB Browser for SQLite can download databases from DBHub.io, and upload your changes'
-            },
-            {
-                'url': '/images/redash1.png', 'thumbUrl': '/images/redash1-50px.png',
-                'caption': 'Tables can be exported as JSON, for visualising with Redash'
-            },
-            {
-                'url': '/images/redash2.png', 'thumbUrl': '/images/redash2-50px.png',
-                'caption': 'Redash offers many useful visualisation capabilities for your data'
-            },
-            {
-                'url': '/images/redash3.png', 'thumbUrl': '/images/redash3-50px.png',
-                'caption': 'From simple counters...'
-            },
-            {
-                'url': '/images/redash4.png', 'thumbUrl': '/images/redash4-50px.png',
-                'caption': '... to more complex interactive displays'
+                'caption': 'You choose whether your model is just for you, or accessible to everyone'
             },
             {
                 'url': '/images/watch1.png', 'thumbUrl': '/images/watch1-46px.png',
-                'caption': 'You can set a "Watch" on databases, so you\'re alerted to changes'
+                'caption': 'You can set a "Watch" on models, so you\'re alerted to changes'
             },
             {
                 'url': '/images/discussions1.png', 'thumbUrl': '/images/discussions1-50px.png',
-                'caption': 'You can start discussions on your own databases, and any public database'
+                'caption': 'You can start discussions on your own models, and any public model'
             },
             {
                 'url': '/images/discussions2.png', 'thumbUrl': '/images/discussions2-50px.png',
-                'caption': 'Anyone watching the database will be notified of the discussion, and can join in'
+                'caption': 'Anyone watching the model will be notified of the discussion, and can join in'
             },
             {
                 'url': '/images/discussions3.png', 'thumbUrl': '/images/discussions3-50px.png',
-                'caption': 'Discussions are useful for suggesting ideas, asking about the data, and pointing out problems'
+                'caption': 'Discussions are useful for suggesting ideas, asking about the model, and pointing out problems'
             },
             {
                 'url': '/images/merge1.png', 'thumbUrl': '/images/merge1-50px.png',
-                'caption': 'Submitting new data to public databases is done through Merge Requests'
+                'caption': 'Submitting changes to public models is done through Merge Requests'
             },
             {
                 'url': '/images/merge2.png', 'thumbUrl': '/images/merge2-50px.png',
@@ -186,15 +154,15 @@
             },
             {
                 'url': '/images/merge4.png', 'thumbUrl': '/images/merge4-50px.png',
-                'caption': 'A completed Merge Request.  The database has been updated with the new data'
+                'caption': 'A completed Merge Request.  The model has been updated with the change'
             },
             {
                 'url': '/images/version_control_history1.png', 'thumbUrl': '/images/version_control_history1-50px.png',
-                'caption': 'All data is SHA256 checksummed, and every database maintains a complete version history'
+                'caption': 'All models are SHA256 checksummed, and every model maintains a complete version history'
             },
             {
                 'url': '/images/version_control_history2.png', 'thumbUrl': '/images/version_control_history2-50px.png',
-                'caption': 'The version history can be useful for traceability of important data'
+                'caption': 'The version history can be useful for traceability of important changes'
             }
             ];
 
