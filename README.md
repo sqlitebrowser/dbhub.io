@@ -2,13 +2,13 @@
 
 ### What it is
 
-An early stage (in development) "Cloud" for 3D models databases.
+An early stage (in development) "Cloud" for 3D projects and models.
 
 You can try out our live development server at [https://3dhub.io](https://3dhub.io), or run it locally for your own
 users.
 
 **Note** - Don't store important data on the live server.  We're still changing things
-around on it quite often, and haven't yet put time into setting up backups (etc).
+around on it quite often, and haven't yet put time into setting up good backups (etc).
 
 When the core code is more fully featured (end of November 2019 target), we'll start
 putting "production" servers online for people to store their projects.
