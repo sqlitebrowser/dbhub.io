@@ -18,8 +18,8 @@
     <div class="row" style="margin-bottom: 10px">
         <div class="col-md-12">
             <div class="dropdown">
-                <button class="btn btn-success" ng-click="uploadForm()">Upload database</button>
-                <button class="btn btn-primary" ng-click="genCert()">Generate client certificate</button>
+                <button class="btn btn-success" ng-click="uploadForm()">Upload 3D model</button>
+                <button class="btn btn-primary" ng-click="">Create new project</button>
             </div>
         </div>
     </div>
@@ -27,7 +27,7 @@
     <div class="row">
         <div class="col-md-6">
             <div class="pull-left" style="padding-top: 8px;">
-                <h3 style="display: inline; vertical-align: middle;">Public databases</h3>
+                <h3 style="display: inline; vertical-align: middle;">Public projects</h3>
             </div>
             <div class="pull-right" style="padding-bottom: 8px;">
                 <button type="button" class="btn btn-default" ng-click="toggleCollapsedPub()">{{ titleCollapsedPub }}</button>
@@ -62,7 +62,7 @@
                 <table class="table table-striped table-responsive profileTable">
                     <tr>
                         <td>
-                            <h4>No public databases yet</h4>
+                            <h4>No public projects yet</h4>
                         </td>
                     </tr>
                 </table>
@@ -70,7 +70,7 @@
         </div>
         <div class="col-md-6">
             <div class="pull-left" style="padding-top: 8px;">
-                <h3 style="display: inline; vertical-align: middle;">Private databases</h3>
+                <h3 style="display: inline; vertical-align: middle;">Private projects</h3>
             </div>
             <div class="pull-right" style="padding-bottom: 8px;">
                 <button type="button" class="btn btn-default" ng-click="toggleCollapsedPriv()">{{ titleCollapsedPriv }}</button>
@@ -105,7 +105,7 @@
                 <table class="table table-striped table-responsive profileTable">
                     <tr>
                         <td>
-                            <h4>No private databases yet</h4>
+                            <h4>No private projects yet</h4>
                         </td>
                     </tr>
                 </table>
@@ -139,7 +139,7 @@
                 <table class="table table-striped table-responsive profileTable">
                     <tr>
                         <td>
-                            <h4>No starred databases yet</h4>
+                            <h4>No starred projects yet</h4>
                         </td>
                     </tr>
                 </table>
@@ -147,7 +147,7 @@
         </div>
         <div class="col-md-6">
             <div class="pull-left" style="padding-top: 8px;">
-                <h3 style="display: inline; vertical-align: middle;">Databases you're watching</h3>
+                <h3 style="display: inline; vertical-align: middle;">Projects you're watching</h3>
             </div>
             <div class="pull-right" style="padding-bottom: 8px;">
                 <button type="button" class="btn btn-default" ng-click="toggleCollapsedWatch()">{{ titleCollapsedWatch }}</button>
@@ -170,7 +170,7 @@
                 <table class="table table-striped table-responsive profileTable">
                     <tr>
                         <td>
-                            <h4>Not watching any databases yet</h4>
+                            <h4>Not watching any projects yet</h4>
                         </td>
                     </tr>
                 </table>
@@ -194,7 +194,7 @@
             return getTimePeriod(date1, includeOn)
         };
 
-        // Toggle whether to show starred databases collapsed or not
+        // Toggle whether to show starred projects collapsed or not
         $scope.isCollapsedStar = true;
         $scope.titleCollapsedStar = "Expand all";
         $scope.toggleCollapsedStar = function() {
@@ -207,7 +207,7 @@
             }
         };
 
-        // Toggle whether to show private databases collapsed or not
+        // Toggle whether to show private projects collapsed or not
         $scope.isCollapsedPriv = true;
         $scope.titleCollapsedPriv = "Expand all";
         $scope.toggleCollapsedPriv = function() {
@@ -220,7 +220,7 @@
             }
         };
 
-        // Toggle whether to show public databases collapsed or not
+        // Toggle whether to show public projects collapsed or not
         $scope.isCollapsedPub = true;
         $scope.titleCollapsedPub = "Expand all";
         $scope.toggleCollapsedPub = function() {
@@ -233,7 +233,7 @@
             }
         };
 
-        // Toggle whether to show watched databases collapsed or not
+        // Toggle whether to show watched projects collapsed or not
         $scope.isCollapsedWatch = true;
         $scope.titleCollapsedWatch = "Expand all";
         $scope.toggleCollapsedWatch = function() {
