@@ -1,4 +1,4 @@
-### systemd unit files used in our (current) deployment on Scaleway
+### Systemd unit files used in our (current) deployments
 
 * dbhub-db4s.service
 
@@ -11,6 +11,11 @@
 * dbhub-webui.service
 
   Starts the DBHub.io web service on port 443 (HTTPS).
+
+
+* 3dhub-webui.service
+
+  Starts the 3DHub.io web service on port 443 (HTTPS).
 
 
 * mnt-minio.mount

@@ -1,0 +1,33 @@
+[Unit]
+Description=3DHub.io Website User Interface
+Documentation=https://github.com/justinclift/3dhub.io
+Requires=postgresql-12.service
+Requires=memcached.service
+Requires=minio.service
+Wants=network-online.target
+After=postgresql-12.service
+After=memcached.service
+After=minio.service
+AssertFileIsExecutable=/usr/local/bin/webui
+
+[Service]
+ExecStart=/usr/local/bin/webui
+WorkingDirectory=/home/3dhub/go/src/github.com/justinclift/3dhub.io
+User=3dhub
+Group=3dhub
+PermissionsStartOnly=true
+NonBlocking=true
+StandardOutput=journal
+StandardError=inherit
+SuccessExitStatus=0
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+
+# Let systemd restart this service only if it has ended with the clean exit code or signal.
+Restart=on-success
+
+# Specifies the maximum file descriptor number that can be opened by this process
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
