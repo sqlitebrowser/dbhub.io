@@ -45,8 +45,8 @@ const (
 // Number of rows to display by default on the database page
 const DefaultNumDisplayRows = 25
 
-// The maximum database size accepted for upload (in MB)
-const MaxDatabaseSize = 512
+// The maximum file size accepted for upload (in MB)
+const MaxFileSize = 512
 
 // The maximum licence size accepted for upload (in MB)
 const MaxLicenceSize = 1
@@ -164,6 +164,7 @@ type WebInfo struct {
 	RequestLog           string `toml:"request_log"`
 	ServerName           string `toml:"server_name"`
 	SessionStorePassword string `toml:"session_store_password"`
+	WebsiteName          string `toml:"website_name"`
 }
 
 // End of configuration file types

@@ -55,7 +55,7 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pageData.Meta.Title = "What is 3DHub.io?"
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 
 	// Add Auth0 info to the page data
 	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
@@ -202,7 +202,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("branchesPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -427,7 +427,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("commitsPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -683,7 +683,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("comparePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -784,7 +784,7 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("confirmDeletePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -940,7 +940,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("contributorsPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -1043,7 +1043,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("createBranchPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -1140,7 +1140,7 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("createDiscussionPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -1243,7 +1243,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("createTagPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -1632,7 +1632,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 		// Render the page (using the caches)
 		if ok {
-			pageData.Meta.WebsiteName = "3DHub.io"
+			pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 			t := tmpl.Lookup("databasePage")
 			err = t.Execute(w, pageData)
 			if err != nil {
@@ -1863,7 +1863,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("databasePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -2059,7 +2059,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Render the discussion comments page
-		pageData.Meta.WebsiteName = "3DHub.io"
+		pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 		t := tmpl.Lookup("discussCommentsPage")
 		err = t.Execute(w, pageData)
 		if err != nil {
@@ -2069,7 +2069,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render the main discussion list page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("discussListPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -2129,7 +2129,7 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 
 	// Render the page
 	w.WriteHeader(httpCode)
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("errorPage")
 	err := t.Execute(w, pageData)
 	if err != nil {
@@ -2224,7 +2224,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("forksPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -2294,7 +2294,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("rootPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -2644,7 +2644,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Render the MR comments page
-		pageData.Meta.WebsiteName = "3DHub.io"
+		pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 		t := tmpl.Lookup("mergeRequestCommentsPage")
 		err = t.Execute(w, pageData)
 		if err != nil {
@@ -2654,7 +2654,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render the MR list page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("mergeRequestListPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -2717,7 +2717,7 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("prefPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -2811,7 +2811,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("profilePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -2977,7 +2977,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("releasesPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -3031,7 +3031,7 @@ func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("selectUserNamePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -3228,7 +3228,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("settingsPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -3322,7 +3322,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("starsPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -3486,7 +3486,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("tagsPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -3563,7 +3563,7 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("updatesPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -3656,7 +3656,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("uploadPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -3754,7 +3754,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("userPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -3848,7 +3848,7 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Render the page
-	pageData.Meta.WebsiteName = "3DHub.io"
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("watchersPage")
 	err = t.Execute(w, pageData)
 	if err != nil {

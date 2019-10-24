@@ -3538,7 +3538,7 @@ func main() {
 	})))
 
 	// Start webUI server
-	log.Printf("DBHub server starting on https://%s\n", com.Conf.Web.ServerName)
+	log.Printf("%s server starting on https://%s\n", com.Conf.Web.WebsiteName, com.Conf.Web.ServerName)
 	err = http.ListenAndServeTLS(com.Conf.Web.BindAddress, com.Conf.Web.Certificate, com.Conf.Web.CertificateKey, nil)
 
 	// Shut down nicely
@@ -5520,8 +5520,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Investigate getting the last modified timestamp of the database file selected for upload
 	// TODO   * https://developer.mozilla.org/en-US/docs/Web/API/File/lastModified
 
-	// Set the maximum accepted database size for uploading
-	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+	// Set the maximum accepted file size for uploading
+	r.Body = http.MaxBytesReader(w, r.Body, com.MaxFileSize*1024*1024)
 
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -5548,13 +5548,13 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check whether the uploaded database is too large
-	if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+	// Check whether the uploaded file is too large
+	if r.ContentLength > (com.MaxFileSize * 1024 * 1024) {
 		errorPage(w, r, http.StatusBadRequest,
-			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
-				com.MaxDatabaseSize, r.ContentLength/1024/1024))
-		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
-			loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
+			fmt.Sprintf("File is too large. Maximum file upload size is %d MB, yours is %d MB",
+				com.MaxFileSize, r.ContentLength/1024/1024))
+		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized file %d MB in size.  Limit is %d MB\n",
+			loggedInUser, r.ContentLength/1024/1024, com.MaxFileSize))
 		return
 	}
 
