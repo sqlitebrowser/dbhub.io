@@ -26,21 +26,21 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	dbSha string) (numBytes int64, newCommitID string, err error) {
 
 	// Create a temporary file to store the database in
-	tempDB, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
+	tempFile, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
 	if err != nil {
 		log.Printf("Error creating temporary file. User: '%s', Database: '%s%s%s', Filename: '%s', Error: %v\n",
-			loggedInUser, dbOwner, dbFolder, dbName, tempDB.Name(), err)
+			loggedInUser, dbOwner, dbFolder, dbName, tempFile.Name(), err)
 		return 0, "", err
 	}
-	tempDBName := tempDB.Name()
+	tempFileName := tempFile.Name()
 
 	// Delete the temporary file when this function finishes
-	defer os.Remove(tempDBName)
+	defer os.Remove(tempFileName)
 
 	// Write the database to the temporary file, so we can try opening it with SQLite to verify it's ok
 	bufSize := 16 << 20 // 16MB
 	buf := make([]byte, bufSize)
-	numBytes, err = io.CopyBuffer(tempDB, newDB, buf)
+	numBytes, err = io.CopyBuffer(tempFile, newDB, buf)
 	if err != nil {
 		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
 			"Error: %v\n", loggedInUser, dbOwner, dbFolder, dbName, err)
@@ -48,13 +48,13 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	}
 
 	// Sanity check the uploaded database, and get the list of tables in the database
-	sTbls, err := SanityCheck(tempDBName)
+	sTbls, err := SanityCheck(tempFileName)
 	if err != nil {
 		return 0, "", err
 	}
 
 	// Return to the start of the temporary file
-	newOff, err := tempDB.Seek(0, 0)
+	newOff, err := tempFile.Seek(0, 0)
 	if err != nil {
 		log.Printf("Seeking on the temporary file failed: %v\n", err.Error())
 		return 0, "", err
@@ -67,7 +67,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	// TODO: Using an io.MultiWriter to feed data from newDB into both the temp file and this sha256 function at the
 	// TODO  same time might be a better approach here
 	s := sha256.New()
-	_, err = io.CopyBuffer(s, tempDB, buf)
+	_, err = io.CopyBuffer(s, tempFile, buf)
 	if err != nil {
 		return 0, "", err
 	}
@@ -301,7 +301,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	}
 
 	// Return to the start of the temporary file again
-	newOff, err = tempDB.Seek(0, 0)
+	newOff, err = tempFile.Seek(0, 0)
 	if err != nil {
 		log.Printf("Seeking on the temporary file (2nd time) failed: %v\n", err.Error())
 		return 0, "", err
@@ -315,7 +315,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	b.Commit = c.ID
 	b.CommitCount = commitCount
 	branches[branchName] = b
-	err = StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, tempDB, sha, numBytes, "",
+	err = StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, tempFile, sha, numBytes, "",
 		"", needDefaultBranchCreated, branchName, sourceURL)
 	if err != nil {
 		return 0, "", err
