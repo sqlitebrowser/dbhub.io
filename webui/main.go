@@ -268,7 +268,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -366,7 +366,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the requested database exists
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -530,7 +530,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -624,7 +624,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	discText := txt
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -890,13 +890,13 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the databases exist
-	srcExists, err := com.CheckDBExists(loggedInUser, srcOwner, srcFolder, srcDBName)
+	srcExists, err := com.CheckFileExists(loggedInUser, srcOwner, srcFolder, srcDBName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	destExists, err := com.CheckDBExists(loggedInUser, destOwner, destFolder, destDBName)
+	destExists, err := com.CheckFileExists(loggedInUser, destOwner, destFolder, destDBName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1041,7 +1041,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the requested database exists
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1444,7 +1444,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1870,7 +1870,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1974,7 +1974,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2186,7 +2186,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
@@ -2282,7 +2282,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2383,7 +2383,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2589,13 +2589,13 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the databases exist
-	srcExists, err := com.CheckDBExists(loggedInUser, srcOwner, srcFolder, srcDBName)
+	srcExists, err := com.CheckFileExists(loggedInUser, srcOwner, srcFolder, srcDBName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	destExists, err := com.CheckDBExists(loggedInUser, destOwner, destFolder, destDBName)
+	destExists, err := com.CheckFileExists(loggedInUser, destOwner, destFolder, destDBName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -3032,7 +3032,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the user has access to the specific version of the source database requested
-	allowed, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	allowed, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3050,7 +3050,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the user doesn't have a database of the same name already
 	// Note the use of "loggedInUser" for the 2nd parameter in this call, unlike using "dbOwner" in the call above
-	exists, err := com.CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, loggedInUser, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3332,7 +3332,7 @@ func main() {
 	http.Handle("/x/updatediscuss/", gz.GzipHandler(logReq(updateDiscussHandler)))
 	http.Handle("/x/updaterelease/", gz.GzipHandler(logReq(updateReleaseHandler)))
 	http.Handle("/x/updatetag/", gz.GzipHandler(logReq(updateTagHandler)))
-	http.Handle("/x/uploaddata/", gz.GzipHandler(logReq(uploadDataHandler)))
+	http.Handle("/x/uploaddata/", gz.GzipHandler(logReq(uploadFileHandler)))
 	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
 	// CSS
@@ -3688,7 +3688,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -4330,7 +4330,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4489,7 +4489,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4933,7 +4933,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5099,7 +5099,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5221,7 +5221,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5328,7 +5328,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5462,7 +5462,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5513,9 +5513,9 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// This function processes new database data submitted through the upload form.
-func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Upload DB handler"
+// This function processes new files submitted through the upload form.
+func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Upload file handler"
 
 	// TODO: Investigate getting the last modified timestamp of the database file selected for upload
 	// TODO   * https://developer.mozilla.org/en-US/docs/Web/API/File/lastModified
@@ -5575,6 +5575,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the licence value
+	// TODO: Determine Open Source Hardware licenses to have in the system by default
 	licenceName, err := com.GetFormLicence(r)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Validation failed for licence value")
@@ -5611,25 +5612,25 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add support for folders and sub-folders
 	dbFolder := "/"
 
-	tempFile, handler, err := r.FormFile("database")
+	tempFile, handler, err := r.FormFile("model")
 	if err != nil {
 		log.Printf("%s: Uploading file failed: %v\n", pageName, err)
-		errorPage(w, r, http.StatusInternalServerError, "Database file missing from upload data?")
+		errorPage(w, r, http.StatusInternalServerError, "File missing from upload data?")
 		return
 	}
 	dbName := handler.Filename
 	defer tempFile.Close()
 
-	// Validate the database name
+	// Validate the file name
 	err = com.ValidateDB(dbName)
 	if err != nil {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
-		errorPage(w, r, http.StatusBadRequest, "Invalid database name")
+		log.Printf("%s: Validation failed for file name: %s", pageName, err)
+		errorPage(w, r, http.StatusBadRequest, "Invalid file name")
 		return
 	}
 
-	// Check if the requested database exists already
-	exists, err := com.CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
+	// Check if the requested file exists already
+	exists, err := com.CheckFileExists(loggedInUser, loggedInUser, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -5665,8 +5666,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		commitID = branchEntry.Commit
 	}
 
-	// Sanity check the uploaded database, and if ok then add it to the system
-	numBytes, _, err := com.AddDatabase(r, loggedInUser, loggedInUser, dbFolder, dbName, createBranch, branchName,
+	// Sanity check the uploaded file, and if ok then add it to the system
+	numBytes, _, err := com.AddFile(r, loggedInUser, loggedInUser, dbFolder, dbName, createBranch, branchName,
 		commitID, public, licenceName, commitMsg, sourceURL, tempFile, "webui", time.Now(), time.Time{},
 		"", "", "", "", nil, "")
 	if err != nil {
@@ -5674,8 +5675,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log the successful database upload
-	log.Printf("%s: Username: '%s', database '%s%s%s' uploaded', bytes: %v\n", pageName, loggedInUser,
+	// Log the successful upload
+	log.Printf("%s: Username: '%s', file '%s%s%s' uploaded', bytes: %v\n", pageName, loggedInUser,
 		loggedInUser, dbFolder, dbName, numBytes)
 
 	// Database upload succeeded.  Bounce the user to the page for their new database

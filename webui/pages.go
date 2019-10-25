@@ -122,7 +122,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -275,7 +275,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -735,7 +735,7 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -844,7 +844,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -993,7 +993,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1095,7 +1095,7 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1193,7 +1193,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1365,7 +1365,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1929,7 +1929,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2174,7 +2174,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
 		return
@@ -2368,7 +2368,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2874,7 +2874,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3100,7 +3100,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3274,7 +3274,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the database exists
 	// TODO: Add folder support
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
 		return
@@ -3384,7 +3384,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3800,7 +3800,7 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the database exists
 	// TODO: Add folder support
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
 		return

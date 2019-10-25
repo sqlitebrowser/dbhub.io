@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gwenn/gosqlite"
+	sqlite "github.com/gwenn/gosqlite"
 )
 
 // Returns the number of rows in a SQLite table.

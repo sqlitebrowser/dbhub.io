@@ -18,8 +18,8 @@ import (
 	"time"
 )
 
-// The main function which handles database upload processing for both the webUI and DB4S end points
-func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder string, dbName string,
+// The main function which handles file upload processing for both the webUI and DB4S end points
+func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder string, dbName string,
 	createBranch bool, branchName string, commitID string, public bool, licenceName string, commitMsg string,
 	sourceURL string, newDB io.Reader, serverSw string, lastModified time.Time, commitTime time.Time,
 	authorName string, authorEmail string, committerName string, committerEmail string, otherParents []string,
@@ -83,7 +83,7 @@ func AddDatabase(r *http.Request, loggedInUser string, dbOwner string, dbFolder 
 	var defBranch string
 	needDefaultBranchCreated := false
 	var branches map[string]BranchEntry
-	exists, err := CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
+	exists, err := CheckFileExists(loggedInUser, loggedInUser, dbFolder, dbName)
 	if err != err {
 		return 0, "", err
 	}

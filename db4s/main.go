@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
+	com "github.com/justinclift/3dhub.io/common"
 	"github.com/pkg/errors"
-	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
 var (
@@ -159,7 +159,7 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(userAcc, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(userAcc, dbOwner, dbFolder, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -352,7 +352,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(userAcc, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(userAcc, dbOwner, dbFolder, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -751,7 +751,7 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(userAcc, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckFileExists(userAcc, dbOwner, dbFolder, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1105,7 +1105,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Check if the database exists already
-	exists, err := com.CheckDBExists(userAcc, targetUser, targetFolder, targetDB)
+	exists, err := com.CheckFileExists(userAcc, targetUser, targetFolder, targetDB)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1213,7 +1213,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Sanity check the uploaded database, and if ok then add it to the system
-	numBytes, commitID, err := com.AddDatabase(r, userAcc, targetUser, targetFolder, targetDB, createBranch,
+	numBytes, commitID, err := com.AddFile(r, userAcc, targetUser, targetFolder, targetDB, createBranch,
 		branchName, commit, public, licenceName, commitMsg, sourceURL, tempFile, "db4s", lastMod,
 		commitTime, authorName, authorEmail, committerName, committerEmail, otherParents, dbSHA256)
 	if err != nil {

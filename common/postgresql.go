@@ -92,9 +92,9 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 	return nil
 }
 
-// Check if a database exists
+// Check if a file exists
 // If an error occurred, the true/false value should be ignored, as only the error value is valid.
-func CheckDBExists(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
+func CheckFileExists(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM sqlite_databases
