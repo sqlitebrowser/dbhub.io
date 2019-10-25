@@ -840,7 +840,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	pageName := "POST request handler"
 
 	// Set the maximum accepted database size for uploading
-	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+	r.Body = http.MaxBytesReader(w, r.Body, com.MaxFileSize*1024*1024)
 
 	// The "public" user isn't allowed to make changes
 	if userAcc == "public" {
@@ -869,12 +869,12 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// Check whether the uploaded database is too large
 	// TODO: Have a list of users (from the config.toml file) which don't have this check applied
-	if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+	if r.ContentLength > (com.MaxFileSize * 1024 * 1024) {
 		http.Error(w,
 			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
-				com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
+				com.MaxFileSize, r.ContentLength/1024/1024), http.StatusBadRequest)
 		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
-			userAcc, r.ContentLength/1024/1024, com.MaxDatabaseSize))
+			userAcc, r.ContentLength/1024/1024, com.MaxFileSize))
 		return
 	}
 
