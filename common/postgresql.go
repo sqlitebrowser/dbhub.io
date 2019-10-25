@@ -94,7 +94,7 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 
 // Check if a file exists
 // If an error occurred, the true/false value should be ignored, as only the error value is valid.
-func CheckFileExists(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
+func CheckFileExists(loggedInUser string, owner string, folder string, fileName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM sqlite_databases
@@ -108,12 +108,12 @@ func CheckFileExists(loggedInUser string, dbOwner string, dbFolder string, dbNam
 			AND is_deleted = false`
 	// If the request is from someone who's not logged in, or is for another users database, ensure we only consider
 	// public databases
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) || loggedInUser == "" {
+	if strings.ToLower(loggedInUser) != strings.ToLower(owner) || loggedInUser == "" {
 		dbQuery += `
 			AND public = true`
 	}
 	var DBCount int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DBCount)
+	err := pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&DBCount)
 	if err != nil {
 		log.Printf("Checking if a database exists failed: %v\n", err)
 		return true, err
@@ -129,7 +129,7 @@ func CheckFileExists(loggedInUser string, dbOwner string, dbFolder string, dbNam
 
 // Check if a given database ID is available, and return it's folder/name so the caller can determine if it has been
 // renamed.  If an error occurs, the true/false value should be ignored, as only the error value is valid.
-func CheckDBID(loggedInUser string, dbOwner string, dbID int64) (avail bool, dbFolder string, dbName string, err error) {
+func CheckDBID(loggedInUser string, owner string, dbID int64) (avail bool, folder string, fileName string, err error) {
 	dbQuery := `
 		SELECT folder, db_name
 		FROM sqlite_databases
@@ -142,11 +142,11 @@ func CheckDBID(loggedInUser string, dbOwner string, dbID int64) (avail bool, dbF
 			AND is_deleted = false`
 	// If the request is from someone who's not logged in, or is for another users database, ensure we only consider
 	// public databases
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) || loggedInUser == "" {
+	if strings.ToLower(loggedInUser) != strings.ToLower(owner) || loggedInUser == "" {
 		dbQuery += `
 			AND public = true`
 	}
-	err = pdb.QueryRow(dbQuery, dbOwner, dbID).Scan(&dbFolder, &dbName)
+	err = pdb.QueryRow(dbQuery, owner, dbID).Scan(&folder, &fileName)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			avail = false
@@ -163,7 +163,7 @@ func CheckDBID(loggedInUser string, dbOwner string, dbID int64) (avail bool, dbF
 }
 
 // Check if a database has been starred by a given user.  The boolean return value is only valid when err is nil.
-func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
+func CheckDBStarred(loggedInUser string, owner string, folder string, fileName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM database_stars
@@ -184,10 +184,10 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 						AND db_name = $3
 						AND is_deleted = false)`
 	var starCount int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser).Scan(&starCount)
+	err := pdb.QueryRow(dbQuery, owner, folder, fileName, loggedInUser).Scan(&starCount)
 	if err != nil {
 		log.Printf("Error looking up star count for database. User: '%s' DB: '%s/%s'. Error: %v\n",
-			loggedInUser, dbOwner, dbName, err)
+			loggedInUser, owner, fileName, err)
 		return true, err
 	}
 	if starCount == 0 {
@@ -200,7 +200,7 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 }
 
 // Check if a database is being watched by a given user.  The boolean return value is only valid when err is nil.
-func CheckDBWatched(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
+func CheckDBWatched(loggedInUser string, owner string, folder string, fileName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM watchers
@@ -221,10 +221,10 @@ func CheckDBWatched(loggedInUser string, dbOwner string, dbFolder string, dbName
 						AND db_name = $3
 						AND is_deleted = false)`
 	var watchCount int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser).Scan(&watchCount)
+	err := pdb.QueryRow(dbQuery, owner, folder, fileName, loggedInUser).Scan(&watchCount)
 	if err != nil {
 		log.Printf("Error looking up watchers count for database. User: '%s' DB: '%s%s%s'. Error: %v\n",
-			loggedInUser, dbOwner, dbFolder, dbName, err)
+			loggedInUser, owner, folder, fileName, err)
 		return true, err
 	}
 	if watchCount == 0 {
@@ -341,7 +341,7 @@ func ConnectPostgreSQL() (err error) {
 }
 
 // Returns the ID number for a given user's database.
-func databaseID(dbOwner string, dbFolder string, dbName string) (dbID int, err error) {
+func databaseID(owner string, folder string, fileName string) (dbID int, err error) {
 	// Retrieve the database id
 	dbQuery := `
 		SELECT db_id
@@ -353,9 +353,9 @@ func databaseID(dbOwner string, dbFolder string, dbName string) (dbID int, err e
 			AND folder = $2
 			AND db_name = $3
 			AND is_deleted = false`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&dbID)
 	if err != nil {
-		log.Printf("Error looking up database id. Owner: '%s', Database: '%s'. Error: %v\n", dbOwner, dbName,
+		log.Printf("Error looking up database id. Owner: '%s', Database: '%s'. Error: %v\n", owner, fileName,
 			err)
 	}
 	return
@@ -438,11 +438,11 @@ func DB4SDefaultList(loggedInUser string) (map[string]UserInfo, error) {
 }
 
 // Retrieve the details for a specific database
-func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) error {
+func DBDetails(DB *SQLiteDBinfo, loggedInUser string, owner string, folder string, fileName string, commitID string) error {
 	// If no commit ID was supplied, we retrieve the latest commit one from the default branch
 	var err error
 	if commitID == "" {
-		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
+		commitID, err = DefaultCommit(owner, folder, fileName)
 		if err != nil {
 			return err
 		}
@@ -465,14 +465,14 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 			AND db.is_deleted = false`
 
 	// If the request is for another users database, ensure we only look up public ones
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
+	if strings.ToLower(loggedInUser) != strings.ToLower(owner) {
 		dbQuery += `
 			AND db.public = true`
 	}
 
 	// Generate a predictable cache key for this functions' metadata.  Probably not sharable with other functions
 	// cached metadata
-	mdataCacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, commitID)
+	mdataCacheKey := MetadataCacheKey("meta", loggedInUser, owner, folder, fileName, commitID)
 
 	// Use a cached version of the query response if it exists
 	ok, err := GetCachedData(mdataCacheKey, &DB)
@@ -486,7 +486,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 
 	// Retrieve the requested database details
 	var defTable, fullDesc, oneLineDesc, sourceURL pgx.NullString
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName, commitID).Scan(&DB.Info.DateCreated,
 		&DB.Info.RepoModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
 		&DB.Info.CommitID,
 		&DB.Info.DBEntry,
@@ -519,8 +519,8 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	}
 
 	// Fill out the fields we already have data for
-	DB.Info.Database = dbName
-	DB.Info.Folder = dbFolder
+	DB.Info.Database = fileName
+	DB.Info.Folder = folder
 
 	// Retrieve latest fork count
 	// TODO: This can probably be folded into the above SQL query as a sub-select, as a minor optimisation
@@ -536,9 +536,9 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 				WHERE lower(user_name) = lower($1))
 			AND folder = $2
 			AND db_name = $3)`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DB.Info.Forks)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&DB.Info.Forks)
 	if err != nil {
-		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", owner, folder, fileName, err)
 		return err
 	}
 
@@ -552,7 +552,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 }
 
 // Returns the star count for a given database.
-func DBStars(dbOwner string, dbFolder string, dbName string) (starCount int, err error) {
+func DBStars(owner string, folder string, fileName string) (starCount int, err error) {
 	// Retrieve the updated star count
 	dbQuery := `
 		SELECT stars
@@ -565,16 +565,16 @@ func DBStars(dbOwner string, dbFolder string, dbName string) (starCount int, err
 			AND folder = $2
 			AND db_name = $3
 			AND is_deleted = false`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&starCount)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&starCount)
 	if err != nil {
-		log.Printf("Error looking up star count for database '%s/%s'. Error: %v\n", dbOwner, dbName, err)
+		log.Printf("Error looking up star count for database '%s/%s'. Error: %v\n", owner, fileName, err)
 		return -1, err
 	}
 	return starCount, nil
 }
 
 // Returns the watchers count for a given database.
-func DBWatchers(dbOwner string, dbFolder string, dbName string) (watcherCount int, err error) {
+func DBWatchers(owner string, folder string, fileName string) (watcherCount int, err error) {
 	// Retrieve the updated watchers count
 	dbQuery := `
 		SELECT watchers
@@ -587,17 +587,17 @@ func DBWatchers(dbOwner string, dbFolder string, dbName string) (watcherCount in
 			AND folder = $2
 			AND db_name = $3
 			AND is_deleted = false`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&watcherCount)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&watcherCount)
 	if err != nil {
-		log.Printf("Error looking up watcher count for database '%s%s%s'. Error: %v\n", dbOwner, dbFolder,
-			dbName, err)
+		log.Printf("Error looking up watcher count for database '%s%s%s'. Error: %v\n", owner, folder,
+			fileName, err)
 		return -1, err
 	}
 	return watcherCount, nil
 }
 
 // Retrieve the default commit ID for a specific database
-func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, error) {
+func DefaultCommit(owner string, folder string, fileName string) (string, error) {
 	// If no commit ID was supplied, we retrieve the latest commit ID from the default branch
 	dbQuery := `
 		SELECT branch_heads->default_branch->'commit' AS commit_id
@@ -611,7 +611,7 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 			AND db_name = $3
 			AND is_deleted = false`
 	var commitID string
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&commitID)
+	err := pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&commitID)
 	if err != nil {
 		log.Printf("Error when retrieving head commit ID of default branch: %v\n", err.Error())
 		return "", errors.New("Internal error when looking up database details")
@@ -620,7 +620,7 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 }
 
 // Delete a specific comment from a discussion
-func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, comID int) error {
+func DeleteComment(owner string, folder string, fileName string, discID int, comID int) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -651,15 +651,15 @@ func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, c
 		WHERE db_id = (SELECT db_id FROM d)
 			AND disc_id = (SELECT int_id FROM int)
 			AND com_id = $5`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID)
+	commandTag, err := tx.Exec(dbQuery, owner, folder, fileName, discID, comID)
 	if err != nil {
-		log.Printf("Deleting comment '%d' from '%s%s%s', discussion '%d' failed: %v\n", comID, dbOwner,
-			dbFolder, dbName, discID, err)
+		log.Printf("Deleting comment '%d' from '%s%s%s', discussion '%d' failed: %v\n", comID, owner,
+			folder, fileName, discID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when deleting comment '%d' from database '%s%s%s, discussion '%d''\n",
-			numRows, comID, dbOwner, dbFolder, dbName, discID)
+			numRows, comID, owner, folder, fileName, discID)
 	}
 
 	// Update the comment count and last modified date for the discussion
@@ -689,15 +689,15 @@ func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, c
 		UPDATE discussions
 		SET comment_count = (SELECT count FROM new), last_modified = now()
 		WHERE internal_id = (SELECT int_id FROM int)`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID)
+	commandTag, err = tx.Exec(dbQuery, owner, folder, fileName, discID)
 	if err != nil {
 		log.Printf("Updating comment count for discussion '%v' of '%s%s%s' in PostgreSQL failed: %v\n",
-			discID, dbOwner, dbFolder, dbName, err)
+			discID, owner, folder, fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when updating comment count for discussion '%v' in "+
-			"'%s%s%s'\n", numRows, discID, dbOwner, dbFolder, dbName)
+			"'%s%s%s'\n", numRows, discID, owner, folder, fileName)
 	}
 
 	// Commit the transaction
@@ -710,7 +710,7 @@ func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, c
 }
 
 // Deletes a database from PostgreSQL.
-func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
+func DeleteDatabase(owner string, folder string, fileName string) error {
 	// TODO: At some point we'll need to figure out a garbage collection approach to remove databases from Minio which
 	// TODO  are no longer pointed to by anything
 
@@ -739,9 +739,9 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 		FROM sqlite_databases AS db, this_db
 		WHERE db.forked_from = this_db.db_id`
 	var numForks int
-	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&numForks)
+	err = tx.QueryRow(dbQuery, owner, folder, fileName).Scan(&numForks)
 	if err != nil {
-		log.Printf("Retreving fork list failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Retreving fork list failed for database '%s%s%s': %v\n", owner, folder, fileName, err)
 		return err
 	}
 	if numForks == 0 {
@@ -771,15 +771,15 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 			SET forks = new_count.forks - 2
 			FROM new_count, root_db
 			WHERE sqlite_databases.db_id = root_db.id`
-		commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+		commandTag, err := tx.Exec(dbQuery, owner, folder, fileName)
 		if err != nil {
-			log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", dbOwner, dbFolder, dbName,
+			log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", owner, folder, fileName,
 				err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf("Wrong number of rows (%v) affected (spot 1) when updating fork count for database '%s%s%s'\n",
-				numRows, dbOwner, dbFolder, dbName)
+				numRows, owner, folder, fileName)
 		}
 
 		// Do the database deletion in PostgreSQL (needs to come after the above fork count update, else the fork count
@@ -794,16 +794,16 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 				)
 				AND folder = $2
 				AND db_name = $3`
-		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+		commandTag, err = tx.Exec(dbQuery, owner, folder, fileName)
 		if err != nil {
-			log.Printf("Deleting database entry failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+			log.Printf("Deleting database entry failed for database '%s%s%s': %v\n", owner, folder, fileName,
 				err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
-				"Wrong number of rows (%v) affected when deleting database '%s%s%s'\n", numRows, dbOwner,
-				dbFolder, dbName)
+				"Wrong number of rows (%v) affected when deleting database '%s%s%s'\n", numRows, owner,
+				folder, fileName)
 		}
 
 		// Commit the transaction
@@ -813,7 +813,7 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 		}
 
 		// Log the database deletion
-		log.Printf("Database '%s%s%s' deleted\n", dbOwner, dbFolder, dbName)
+		log.Printf("Database '%s%s%s' deleted\n", owner, folder, fileName)
 		return nil
 	}
 
@@ -835,10 +835,10 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 				AND folder = $2
 				AND db_name = $3
 			)`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	commandTag, err := tx.Exec(dbQuery, owner, folder, fileName)
 	if err != nil {
-		log.Printf("Deleting (forked) database stars failed for database '%s%s%s': %v\n", dbOwner, dbFolder,
-			dbName, err)
+		log.Printf("Deleting (forked) database stars failed for database '%s%s%s': %v\n", owner, folder,
+			fileName, err)
 		return err
 	}
 
@@ -857,16 +857,16 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 			)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, newName)
+	commandTag, err = tx.Exec(dbQuery, owner, folder, fileName, newName)
 	if err != nil {
-		log.Printf("Deleting (forked) database entry failed for database '%s%s%s': %v\n", dbOwner, dbFolder,
-			dbName, err)
+		log.Printf("Deleting (forked) database entry failed for database '%s%s%s': %v\n", owner, folder,
+			fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when deleting (forked) database '%s%s%s'\n", numRows, dbOwner,
-			dbFolder, dbName)
+			"Wrong number of rows (%v) affected when deleting (forked) database '%s%s%s'\n", numRows, owner,
+			folder, fileName)
 	}
 
 	// Update the fork count for the root database
@@ -891,15 +891,15 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 		SET forks = new_count.forks - 1
 		FROM new_count, root_db
 		WHERE sqlite_databases.db_id = root_db.id`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, newName)
+	commandTag, err = tx.Exec(dbQuery, owner, folder, newName)
 	if err != nil {
-		log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", dbOwner, dbFolder, dbName,
+		log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", owner, folder, fileName,
 			err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected (spot 2) when updating fork count for database '%s%s%s'\n",
-			numRows, dbOwner, dbFolder, dbName)
+			numRows, owner, folder, fileName)
 	}
 
 	// Commit the transaction
@@ -909,7 +909,7 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 	}
 
 	// Log the database deletion
-	log.Printf("(Forked) database '%s%s%s' deleted\n", dbOwner, dbFolder, dbName)
+	log.Printf("(Forked) database '%s%s%s' deleted\n", owner, folder, fileName)
 	return nil
 }
 
@@ -1054,7 +1054,7 @@ func DisconnectPostgreSQL() {
 //        BY clause in the SQL and preserve the returned order (maps don't preserve order).  If in future we no longer
 //        need to preserve the order, it might be useful to switch to using a map instead since they're often simpler
 //        to work with.
-func Discussions(dbOwner string, dbFolder string, dbName string, discType DiscussionType, discID int) (list []DiscussionEntry, err error) {
+func Discussions(owner string, folder string, fileName string, discType DiscussionType, discID int) (list []DiscussionEntry, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -1080,7 +1080,7 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discType Discus
 	dbQuery += `
 		ORDER BY last_modified DESC`
 	var rows *pgx.Rows
-	rows, err = pdb.Query(dbQuery, dbOwner, dbFolder, dbName, discType)
+	rows, err = pdb.Query(dbQuery, owner, folder, fileName, discType)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return
@@ -1093,8 +1093,8 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discType Discus
 			&oneRow.Body, &oneRow.LastModified, &oneRow.CommentCount, &sdb, &sb, &db, &oneRow.MRDetails.State,
 			&oneRow.MRDetails.Commits)
 		if err != nil {
-			log.Printf("Error retrieving discussion/MR list for database '%s%s%s': %v\n", dbOwner, dbFolder,
-				dbName, err)
+			log.Printf("Error retrieving discussion/MR list for database '%s%s%s': %v\n", owner, folder,
+				fileName, err)
 			rows.Close()
 			return
 		}
@@ -1157,7 +1157,7 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discType Discus
 // Note - This returns a slice instead of a map.  We use a slice because it lets us use an ORDER BY clause in the SQL
 //        and preserve the returned order (maps don't preserve order).  If in future we no longer need to preserve the
 //        order, it might be useful to switch to using a map instead since they're often simpler to work with.
-func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID int, comID int) (list []DiscussionCommentEntry, err error) {
+func DiscussionComments(owner string, folder string, fileName string, discID int, comID int) (list []DiscussionCommentEntry, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -1187,7 +1187,7 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 	dbQuery += `
 		ORDER BY date_created ASC`
 	var rows *pgx.Rows
-	rows, err = pdb.Query(dbQuery, dbOwner, dbFolder, dbName, discID)
+	rows, err = pdb.Query(dbQuery, owner, folder, fileName, discID)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return
@@ -1197,8 +1197,8 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 		var oneRow DiscussionCommentEntry
 		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &em, &av, &oneRow.DateCreated, &oneRow.Body, &oneRow.EntryType)
 		if err != nil {
-			log.Printf("Error retrieving comment list for database '%s%s%s', discussion '%d': %v\n", dbOwner,
-				dbFolder, dbName, discID, err)
+			log.Printf("Error retrieving comment list for database '%s%s%s', discussion '%d': %v\n", owner,
+				folder, fileName, discID, err)
 			rows.Close()
 			return
 		}
@@ -1262,14 +1262,14 @@ func FlushViewCount() {
 
 		// For each public database, retrieve the latest view count from memcache and save it back to PostgreSQL
 		for _, db := range dbList {
-			dbOwner := db.Owner
-			dbFolder := db.Folder
-			dbName := db.Name
+			owner := db.Owner
+			folder := db.Folder
+			fileName := db.Name
 
 			// Retrieve the view count from Memcached
-			newValue, err := GetViewCount(dbOwner, dbFolder, dbName)
+			newValue, err := GetViewCount(owner, folder, fileName)
 			if err != nil {
-				log.Printf("Error when getting memcached view count for %s%s%s: %s\n", dbOwner, dbFolder, dbName,
+				log.Printf("Error when getting memcached view count for %s%s%s: %s\n", owner, folder, fileName,
 					err.Error())
 				continue
 			}
@@ -1287,14 +1287,14 @@ func FlushViewCount() {
 						)
 						AND folder = $2
 						AND db_name = $3`
-				commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, newValue)
+				commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, newValue)
 				if err != nil {
-					log.Printf("Flushing view count for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+					log.Printf("Flushing view count for '%s%s%s' failed: %v\n", owner, folder, fileName, err)
 					continue
 				}
 				if numRows := commandTag.RowsAffected(); numRows != 1 {
 					log.Printf("Wrong number of rows affected (%v) when flushing view count for '%s%s%s'\n",
-						numRows, dbOwner, dbFolder, dbName)
+						numRows, owner, folder, fileName)
 					continue
 				}
 			}
@@ -1307,7 +1307,7 @@ func FlushViewCount() {
 }
 
 // Fork the PostgreSQL entry for a SQLite database from one user to another
-func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner string) (newForkCount int, err error) {
+func ForkDatabase(srcOwner string, folder string, fileName string, dstOwner string) (newForkCount int, err error) {
 	// Copy the main database entry
 	dbQuery := `
 		WITH dst_u AS (
@@ -1329,14 +1329,14 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 			)
 			AND folder = $3
 			AND db_name = $4`
-	commandTag, err := pdb.Exec(dbQuery, dstOwner, srcOwner, dbFolder, dbName)
+	commandTag, err := pdb.Exec(dbQuery, dstOwner, srcOwner, folder, fileName)
 	if err != nil {
-		log.Printf("Forking database '%s%s%s' in PostgreSQL failed: %v\n", srcOwner, dbFolder, dbName, err)
+		log.Printf("Forking database '%s%s%s' in PostgreSQL failed: %v\n", srcOwner, folder, fileName, err)
 		return 0, err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows affected (%d) when forking main database entry: "+
-			"'%s%s%s' to '%s%s%s'\n", numRows, srcOwner, dbFolder, dbName, dstOwner, dbFolder, dbName)
+			"'%s%s%s' to '%s%s%s'\n", numRows, srcOwner, folder, fileName, dstOwner, folder, fileName)
 	}
 
 	// Update the fork count for the root database
@@ -1362,7 +1362,7 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 		FROM new_count, root_db
 		WHERE sqlite_databases.db_id = root_db.id
 		RETURNING new_count.forks - 1`
-	err = pdb.QueryRow(dbQuery, dstOwner, dbFolder, dbName).Scan(&newForkCount)
+	err = pdb.QueryRow(dbQuery, dstOwner, folder, fileName).Scan(&newForkCount)
 	if err != nil {
 		log.Printf("Updating fork count in PostgreSQL failed: %v\n", err)
 		return 0, err
@@ -1371,7 +1371,7 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 }
 
 // Checks if the given database was forked from another, and if so returns that one's owner, folder and database name
-func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string, forkFol string, forkDB string,
+func ForkedFrom(owner string, folder string, fileName string) (forkOwn string, forkFol string, forkDB string,
 	forkDel bool, err error) {
 	// Check if the database was forked from another
 	var dbID, forkedFrom pgx.NullInt64
@@ -1384,10 +1384,10 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 				WHERE lower(user_name) = lower($1))
 			AND folder = $2
 			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID, &forkedFrom)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&dbID, &forkedFrom)
 	if err != nil {
-		log.Printf("Error checking if database was forked from another '%s%s%s'. Error: %v\n", dbOwner,
-			dbFolder, dbName, err)
+		log.Printf("Error checking if database was forked from another '%s%s%s'. Error: %v\n", owner,
+			folder, fileName, err)
 		return "", "", "", false, err
 	}
 	if !forkedFrom.Valid {
@@ -1403,8 +1403,8 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 			AND u.user_id = db.user_id`
 	err = pdb.QueryRow(dbQuery, forkedFrom).Scan(&forkOwn, &forkFol, &forkDB, &forkDel)
 	if err != nil {
-		log.Printf("Error retrieving forked database information for '%s%s%s'. Error: %v\n", dbOwner,
-			dbFolder, dbName, err)
+		log.Printf("Error retrieving forked database information for '%s%s%s'. Error: %v\n", owner,
+			folder, fileName, err)
 		return "", "", "", false, err
 	}
 
@@ -1417,7 +1417,7 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 
 // Return the parent of a database, if there is one (and it's accessible to the logged in user).  If no parent was
 // found, the returned Owner/Folder/DBName values will be empty strings
-func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName string) (parentOwner string,
+func ForkParent(loggedInUser string, owner string, folder string, fileName string) (parentOwner string,
 	parentFolder string, parentDBName string, err error) {
 	dbQuery := `
 		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
@@ -1435,7 +1435,7 @@ func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName str
 				)
 			AND db.user_id = users.user_id
 		ORDER BY db.forked_from NULLS FIRST`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, err := pdb.Query(dbQuery, owner, folder, fileName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return
@@ -1447,7 +1447,7 @@ func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName str
 		var oneRow ForkEntry
 		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk, &oneRow.Deleted)
 		if err != nil {
-			log.Printf("Error retrieving fork parent for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+			log.Printf("Error retrieving fork parent for '%s%s%s': %v\n", owner, folder, fileName,
 				err)
 			return
 		}
@@ -1465,7 +1465,7 @@ func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName str
 	}
 
 	// Get the ID of the database being called
-	dbID, err := databaseID(dbOwner, dbFolder, dbName)
+	dbID, err := databaseID(owner, folder, fileName)
 	if err != nil {
 		return
 	}
@@ -1497,7 +1497,7 @@ func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName str
 }
 
 // Return the complete fork tree for a given database
-func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName string) (outputList []ForkEntry, err error) {
+func ForkTree(loggedInUser string, owner string, folder string, fileName string) (outputList []ForkEntry, err error) {
 	dbQuery := `
 		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
 		FROM sqlite_databases AS db, users
@@ -1514,7 +1514,7 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 				)
 			AND db.user_id = users.user_id
 		ORDER BY db.forked_from NULLS FIRST`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, err := pdb.Query(dbQuery, owner, folder, fileName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
@@ -1526,7 +1526,7 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 		var oneRow ForkEntry
 		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk, &oneRow.Deleted)
 		if err != nil {
-			log.Printf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+			log.Printf("Error retrieving fork list for '%s%s%s': %v\n", owner, folder, fileName,
 				err)
 			return nil, err
 		}
@@ -1772,7 +1772,7 @@ func GetActivityStats() (stats ActivityStats, err error) {
 // Load the branch heads for a database.
 // TODO: It might be better to have the default branch name be returned as part of this list, by indicating in the list
 // TODO  which of the branches is the default.
-func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[string]BranchEntry, err error) {
+func GetBranches(owner string, folder string, fileName string) (branches map[string]BranchEntry, err error) {
 	dbQuery := `
 		SELECT db.branch_heads
 		FROM sqlite_databases AS db
@@ -1783,9 +1783,9 @@ func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[s
 			)
 			AND db.folder = $2
 			AND db.db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&branches)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&branches)
 	if err != nil {
-		log.Printf("Error when retrieving branch heads for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+		log.Printf("Error when retrieving branch heads for database '%s%s%s': %v\n", owner, folder, fileName,
 			err)
 		return nil, err
 	}
@@ -1793,7 +1793,7 @@ func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[s
 }
 
 // Retrieves the full commit list for a database.
-func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]CommitEntry, error) {
+func GetCommitList(owner string, folder string, fileName string) (map[string]CommitEntry, error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -1807,16 +1807,16 @@ func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]C
 			AND db.db_name = $3
 			AND db.is_deleted = false`
 	var l map[string]CommitEntry
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&l)
+	err := pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&l)
 	if err != nil {
-		log.Printf("Retrieving commit list for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Retrieving commit list for '%s%s%s' failed: %v\n", owner, folder, fileName, err)
 		return map[string]CommitEntry{}, err
 	}
 	return l, nil
 }
 
 // Returns the default branch name for a database.
-func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (branchName string, err error) {
+func GetDefaultBranchName(owner string, folder string, fileName string) (branchName string, err error) {
 	dbQuery := `
 		SELECT db.default_branch
 		FROM sqlite_databases AS db
@@ -1829,15 +1829,15 @@ func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (branc
 			AND db.db_name = $3
 			AND db.is_deleted = false`
 	var b pgx.NullString
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&b)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&b)
 	if err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("Error when retrieving default branch name for database '%s%s%s': %v\n", dbOwner,
-				dbFolder, dbName, err)
+			log.Printf("Error when retrieving default branch name for database '%s%s%s': %v\n", owner,
+				folder, fileName, err)
 			return
 		} else {
-			log.Printf("No default branch name exists for database '%s%s%s'. This shouldn't happen\n", dbOwner,
-				dbFolder, dbName)
+			log.Printf("No default branch name exists for database '%s%s%s'. This shouldn't happen\n", owner,
+				folder, fileName)
 			return
 		}
 	}
@@ -1848,7 +1848,7 @@ func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (branc
 }
 
 // Returns the default table name for a database.
-func GetDefaultTableName(dbOwner string, dbFolder string, dbName string) (tableName string, err error) {
+func GetDefaultTableName(owner string, folder string, fileName string) (tableName string, err error) {
 	dbQuery := `
 		SELECT db.default_table
 		FROM sqlite_databases AS db
@@ -1861,11 +1861,11 @@ func GetDefaultTableName(dbOwner string, dbFolder string, dbName string) (tableN
 			AND db.db_name = $3
 			AND db.is_deleted = false`
 	var t pgx.NullString
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&t)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&t)
 	if err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("Error when retrieving default table name for database '%s%s%s': %v\n", dbOwner,
-				dbFolder, dbName, err)
+			log.Printf("Error when retrieving default table name for database '%s%s%s': %v\n", owner,
+				folder, fileName, err)
 			return
 		}
 	}
@@ -1879,7 +1879,7 @@ func GetDefaultTableName(dbOwner string, dbFolder string, dbName string) (tableN
 // TODO: The only reason this function exists atm, is because we're incorrectly caching the discussion and MR data in
 // TODO  a way that makes invalidating it correctly hard/impossible.  We should redo our memcached approach to solve the
 // TODO  issue properly
-func GetDiscussionAndMRCount(dbOwner string, dbFolder string, dbName string) (discCount int, mrCount int, err error) {
+func GetDiscussionAndMRCount(owner string, folder string, fileName string) (discCount int, mrCount int, err error) {
 	dbQuery := `
 		SELECT db.discussions, db.merge_requests
 		FROM sqlite_databases AS db
@@ -1891,15 +1891,15 @@ func GetDiscussionAndMRCount(dbOwner string, dbFolder string, dbName string) (di
 			AND db.folder = $2
 			AND db.db_name = $3
 			AND db.is_deleted = false`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&discCount, &mrCount)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&discCount, &mrCount)
 	if err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("Error when retrieving discussion and MR count for database '%s%s%s': %v\n", dbOwner,
-				dbFolder, dbName, err)
+			log.Printf("Error when retrieving discussion and MR count for database '%s%s%s': %v\n", owner,
+				folder, fileName, err)
 			return
 		} else {
 			log.Printf("Database '%s%s%s' not found when attempting to retrieve discussion and MR count. This"+
-				"shouldn't happen\n", dbOwner, dbFolder, dbName)
+				"shouldn't happen\n", owner, folder, fileName)
 			return
 		}
 	}
@@ -2078,7 +2078,7 @@ func GetLicenceSha256FromName(userName string, licenceName string) (sha256 strin
 }
 
 // Retrieve the list of releases for a database.
-func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[string]ReleaseEntry, err error) {
+func GetReleases(owner string, folder string, fileName string) (releases map[string]ReleaseEntry, err error) {
 	dbQuery := `
 		SELECT release_list
 		FROM sqlite_databases
@@ -2089,9 +2089,9 @@ func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[s
 			)
 			AND folder = $2
 			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&releases)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&releases)
 	if err != nil {
-		log.Printf("Error when retrieving releases for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Error when retrieving releases for database '%s%s%s': %v\n", owner, folder, fileName, err)
 		return nil, err
 	}
 	if releases == nil {
@@ -2102,7 +2102,7 @@ func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[s
 }
 
 // Retrieve the tags for a database.
-func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]TagEntry, err error) {
+func GetTags(owner string, folder string, fileName string) (tags map[string]TagEntry, err error) {
 	dbQuery := `
 		SELECT tag_list
 		FROM sqlite_databases
@@ -2113,9 +2113,9 @@ func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]Ta
 			)
 			AND folder = $2
 			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&tags)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&tags)
 	if err != nil {
-		log.Printf("Error when retrieving tags for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Error when retrieving tags for database '%s%s%s': %v\n", owner, folder, fileName, err)
 		return nil, err
 	}
 	if tags == nil {
@@ -2154,7 +2154,7 @@ func GetUsernameFromEmail(email string) (userName string, avatarURL string, err 
 }
 
 // Increments the download count for a database
-func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) error {
+func IncrementDownloadCount(owner string, folder string, fileName string) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET download_count = download_count + 1
@@ -2165,15 +2165,15 @@ func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) erro
 			)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName)
 	if err != nil {
-		log.Printf("Increment download count for '%s%s%s' failed: %v\n", dbOwner, dbFolder,
-			dbName, err)
+		log.Printf("Increment download count for '%s%s%s' failed: %v\n", owner, folder,
+			fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when incrementing download count for '%s%s%s'\n",
-			numRows, dbOwner, dbFolder, dbName)
+			numRows, owner, folder, fileName)
 		log.Printf(errMsg)
 		return errors.New(errMsg)
 	}
@@ -2181,7 +2181,7 @@ func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) erro
 }
 
 // Create a download log entry
-func LogDownload(dbOwner string, dbFolder string, dbName string, loggedInUser string, ipAddr string, serverSw string,
+func LogDownload(owner string, folder string, fileName string, loggedInUser string, ipAddr string, serverSw string,
 	userAgent string, downloadDate time.Time, sha string) error {
 	// If the downloader isn't a logged in user, use a NULL value for that column
 	var downloader pgx.NullString
@@ -2205,22 +2205,22 @@ func LogDownload(dbOwner string, dbFolder string, dbName string, loggedInUser st
 		)
 		INSERT INTO database_downloads (db_id, user_id, ip_addr, server_sw, user_agent, download_date, db_sha256)
 		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7, $8, $9`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, downloader, ipAddr, serverSw, userAgent,
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, downloader, ipAddr, serverSw, userAgent,
 		downloadDate, sha)
 	if err != nil {
-		log.Printf("Storing record of download '%s%s%s', sha '%s' by '%s' failed: %v\n", dbOwner, dbFolder,
-			dbName, sha, downloader, err)
+		log.Printf("Storing record of download '%s%s%s', sha '%s' by '%s' failed: %v\n", owner, folder,
+			fileName, sha, downloader, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected while storing download record for '%s%s%s'\n", numRows,
-			dbOwner, dbFolder, dbName)
+			owner, folder, fileName)
 	}
 	return nil
 }
 
 // Create an upload log entry
-func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser string, ipAddr string, serverSw string,
+func LogUpload(owner string, folder string, fileName string, loggedInUser string, ipAddr string, serverSw string,
 	userAgent string, uploadDate time.Time, sha string) error {
 	// If the uploader isn't a logged in user, use a NULL value for that column
 	var uploader pgx.NullString
@@ -2244,33 +2244,33 @@ func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser stri
 		)
 		INSERT INTO database_uploads (db_id, user_id, ip_addr, server_sw, user_agent, upload_date, db_sha256)
 		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7, $8, $9`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, uploader, ipAddr, serverSw, userAgent,
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, uploader, ipAddr, serverSw, userAgent,
 		uploadDate, sha)
 	if err != nil {
-		log.Printf("Storing record of upload '%s%s%s', sha '%s' by '%s' failed: %v\n", dbOwner, dbFolder,
-			dbName, sha, uploader, err)
+		log.Printf("Storing record of upload '%s%s%s', sha '%s' by '%s' failed: %v\n", owner, folder,
+			fileName, sha, uploader, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected while storing upload record for '%s%s%s'\n", numRows,
-			dbOwner, dbFolder, dbName)
+			owner, folder, fileName)
 	}
 	return nil
 }
 
-// Return the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from owner/folder/database URL
+// Return the Minio bucket and ID for a given database. owner, folder, & fileName are from owner/folder/database URL
 // fragment, // loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
 // string ("") as the loggedInUser parameter if the true value isn't set or known.
 // If the requested database doesn't exist, or the loggedInUser doesn't have access to it, then an error will be
 // returned.
-func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (minioBucket string,
+func MinioLocation(owner string, folder string, fileName string, commitID string, loggedInUser string) (minioBucket string,
 	minioID string, lastModified time.Time, err error) {
 
 	// TODO: This will likely need updating to query the "database_files" table to retrieve the Minio server name
 
 	// If no commit was provided, we grab the default one
 	if commitID == "" {
-		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
+		commitID, err = DefaultCommit(owner, folder, fileName)
 		if err != nil {
 			return // Bucket and ID are still the initial default empty string
 		}
@@ -2292,15 +2292,15 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 			AND db.is_deleted = false`
 
 	// If the request is for another users database, it needs to be a public one
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
+	if strings.ToLower(loggedInUser) != strings.ToLower(owner) {
 		dbQuery += `
 				AND db.public = true`
 	}
 
 	var sha, mod string
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&sha, &mod)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName, commitID).Scan(&sha, &mod)
 	if err != nil {
-		log.Printf("Error retrieving MinioID for %s/%s version %v: %v\n", dbOwner, dbName, commitID, err)
+		log.Printf("Error retrieving MinioID for %s/%s version %v: %v\n", owner, fileName, commitID, err)
 		return // Bucket and ID are still the initial default empty string
 	}
 
@@ -2365,7 +2365,7 @@ func PrefUserMaxRows(loggedInUser string) int {
 }
 
 // Rename a SQLite database.
-func RenameDatabase(userName string, dbFolder string, dbName string, newName string) error {
+func RenameDatabase(userName string, folder string, fileName string, newName string) error {
 	// Save the database settings
 	dbQuery := `
 		UPDATE sqlite_databases
@@ -2377,27 +2377,27 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 			)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, userName, dbFolder, dbName, newName)
+	commandTag, err := pdb.Exec(dbQuery, userName, folder, fileName, newName)
 	if err != nil {
-		log.Printf("Renaming database '%s%s%s' failed: %v\n", userName, dbFolder, dbName, err)
+		log.Printf("Renaming database '%s%s%s' failed: %v\n", userName, folder, fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when renaming '%s%s%s' to '%s%s%s'\n",
-			numRows, userName, dbFolder, dbName, userName, dbFolder, newName)
+			numRows, userName, folder, fileName, userName, folder, newName)
 		log.Printf(errMsg)
 		return errors.New(errMsg)
 	}
 
 	// Log the rename
-	log.Printf("Database renamed from '%s%s%s' to '%s%s%s'\n", userName, dbFolder, dbName, userName, dbFolder,
+	log.Printf("Database renamed from '%s%s%s' to '%s%s%s'\n", userName, folder, fileName, userName, folder,
 		newName)
 
 	return nil
 }
 
 // Saves updated database settings to PostgreSQL.
-func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc string, fullDesc string,
+func SaveDBSettings(userName string, folder string, fileName string, oneLineDesc string, fullDesc string,
 	defaultTable string, public bool, sourceURL string, defaultBranch string) error {
 	// Check for values which should be NULL
 	var nullable1LineDesc, nullableFullDesc, nullableSourceURL pgx.NullString
@@ -2432,22 +2432,22 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc
 			)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullable1LineDesc, nullableFullDesc, defaultTable,
+	commandTag, err := pdb.Exec(SQLQuery, userName, folder, fileName, nullable1LineDesc, nullableFullDesc, defaultTable,
 		public, nullableSourceURL, defaultBranch)
 	if err != nil {
-		log.Printf("Updating description for database '%s%s%s' failed: %v\n", userName, dbFolder,
-			dbName, err)
+		log.Printf("Updating description for database '%s%s%s' failed: %v\n", userName, folder,
+			fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when updating description for '%s%s%s'\n",
-			numRows, userName, dbFolder, dbName)
+			numRows, userName, folder, fileName)
 		log.Printf(errMsg)
 		return errors.New(errMsg)
 	}
 
 	// Invalidate the old memcached entry for the database
-	err = InvalidateCacheEntry(userName, userName, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = InvalidateCacheEntry(userName, userName, folder, fileName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -2580,7 +2580,7 @@ func SetUserPreferences(userName string, maxRows int, displayName string, email 
 }
 
 // Retrieve the latest social stats for a given database.
-func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int, fo int, err error) {
+func SocialStats(owner string, folder string, fileName string) (wa int, st int, fo int, err error) {
 
 	// TODO: Implement caching of these stats
 
@@ -2595,9 +2595,9 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 			)
 			AND folder = $2
 			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&st)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&st)
 	if err != nil {
-		log.Printf("Error retrieving star count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Error retrieving star count for '%s%s%s': %v\n", owner, folder, fileName, err)
 		return -1, -1, -1, err
 	}
 
@@ -2615,9 +2615,9 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 					)
 			AND folder = $2
 			AND db_name = $3)`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&fo)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&fo)
 	if err != nil {
-		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", owner, folder, fileName, err)
 		return -1, -1, -1, err
 	}
 
@@ -2669,7 +2669,7 @@ func StatusUpdatesLoop() {
 		}
 
 		// Retrieve the list of outstanding events
-		// NOTE - We gather the db_id here instead of dbOwner/dbFolder/dbName as it should be faster for PG to deal
+		// NOTE - We gather the db_id here instead of owner/folder/fileName as it should be faster for PG to deal
 		//        with when generating the watcher list
 		dbQuery := `
 			SELECT event_id, event_timestamp, db_id, event_type, event_data
@@ -2744,9 +2744,9 @@ func StatusUpdatesLoop() {
 
 				// Group the status updates by database, and coalesce multiple updates for the same discussion or MR
 				// into a single entry (keeping the most recent one of each)
-				dbName := fmt.Sprintf("%s%s%s", ev.details.Owner, ev.details.Folder, ev.details.DBName)
+				fileName := fmt.Sprintf("%s%s%s", ev.details.Owner, ev.details.Folder, ev.details.DBName)
 				var a StatusUpdateEntry
-				lst, ok := userEvents[dbName]
+				lst, ok := userEvents[fileName]
 				if ev.details.Type == EVENT_NEW_DISCUSSION || ev.details.Type == EVENT_NEW_MERGE_REQUEST || ev.details.Type == EVENT_NEW_COMMENT {
 					if ok {
 						// Check if an entry already exists for the discussion/MR/comment
@@ -2763,7 +2763,7 @@ func StatusUpdatesLoop() {
 				a.Title = ev.details.Title
 				a.URL = ev.details.URL
 				lst = append(lst, a)
-				userEvents[dbName] = lst
+				userEvents[fileName] = lst
 
 				// Save the updated list for the user back to PG
 				dbQuery = `
@@ -2870,7 +2870,7 @@ func StatusUpdatesLoop() {
 }
 
 // Updates the branches list for a database.
-func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry) error {
+func StoreBranches(owner string, folder string, fileName string, branches map[string]BranchEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET branch_heads = $4, branches = $5
@@ -2881,22 +2881,22 @@ func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[
 				)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, branches, len(branches))
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, branches, len(branches))
 	if err != nil {
-		log.Printf("Updating branch heads for database '%s%s%s' to '%v' failed: %v\n", dbOwner, dbFolder,
-			dbName, branches, err)
+		log.Printf("Updating branch heads for database '%s%s%s' to '%v' failed: %v\n", owner, folder,
+			fileName, branches, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating branch heads for database '%s%s%s' to '%v'\n",
-			numRows, dbOwner, dbFolder, dbName, branches)
+			numRows, owner, folder, fileName, branches)
 	}
 	return nil
 }
 
 // Adds a comment to a discussion.
-func StoreComment(dbOwner string, dbFolder string, dbName string, commenter string, discID int, comText string,
+func StoreComment(owner string, folder string, fileName string, commenter string, discID int, comText string,
 	discClose bool, mrState MergeRequestState) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
@@ -2927,17 +2927,17 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 			)
 			AND disc.disc_id = $4
 			AND disc.creator = u.user_id`
-	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState, &discCreator, &discType, &discTitle)
+	err = tx.QueryRow(dbQuery, owner, folder, fileName, discID).Scan(&discState, &discCreator, &discType, &discTitle)
 	if err != nil {
-		log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", dbOwner,
-			dbFolder, dbName, discID, err)
+		log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n", owner,
+			folder, fileName, discID, err)
 		return err
 	}
 
 	// If the discussion is to be closed or reopened, ensure the person doing so is either the database owner or the
 	// person who started the discussion
 	if discClose == true {
-		if (strings.ToLower(commenter) != strings.ToLower(dbOwner)) && (strings.ToLower(commenter) != strings.ToLower(discCreator)) {
+		if (strings.ToLower(commenter) != strings.ToLower(owner)) && (strings.ToLower(commenter) != strings.ToLower(discCreator)) {
 			return errors.New("Not authorised")
 		}
 	}
@@ -2966,10 +2966,10 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
 			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $6, 'txt'
 			RETURNING com_id`
-		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, comText).Scan(&comID)
+		err = tx.QueryRow(dbQuery, owner, folder, fileName, commenter, discID, comText).Scan(&comID)
 		if err != nil {
-			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
-				dbName, discID, err)
+			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", owner, folder,
+				fileName, discID, err)
 			return err
 		}
 	}
@@ -3007,16 +3007,16 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 			)
 			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
 			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $6, $7`
-		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, eventTxt, eventType)
+		commandTag, err = tx.Exec(dbQuery, owner, folder, fileName, commenter, discID, eventTxt, eventType)
 		if err != nil {
-			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner, dbFolder,
-				dbName, discID, err)
+			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n", owner, folder,
+				fileName, discID, err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
 				"Wrong number of rows (%v) affected when adding a comment to database '%s%s%s', discussion '%d'\n",
-				numRows, dbOwner, dbFolder, dbName, discID)
+				numRows, owner, folder, fileName, discID)
 		}
 	}
 
@@ -3037,16 +3037,16 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 						AND db_name = $3
 				)
 				AND disc_id = $4`
-		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, mrState)
+		commandTag, err = tx.Exec(dbQuery, owner, folder, fileName, discID, mrState)
 		if err != nil {
-			log.Printf("Updating MR state for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner,
-				dbFolder, dbName, discID, err)
+			log.Printf("Updating MR state for database '%s%s%s', discussion '%d' failed: %v\n", owner,
+				folder, fileName, discID, err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
 				"Wrong number of rows (%v) affected when updating MR state for database '%s%s%s', discussion '%d'\n",
-				numRows, dbOwner, dbFolder, dbName, discID)
+				numRows, owner, folder, fileName, discID)
 		}
 	}
 
@@ -3079,16 +3079,16 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 					AND db_name = $3
 			)
 			AND disc_id = $4`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID)
+	commandTag, err = tx.Exec(dbQuery, owner, folder, fileName, discID)
 	if err != nil {
-		log.Printf("Updating last modified date for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner,
-			dbFolder, dbName, discID, err)
+		log.Printf("Updating last modified date for database '%s%s%s', discussion '%d' failed: %v\n", owner,
+			folder, fileName, discID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating last_modified date for database '%s%s%s', discussion '%d'\n",
-			numRows, dbOwner, dbFolder, dbName, discID)
+			numRows, owner, folder, fileName, discID)
 	}
 
 	// Update the open discussion and MR counters for the database
@@ -3120,33 +3120,33 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 					AND discussion_type = 1
 			)
 		WHERE db_id = (SELECT db_id FROM d)`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	commandTag, err = tx.Exec(dbQuery, owner, folder, fileName)
 	if err != nil {
-		log.Printf("Updating discussion count for database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName,
+		log.Printf("Updating discussion count for database '%s%s%s' failed: %v\n", owner, folder, fileName,
 			err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating discussion count for database '%s%s%s'\n",
-			numRows, dbOwner, dbFolder, dbName)
+			numRows, owner, folder, fileName)
 	}
 
 	// If comment text was provided, generate an event about the new comment
 	if comText != "" {
 		var commentURL string
 		if discType == MERGE_REQUEST {
-			commentURL = fmt.Sprintf("/merge/%s%s%s?id=%d#c%d", url.PathEscape(dbOwner), dbFolder,
-				url.PathEscape(dbName), discID, comID)
+			commentURL = fmt.Sprintf("/merge/%s%s%s?id=%d#c%d", url.PathEscape(owner), folder,
+				url.PathEscape(fileName), discID, comID)
 		} else {
-			commentURL = fmt.Sprintf("/discuss/%s%s%s?id=%d#c%d", url.PathEscape(dbOwner), dbFolder,
-				url.PathEscape(dbName), discID, comID)
+			commentURL = fmt.Sprintf("/discuss/%s%s%s?id=%d#c%d", url.PathEscape(owner), folder,
+				url.PathEscape(fileName), discID, comID)
 		}
 		details := EventDetails{
-			DBName:   dbName,
+			DBName:   fileName,
 			DiscID:   discID,
-			Folder:   dbFolder,
-			Owner:    dbOwner,
+			Folder:   folder,
+			Owner:    owner,
 			Type:     EVENT_NEW_COMMENT,
 			Title:    discTitle,
 			URL:      commentURL,
@@ -3169,7 +3169,7 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 }
 
 // Updates the commit list for a database.
-func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map[string]CommitEntry) error {
+func StoreCommits(owner string, folder string, fileName string, commitList map[string]CommitEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET commit_list = $4, last_modified = now()
@@ -3180,21 +3180,21 @@ func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map
 				)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, commitList)
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, commitList)
 	if err != nil {
-		log.Printf("Updating commit list for database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Updating commit list for database '%s%s%s' failed: %v\n", owner, folder, fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating commit list for database '%s%s%s'\n", numRows,
-			dbOwner, dbFolder, dbName)
+			owner, folder, fileName)
 	}
 	return nil
 }
 
 // Stores database details in PostgreSQL, and the database data itself in Minio.
-func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry, c CommitEntry,
+func StoreDatabase(owner string, folder string, fileName string, branches map[string]BranchEntry, c CommitEntry,
 	pub bool, buf *os.File, sha string, dbSize int64, oneLineDesc string, fullDesc string, createDefBranch bool,
 	branchName string, sourceURL string) error {
 	// Store the database file
@@ -3248,26 +3248,26 @@ func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[
 	if sourceURL != "" {
 		dbQuery += `,
 			source_url = $9`
-		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, pub, nullable1LineDesc, nullableFullDesc,
+		commandTag, err = pdb.Exec(dbQuery, owner, folder, fileName, pub, nullable1LineDesc, nullableFullDesc,
 			cMap, branches, sourceURL)
 	} else {
-		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, pub, nullable1LineDesc, nullableFullDesc,
+		commandTag, err = pdb.Exec(dbQuery, owner, folder, fileName, pub, nullable1LineDesc, nullableFullDesc,
 			cMap, branches)
 	}
 	if err != nil {
-		log.Printf("Storing database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Storing database '%s%s%s' failed: %v\n", owner, folder, fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while storing database '%s%s%s'\n", numRows, dbOwner,
-			dbFolder, dbName)
+		log.Printf("Wrong number of rows (%v) affected while storing database '%s%s%s'\n", numRows, owner,
+			folder, fileName)
 	}
 
 	if createDefBranch {
-		err = StoreDefaultBranchName(dbOwner, dbFolder, dbName, branchName)
+		err = StoreDefaultBranchName(owner, folder, fileName, branchName)
 		if err != nil {
-			log.Printf("Storing default branch '%s' name for '%s%s%s' failed: %v\n", branchName, dbOwner,
-				dbFolder, dbName, err)
+			log.Printf("Storing default branch '%s' name for '%s%s%s' failed: %v\n", branchName, owner,
+				folder, fileName, err)
 			return err
 		}
 	}
@@ -3275,7 +3275,7 @@ func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[
 }
 
 // Stores the default branch name for a database.
-func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branchName string) error {
+func StoreDefaultBranchName(owner string, folder string, fileName string, branchName string) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET default_branch = $4
@@ -3286,20 +3286,20 @@ func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branch
 				)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, folder, dbName, branchName)
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, branchName)
 	if err != nil {
-		log.Printf("Changing default branch for database '%v' to '%v' failed: %v\n", dbName, branchName, err)
+		log.Printf("Changing default branch for database '%v' to '%v' failed: %v\n", fileName, branchName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected during update: database: %v, new branch name: '%v'\n",
-			numRows, dbName, branchName)
+			numRows, fileName, branchName)
 	}
 	return nil
 }
 
 // Stores the default table name for a database.
-func StoreDefaultTableName(dbOwner string, folder string, dbName string, tableName string) error {
+func StoreDefaultTableName(owner string, folder string, fileName string, tableName string) error {
 	var t pgx.NullString
 	if tableName != "" {
 		t.String = tableName
@@ -3315,20 +3315,20 @@ func StoreDefaultTableName(dbOwner string, folder string, dbName string, tableNa
 				)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, folder, dbName, t)
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, t)
 	if err != nil {
-		log.Printf("Changing default table for database '%v' to '%v' failed: %v\n", dbName, tableName, err)
+		log.Printf("Changing default table for database '%v' to '%v' failed: %v\n", fileName, tableName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected during update: database: %v, new table name: '%v'\n",
-			numRows, dbName, tableName)
+			numRows, fileName, tableName)
 	}
 	return nil
 }
 
 // Stores a new discussion for a database.
-func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, title string, text string,
+func StoreDiscussion(owner string, folder string, fileName string, loggedInUser string, title string, text string,
 	discType DiscussionType, mr MergeRequestEntry) (newID int, err error) {
 
 	// Begin a transaction
@@ -3385,14 +3385,14 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 	dbQuery += `
 		RETURNING (SELECT id FROM next_id)`
 	if discType == MERGE_REQUEST {
-		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text, discType, mr.SourceOwner,
+		err = tx.QueryRow(dbQuery, owner, folder, fileName, loggedInUser, title, text, discType, mr.SourceOwner,
 			mr.SourceFolder, mr.SourceDBName, mr.SourceBranch, mr.DestBranch, mr.Commits).Scan(&newID)
 	} else {
-		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text, discType).Scan(&newID)
+		err = tx.QueryRow(dbQuery, owner, folder, fileName, loggedInUser, title, text, discType).Scan(&newID)
 	}
 	if err != nil {
-		log.Printf("Adding new discussion or merge request '%s' for '%s%s%s' failed: %v\n", title, dbOwner,
-			dbFolder, dbName, err)
+		log.Printf("Adding new discussion or merge request '%s' for '%s%s%s' failed: %v\n", title, owner,
+			folder, fileName, err)
 		return
 	}
 
@@ -3414,14 +3414,14 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 			)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	commandTag, err := tx.Exec(dbQuery, owner, folder, fileName)
 	if err != nil {
-		log.Printf("Updating discussion counter for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Updating discussion counter for '%s%s%s' failed: %v\n", owner, folder, fileName, err)
 		return
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when updating discussion counter for '%s%s%s'\n",
-			numRows, dbOwner, dbFolder, dbName)
+			numRows, owner, folder, fileName)
 	}
 
 	// Commit the transaction
@@ -3469,7 +3469,7 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 }
 
 // Store the releases for a database.
-func StoreReleases(dbOwner string, dbFolder string, dbName string, releases map[string]ReleaseEntry) error {
+func StoreReleases(owner string, folder string, fileName string, releases map[string]ReleaseEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET release_list = $4, release_count = $5
@@ -3480,14 +3480,14 @@ func StoreReleases(dbOwner string, dbFolder string, dbName string, releases map[
 			)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, releases, len(releases))
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, releases, len(releases))
 	if err != nil {
-		log.Printf("Storing releases for database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Storing releases for database '%s%s%s' failed: %v\n", owner, folder, fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when storing releases for database: '%s%s%s'\n", numRows,
-			dbOwner, dbFolder, dbName)
+			owner, folder, fileName)
 	}
 	return nil
 }
@@ -3512,7 +3512,7 @@ func StoreStatusUpdates(userName string, statusUpdates map[string][]StatusUpdate
 }
 
 // Store the tags for a database.
-func StoreTags(dbOwner string, dbFolder string, dbName string, tags map[string]TagEntry) error {
+func StoreTags(owner string, folder string, fileName string, tags map[string]TagEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET tag_list = $4, tags = $5
@@ -3523,28 +3523,28 @@ func StoreTags(dbOwner string, dbFolder string, dbName string, tags map[string]T
 			)
 			AND folder = $2
 			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, tags, len(tags))
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, tags, len(tags))
 	if err != nil {
-		log.Printf("Storing tags for database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Storing tags for database '%s%s%s' failed: %v\n", owner, folder, fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when storing tags for database: '%s%s%s'\n", numRows,
-			dbOwner, dbFolder, dbName)
+			owner, folder, fileName)
 	}
 	return nil
 }
 
 // Toggle on or off the starring of a database by a user.
-func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName string) error {
+func ToggleDBStar(loggedInUser string, owner string, folder string, fileName string) error {
 	// Check if the database is already starred
-	starred, err := CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	starred, err := CheckDBStarred(loggedInUser, owner, folder, fileName)
 	if err != nil {
 		return err
 	}
 
 	// Get the ID number of the database
-	dbID, err := databaseID(dbOwner, dbFolder, dbName)
+	dbID, err := databaseID(owner, folder, fileName)
 	if err != nil {
 		return err
 	}
@@ -3613,9 +3613,9 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 }
 
 // Toggle on or off the watching of a database by a user.
-func ToggleDBWatch(loggedInUser string, dbOwner string, dbFolder string, dbName string) error {
+func ToggleDBWatch(loggedInUser string, owner string, folder string, fileName string) error {
 	// Check if the database is already being watched
-	watched, err := CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	watched, err := CheckDBWatched(loggedInUser, owner, folder, fileName)
 	if err != nil {
 		return err
 	}
@@ -3643,15 +3643,15 @@ func ToggleDBWatch(loggedInUser string, dbOwner string, dbFolder string, dbName 
 			INSERT INTO watchers (db_id, user_id)
 			SELECT d.db_id, u.user_id
 			FROM d, u`
-		commandTag, err := pdb.Exec(insertQuery, dbOwner, dbFolder, dbName, loggedInUser)
+		commandTag, err := pdb.Exec(insertQuery, owner, folder, fileName, loggedInUser)
 		if err != nil {
 			log.Printf("Adding '%s' to watchers list for database '%s%s%s' failed: Error '%v'\n", loggedInUser,
-				dbOwner, dbFolder, dbName, err)
+				owner, folder, fileName, err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf("Wrong # of rows affected (%v) when adding '%s' to watchers list for database '%s%s%s'",
-				numRows, loggedInUser, dbOwner, dbFolder, dbName)
+				numRows, loggedInUser, owner, folder, fileName)
 		}
 	} else {
 		// Unwatch the database
@@ -3674,15 +3674,15 @@ func ToggleDBWatch(loggedInUser string, dbOwner string, dbFolder string, dbName 
 				FROM users
 				WHERE lower(user_name) = lower($4)
 			)`
-		commandTag, err := pdb.Exec(deleteQuery, dbOwner, dbFolder, dbName, loggedInUser)
+		commandTag, err := pdb.Exec(deleteQuery, owner, folder, fileName, loggedInUser)
 		if err != nil {
 			log.Printf("Removing '%s' from watchers list for database '%s%s%s' failed: Error '%v'\n",
-				loggedInUser, dbOwner, dbFolder, dbName, err)
+				loggedInUser, owner, folder, fileName, err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf("Wrong # of rows affected (%v) when removing '%s' from watchers list for database '%s%s%s'",
-				numRows, loggedInUser, dbOwner, dbFolder, dbName)
+				numRows, loggedInUser, owner, folder, fileName)
 		}
 	}
 
@@ -3706,14 +3706,14 @@ func ToggleDBWatch(loggedInUser string, dbOwner string, dbFolder string, dbName 
 			FROM watchers
 			WHERE db_id = (SELECT db_id FROM d)
 		) WHERE db_id = (SELECT db_id FROM d)`
-	commandTag, err := pdb.Exec(updateQuery, dbOwner, dbFolder, dbName)
+	commandTag, err := pdb.Exec(updateQuery, owner, folder, fileName)
 	if err != nil {
-		log.Printf("Updating watchers count for '%s%s%s' failed: %v", dbOwner, dbFolder, dbName, err)
+		log.Printf("Updating watchers count for '%s%s%s' failed: %v", owner, folder, fileName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong # of rows affected (%v) when updating watchers count for '%s%s%s'", numRows, dbOwner,
-			dbFolder, dbName)
+		log.Printf("Wrong # of rows affected (%v) when updating watchers count for '%s%s%s'", numRows, owner,
+			folder, fileName)
 	}
 	return nil
 }
@@ -3737,9 +3737,9 @@ func UpdateAvatarURL(userName string, avatarURL string) error {
 }
 
 // Updates the contributors count for a database.
-func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
+func UpdateContributorsCount(owner string, folder, fileName string) error {
 	// Get the commit list for the database
-	commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
+	commitList, err := GetCommitList(owner, folder, fileName)
 	if err != nil {
 		return err
 	}
@@ -3762,21 +3762,21 @@ func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
 			)
 				AND folder = $2
 				AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, n)
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, n)
 	if err != nil {
-		log.Printf("Updating contributor count in database '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName,
+		log.Printf("Updating contributor count in database '%s%s%s' failed: %v\n", owner, folder, fileName,
 			err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong # of rows affected (%v) when updating contributor count for database '%s%s%s'\n",
-			numRows, dbOwner, dbFolder, dbName)
+			numRows, owner, folder, fileName)
 	}
 	return nil
 }
 
 // Updates the text for a comment
-func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser string, discID int, comID int, newText string) error {
+func UpdateComment(owner string, folder string, fileName string, loggedInUser string, discID int, comID int, newText string) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -3810,15 +3810,15 @@ func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser 
 			AND com.disc_id = (SELECT int_id FROM int)
 			AND com.com_id = $5
 			AND com.commenter = u.user_id`
-	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID, comID).Scan(&comCreator)
+	err = tx.QueryRow(dbQuery, owner, folder, fileName, discID, comID).Scan(&comCreator)
 	if err != nil {
 		log.Printf("Error retrieving name of comment creator for '%s%s%s', discussion '%d', comment '%d': %v\n",
-			dbOwner, dbFolder, dbName, discID, comID, err)
+			owner, folder, fileName, discID, comID, err)
 		return err
 	}
 
 	// Ensure only the database owner or comment creator can update the comment
-	if (strings.ToLower(loggedInUser) != strings.ToLower(dbOwner)) && (strings.ToLower(loggedInUser) != strings.ToLower(comCreator)) {
+	if (strings.ToLower(loggedInUser) != strings.ToLower(owner)) && (strings.ToLower(loggedInUser) != strings.ToLower(comCreator)) {
 		return errors.New("Not authorised")
 	}
 
@@ -3845,16 +3845,16 @@ func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser 
 		WHERE com.db_id = (SELECT db_id FROM d)
 			AND com.disc_id = (SELECT int_id FROM int)
 			AND com.com_id = $5`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID, newText)
+	commandTag, err := tx.Exec(dbQuery, owner, folder, fileName, discID, comID, newText)
 	if err != nil {
 		log.Printf("Updating comment for database '%s%s%s', discussion '%d', comment '%d' failed: %v\n",
-			dbOwner, dbFolder, dbName, discID, comID, err)
+			owner, folder, fileName, discID, comID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating comment for database '%s%s%s', discussion '%d', comment '%d'\n",
-			numRows, dbOwner, dbFolder, dbName, discID, comID)
+			numRows, owner, folder, fileName, discID, comID)
 	}
 
 	// Commit the transaction
@@ -3866,7 +3866,7 @@ func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser 
 }
 
 // Updates the text for a discussion
-func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, discID int, newTitle string, newText string) error {
+func UpdateDiscussion(owner string, folder string, fileName string, loggedInUser string, discID int, newTitle string, newText string) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -3893,15 +3893,15 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 			)
 			AND disc.disc_id = $4
 			AND disc.creator = u.user_id`
-	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discCreator)
+	err = tx.QueryRow(dbQuery, owner, folder, fileName, discID).Scan(&discCreator)
 	if err != nil {
 		log.Printf("Error retrieving name of discussion creator for '%s%s%s', discussion '%d': %v\n",
-			dbOwner, dbFolder, dbName, discID, err)
+			owner, folder, fileName, discID, err)
 		return err
 	}
 
 	// Ensure only the database owner or discussion starter can update the discussion
-	if (strings.ToLower(loggedInUser) != strings.ToLower(dbOwner)) && (strings.ToLower(loggedInUser) != strings.ToLower(discCreator)) {
+	if (strings.ToLower(loggedInUser) != strings.ToLower(owner)) && (strings.ToLower(loggedInUser) != strings.ToLower(discCreator)) {
 		return errors.New("Not authorised")
 	}
 
@@ -3922,16 +3922,16 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 		SET title = $5, description = $6, last_modified = now()
 		WHERE disc.db_id = (SELECT db_id FROM d)
 			AND disc.disc_id = $4`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, newTitle, newText)
+	commandTag, err := tx.Exec(dbQuery, owner, folder, fileName, discID, newTitle, newText)
 	if err != nil {
-		log.Printf("Updating discussion for database '%s%s%s', discussion '%d' failed: %v\n", dbOwner,
-			dbFolder, dbName, discID, err)
+		log.Printf("Updating discussion for database '%s%s%s', discussion '%d' failed: %v\n", owner,
+			folder, fileName, discID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating discussion for database '%s%s%s', discussion '%d'\n",
-			numRows, dbOwner, dbFolder, dbName, discID)
+			numRows, owner, folder, fileName, discID)
 	}
 
 	// Commit the transaction
@@ -3943,7 +3943,7 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 }
 
 // Updates the commit list for a Merge Request
-func UpdateMergeRequestCommits(dbOwner string, dbFolder string, dbName string, discID int, mrCommits []CommitEntry) (err error) {
+func UpdateMergeRequestCommits(owner string, folder string, fileName string, discID int, mrCommits []CommitEntry) (err error) {
 	dbQuery := `
 		WITH d AS (
 			SELECT db.db_id
@@ -3960,16 +3960,16 @@ func UpdateMergeRequestCommits(dbOwner string, dbFolder string, dbName string, d
 		SET mr_commits = $5
 		WHERE disc.db_id = (SELECT db_id FROM d)
 			AND disc.disc_id = $4`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, mrCommits)
+	commandTag, err := pdb.Exec(dbQuery, owner, folder, fileName, discID, mrCommits)
 	if err != nil {
-		log.Printf("Updating commit list for database '%s%s%s', MR '%d' failed: %v\n", dbOwner,
-			dbFolder, dbName, discID, err)
+		log.Printf("Updating commit list for database '%s%s%s', MR '%d' failed: %v\n", owner,
+			folder, fileName, discID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
 			"Wrong number of rows (%v) affected when updating commit list for database '%s%s%s', MR '%d'\n",
-			numRows, dbOwner, dbFolder, dbName, discID)
+			numRows, owner, folder, fileName, discID)
 	}
 	return nil
 }
@@ -4191,7 +4191,7 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 }
 
 // Returns the list of users who starred a database.
-func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEntry, err error) {
+func UsersStarredDB(owner string, folder string, fileName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH star_users AS (
 			SELECT user_id, date_starred
@@ -4213,7 +4213,7 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 		FROM users, star_users
 		WHERE users.user_id = star_users.user_id
 		ORDER BY star_users.date_starred DESC`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, err := pdb.Query(dbQuery, owner, folder, fileName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
@@ -4224,7 +4224,7 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 		var dn pgx.NullString
 		err = rows.Scan(&oneRow.Owner, &dn, &oneRow.DateEntry)
 		if err != nil {
-			log.Printf("Error retrieving list of stars for %s/%s: %v\n", dbOwner, dbName, err)
+			log.Printf("Error retrieving list of stars for %s/%s: %v\n", owner, fileName, err)
 			return nil, err
 		}
 
@@ -4240,7 +4240,7 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 }
 
 // Returns the list of users watching a database.
-func UsersWatchingDB(dbOwner string, dbFolder string, dbName string) (list []DBEntry, err error) {
+func UsersWatchingDB(owner string, folder string, fileName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH lst AS (
 			SELECT user_id, date_watched
@@ -4262,7 +4262,7 @@ func UsersWatchingDB(dbOwner string, dbFolder string, dbName string) (list []DBE
 		FROM users, lst
 		WHERE users.user_id = lst.user_id
 		ORDER BY lst.date_watched DESC`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, err := pdb.Query(dbQuery, owner, folder, fileName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
@@ -4273,7 +4273,7 @@ func UsersWatchingDB(dbOwner string, dbFolder string, dbName string) (list []DBE
 		var dn pgx.NullString
 		err = rows.Scan(&oneRow.Owner, &dn, &oneRow.DateEntry)
 		if err != nil {
-			log.Printf("Error retrieving list of watchers for %s%s%s: %v\n", dbOwner, dbFolder, dbName, err)
+			log.Printf("Error retrieving list of watchers for %s%s%s: %v\n", owner, folder, fileName, err)
 			return nil, err
 		}
 
@@ -4330,7 +4330,7 @@ func UserWatchingDBs(userName string) (list []DBEntry, err error) {
 }
 
 // Returns the view counter for a specific database
-func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, err error) {
+func ViewCount(owner string, folder string, fileName string) (viewCount int, err error) {
 	dbQuery := `
 		SELECT page_views
 		FROM sqlite_databases
@@ -4341,9 +4341,9 @@ func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, e
 			)
 			AND folder = $2
 			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&viewCount)
+	err = pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&viewCount)
 	if err != nil {
-		log.Printf("Retrieving view count for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Retrieving view count for '%s%s%s' failed: %v\n", owner, folder, fileName, err)
 		return 0, err
 	}
 	return

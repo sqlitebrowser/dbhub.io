@@ -491,7 +491,7 @@ func SanityCheck(fileName string) (tables []string, err error) {
 }
 
 // Returns the list of tables and view in the SQLite database.
-func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
+func Tables(sdb *sqlite.Conn, fileName string) ([]string, error) {
 	// TODO: It might be useful to cache this info in PG or memcached
 	// Retrieve the list of tables in the database
 	tables, err := sdb.Tables("")
@@ -509,7 +509,7 @@ func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 	}
 	if len(tables) == 0 {
 		// No table names were returned, so abort
-		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
+		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", fileName)
 		return nil, err
 	}
 

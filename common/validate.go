@@ -146,8 +146,8 @@ func ValidateCommitID(fieldName string) error {
 }
 
 // Validate the database name.
-func ValidateDB(dbName string) error {
-	err := Validate.Var(dbName, "required,dbname,min=1,max=256") // 256 char limit seems reasonable
+func ValidateDB(fileName string) error {
+	err := Validate.Var(fileName, "required,dbname,min=1,max=256") // 256 char limit seems reasonable
 	if err != nil {
 		return err
 	}
@@ -156,8 +156,8 @@ func ValidateDB(dbName string) error {
 }
 
 // Validate a provided full name.
-func ValidateDisplayName(dbName string) error {
-	err := Validate.Var(dbName, "required,displayname,min=1,max=80") // 80 char limit seems reasonable
+func ValidateDisplayName(fileName string) error {
+	err := Validate.Var(fileName, "required,displayname,min=1,max=80") // 80 char limit seems reasonable
 	if err != nil {
 		return err
 	}

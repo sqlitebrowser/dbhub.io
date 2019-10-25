@@ -14,7 +14,7 @@ import (
 // Extracts a database name from GET or POST/PUT data.
 func GetDatabase(r *http.Request, allowGet bool) (string, error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var d, dbName string
+	var d string
 	if allowGet {
 		d = r.FormValue("dbname")
 	} else {
@@ -22,22 +22,22 @@ func GetDatabase(r *http.Request, allowGet bool) (string, error) {
 	}
 
 	// Unescape, then validate the database name
-	dbName, err := url.QueryUnescape(d)
+	fileName, err := url.QueryUnescape(d)
 	if err != nil {
 		return "", err
 	}
-	err = ValidateDB(dbName)
+	err = ValidateDB(fileName)
 	if err != nil {
-		log.Printf("Validation failed for database name '%s': %s", dbName, err)
+		log.Printf("Validation failed for database name '%s': %s", fileName, err)
 		return "", errors.New("Invalid database name")
 	}
-	return dbName, nil
+	return fileName, nil
 }
 
 // Returns the folder name (if any) present in GET or POST/PUT data.
 func GetFolder(r *http.Request, allowGet bool) (string, error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var f, folder string
+	var f string
 	if allowGet {
 		f = r.FormValue("folder")
 	} else {
@@ -180,7 +180,7 @@ func GetFormUDC(r *http.Request) (string, string, string, error) {
 	}
 
 	// Extract the database name
-	dbName, err := GetDatabase(r, false)
+	fileName, err := GetDatabase(r, false)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -191,7 +191,7 @@ func GetFormUDC(r *http.Request) (string, string, string, error) {
 		return "", "", "", err
 	}
 
-	return userName, dbName, commitID, nil
+	return userName, fileName, commitID, nil
 }
 
 // Returns the requested database owner and database name.
@@ -204,31 +204,31 @@ func GetOD(ignore_leading int, r *http.Request) (string, string, error) {
 		log.Printf("Something wrong with the requested URL: %v\n", r.URL.Path)
 		return "", "", errors.New("Invalid URL")
 	}
-	dbOwner := pathStrings[1+ignore_leading]
-	dbName := pathStrings[2+ignore_leading]
+	owner := pathStrings[1+ignore_leading]
+	fileName := pathStrings[2+ignore_leading]
 
 	// Validate the user supplied owner and database name
-	err := ValidateUserDB(dbOwner, dbName)
+	err := ValidateUserDB(owner, fileName)
 	if err != nil {
 		// Don't bother logging the fairly common case of a bot using an AngularJS phrase in a request
-		if (dbOwner == "{{ meta.Owner + '" && dbName == "' + row.Database }}") ||
-			(dbOwner == "{{ row.owner + '" && dbName == "' + row.dbname }}") {
+		if (owner == "{{ meta.Owner + '" && fileName == "' + row.Database }}") ||
+			(owner == "{{ row.owner + '" && fileName == "' + row.dbname }}") {
 			return "", "", errors.New("Invalid owner or database name")
 		}
 
 		log.Printf("Validation failed for owner or database name. Owner '%s', DB name '%s': %s",
-			dbOwner, dbName, err)
+			owner, fileName, err)
 		return "", "", errors.New("Invalid owner or database name")
 	}
 
 	// Everything seems ok
-	return dbOwner, dbName, nil
+	return owner, fileName, nil
 }
 
 // Returns the requested database owner, database name, and commit revision.
 func GetODC(ignore_leading int, r *http.Request) (string, string, string, error) {
 	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignore_leading, r)
+	owner, fileName, err := GetOD(ignore_leading, r)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -240,13 +240,13 @@ func GetODC(ignore_leading int, r *http.Request) (string, string, string, error)
 	}
 
 	// Everything seems ok
-	return dbOwner, dbName, commitID, nil
+	return owner, fileName, commitID, nil
 }
 
 // Returns the requested database owner, database name, and table name.
 func GetODT(ignore_leading int, r *http.Request) (string, string, string, error) {
 	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignore_leading, r)
+	owner, fileName, err := GetOD(ignore_leading, r)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -258,13 +258,13 @@ func GetODT(ignore_leading int, r *http.Request) (string, string, string, error)
 	}
 
 	// Everything seems ok
-	return dbOwner, dbName, requestedTable, nil
+	return owner, fileName, requestedTable, nil
 }
 
 // Returns the requested database owner, database name, table name, and commit string.
 func GetODTC(ignore_leading int, r *http.Request) (string, string, string, string, error) {
 	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignore_leading, r)
+	owner, fileName, err := GetOD(ignore_leading, r)
 	if err != nil {
 		return "", "", "", "", err
 	}
@@ -282,7 +282,7 @@ func GetODTC(ignore_leading int, r *http.Request) (string, string, string, strin
 	}
 
 	// Everything seems ok
-	return dbOwner, dbName, requestedTable, commitID, nil
+	return owner, fileName, requestedTable, commitID, nil
 }
 
 // Returns the requested "public" variable, if present in the form data.
@@ -334,24 +334,24 @@ func GetUFD(r *http.Request, allowGet bool) (string, string, string, error) {
 	}
 
 	// Extract the folder
-	dbFolder, err := GetFolder(r, allowGet)
+	folder, err := GetFolder(r, allowGet)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// Extract the database name
-	dbName, err := GetDatabase(r, allowGet)
+	fileName, err := GetDatabase(r, allowGet)
 	if err != nil {
 		return "", "", "", err
 	}
 
-	return userName, dbFolder, dbName, nil
+	return userName, folder, fileName, nil
 }
 
 // Return the username (if any) present in the GET or POST/PUT data.
 func GetUsername(r *http.Request, allowGet bool) (string, error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var u, userName string
+	var u string
 	if allowGet {
 		u = r.FormValue("username")
 	} else {

@@ -19,7 +19,7 @@ import (
 )
 
 // The main function which handles file upload processing for both the webUI and DB4S end points
-func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder string, dbName string,
+func AddFile(r *http.Request, loggedInUser string, owner string, folder string, fileName string,
 	createBranch bool, branchName string, commitID string, public bool, licenceName string, commitMsg string,
 	sourceURL string, newDB io.Reader, serverSw string, lastModified time.Time, commitTime time.Time,
 	authorName string, authorEmail string, committerName string, committerEmail string, otherParents []string,
@@ -29,7 +29,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	tempFile, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
 	if err != nil {
 		log.Printf("Error creating temporary file. User: '%s', Database: '%s%s%s', Filename: '%s', Error: %v\n",
-			loggedInUser, dbOwner, dbFolder, dbName, tempFile.Name(), err)
+			loggedInUser, owner, folder, fileName, tempFile.Name(), err)
 		return 0, "", err
 	}
 	tempFileName := tempFile.Name()
@@ -43,7 +43,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	numBytes, err = io.CopyBuffer(tempFile, newDB, buf)
 	if err != nil {
 		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
-			"Error: %v\n", loggedInUser, dbOwner, dbFolder, dbName, err)
+			"Error: %v\n", loggedInUser, owner, folder, fileName, err)
 		return 0, "", err
 	}
 
@@ -83,19 +83,19 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	var defBranch string
 	needDefaultBranchCreated := false
 	var branches map[string]BranchEntry
-	exists, err := CheckFileExists(loggedInUser, loggedInUser, dbFolder, dbName)
+	exists, err := CheckFileExists(loggedInUser, loggedInUser, folder, fileName)
 	if err != err {
 		return 0, "", err
 	}
 	if exists {
 		// Load the existing branchHeads for the database
-		branches, err = GetBranches(loggedInUser, dbFolder, dbName)
+		branches, err = GetBranches(loggedInUser, folder, fileName)
 		if err != nil {
 			return 0, "", err
 		}
 
 		// If no branch name was given, use the default for the database
-		defBranch, err = GetDefaultBranchName(loggedInUser, dbFolder, dbName)
+		defBranch, err = GetDefaultBranchName(loggedInUser, folder, fileName)
 		if err != nil {
 			return 0, "", err
 		}
@@ -116,7 +116,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	// Create a dbTree entry for the individual database file
 	var e DBTreeEntry
 	e.EntryType = DATABASE
-	e.Name = dbName
+	e.Name = fileName
 	e.Sha256 = sha
 	e.LastModified = lastModified.UTC()
 	e.Size = numBytes
@@ -124,7 +124,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 		// No licence was specified by the client, so check if the database is already in the system and
 		// already has one.  If so, we use that.
 		if exists {
-			lic, err := CommitLicenceSHA(loggedInUser, dbFolder, dbName, commitID)
+			lic, err := CommitLicenceSHA(loggedInUser, folder, fileName, commitID)
 			if err != nil {
 				return 0, "", err
 			}
@@ -158,7 +158,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 				commitMsg = fmt.Sprintf("Initial database upload, using licence %s.", licenceName)
 			} else {
 				// The database already exists, so check if the licence has changed
-				lic, err := CommitLicenceSHA(loggedInUser, dbFolder, dbName, commitID)
+				lic, err := CommitLicenceSHA(loggedInUser, folder, fileName, commitID)
 				if err != nil {
 					return 0, "", err
 				}
@@ -228,7 +228,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 			if commitID != "" {
 				if b.Commit != commitID {
 					// We're rewriting commit history
-					iTags, iRels, err := DeleteBranchHistory(dbOwner, dbFolder, dbName, branchName, commitID)
+					iTags, iRels, err := DeleteBranchHistory(owner, folder, fileName, branchName, commitID)
 					if err != nil {
 						if (len(iTags) > 0) || (len(iRels) > 0) {
 							msg := fmt.Sprintln("You need to delete the following tags and releases before doing " +
@@ -281,7 +281,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	// If the database already exists, count the number of commits in the new branch
 	commitCount := 1
 	if exists {
-		commitList, err := GetCommitList(loggedInUser, dbFolder, dbName)
+		commitList, err := GetCommitList(loggedInUser, folder, fileName)
 		if err != nil {
 			return 0, "", err
 		}
@@ -293,7 +293,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 			c2, ok = commitList[c2.Parent]
 			if !ok {
 				m := fmt.Sprintf("Error when counting commits in branch '%s' of database '%s%s%s'\n", branchName,
-					loggedInUser, dbFolder, dbName)
+					loggedInUser, folder, fileName)
 				log.Print(m)
 				return 0, "", errors.New(m)
 			}
@@ -315,7 +315,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	b.Commit = c.ID
 	b.CommitCount = commitCount
 	branches[branchName] = b
-	err = StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, tempFile, sha, numBytes, "",
+	err = StoreDatabase(loggedInUser, folder, fileName, branches, c, public, tempFile, sha, numBytes, "",
 		"", needDefaultBranchCreated, branchName, sourceURL)
 	if err != nil {
 		return 0, "", err
@@ -323,7 +323,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 
 	// If the database already existed, update it's contributor count
 	if exists {
-		err = UpdateContributorsCount(loggedInUser, dbFolder, dbName)
+		err = UpdateContributorsCount(loggedInUser, folder, fileName)
 		if err != nil {
 			return 0, "", err
 		}
@@ -332,7 +332,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	// If a new branch was created, then update the branch count for the database
 	// Note, this could probably be merged into the StoreDatabase() call above, but it should be good enough for now
 	if createBranch {
-		err = StoreBranches(dbOwner, dbFolder, dbName, branches)
+		err = StoreBranches(owner, folder, fileName, branches)
 		if err != nil {
 			return 0, "", err
 		}
@@ -341,7 +341,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	// If the newly uploaded database is on the default branch, check if the default table is present in this version
 	// of the database.  If it's not, we need to clear the default table value
 	if branchName == defBranch {
-		defTbl, err := GetDefaultTableName(dbOwner, dbFolder, dbName)
+		defTbl, err := GetDefaultTableName(owner, folder, fileName)
 		if err != nil {
 			return 0, "", err
 		}
@@ -353,7 +353,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 		}
 		if !defFound {
 			// The default table is present in the previous commit, so we clear the default table value
-			err = StoreDefaultTableName(dbOwner, dbFolder, dbName, "")
+			err = StoreDefaultTableName(owner, folder, fileName, "")
 			if err != nil {
 				return 0, "", err
 			}
@@ -362,7 +362,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 
 	// If the database didn't previous exist, add the user to the watch list for the database
 	if !exists {
-		err = ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName)
+		err = ToggleDBWatch(loggedInUser, owner, folder, fileName)
 		if err != nil {
 			return 0, "", err
 		}
@@ -376,13 +376,13 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	}
 
 	// Make a record of the upload
-	err = LogUpload(loggedInUser, dbFolder, dbName, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now().UTC(), sha)
+	err = LogUpload(loggedInUser, folder, fileName, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now().UTC(), sha)
 	if err != nil {
 		return 0, "", err
 	}
 
 	// Invalidate the memcached entry for the database (only really useful if we're updating an existing database)
-	err = InvalidateCacheEntry(loggedInUser, loggedInUser, "/", dbName, "") // Empty string indicates "for all versions"
+	err = InvalidateCacheEntry(loggedInUser, loggedInUser, "/", fileName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -390,7 +390,7 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 	}
 
 	// Invalidate any memcached entries for the previous highest version # of the database
-	err = InvalidateCacheEntry(loggedInUser, loggedInUser, dbFolder, dbName, c.ID) // And empty string indicates "for all commits"
+	err = InvalidateCacheEntry(loggedInUser, loggedInUser, folder, fileName, c.ID) // And empty string indicates "for all commits"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for any previous database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -402,8 +402,8 @@ func AddFile(r *http.Request, loggedInUser string, dbOwner string, dbFolder stri
 }
 
 // Returns the licence used by the database in a given commit
-func CommitLicenceSHA(dbOwner string, dbFolder string, dbName string, commitID string) (licenceSHA string, err error) {
-	commits, err := GetCommitList(dbOwner, dbFolder, dbName)
+func CommitLicenceSHA(owner string, folder string, fileName string, commitID string) (licenceSHA string, err error) {
+	commits, err := GetCommitList(owner, folder, fileName)
 	if err != nil {
 		return "", err
 	}
@@ -460,9 +460,9 @@ func CreateDBTreeID(entries []DBTreeEntry) string {
 
 // Safely removes the commit history for a branch, from the head of the branch back to (but not including) the
 // specified commit.  The new branch head will be at the commit ID specified
-func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchName string, commitID string) (isolatedTags []string, isolatedRels []string, err error) {
+func DeleteBranchHistory(owner string, folder string, fileName string, branchName string, commitID string) (isolatedTags []string, isolatedRels []string, err error) {
 	// Make sure the requested commit is in the history for the specified branch
-	ok, err := IsCommitInBranchHistory(dbOwner, dbFolder, dbName, branchName, commitID)
+	ok, err := IsCommitInBranchHistory(owner, folder, fileName, branchName, commitID)
 	if err != nil {
 		return
 	}
@@ -472,14 +472,14 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 	}
 
 	// Get the commit list for the database
-	commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
+	commitList, err := GetCommitList(owner, folder, fileName)
 	if err != nil {
 		return
 	}
 
 	// Walk the branch history, making a list of the commit IDs to delete
 	delList := map[string]struct{}{}
-	branchList, err := GetBranches(dbOwner, dbFolder, dbName)
+	branchList, err := GetBranches(owner, folder, fileName)
 	if err != nil {
 		return
 	}
@@ -504,7 +504,7 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 		c, ok = commitList[c.Parent]
 		if !ok {
 			err = fmt.Errorf("Broken commit history encountered for branch '%s' in '%s%s%s', when looking for "+
-				"commit '%s'\n", branchName, dbOwner, dbFolder, dbName, c.Parent)
+				"commit '%s'\n", branchName, owner, folder, fileName, c.Parent)
 			log.Printf(err.Error())
 			return
 		}
@@ -519,12 +519,12 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 
 	// * To get here, we have the list of commits to delete *
 
-	tagList, err := GetTags(dbOwner, dbFolder, dbName)
+	tagList, err := GetTags(owner, folder, fileName)
 	if err != nil {
 		return
 	}
 
-	relList, err := GetReleases(dbOwner, dbFolder, dbName)
+	relList, err := GetReleases(owner, folder, fileName)
 	if err != nil {
 		return
 	}
@@ -568,7 +568,7 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 			c, ok = commitList[bEntry.Commit]
 			if !ok {
 				err = fmt.Errorf("Broken commit history encountered when checking for isolated tags while "+
-					"deleting commits in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+					"deleting commits in branch '%s' of database '%s%s%s'\n", branchName, owner, folder, fileName)
 				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 				return
 			}
@@ -584,8 +584,8 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 				c, ok = commitList[c.Parent]
 				if !ok {
 					err = fmt.Errorf("Broken commit history encountered when checking for isolated tags "+
-						"while deleting commits in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder,
-						dbName)
+						"while deleting commits in branch '%s' of database '%s%s%s'\n", branchName, owner, folder,
+						fileName)
 					log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 					return
 				}
@@ -621,8 +621,8 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 			c, ok = commitList[bEntry.Commit]
 			if !ok {
 				err = fmt.Errorf("Broken commit history encountered when checking for isolated releases "+
-					"while deleting commits in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder,
-					dbName)
+					"while deleting commits in branch '%s' of database '%s%s%s'\n", branchName, owner, folder,
+					fileName)
 				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 				return
 			}
@@ -638,8 +638,8 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 				c, ok = commitList[c.Parent]
 				if !ok {
 					err = fmt.Errorf("Broken commit history encountered when checking for isolated releases "+
-						"while deleting commits in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder,
-						dbName)
+						"while deleting commits in branch '%s' of database '%s%s%s'\n", branchName, owner, folder,
+						fileName)
 					log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 					return
 				}
@@ -684,7 +684,7 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 			c, ok = commitList[bEntry.Commit]
 			if !ok {
 				err = fmt.Errorf("Broken commit history encountered when checking for commits to remove in "+
-					"branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+					"branch '%s' of database '%s%s%s'\n", branchName, owner, folder, fileName)
 				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 				return
 			}
@@ -696,7 +696,7 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 				c, ok = commitList[c.Parent]
 				if !ok {
 					err = fmt.Errorf("Broken commit history encountered when checking for commits to remove "+
-						"in branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+						"in branch '%s' of database '%s%s%s'\n", branchName, owner, folder, fileName)
 					log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 					return
 				}
@@ -716,7 +716,7 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 		c, ok = commitList[c.Parent]
 		if !ok {
 			log.Printf("Error when counting # of commits while rewriting branch '%s' of database '%s%s%s'\n",
-				branchName, dbOwner, dbFolder, dbName)
+				branchName, owner, folder, fileName)
 			err = fmt.Errorf("Error when counting commits during branch history rewrite")
 			return
 		}
@@ -727,7 +727,7 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 	b.Commit = commitID
 	b.CommitCount = commitCount
 	branchList[branchName] = b
-	err = StoreBranches(dbOwner, dbFolder, dbName, branchList)
+	err = StoreBranches(owner, folder, fileName, branchList)
 	if err != nil {
 		return
 	}
@@ -739,7 +739,7 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 			delete(commitList, cid)
 		}
 	}
-	err = StoreCommits(dbOwner, dbFolder, dbName, commitList)
+	err = StoreCommits(owner, folder, fileName, commitList)
 	return
 }
 
@@ -826,14 +826,14 @@ func GetCurrentFunctionName() (FuncName string) {
 }
 
 // Checks if a given commit ID is in the history of the given branch
-func IsCommitInBranchHistory(dbOwner string, dbFolder string, dbName string, branchName string, commitID string) (bool, error) {
+func IsCommitInBranchHistory(owner string, folder string, fileName string, branchName string, commitID string) (bool, error) {
 	// Get the commit list for the database
-	commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
+	commitList, err := GetCommitList(owner, folder, fileName)
 	if err != nil {
 		return false, err
 	}
 
-	branchList, err := GetBranches(dbOwner, dbFolder, dbName)
+	branchList, err := GetBranches(owner, folder, fileName)
 	if err != nil {
 		return false, err
 	}
@@ -859,7 +859,7 @@ func IsCommitInBranchHistory(dbOwner string, dbFolder string, dbName string, bra
 		c, ok = commitList[c.Parent]
 		if !ok {
 			log.Printf("Broken commit history encountered for branch '%s' in '%s%s%s', when looking for "+
-				"commit '%s'\n", branchName, dbOwner, dbFolder, dbName, c.Parent)
+				"commit '%s'\n", branchName, owner, folder, fileName, c.Parent)
 			return false, fmt.Errorf("Broken commit history encountered for branch '%s' when looking up "+
 				"commit details", branchName)
 		}
@@ -940,13 +940,13 @@ func RandomString(length int) string {
 }
 
 // Checks if a status update for the user exists for a given discussion or MR, and if so then removes it
-func StatusUpdateCheck(dbOwner string, dbFolder string, dbName string, thisID int, userName string) (numStatusUpdates int, err error) {
+func StatusUpdateCheck(owner string, folder string, fileName string, thisID int, userName string) (numStatusUpdates int, err error) {
 	var lst map[string][]StatusUpdateEntry
 	lst, err = StatusUpdates(userName)
 	if err != nil {
 		return
 	}
-	db := fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName)
+	db := fmt.Sprintf("%s%s%s", owner, folder, fileName)
 	b, ok := lst[db]
 	if ok {
 		for i, j := range b {
