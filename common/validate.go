@@ -260,24 +260,9 @@ func ValidateUser(user string) error {
 	return nil
 }
 
-// Validate the provided user and database name.
-func ValidateUserDB(user string, db string) error {
-	err := ValidateUser(user)
-	if err != nil {
-		return err
-	}
-
-	err = ValidateFileName(db)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // Validate the provided user, database, and table name.
 func ValidateUserDBTable(user string, db string, table string) error {
-	err := ValidateUserDB(user, db)
+	err := ValidateUserFilename(user, db)
 	if err != nil {
 		return err
 	}
@@ -298,6 +283,21 @@ func ValidateUserEmail(user string, email string) error {
 	}
 
 	err = ValidateEmail(email)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Validate the provided user and file name.
+func ValidateUserFilename(user string, fn string) error {
+	err := ValidateUser(user)
+	if err != nil {
+		return err
+	}
+
+	err = ValidateFileName(fn)
 	if err != nil {
 		return err
 	}

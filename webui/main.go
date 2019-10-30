@@ -3582,13 +3582,13 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		// TODO: Add support for folders and sub folders
-		// TODO  eg: Allow for collections of databases
+		// TODO  eg: Allow for projects which have multiple files
 		// TODO    * /user/collectionFoo/database1
 		// TODO    * /user/collectionFoo/database2
 		// TODO    * /user/collectionBar/database1
 		// TODO    * /user/collectionBar/database2
 
-		// We haven't yet added support for folders and subfolders, so bounce back to the /user/database page
+		// We haven't yet added support for folders and subfolders, so bounce back to the /user/file page
 		http.Redirect(w, r, fmt.Sprintf("/%s/%s", pathStrings[1], pathStrings[2]), http.StatusTemporaryRedirect)
 		return
 	}
@@ -3596,18 +3596,18 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	userName = pathStrings[1]
 	fileName = pathStrings[2]
 
-	// Validate the user supplied user and database name
-	err := com.ValidateUserDB(userName, fileName)
+	// Validate the user supplied user and file/project name
+	err := com.ValidateUserFilename(userName, fileName)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Invalid user or database name")
+		errorPage(w, r, http.StatusBadRequest, "Invalid user or project name")
 		return
 	}
 
 	// TODO: Add support for folders and sub-folders in request paths
 	folder := "/"
 
-	// A specific database was requested
-	databasePage(w, r, userName, folder, fileName)
+	// A specific project was requested
+	contentPage(w, r, userName, folder, fileName)
 }
 
 // Returns HTML rendered content from a given markdown string, for the settings page README preview tab.

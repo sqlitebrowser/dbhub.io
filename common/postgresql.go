@@ -92,41 +92,6 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 	return nil
 }
 
-// Check if a file exists
-// If an error occurred, the true/false value should be ignored, as only the error value is valid.
-func CheckFileExists(loggedInUser string, owner string, folder string, fileName string) (bool, error) {
-	dbQuery := `
-		SELECT count(db_id)
-		FROM sqlite_databases
-		WHERE user_id = (
-				SELECT user_id
-				FROM users
-				WHERE lower(user_name) = lower($1)
-			)
-			AND folder = $2
-			AND db_name = $3
-			AND is_deleted = false`
-	// If the request is from someone who's not logged in, or is for another users database, ensure we only consider
-	// public databases
-	if strings.ToLower(loggedInUser) != strings.ToLower(owner) || loggedInUser == "" {
-		dbQuery += `
-			AND public = true`
-	}
-	var DBCount int
-	err := pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&DBCount)
-	if err != nil {
-		log.Printf("Checking if a database exists failed: %v\n", err)
-		return true, err
-	}
-	if DBCount == 0 {
-		// Database isn't in our system
-		return false, nil
-	}
-
-	// Database exists
-	return true, nil
-}
-
 // Check if a given database ID is available, and return it's folder/name so the caller can determine if it has been
 // renamed.  If an error occurs, the true/false value should be ignored, as only the error value is valid.
 func CheckDBID(loggedInUser string, owner string, dbID int64) (avail bool, folder string, fileName string, err error) {
@@ -258,6 +223,41 @@ func CheckEmailExists(email string) (bool, error) {
 	// Email address IS already in our system
 	return true, nil
 
+}
+
+// Check if a file exists
+// If an error occurred, the true/false value should be ignored, as only the error value is valid.
+func CheckFileExists(loggedInUser string, owner string, folder string, fileName string) (bool, error) {
+	dbQuery := `
+		SELECT count(db_id)
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)
+			AND folder = $2
+			AND db_name = $3
+			AND is_deleted = false`
+	// If the request is from someone who's not logged in, or is for another users database, ensure we only consider
+	// public databases
+	if strings.ToLower(loggedInUser) != strings.ToLower(owner) || loggedInUser == "" {
+		dbQuery += `
+			AND public = true`
+	}
+	var DBCount int
+	err := pdb.QueryRow(dbQuery, owner, folder, fileName).Scan(&DBCount)
+	if err != nil {
+		log.Printf("Checking if a database exists failed: %v\n", err)
+		return true, err
+	}
+	if DBCount == 0 {
+		// Database isn't in our system
+		return false, nil
+	}
+
+	// Database exists
+	return true, nil
 }
 
 // Checks if a licence exists in our system.
@@ -1813,6 +1813,12 @@ func GetCommitList(owner string, folder string, fileName string) (map[string]Com
 		return map[string]CommitEntry{}, err
 	}
 	return l, nil
+}
+
+// Returns the content type for a given file requested by the user
+func GetContentType(loggedInUser string, owner string, folder string, filename string, commit string, branchName string, tagName string, releaseName string) DBTreeEntryType {
+	// TODO: Turn this into a real function
+	return THREE_D_MODEL
 }
 
 // Returns the default branch name for a database.

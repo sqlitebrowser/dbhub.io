@@ -208,7 +208,7 @@ func GetOD(ignore_leading int, r *http.Request) (string, string, error) {
 	fileName := pathStrings[2+ignore_leading]
 
 	// Validate the user supplied owner and database name
-	err := ValidateUserDB(owner, fileName)
+	err := ValidateUserFilename(owner, fileName)
 	if err != nil {
 		// Don't bother logging the fairly common case of a bot using an AngularJS phrase in a request
 		if (owner == "{{ meta.Owner + '" && fileName == "' + row.Database }}") ||

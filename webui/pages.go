@@ -792,6 +792,100 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// The user wants to view a specific piece of content.  This function determines the type of content, and displays it
+// to the user if they have appropriate access permission
+func contentPage(w http.ResponseWriter, r *http.Request, owner string, folder string, fileName string) {
+	var pageData struct {
+		Auth0   com.Auth0Set
+		Data    com.SQLiteRecordSet
+		DB      com.SQLiteDBinfo
+		Meta    com.MetaInfo
+		MyStar  bool
+		MyWatch bool
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "3dhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
+	}
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+	}
+
+	// Check if the requested content exists and the user has access to view it
+	exists, err := com.CheckFileExists(loggedInUser, owner, folder, fileName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("File '%s%s%s' doesn't exist", owner, folder,
+			fileName))
+		return
+	}
+
+	// * Execution can only get here if the user has access to the requested database *
+
+	// Check if a specific commit ID was given
+	commitID, err := com.GetFormCommit(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Invalid commit ID")
+		return
+	}
+
+	// Check if a branch name was requested
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		return
+	}
+
+	// Check if a named tag was requested
+	tagName, err := com.GetFormTag(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for tag name")
+		return
+	}
+
+	// Check if a specific release was requested
+	releaseName := r.FormValue("release")
+	if releaseName != "" {
+		err = com.ValidateBranchName(releaseName)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Validation failed for release name")
+			return
+		}
+	}
+
+	// Determine the type of content, then display it as appropriate
+	switch com.GetContentType(loggedInUser, owner, folder, fileName, commitID, branchName, tagName, releaseName) {
+	case com.THREE_D_MODEL:
+		// If the content is a 3D model, use the 3D model content display page
+		threeDModelPage(w, r, loggedInUser, owner, folder, fileName, commitID, branchName, tagName, releaseName)
+		return
+	case com.DATABASE:
+		// If the content is a database, use the existing database content display page
+		databasePage(w, r, loggedInUser, owner, folder, fileName, commitID, branchName, tagName, releaseName)
+		return
+	case com.LICENCE:
+		// TODO: Would it be useful to have some capability for displaying the text/html/etc for a given licence?
+		errorPage(w, r, http.StatusInternalServerError, "Handler to display licence text hasn't been written yet")
+		return
+	}
+	errorPage(w, r, http.StatusInternalServerError, "Handler for this content type hasn't been written yet")
+	return
+}
+
 // Render the contributors page, which lists the contributors to a database.
 func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	// Structures to hold page data
@@ -1251,8 +1345,9 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func databasePage(w http.ResponseWriter, r *http.Request, owner string, folder string, fileName string) {
-	pageName := "Render database page"
+// Displays the database view page to the user, with the requested content
+func databasePage(w http.ResponseWriter, r *http.Request, loggedInUser string, owner string, folder string, fileName string, commitID string, branchName string, tagName string, releaseName string) {
+	pageName := "Display database page"
 
 	var pageData struct {
 		Auth0   com.Auth0Set
@@ -1262,33 +1357,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, owner string, folder s
 		MyStar  bool
 		MyWatch bool
 	}
-
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "3dhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = "default"
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-	}
-
-	// Check if a specific database commit ID was given
-	commitID, err := com.GetFormCommit(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Invalid database commit ID")
-		return
-	}
+	pageData.Meta.LoggedInUser = loggedInUser
 
 	// If a table name was supplied, validate it
+	var err error
 	dbTable := r.FormValue("table")
 	if dbTable != "" {
 		err = com.ValidatePGTable(dbTable)
@@ -1296,30 +1368,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, owner string, folder s
 			// Validation failed, so don't pass on the table name
 			log.Printf("%s: Validation failed for table name: %s", pageName, err)
 			dbTable = ""
-		}
-	}
-
-	// Check if a branch name was requested
-	branchName, err := com.GetFormBranch(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
-		return
-	}
-
-	// Check if a named tag was requested
-	tagName, err := com.GetFormTag(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for tag name")
-		return
-	}
-
-	// Check if a specific release was requested
-	releaseName := r.FormValue("release")
-	if releaseName != "" {
-		err = com.ValidateBranchName(releaseName)
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, "Validation failed for release name")
-			return
 		}
 	}
 
@@ -1363,20 +1411,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, owner string, folder s
 			return
 		}
 	}
-
-	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckFileExists(loggedInUser, owner, folder, fileName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", owner, folder,
-			fileName))
-		return
-	}
-
-	// * Execution can only get here if the user has access to the requested database *
 
 	// Increment the view counter for the database (excluding people viewing their own databases)
 	if strings.ToLower(loggedInUser) != strings.ToLower(owner) {
@@ -3488,6 +3522,368 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	// Render the page
 	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
 	t := tmpl.Lookup("tagsPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+// Display the 3D model the user requested
+func threeDModelPage(w http.ResponseWriter, r *http.Request, loggedInUser string, owner string, folder string, fileName string, commitID string, branchName string, tagName string, releaseName string) {
+	pageName := "Display 3D model"
+
+	var pageData struct {
+		Auth0   com.Auth0Set
+		Data    com.SQLiteRecordSet
+		DB      com.SQLiteDBinfo
+		Meta    com.MetaInfo
+		MyStar  bool
+		MyWatch bool
+	}
+	pageData.Meta.LoggedInUser = loggedInUser
+
+	// Increment the view counter for the file (excluding people viewing their own files)
+	var err error
+	if strings.ToLower(loggedInUser) != strings.ToLower(owner) {
+		err = com.IncrementViewCount(owner, folder, fileName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	// If a specific commit was requested, make sure it exists in the commit history
+	// TODO: These commitID/release/etc checks should probably be in contentPage(), so they're not duplicated (etc)
+	if commitID != "" {
+		commitList, err := com.GetCommitList(owner, folder, fileName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if _, ok := commitList[commitID]; !ok {
+			// The requested commit isn't one in the commit history so error out
+			errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for '%s%s%s'", owner, folder,
+				fileName))
+			return
+		}
+	}
+
+	// If a specific release was requested, and no commit ID was given, retrieve the commit ID matching the release
+	if commitID == "" && releaseName != "" {
+		releases, err := com.GetReleases(owner, folder, fileName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve releases for this file")
+			return
+		}
+		rls, ok := releases[releaseName]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, "Unknown release requested for this file")
+			return
+		}
+		commitID = rls.Commit
+	}
+
+	// Load the branch info for the file
+	branchHeads, err := com.GetBranches(owner, folder, fileName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve branch information for file")
+		return
+	}
+
+	// If a specific branch was requested and no commit ID was given, use the latest commit for the branch
+	if commitID == "" && branchName != "" {
+		c, ok := branchHeads[branchName]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, "Unknown branch requested for this file")
+			return
+		}
+		commitID = c.Commit
+	}
+
+	// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
+	// TODO: If we need to reduce database calls, we can probably make a function merging this, GetBranches(), and
+	// TODO  GetCommitList() above.  Potentially also the DBDetails() call below too.
+	if commitID == "" && tagName != "" {
+		tags, err := com.GetTags(owner, folder, fileName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for this file")
+			return
+		}
+		tg, ok := tags[tagName]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, "Unknown tag requested for this file")
+			return
+		}
+		commitID = tg.Commit
+	}
+
+	// If we still haven't determined the required commit ID, use the head commit of the default branch
+	if commitID == "" {
+		commitID, err = com.DefaultCommit(owner, folder, fileName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	// Retrieve the file details
+	// TODO: May need to create a 3D model specific version of this function
+	err = com.DBDetails(&pageData.DB, loggedInUser, owner, folder, fileName, commitID)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get the latest discussion and merge request count directly from PG, skipping the ones (incorrectly) stored in memcache
+	// TODO: Fix this ugliness
+	currentDisc, currentMRs, err := com.GetDiscussionAndMRCount(owner, folder, fileName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
+	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
+	if licSHA != "" {
+		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(owner, licSHA)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		pageData.DB.Info.Licence = "Not specified"
+	}
+
+	// Check if the file was starred by the logged in user
+	myStar, err := com.CheckDBStarred(loggedInUser, owner, folder, fileName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database star status")
+		return
+	}
+
+	// Check if the file is being watched by the logged in user
+	myWatch, err := com.CheckDBWatched(loggedInUser, owner, folder, fileName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
+		return
+	}
+
+	// Retrieve the details for the logged in user
+	var avatarURL string
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			avatarURL = ur.AvatarURL + "&s=48"
+		}
+	}
+
+	// Generate predictable cache keys for the metadata
+	mdataCacheKey := com.MetadataCacheKey("dwndb-meta", loggedInUser, owner, folder, fileName, commitID)
+
+	// If a cached version of the page data exists, use it
+	ok, err := com.GetCachedData(mdataCacheKey, &pageData)
+	if err != nil {
+		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
+	}
+	if ok {
+		// Restore the correct username
+		pageData.Meta.LoggedInUser = loggedInUser
+
+		// Restore the correct discussion and MR count
+		pageData.DB.Info.Discussions = currentDisc
+		pageData.DB.Info.MRs = currentMRs
+
+		// Set the selected branch name
+		if branchName != "" {
+			pageData.DB.Info.Branch = branchName
+		}
+
+		// Fill out the branch info
+		pageData.DB.Info.BranchList = []string{}
+		if branchName != "" {
+			// If a specific branch was requested, ensure it's the first entry of the drop down
+			pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, branchName)
+		}
+		for i := range branchHeads {
+			if i != branchName {
+				err = com.ValidateBranchName(i)
+				if err == nil {
+					pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
+				}
+			}
+		}
+
+		// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
+		bCheck := map[string]struct{}{}
+		for _, j := range pageData.DB.Info.BranchList {
+			_, ok := bCheck[j]
+			if !ok {
+				// The branch name value isn't in the map already, so add it
+				bCheck[j] = struct{}{}
+			} else {
+				// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
+				log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
+					"logged in user '%s'", j, owner, folder, fileName, loggedInUser)
+			}
+		}
+
+		// Retrieve the "forked from" information
+		frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(owner, folder, fileName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+			return
+		}
+		pageData.Meta.ForkOwner = frkOwn
+		pageData.Meta.ForkFolder = frkFol
+		pageData.Meta.ForkDatabase = frkDB
+		pageData.Meta.ForkDeleted = frkDel
+
+		// Get latest star and fork count
+		_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(owner, folder, fileName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Retrieve the status updates count for the logged in user
+		if loggedInUser != "" {
+			pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
+		// Ensure the correct Avatar URL is displayed
+		pageData.Meta.AvatarURL = avatarURL
+
+		// Render the page (using the caches)
+		pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
+		t := tmpl.Lookup("threeDModelPage")
+		err = t.Execute(w, pageData)
+		if err != nil {
+			log.Printf("Error: %s", err)
+		}
+		return
+	}
+
+	// Get a handle from Minio for the model file
+	sdb, err := com.OpenMinioObject(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
+		pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:])
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// TODO: Figure out how to embed the data in the page, so it can be viewed by the wasm viewer
+	sdb.Close()
+
+	// Retrieve correctly capitalised username for the user
+	usr, err := com.User(owner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
+	// Ensure the correct Avatar URL is displayed
+	pageData.Meta.AvatarURL = avatarURL
+
+	// Retrieve the status updates count for the logged in user
+	if loggedInUser != "" {
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	// Fill out various metadata fields
+	pageData.Meta.Database = fileName
+	pageData.Meta.Server = com.Conf.Web.ServerName
+	pageData.Meta.Title = fmt.Sprintf("%s %s %s", owner, folder, fileName)
+
+	// Retrieve default branch name details
+	if branchName == "" {
+		branchName, err = com.GetDefaultBranchName(owner, folder, fileName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
+			return
+		}
+	}
+
+	// Fill out the branch info
+	pageData.DB.Info.BranchList = []string{}
+	if branchName != "" {
+		// If a specific branch was requested, ensure it's the first entry of the drop down
+		pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, branchName)
+	}
+	for i := range branchHeads {
+		if i != branchName {
+			err = com.ValidateBranchName(i)
+			if err == nil {
+				pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
+			}
+		}
+	}
+
+	// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
+	bCheck := map[string]struct{}{}
+	for _, j := range pageData.DB.Info.BranchList {
+		_, ok := bCheck[j]
+		if !ok {
+			// The branch name value isn't in the map already, so add it
+			bCheck[j] = struct{}{}
+		} else {
+			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
+			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
+				"logged in user '%s'", j, owner, folder, fileName, loggedInUser)
+		}
+	}
+
+	pageData.DB.Info.Branch = branchName
+	pageData.DB.Info.Commits = branchHeads[branchName].CommitCount
+
+	// Retrieve the "forked from" information
+	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(owner, folder, fileName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+		return
+	}
+	pageData.Meta.ForkOwner = frkOwn
+	pageData.Meta.ForkFolder = frkFol
+	pageData.Meta.ForkDatabase = frkDB
+	pageData.Meta.ForkDeleted = frkDel
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+
+	// Update file star and watch status for the logged in user
+	pageData.MyStar = myStar
+	pageData.MyWatch = myWatch
+
+	// Render the full description as markdown
+	pageData.DB.Info.FullDesc = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
+
+	// Restore the correct discussion and MR count
+	pageData.DB.Info.Discussions = currentDisc
+	pageData.DB.Info.MRs = currentMRs
+
+	// Cache the page metadata
+	err = com.CacheData(mdataCacheKey, pageData, com.Conf.Memcache.DefaultCacheTime)
+	if err != nil {
+		log.Printf("%s: Error when caching page data: %v\n", pageName, err)
+	}
+
+	// Render the page
+	pageData.Meta.WebsiteName = com.Conf.Web.WebsiteName
+	t := tmpl.Lookup("threeDModelPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
