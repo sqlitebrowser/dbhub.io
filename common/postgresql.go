@@ -3194,7 +3194,7 @@ func StoreCommits(owner string, folder string, fileName string, commitList map[s
 }
 
 // Stores database details in PostgreSQL, and the database data itself in Minio.
-func StoreDatabase(owner string, folder string, fileName string, branches map[string]BranchEntry, c CommitEntry,
+func StoreFile(owner string, folder string, fileName string, branches map[string]BranchEntry, c CommitEntry,
 	pub bool, buf *os.File, sha string, dbSize int64, oneLineDesc string, fullDesc string, createDefBranch bool,
 	branchName string, sourceURL string) error {
 	// Store the database file
@@ -3613,7 +3613,7 @@ func ToggleDBStar(loggedInUser string, owner string, folder string, fileName str
 }
 
 // Toggle on or off the watching of a database by a user.
-func ToggleDBWatch(loggedInUser string, owner string, folder string, fileName string) error {
+func ToggleProjectWatch(loggedInUser string, owner string, folder string, fileName string) error {
 	// Check if the database is already being watched
 	watched, err := CheckDBWatched(loggedInUser, owner, folder, fileName)
 	if err != nil {

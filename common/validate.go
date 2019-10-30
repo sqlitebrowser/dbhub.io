@@ -29,10 +29,10 @@ func init() {
 	// Load validation code
 	Validate = valid.New()
 	Validate.RegisterValidation("branchortagname", checkBranchOrTagName)
-	Validate.RegisterValidation("dbname", checkDBName)
 	Validate.RegisterValidation("discussiontitle", checkDiscussTitle)
 	Validate.RegisterValidation("displayname", checkDisplayName)
 	Validate.RegisterValidation("fieldname", checkFieldName)
+	Validate.RegisterValidation("filename", checkFileName)
 	Validate.RegisterValidation("folder", checkFolder)
 	Validate.RegisterValidation("licence", checkLicence)
 	Validate.RegisterValidation("licencefullname", checkLicenceFullName)
@@ -48,13 +48,6 @@ func checkBranchOrTagName(fl valid.FieldLevel) bool {
 	return regexBraTagName.MatchString(fl.Field().String())
 }
 
-// Custom validation function for SQLite database names.
-// At the moment it just allows alphanumeric and ".-_()+ " chars, though it should probably be extended to cover any
-// valid file name
-func checkDBName(fl valid.FieldLevel) bool {
-	return regexDBName.MatchString(fl.Field().String())
-}
-
 // Custom validation function for discussion titles.
 // At the moment it just allows alpha and "^.-_/()'!@#&$+:;? " chars
 func checkDiscussTitle(fl valid.FieldLevel) bool {
@@ -67,11 +60,18 @@ func checkDisplayName(fl valid.FieldLevel) bool {
 	return regexDisplayName.MatchString(fl.Field().String())
 }
 
-// Custom validation function for SQLite field names
+// Custom validation function for SQLite field names.
 // At the moment it just allows alphanumeric and "^.-_/() " chars, though it should probably be extended to cover all
 // valid SQLite field name characters
 func checkFieldName(fl valid.FieldLevel) bool {
 	return regexFieldName.MatchString(fl.Field().String())
+}
+
+// Custom validation function for file names.
+// At the moment it just allows alphanumeric and ".-_()+ " chars, though it should probably be extended to cover any
+// valid file name
+func checkFileName(fl valid.FieldLevel) bool {
+	return regexDBName.MatchString(fl.Field().String())
 }
 
 // Custom validation function for folder names.
@@ -145,16 +145,6 @@ func ValidateCommitID(fieldName string) error {
 	return nil
 }
 
-// Validate the database name.
-func ValidateDB(fileName string) error {
-	err := Validate.Var(fileName, "required,dbname,min=1,max=256") // 256 char limit seems reasonable
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // Validate a provided full name.
 func ValidateDisplayName(fileName string) error {
 	err := Validate.Var(fileName, "required,displayname,min=1,max=80") // 80 char limit seems reasonable
@@ -178,6 +168,16 @@ func ValidateEmail(email string) error {
 // Validate the SQLite field name.
 func ValidateFieldName(fieldName string) error {
 	err := Validate.Var(fieldName, "required,fieldname,min=1,max=63") // 63 char limit seems reasonable
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Validate the file name.
+func ValidateFileName(fileName string) error {
+	err := Validate.Var(fileName, "required,filename,min=1,max=256") // 256 char limit seems reasonable
 	if err != nil {
 		return err
 	}
@@ -267,7 +267,7 @@ func ValidateUserDB(user string, db string) error {
 		return err
 	}
 
-	err = ValidateDB(db)
+	err = ValidateFileName(db)
 	if err != nil {
 		return err
 	}

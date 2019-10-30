@@ -238,9 +238,10 @@ type DBEntry struct {
 type DBTreeEntryType string
 
 const (
-	TREE     DBTreeEntryType = "tree"
-	DATABASE                 = "db"
-	LICENCE                  = "licence"
+	TREE          DBTreeEntryType = "tree"
+	DATABASE                      = "db"
+	LICENCE                       = "licence"
+	THREE_D_MODEL                 = "3dmodel"
 )
 
 type DBTree struct {

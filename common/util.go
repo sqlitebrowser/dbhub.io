@@ -2,6 +2,7 @@
 package common
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,7 +14,9 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -23,10 +26,10 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 	createBranch bool, branchName string, commitID string, public bool, licenceName string, commitMsg string,
 	sourceURL string, newDB io.Reader, serverSw string, lastModified time.Time, commitTime time.Time,
 	authorName string, authorEmail string, committerName string, committerEmail string, otherParents []string,
-	dbSha string) (numBytes int64, newCommitID string, err error) {
+	fileSha string) (numBytes int64, newCommitID string, err error) {
 
-	// Create a temporary file to store the database in
-	tempFile, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
+	// Create a temporary file to store the uploaded file in
+	tempFile, err := ioutil.TempFile(Conf.DiskCache.Directory, "upload-")
 	if err != nil {
 		log.Printf("Error creating temporary file. User: '%s', Database: '%s%s%s', Filename: '%s', Error: %v\n",
 			loggedInUser, owner, folder, fileName, tempFile.Name(), err)
@@ -37,20 +40,23 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 	// Delete the temporary file when this function finishes
 	defer os.Remove(tempFileName)
 
-	// Write the database to the temporary file, so we can try opening it with SQLite to verify it's ok
+	// Save the upload to the temporary file, so we can try opening it to verify it's ok
 	bufSize := 16 << 20 // 16MB
 	buf := make([]byte, bufSize)
 	numBytes, err = io.CopyBuffer(tempFile, newDB, buf)
 	if err != nil {
-		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
+		log.Printf("Error when writing the uploaded file to a temp file. User: '%s', File: '%s%s%s' "+
 			"Error: %v\n", loggedInUser, owner, folder, fileName, err)
 		return 0, "", err
 	}
 
-	// Sanity check the uploaded database, and get the list of tables in the database
-	sTbls, err := SanityCheck(tempFileName)
+	// Sanity check the uploaded file
+	ok, err := SanityCheck3DModel(tempFileName)
 	if err != nil {
 		return 0, "", err
+	}
+	if !ok {
+		return 0, "", errors.New("Uploaded file doesn't appear to be a 3D model")
 	}
 
 	// Return to the start of the temporary file
@@ -64,8 +70,8 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 	}
 
 	// Generate sha256 of the uploaded file
-	// TODO: Using an io.MultiWriter to feed data from newDB into both the temp file and this sha256 function at the
-	// TODO  same time might be a better approach here
+	// TODO: Using an io.MultiWriter to feed data into both the temp file and this sha256 function at the same time
+	// TODO  might be a better approach here
 	s := sha256.New()
 	_, err = io.CopyBuffer(s, tempFile, buf)
 	if err != nil {
@@ -74,12 +80,12 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 	sha := hex.EncodeToString(s.Sum(nil))
 
 	// If we were given a SHA256 for the file, make sure it matches our calculated one
-	if dbSha != "" && dbSha != sha {
+	if fileSha != "" && fileSha != sha {
 		return 0, "",
-			fmt.Errorf("SHA256 given (%s) for uploaded file doesn't match the calculated value (%s)", dbSha, sha)
+			fmt.Errorf("SHA256 given (%s) for uploaded file doesn't match the calculated value (%s)", fileSha, sha)
 	}
 
-	// Check if the database already exists in the system
+	// Check if the file already exists in the system
 	var defBranch string
 	needDefaultBranchCreated := false
 	var branches map[string]BranchEntry
@@ -88,13 +94,13 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 		return 0, "", err
 	}
 	if exists {
-		// Load the existing branchHeads for the database
+		// Load the existing branchHeads for the project
 		branches, err = GetBranches(loggedInUser, folder, fileName)
 		if err != nil {
 			return 0, "", err
 		}
 
-		// If no branch name was given, use the default for the database
+		// If no branch name was given, use the default for the project
 		defBranch, err = GetDefaultBranchName(loggedInUser, folder, fileName)
 		if err != nil {
 			return 0, "", err
@@ -106,22 +112,22 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 		// No existing branches, so this will be the first
 		branches = make(map[string]BranchEntry)
 
-		// Set the default branch name for the database
+		// Set the default branch name for the project
 		if branchName == "" {
 			branchName = "master"
 		}
 		needDefaultBranchCreated = true
 	}
 
-	// Create a dbTree entry for the individual database file
+	// Create a dbTree entry for the individual file
 	var e DBTreeEntry
-	e.EntryType = DATABASE
+	e.EntryType = THREE_D_MODEL
 	e.Name = fileName
 	e.Sha256 = sha
 	e.LastModified = lastModified.UTC()
 	e.Size = numBytes
 	if licenceName == "" || licenceName == "Not specified" {
-		// No licence was specified by the client, so check if the database is already in the system and
+		// No licence was specified by the client, so check if the file is already in the system and
 		// already has one.  If so, we use that.
 		if exists {
 			lic, err := CommitLicenceSHA(loggedInUser, folder, fileName, commitID)
@@ -129,11 +135,11 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 				return 0, "", err
 			}
 			if lic != "" {
-				// The previous commit for the database had a licence, so we use that for this commit too
+				// The previous commit for the file had a licence, so we use that for this commit too
 				e.LicenceSHA = lic
 			}
 		} else {
-			// It's a new database, and the licence hasn't been specified
+			// It's a new project, and the licence hasn't been specified
 			e.LicenceSHA, err = GetLicenceSha256FromName(loggedInUser, licenceName)
 			if err != nil {
 				return 0, "", err
@@ -141,7 +147,7 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 
 			// If no commit message was given, use a default one and include the info of no licence being specified
 			if commitMsg == "" {
-				commitMsg = "Initial database upload, licence not specified."
+				commitMsg = "Initial file upload, licence not specified."
 			}
 		}
 	} else {
@@ -154,10 +160,10 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 		// Generate an appropriate commit message if none was provided
 		if commitMsg == "" {
 			if !exists {
-				// A reasonable commit message for new database
-				commitMsg = fmt.Sprintf("Initial database upload, using licence %s.", licenceName)
+				// A reasonable commit message for new file
+				commitMsg = fmt.Sprintf("Initial file upload, using licence %s.", licenceName)
 			} else {
-				// The database already exists, so check if the licence has changed
+				// The file already exists, so check if the licence has changed
 				lic, err := CommitLicenceSHA(loggedInUser, folder, fileName, commitID)
 				if err != nil {
 					return 0, "", err
@@ -168,13 +174,13 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 					if err != nil {
 						return 0, "", err
 					}
-					commitMsg = fmt.Sprintf("Database licence changed from '%s' to '%s'.", l, licenceName)
+					commitMsg = fmt.Sprintf("Project licence changed from '%s' to '%s'.", l, licenceName)
 				}
 			}
 		}
 	}
 
-	// Create a dbTree structure for the database entry
+	// Create a dbTree structure for the entry
 	var t DBTree
 	t.Entries = append(t.Entries, e)
 	t.ID = CreateDBTreeID(t.Entries)
@@ -219,7 +225,7 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 		c.OtherParents = otherParents
 	}
 
-	// If the database already exists, determine the commit ID to use as the parent
+	// If the file already exists, determine the commit ID to use as the parent
 	if exists {
 		b, ok := branches[branchName]
 		if ok {
@@ -266,7 +272,7 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 				c.Parent = b.Commit
 			}
 		} else {
-			// The branch name given isn't (yet) part of the database.  If we've been told to create the branch, then
+			// The branch name given isn't (yet) part of the file.  If we've been told to create the branch, then
 			// we use the commit also passed (a requirement!) as the parent.  Otherwise, we error out
 			if !createBranch {
 				return 0, "", errors.New("Error when looking up branch details")
@@ -278,7 +284,7 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 	// Create the commit ID for the new upload
 	c.ID = CreateCommitID(c)
 
-	// If the database already exists, count the number of commits in the new branch
+	// If the project already exists, count the number of commits in the new branch
 	commitCount := 1
 	if exists {
 		commitList, err := GetCommitList(loggedInUser, folder, fileName)
@@ -292,7 +298,7 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 			commitCount++
 			c2, ok = commitList[c2.Parent]
 			if !ok {
-				m := fmt.Sprintf("Error when counting commits in branch '%s' of database '%s%s%s'\n", branchName,
+				m := fmt.Sprintf("Error when counting commits in branch '%s' of project '%s%s%s'\n", branchName,
 					loggedInUser, folder, fileName)
 				log.Print(m)
 				return 0, "", errors.New(m)
@@ -307,21 +313,21 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 		return 0, "", err
 	}
 	if newOff != 0 {
-		return 0, "", errors.New("Seeking to start of temporary database file didn't work")
+		return 0, "", errors.New("Seeking to start of temporary file didn't work")
 	}
 
-	// Update the branch with the commit for this new database upload & the updated commit count for the branch
+	// Update the branch with the commit for this new file upload & the updated commit count for the branch
 	b := branches[branchName]
 	b.Commit = c.ID
 	b.CommitCount = commitCount
 	branches[branchName] = b
-	err = StoreDatabase(loggedInUser, folder, fileName, branches, c, public, tempFile, sha, numBytes, "",
+	err = StoreFile(loggedInUser, folder, fileName, branches, c, public, tempFile, sha, numBytes, "",
 		"", needDefaultBranchCreated, branchName, sourceURL)
 	if err != nil {
 		return 0, "", err
 	}
 
-	// If the database already existed, update it's contributor count
+	// If the file already existed, update it's contributor count
 	if exists {
 		err = UpdateContributorsCount(loggedInUser, folder, fileName)
 		if err != nil {
@@ -329,8 +335,8 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 		}
 	}
 
-	// If a new branch was created, then update the branch count for the database
-	// Note, this could probably be merged into the StoreDatabase() call above, but it should be good enough for now
+	// If a new branch was created, then update the branch count for the project
+	// Note, this could probably be merged into the StoreFile() call above, but it should be good enough for now
 	if createBranch {
 		err = StoreBranches(owner, folder, fileName, branches)
 		if err != nil {
@@ -338,31 +344,9 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 		}
 	}
 
-	// If the newly uploaded database is on the default branch, check if the default table is present in this version
-	// of the database.  If it's not, we need to clear the default table value
-	if branchName == defBranch {
-		defTbl, err := GetDefaultTableName(owner, folder, fileName)
-		if err != nil {
-			return 0, "", err
-		}
-		defFound := false
-		for _, j := range sTbls {
-			if j == defTbl {
-				defFound = true
-			}
-		}
-		if !defFound {
-			// The default table is present in the previous commit, so we clear the default table value
-			err = StoreDefaultTableName(owner, folder, fileName, "")
-			if err != nil {
-				return 0, "", err
-			}
-		}
-	}
-
-	// If the database didn't previous exist, add the user to the watch list for the database
+	// If the project didn't previously exist, add the user to the watch list for the project
 	if !exists {
-		err = ToggleDBWatch(loggedInUser, owner, folder, fileName)
+		err = ToggleProjectWatch(loggedInUser, owner, folder, fileName)
 		if err != nil {
 			return 0, "", err
 		}
@@ -381,23 +365,23 @@ func AddFile(r *http.Request, loggedInUser string, owner string, folder string, 
 		return 0, "", err
 	}
 
-	// Invalidate the memcached entry for the database (only really useful if we're updating an existing database)
+	// Invalidate the memcached entry for the file (only really useful if we're updating an existing file)
 	err = InvalidateCacheEntry(loggedInUser, loggedInUser, "/", fileName, "") // Empty string indicates "for all versions"
 	if err != nil {
-		// Something went wrong when invalidating memcached entries for the database
+		// Something went wrong when invalidating memcached entries for the file
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
 		return 0, "", err
 	}
 
-	// Invalidate any memcached entries for the previous highest version # of the database
+	// Invalidate any memcached entries for the previous highest version # of the file
 	err = InvalidateCacheEntry(loggedInUser, loggedInUser, folder, fileName, c.ID) // And empty string indicates "for all commits"
 	if err != nil {
-		// Something went wrong when invalidating memcached entries for any previous database
+		// Something went wrong when invalidating memcached entries for any previous file
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
 		return 0, "", err
 	}
 
-	// Database successfully uploaded
+	// File successfully uploaded
 	return numBytes, c.ID, nil
 }
 
@@ -937,6 +921,40 @@ func RandomString(length int) string {
 	}
 
 	return string(randomString)
+}
+
+// Performs basic sanity checks of an uploaded 3D model file.
+func SanityCheck3DModel(fileName string) (ok bool, err error) {
+	// For now, we validate the model file by running assimp manually instead of using the ASSIMP Go bindings.  This is
+	// because the Go bindings can crash in native Assimp (C++) code if it doesn't like the model file, which we'd have
+	// to handle.  Hopefully (!) calling out like this works well enough, and doesn't lead to bad problems.
+	cmd := exec.Command("/usr/local/bin/assimp", "info", fileName)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err = cmd.Run()
+	if err != nil {
+		return
+	}
+
+	// Check the output of ASSIMP, to make sure the file is a 3D model
+	numNodes := 0
+	scanner := bufio.NewScanner(&out)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "Nodes:") {
+			// Extract the # given on the "Nodes" line
+			nodesLn := strings.Fields(line)
+			if len(nodesLn) != 2 {
+				return
+			}
+			numNodes, err = strconv.Atoi(nodesLn[1])
+		}
+	}
+	if numNodes != 0 {
+		// Assimp found 3D model nodes in the file, so this file passes validation
+		ok = true
+	}
+	return
 }
 
 // Checks if a status update for the user exists for a given discussion or MR, and if so then removes it

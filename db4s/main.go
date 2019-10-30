@@ -345,7 +345,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = com.ValidateDB(fileName)
+	err = com.ValidateFileName(fileName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -899,7 +899,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 	// Validate the database name
 	targetDB := handler.Filename
-	err = com.ValidateDB(targetDB)
+	err = com.ValidateFileName(targetDB)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -428,68 +428,6 @@ func ReadSQLiteDBRedash(sdb *sqlite.Conn, dbTable string) (dash RedashTableData,
 	return dash, nil
 }
 
-// Performs basic sanity checks of an uploaded database.
-func SanityCheck(fileName string) (tables []string, err error) {
-	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
-	sqliteDB, err := sqlite.Open(fileName, sqlite.OpenReadOnly)
-	if err != nil {
-		log.Printf("Couldn't open database when sanity checking upload: %s", err)
-		err = fmt.Errorf("Internal error when uploading database")
-		return
-	}
-	defer sqliteDB.Close()
-
-	// Run an integrity check on the uploaded database
-	var ok bool
-	var results []string
-	err = sqliteDB.Select("PRAGMA integrity_check", func(s *sqlite.Stmt) error {
-		// Retrieve a row from the integrity check result
-		var a string
-		if err = s.Scan(&a); err != nil {
-			// Error where reading the row, so ensure the integrity check returns a failure result
-			ok = false
-			return err
-		}
-
-		// If the returned row was the text string "ok", then we mark the integrity check as passed.  Any other
-		// string or set of strings means the check failed
-		switch a {
-		case "ok":
-			ok = true
-		default:
-			ok = false
-			results = append(results, a)
-		}
-		return nil
-	})
-
-	// Check for a failure
-	if !ok || err != nil {
-		log.Printf("Error when running an integrity check on the database: %s\n", err)
-		if len(results) > 0 {
-			for _, b := range results {
-				log.Printf("  * %v\n", b)
-			}
-		}
-		return
-	}
-
-	// Ensure the uploaded database has tables.  An empty database serves no useful purpose.
-	tables, err = sqliteDB.Tables("")
-	if err != nil {
-		log.Printf("Error retrieving table names when sanity checking upload: %s", err)
-		err = fmt.Errorf("Error when sanity checking file.  Possibly encrypted or not a database?")
-		return
-	}
-	if len(tables) == 0 {
-		// No table names were returned, so abort
-		log.Print("The attempted upload failed, as it doesn't seem to have any tables.")
-		err = fmt.Errorf("Database has no tables?")
-		return
-	}
-	return
-}
-
 // Returns the list of tables and view in the SQLite database.
 func Tables(sdb *sqlite.Conn, fileName string) ([]string, error) {
 	// TODO: It might be useful to cache this info in PG or memcached

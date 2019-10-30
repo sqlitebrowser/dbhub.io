@@ -753,7 +753,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	err = com.ValidateDB(srcDBName)
+	err = com.ValidateFileName(srcDBName)
 	if err != nil {
 		log.Printf("Validation failed for database name '%s': %s", srcDBName, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -817,7 +817,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	err = com.ValidateDB(destDBName)
+	err = com.ValidateFileName(destDBName)
 	if err != nil {
 		log.Printf("Validation failed for database name '%s': %s", destDBName, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -2492,7 +2492,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	err = com.ValidateDB(srcDBName)
+	err = com.ValidateFileName(srcDBName)
 	if err != nil {
 		log.Printf("Validation failed for database name '%s': %s", srcDBName, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -2556,7 +2556,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	err = com.ValidateDB(destDBName)
+	err = com.ValidateFileName(destDBName)
 	if err != nil {
 		log.Printf("Validation failed for database name '%s': %s", destDBName, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -3070,7 +3070,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Add the user to the watch list for the forked database
 	if !exists {
-		err = com.ToggleDBWatch(loggedInUser, loggedInUser, folder, fileName)
+		err = com.ToggleProjectWatch(loggedInUser, loggedInUser, folder, fileName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -4034,7 +4034,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If set, validate the new database name
 	if newName != fileName {
-		err := com.ValidateDB(newName)
+		err := com.ValidateFileName(newName)
 		if err != nil {
 			log.Printf("Validation failed for new database name '%s': %s", newName, err)
 			errorPage(w, r, http.StatusBadRequest, "New database name failed validation")
@@ -5622,7 +5622,7 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	defer tempFile.Close()
 
 	// Validate the file name
-	err = com.ValidateDB(fileName)
+	err = com.ValidateFileName(fileName)
 	if err != nil {
 		log.Printf("%s: Validation failed for file name: %s", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Invalid file name")
@@ -5679,7 +5679,7 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s: Username: '%s', file '%s%s%s' uploaded', bytes: %v\n", pageName, loggedInUser,
 		loggedInUser, folder, fileName, numBytes)
 
-	// Database upload succeeded.  Bounce the user to the page for their new database
+	// Upload succeeded.  Bounce the user to the page for their new upload
 	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, "/", fileName), http.StatusSeeOther)
 }
 
@@ -5721,7 +5721,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Toggle on or off the watching of a database by a user
-	err = com.ToggleDBWatch(loggedInUser, owner, folder, fileName)
+	err = com.ToggleProjectWatch(loggedInUser, owner, folder, fileName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())

@@ -26,7 +26,7 @@ func GetDatabase(r *http.Request, allowGet bool) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = ValidateDB(fileName)
+	err = ValidateFileName(fileName)
 	if err != nil {
 		log.Printf("Validation failed for database name '%s': %s", fileName, err)
 		return "", errors.New("Invalid database name")
