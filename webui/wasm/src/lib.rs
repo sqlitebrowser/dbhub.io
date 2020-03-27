@@ -25,6 +25,20 @@ pub struct DbData {
     Offset: i32,
 }
 
+struct DrawObject {
+    name: String,
+    num: u32,
+}
+
+impl DrawObject {
+    pub fn new(name: String, num: u32) -> Self {
+        DrawObject {
+            name,
+            num
+        }
+    }
+}
+
 const GOLDEN_RATIO_CONJUGATE: f64 = 0.6180;
 const DEBUG: bool = false;
 
@@ -48,10 +62,6 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue) {
     // * Import the data from the web page *
     let data: DbData = js_data.into_serde().unwrap();
     let rows = data.Records;
-
-    // TODO: Sort the categories so the draw order of barcharts is stable
-
-    // TODO: Sorting the categories in some more useful way can come later
 
     // Count the number of items for each category
     let mut highest_val = 0;
@@ -79,6 +89,25 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue) {
             );
         }
     }
+
+    // * Sort the category data, so the draw order of bars doesn't change when the browser window is resized *
+
+    let mut draw_order: Vec<DrawObject> = vec![];
+    for (label, num) in &item_counts {
+        draw_order.push(DrawObject::new(label.to_string(), num.clone()));
+    }
+
+    // FIXME: Allow the user to choose from various sort orders
+
+    // Sort by item total
+    // draw_order.sort_by(|a, b| b.num.cmp(&a.num));
+
+    // Sort by category name
+    draw_order.sort_by(|a, b| b.name.cmp(&a.name));
+
+    // Reverse the sort order
+    // FIXME: This should allow for easy toggling by the user of up/down sort ordering
+    draw_order.reverse();
 
     // Determine the highest count value, so we can automatically size the graph to fit
     for (_cat, cnt) in &item_counts {
@@ -195,9 +224,11 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue) {
     ctx.set_stroke_style(&"black".into());
     ctx.set_text_align(&"center");
     let mut font_size;
-    for (label, num) in &item_counts {
+    for bar in &draw_order {
         // Draw the bar
-        let bar_height = *num as f64 * unit_size;
+        let label = &bar.name;
+        let num = bar.num;
+        let bar_height = num as f64 * unit_size;
         hue += GOLDEN_RATIO_CONJUGATE;
         hue = hue % 1.0;
         ctx.set_fill_style(&hsv_to_rgb(hue, 0.5, 0.95).into());
