@@ -212,15 +212,15 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.fill_rect(0.0, 0.0, width, height);
 
     // Draw y axis marker lines
-    let y_marker_font_size = 12.0;
+    let y_marker_font_size = 18.0;
     let y_marker_left = axis_left - axis_thickness - text_gap - 5.0;
     ctx.set_stroke_style(&"rgb(220, 220, 220)".into());
     ctx.set_fill_style(&"black".into());
-    ctx.set_font(&format!("{}", y_marker_font_size));
+    ctx.set_font(&format!("{}px serif", y_marker_font_size));
     ctx.set_text_align(&"right");
     let mut i = y_base;
     while i >= y_top {
-        let marker_label = &format!("{}", (y_base - i) / y_unit);
+        let marker_label = &format!("{} ", ((y_base - i) / y_unit).round());
         let marker_metrics = ctx.measure_text(&marker_label).unwrap();
         let y_marker_width = marker_metrics.width();
         ctx.begin_path();
