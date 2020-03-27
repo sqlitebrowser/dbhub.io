@@ -48,6 +48,7 @@
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
         <div class="col-md-12">
             <label id="viewdata" style="font-weight: 600; font-family: 'arial black';"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data"><i class="fa fa-database"></i> Data</a></label> &nbsp; &nbsp; &nbsp;
+            <label id="viewvis" style="font-weight: 600; font-family: 'arial black';"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise"><i class="fa fa-bar-chart"></i> Visualise</a></label> &nbsp; &nbsp; &nbsp;
             <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
             <label id="viewmrs" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]

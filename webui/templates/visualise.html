@@ -1,6 +1,6 @@
-[[ define "databasePage" ]]
+[[ define "visualisePage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="databaseView">
+<html ng-app="DBHub" ng-controller="visualiseView">
 [[ template "head" . ]]
 <body>
 <style>
@@ -11,6 +11,12 @@
 
     .colHeader:hover {
         text-decoration: underline;
+    }
+
+    #barchart {
+        opacity:1.0;
+        width: 100%;
+        height:100%;
     }
 </style>
 [[ template "header" . ]]
@@ -57,8 +63,8 @@
     </div>
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
         <div class="col-md-6">
-            <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-database"></i> Data</label> &nbsp; &nbsp; &nbsp;
-            <label id="viewvis" style="font-weight: 600; font-family: 'arial black';"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise"><i class="fa fa-bar-chart"></i> Visualise</a></label> &nbsp; &nbsp; &nbsp;
+            <label id="viewdata" style="font-weight: 600; font-family: 'arial black';"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data"><i class="fa fa-database"></i> Data</a></label> &nbsp; &nbsp; &nbsp;
+            <label id="viewvis" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-bar-chart"></i> Visualise</label> &nbsp; &nbsp; &nbsp;
             <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
             <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
@@ -192,40 +198,7 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            <div style="max-width: 100%; overflow: auto; border: 1px solid #DDD; border-radius: 7px 7px 0 0;">
-                <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0; padding-bottom: 0;">
-                    <thead>
-                        <tr>
-                            <th ng-repeat="header in db.ColNames" style="padding: 7px 0 6px 6px;">
-                                <a href="" class="colHeader" ng-click="sortOrder(header)"><span id="col{{ header }}" ng-bind-html="addArrow(header)"></span></a>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr ng-repeat="row in db.Records">
-                            <td ng-repeat="val in row" dir="auto"><pre style="background-color: transparent; border: none; padding: 0px; margin: 0px;" ng-bind-html="val.Value | fixSpaces"></pre></td>
-                        </tr>
-                        <tr ng-if="db.Records === null">
-                            <td style="text-align: center;" colspan="{{ db.ColCount }}">Empty table or view</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div style="max-width: 100%; overflow: auto; border: 1px solid #DDD; border-radius: 0 0 7px 7px;">
-                <table class="table table-responsive" style="margin: 0;">
-                    <thead>
-                    <tr>
-                        <th colspan="{{ db.ColCount }}" style="text-align: center; padding: 0;">
-                            <span id="tbltop" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToTop()">⏫</a></span>
-                            <span id="tblup" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageBack()">▲</a></span>
-                            <span style="vertical-align: middle;" ng-bind-html="totalRowCount()"></span>
-                            <span id="tbldown" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="pageForward()">▼</a></span>
-                            <span id="tblbottom" style="font-size: x-large; vertical-align: middle; margin-bottom: 10px;"><a href="" style="color: black; text-decoration: none;" ng-click="goToBottom()">⏬</a></span>
-                        </th>
-                    </tr>
-                    </thead>
-                </table>
-            </div>
+            <canvas id="barchart">Your browser doesn't appear to support the canvas tag.</canvas>
         </div>
     </div>
     <div class="row" style="border: none;">
@@ -251,9 +224,37 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    // Pre-filled table row data
+    let barChartData = { Tablename: "[[ .Data.Tablename ]]",
+        Records: [[ .Data.Records ]],
+        ColNames: [[ .Data.ColNames ]],
+        RowCount: [[ .Data.RowCount ]],
+        ColCount: [[ .Data.ColCount ]],
+        SortCol:  [[ .Data.SortCol ]],
+        SortDir:  [[ .Data.SortDir ]],
+        Offset:   [[ .Data.Offset ]],
+    }
+</script>
+<script src="/wasm/dbhub_vis.js"></script>
+<script type="module">
+    const { draw_bar_chart } = wasm_bindgen;
+    let palette = 1.0;
+    async function run() {
+        await wasm_bindgen('/wasm/dbhub_vis_bg.wasm');
+        draw_bar_chart(palette, barChartData);
+    }
+    run();
 
+    // Handle browser resize events
+    function resizeEvent() {
+        draw_bar_chart(palette, barChartData);
+    }
+    window.onresize = resizeEvent; // Redraw the bar chart when the window is resized
+</script>
+
+<script>
     // Simple filter to ensure '&nbsp;' is shown as a non-breaking space
+    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.filter("fixSpaces", ['$sce', '$sanitize', function($sce, $sanitize) {
         return function(htmlCode) {
             if (htmlCode == "") {
@@ -263,7 +264,7 @@
         }
     }]);
 
-    app.controller('databaseView', function($scope, $http) {
+    app.controller('visualiseView', function($scope, $http) {
         // Pre-filled database metadata
         $scope.meta = {
             Branch:       "[[ .DB.Info.Branch ]]",
@@ -306,46 +307,17 @@
             $scope.meta.Public = "Private";
         }
 
-        // Pre-filled table row data
-        $scope.db = { Tablename: "[[ .Data.Tablename ]]",
-            Records: [[ .Data.Records ]],
-            ColNames: [[ .Data.ColNames ]],
-            RowCount: [[ .Data.RowCount ]],
-            ColCount: [[ .Data.ColCount ]],
-            SortCol:  [[ .Data.SortCol ]],
-            SortDir:  [[ .Data.SortDir ]],
-            Offset:   [[ .Data.Offset ]],
-        }
-
-        // Add an appropriate direction arrow (▲/▼) to a column heading
-        $scope.addArrow = function(header) {
-            if (header == $scope.db.SortCol) {
-                if ($scope.db.SortDir == "ASC") {
-                    return header + " <i class=\"fa fa-sort-amount-asc\"></i>";
-                }  else {
-                    return header + " <i class=\"fa fa-sort-amount-desc\"></i>";
-                }
-            } else {
-                return header;
-            }
-        };
-
-        // Retrieves the branch being viewed
-        $scope.changeBranch = function(newbranch) {
-            window.location = "/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch=" + newbranch;
-        };
-
         // Retrieves the table data for a given table
         $scope.changeTable = function(newtable) {
             $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
                 newtable).then(
                     function (response) {
                         // Update table data
-                        $scope.db = response.data;
+                        barChartData = response.data;
 
                         // Set a default sort direction if none present
-                        if ($scope.db.SortDir == "") {
-                            $scope.db.SortDir = "ASC";
+                        if (barChartData.SortDir == "") {
+                            barChartData.SortDir = "ASC";
                         }
 
                         // Show or hide pagination buttons
@@ -375,173 +347,14 @@
             window.location = "/forks/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
         };
 
-        // Moves the table view forward, so the last row is visible
-        $scope.goToBottom = function() {
-            // Don't page down if we're at the end
-            var lastPage = Number($scope.db.RowCount) - Number($scope.meta.MaxRows);
-            if ($scope.db.Offset >= lastPage)
-            {
-                return;
-            }
-
-            var newOffset = Number($scope.db.RowCount) - Number($scope.meta.MaxRows);
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
-                $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
-                function (response) {
-                    // Retrieve the new table data range
-                    $scope.db = response.data;
-
-                    // Update the displayed range information
-                    $scope.db.Offset = Number(newOffset);
-
-                    // Update the displayed arrows
-                    $scope.updateTableArrows();
-                }
-            )
-        };
-
-        // Moves the table view back to the top row
-        $scope.goToTop = function() {
-            // Don't do anything if we're already at the start
-            if ($scope.db.Offset <= 1) {
-                return;
-            }
-
-            // Retrieve the updated page data
-            var newOffset = 0;
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
-                $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
-                function (response) {
-                    // Retrieve the new table data range
-                    $scope.db = response.data;
-
-                    // Update the displayed range information
-                    $scope.db.Offset = Number(newOffset);
-
-                    // Update the displayed arrows
-                    $scope.updateTableArrows();
-                }
-            )
-        };
-
-        // Refreshes the table data, moving backwards one page
-        $scope.pageBack = function() {
-            // Don't page up if we're at the start
-            if ($scope.db.Offset <= 1) {
-                return;
-            }
-
-            // If we're not quite at the start, but less than 1 page (aka MaxRows) from it, then paging up should
-            // just move us to the start
-            var newOffset = 0;
-            if ($scope.db.Offset > 0 && $scope.db.Offset < $scope.meta.MaxRows) {
-                // Move to the top
-                newOffset = 0;
-            } else {
-                // Move up a full page
-                newOffset = Number($scope.db.Offset) - Number($scope.meta.MaxRows);
-            }
-
-            // Retrieve the updated page data
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
-                $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
-                    function (response) {
-                        // Retrieve the new table data range
-                        $scope.db = response.data;
-
-                        // Update the displayed range information
-                        $scope.db.Offset = Number(newOffset);
-
-                        // Update the displayed arrows
-                        $scope.updateTableArrows();
-                    }
-                )
-        };
-
-        // Refreshes the table data, moving forwards one page
-        $scope.pageForward = function() {
-            // Don't page down if we're at the end
-            var lastPage = Number($scope.db.RowCount) - Number($scope.meta.MaxRows);
-            if ($scope.db.Offset >= lastPage)
-            {
-                return;
-            }
-
-            var newOffset = Number($scope.db.Offset) + Number($scope.meta.MaxRows);
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
-                $scope.db.Tablename+"&sort="+$scope.db.SortCol+"&dir="+$scope.db.SortDir+"&offset="+newOffset).then(
-                    function (response) {
-                        // Retrieve the new table data range
-                        $scope.db = response.data;
-
-                        // Update the displayed range information
-                        $scope.db.Offset = Number(newOffset);
-
-                        // Update the displayed arrows
-                        $scope.updateTableArrows();
-                    }
-                )
-        };
-
-        // Updates displayed table data, using new sort order
-        if ($scope.db.SortDir == "") {
-            $scope.db.SortDir = "ASC";
-        }
-        $scope.sortOrder = function(newSortCol) {
-            // If the existing sort column has been clicked again, we reverse the sort direction
-            if (newSortCol == $scope.db.SortCol) {
-                if ($scope.db.SortDir == "ASC") {
-                    $scope.db.SortDir = "DESC";
-                } else {
-                    $scope.db.SortDir = "ASC";
-                }
-            } else {
-                // We're changing sort column, so remove the direction arrow from the present sort column header
-                if ($scope.db.SortCol != "") {
-                    var presentHeader = document.getElementById("col" + $scope.db.SortCol);
-                    presentHeader.textContent = $scope.db.SortCol;
-                }
-
-                // Use the clicked on heading as the new sort column
-                $scope.db.SortCol = newSortCol;
-                $scope.db.SortDir = "ASC";
-            }
-
-            // Retrieve updated table data
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
-                $scope.db.Tablename+"&sort="+newSortCol+"&dir="+$scope.db.SortDir+"&offset="+$scope.db.Offset).then(
-                function (response) { $scope.db = response.data; });
-
-            // Add a direction arrow (▲/▼) to the new sort column heading, showing the sort direction
-            var newHeader = document.getElementById("col" + newSortCol);
-            if ($scope.db.SortDir == "ASC") {
-                newHeader.textContent = newSortCol + " <i class=\"fa fa-sort-amount-asc\"></i>";
-            } else {
-                newHeader.textContent = newSortCol + " <i class=\"fa fa-sort-amount-desc\"></i>";
-            }
-        };
-
         // Sends the user to the stars page for the database
         $scope.starsPage = function() {
             window.location = "/stars/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
         };
 
-        // Returns a text string with row count information for the table
-        $scope.totalRowCount = function() {
-            var start = $scope.db.Offset;
-            var end = Number($scope.db.Offset) + Number($scope.meta.MaxRows);
-            var total = $scope.db.RowCount;
-
-            // Update the end value if it's pointing past the last row
-            if (end > total) {
-                end = total;
-            }
-            return start.toLocaleString() + "-" + end.toLocaleString() + " of " + total.toLocaleString() + " total rows";
-        };
-
         // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
         $scope.toggleStars = function() {
-            if ($scope.meta.Loggedin != "true") {
+            if ($scope.meta.Loggedin !== "true") {
                 // User needs to be logged in
                 lock.show();
                 return;
@@ -549,9 +362,9 @@
             $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
                 .then(function (response) {
                     var tempval = response.data;
-                    if (tempval != "-1") {
+                    if (tempval !== "-1") {
                         // Update star button text
-                        if ($scope.meta.MyStar != "true") {
+                        if ($scope.meta.MyStar !== "true") {
                             $scope.meta.MyStar = "true";
                         } else {
                             $scope.meta.MyStar = "false";
@@ -566,7 +379,7 @@
 
         // Turns on watching for a database
         $scope.toggleWatchers = function() {
-            if ($scope.meta.Loggedin != "true") {
+            if ($scope.meta.Loggedin !== "true") {
                 // User needs to be logged in
                 lock.show();
                 return;
@@ -576,7 +389,7 @@
             $http.get("/x/watch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
                 .then(function (response) {
                     // Update watch button text
-                    if ($scope.meta.MyWatch != "true") {
+                    if ($scope.meta.MyWatch !== "true") {
                         $scope.meta.MyWatch = "true";
                     } else {
                         $scope.meta.MyWatch = "false";
@@ -591,7 +404,7 @@
         // Update star button text to say "Stars" or "Unstar"
         $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
         $scope.updateStarsText = function() {
-            if ($scope.meta.MyStar != "true") {
+            if ($scope.meta.MyStar !== "true") {
                 $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
             } else {
                 $scope.starsText = "<i class=\"fa fa-star\"></i> Unstar";
@@ -599,55 +412,16 @@
         };
         $scope.updateStarsText();
 
-        // Updates the shown/hidden state of the table arrows
-        $scope.updateTableArrows = function() {
-            var bottomArrow = document.getElementById("tblbottom");
-            var downArrow = document.getElementById("tbldown");
-            var topArrow = document.getElementById("tbltop");
-            var upArrow = document.getElementById("tblup");
-
-            // Display up arrow only when needed
-            if ($scope.db.Offset > 0) {
-                topArrow.style.visibility = "visible";
-                upArrow.style.visibility = "visible";
-            } else {
-                topArrow.style.visibility = "hidden";
-                upArrow.style.visibility = "hidden";
-            }
-
-            // Display down arrow only when needed
-            var pageRow = Number($scope.db.Offset) + Number($scope.meta.MaxRows);
-            var totalRows = Number($scope.db.RowCount);
-            if (pageRow < totalRows) {
-                bottomArrow.style.visibility = "visible";
-                downArrow.style.visibility = "visible";
-            } else {
-                bottomArrow.style.visibility = "hidden";
-                downArrow.style.visibility = "hidden";
-            }
-        };
-        $scope.updateTableArrows();
-
         // Update watchers button text to say "Watch" or "Unwatch"
         $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
         $scope.updateWatchersText = function() {
-            if ($scope.meta.MyWatch != "true") {
+            if ($scope.meta.MyWatch !== "true") {
                 $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
             } else {
                 $scope.watchersText = "<i class=\"fa fa-eye\"></i> Unwatch";
             }
         };
         $scope.updateWatchersText();
-
-//        // Switch to the upload database page
-//        $scope.uploadForm = function() {
-//            if ($scope.meta.Loggedin != "true") {
-//                // User needs to be logged in
-//                lock.show();
-//            } else {
-//                window.location = '/upload/';
-//            }
-//        };
 
         // Sends the user to the watchers page for the database
         $scope.watchersPage = function() {
