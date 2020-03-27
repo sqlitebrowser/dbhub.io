@@ -318,6 +318,9 @@
             [[ end ]]
         }
 
+        // Set the table name
+        $scope.db = { Tablename: "[[ .Data.Tablename ]]"};
+
         // Set the displayed public/private value
         if ("[[ .DB.Info.Public ]]" === "true") {
             $scope.meta.Public = "Public";
