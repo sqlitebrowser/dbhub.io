@@ -39,6 +39,16 @@ impl DrawObject {
     }
 }
 
+enum OrderBy {
+    CategoryName = 0,
+    CategoryValue = 1,
+}
+
+enum OrderDirection {
+    OrderDescending = 0,
+    OrderAscending = 1,
+}
+
 const GOLDEN_RATIO_CONJUGATE: f64 = 0.6180;
 const DEBUG: bool = false;
 
@@ -55,7 +65,7 @@ fn document() -> web_sys::Document {
 
 // draw_bar_chart draws a simple bar chart, with a colour palette generated from the provided seed value
 #[wasm_bindgen]
-pub fn draw_bar_chart(palette: f64, js_data: &JsValue) {
+pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_direction: u32) {
     // Show better panic messages on the javascript console.  Useful for development
     panic::set_hook(Box::new(console_error_panic_hook::hook));
 
@@ -90,25 +100,6 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue) {
         }
     }
 
-    // * Sort the category data, so the draw order of bars doesn't change when the browser window is resized *
-
-    let mut draw_order: Vec<DrawObject> = vec![];
-    for (label, num) in &item_counts {
-        draw_order.push(DrawObject::new(label.to_string(), num.clone()));
-    }
-
-    // FIXME: Allow the user to choose from various sort orders
-
-    // Sort by item total
-    // draw_order.sort_by(|a, b| b.num.cmp(&a.num));
-
-    // Sort by category name
-    draw_order.sort_by(|a, b| b.name.cmp(&a.name));
-
-    // Reverse the sort order
-    // FIXME: This should allow for easy toggling by the user of up/down sort ordering
-    draw_order.reverse();
-
     // Determine the highest count value, so we can automatically size the graph to fit
     for (_cat, cnt) in &item_counts {
         if cnt > &highest_val {
@@ -117,6 +108,27 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue) {
     }
     if DEBUG {
         web_sys::console::log_2(&"Highest count: ".into(), &highest_val.into());
+    }
+
+    // * Sort the category data, so the draw order of bars doesn't change when the browser window is resized *
+
+    let mut draw_order: Vec<DrawObject> = vec![];
+    for (label, num) in &item_counts {
+        draw_order.push(DrawObject::new(label.to_string(), num.clone()));
+    }
+
+    // Sort by the users chosen sort order
+    if order_by == OrderBy::CategoryName as u32 {
+        // Sort by category name
+        draw_order.sort_by(|a, b| b.name.cmp(&a.name));
+    } else {
+        // Sort by item total
+        draw_order.sort_by(|a, b| b.num.cmp(&a.num));
+    }
+
+    // Reverse the sort order if desired
+    if order_direction == OrderDirection::OrderDescending as u32 {
+        draw_order.reverse();
     }
 
     // * Canvas setup *

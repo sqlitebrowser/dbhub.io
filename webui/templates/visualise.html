@@ -4,21 +4,32 @@
 [[ template "head" . ]]
 <body>
 <style>
-    .colHeader {
-        color: #333333;
-        text-decoration: none;
-    }
-
-    .colHeader:hover {
-        text-decoration: underline;
-    }
-
     #barchart {
         opacity:1.0;
         width: 100%;
         height:100%;
     }
 </style>
+<script src="/wasm/dbhub_vis.js"></script>
+<script>
+    const { draw_bar_chart } = wasm_bindgen;
+    let palette = 1.0;
+    let barChartOrderBy = 0;
+    let barChartOrderDirection = 0;
+
+    // Handle browser resize events
+    function resizeEvent() {
+        draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+    }
+    window.onresize = resizeEvent; // Redraw the bar chart when the window is resized
+
+    // Draw the bar chart
+    async function run() {
+        await wasm_bindgen('/wasm/dbhub_vis_bg.wasm');
+        draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+    }
+    run();
+</script>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
@@ -171,6 +182,30 @@
                             </li>
                         </ul>
                     </div>
+                    <div class="btn-group" uib-dropdown keyboard-nav="true">
+                        <button id="orderby" type="button" class="btn">{{ 'Order by: ' + ChartOrderName }}</button>
+
+                        <button type="button" uib-dropdown-toggle class="btn btn-default">
+                            <span class="caret"></span>
+                        </button>
+                        <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                            <li ng-repeat="row in ChartOrderBy" role="menuitem" ng-click="chartChangeOrder(row)">
+                                <a href="">{{ row }}</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="btn-group" uib-dropdown keyboard-nav="true">
+                        <button id="orderby" type="button" class="btn">{{ 'Order direction: ' + ChartDirectionName }}</button>
+
+                        <button type="button" uib-dropdown-toggle class="btn btn-default">
+                            <span class="caret"></span>
+                        </button>
+                        <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                            <li ng-repeat="row in ChartDirectionBy" role="menuitem" ng-click="chartChangeDirection(row)">
+                                <a href="">{{ row }}</a>
+                            </li>
+                        </ul>
+                    </div>
                     [[ if .Meta.LoggedInUser ]]
                         <a href="/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="btn btn-primary">New Merge Request</a>
                     [[ end ]]
@@ -235,29 +270,12 @@
         Offset:   [[ .Data.Offset ]],
     }
 </script>
-<script src="/wasm/dbhub_vis.js"></script>
-<script type="module">
-    const { draw_bar_chart } = wasm_bindgen;
-    let palette = 1.0;
-    async function run() {
-        await wasm_bindgen('/wasm/dbhub_vis_bg.wasm');
-        draw_bar_chart(palette, barChartData);
-    }
-    run();
-
-    // Handle browser resize events
-    function resizeEvent() {
-        draw_bar_chart(palette, barChartData);
-    }
-    window.onresize = resizeEvent; // Redraw the bar chart when the window is resized
-</script>
-
 <script>
     // Simple filter to ensure '&nbsp;' is shown as a non-breaking space
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.filter("fixSpaces", ['$sce', '$sanitize', function($sce, $sanitize) {
         return function(htmlCode) {
-            if (htmlCode == "") {
+            if (htmlCode === "") {
                 htmlCode = '&nbsp;';
             }
             return $sanitize(htmlCode);
@@ -301,10 +319,36 @@
         }
 
         // Set the displayed public/private value
-        if ("[[ .DB.Info.Public ]]" == "true") {
+        if ("[[ .DB.Info.Public ]]" === "true") {
             $scope.meta.Public = "Public";
         } else {
             $scope.meta.Public = "Private";
+        }
+
+        // Change the column sort approach
+        $scope.ChartOrderName = "Category names";
+        $scope.ChartOrderBy = ["Category names", "Item totals"];
+        $scope.chartChangeOrder = function(ord) {
+            if (ord === "Category names") {
+                barChartOrderBy = 0;
+            } else {
+                barChartOrderBy = 1;
+            }
+            $scope.ChartOrderName = ord;
+            draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+        }
+
+        // Change the column sort direction
+        $scope.ChartDirectionName = "Ascending";
+        $scope.ChartDirectionBy = ["Ascending", "Descending"];
+        $scope.chartChangeDirection = function(dir) {
+            if (dir === "Ascending") {
+                barChartOrderDirection = 0;
+            } else {
+                barChartOrderDirection = 1;
+            }
+            $scope.ChartDirectionName = dir;
+            draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
         }
 
         // Retrieves the table data for a given table
@@ -316,7 +360,7 @@
                         barChartData = response.data;
 
                         // Set a default sort direction if none present
-                        if (barChartData.SortDir == "") {
+                        if (barChartData.SortDir === "") {
                             barChartData.SortDir = "ASC";
                         }
 
@@ -329,14 +373,14 @@
         // Fork the database
         $scope.forkDB = function() {
             // Check if the user is logged in
-            if ($scope.meta.Loggedin != "true") {
+            if ($scope.meta.Loggedin !== "true") {
                 // User needs to be logged in
                 lock.show();
                 return;
             }
 
             // Only proceed if the database being forked doesn't already belong to the user
-            if ("[[ .Meta.LoggedInUser ]]" != "[[ .Meta.Owner ]]") {
+            if ("[[ .Meta.LoggedInUser ]]" !== "[[ .Meta.Owner ]]") {
                 // Call the fork database code, which should bounce us to the forked database
                 window.location = "/x/forkdb/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]";
             }

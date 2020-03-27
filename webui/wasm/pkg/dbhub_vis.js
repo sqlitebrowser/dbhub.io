@@ -198,10 +198,12 @@ function addBorrowedObject(obj) {
 /**
 * @param {number} palette
 * @param {any} js_data
+* @param {number} order_by
+* @param {number} order_direction
 */
-__exports.draw_bar_chart = function(palette, js_data) {
+__exports.draw_bar_chart = function(palette, js_data, order_by, order_direction) {
     try {
-        wasm.draw_bar_chart(palette, addBorrowedObject(js_data));
+        wasm.draw_bar_chart(palette, addBorrowedObject(js_data), order_by, order_direction);
     } finally {
         heap[stack_pointer++] = undefined;
     }
