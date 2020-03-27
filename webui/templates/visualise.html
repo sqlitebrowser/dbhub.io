@@ -356,19 +356,12 @@
 
         // Retrieves the table data for a given table
         $scope.changeTable = function(newtable) {
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
-                newtable).then(
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+newtable).then(
                     function (response) {
                         // Update table data
                         barChartData = response.data;
-
-                        // Set a default sort direction if none present
-                        if (barChartData.SortDir === "") {
-                            barChartData.SortDir = "ASC";
-                        }
-
-                        // Show or hide pagination buttons
-                        $scope.updateTableArrows();
+                        $scope.db.Tablename = barChartData.Tablename;
+                        draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
                     }
                 )
         };
