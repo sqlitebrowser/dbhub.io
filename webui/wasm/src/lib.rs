@@ -48,7 +48,7 @@ enum OrderDirection {
 }
 
 const GOLDEN_RATIO_CONJUGATE: f64 = 0.6180;
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 // * Helper functions, as the web_sys pieces don't seem capable of being stored in globals *
 fn window() -> web_sys::Window {
@@ -167,49 +167,42 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
     // * Bar graph setup *
 
-    // Calculate the values used for controlling the graph positioning and display
-    // FIXME: Most of these should be calculated as a percentage of either canvas height or width
-    //        Or at least, some approach to having them autocalculate correctly
-    let y_axis_caption_font_height = ((canvas_height * canvas_width) * 0.000015);
-    // let y_axis_caption_font_height = 20.0;
-    let x_axis_caption_font_height = ((canvas_height * canvas_width) * 0.000015);
-
-    let mut axis_thickness = ((canvas_height * canvas_width) * 0.000006).round();
-    if axis_thickness > 5.0 {
-        axis_thickness = 5.0;
-    }
-
+    // Fixed value pieces
     let border = 2.0;
     let gap = 2.0;
-
     let graph_border = 50.0;
-    let text_gap = 5.0;
-    // let text_gap = ((canvas_height * canvas_width) * 0.000004);
-    let title_font_height = ((canvas_height * canvas_width) * 0.00002);
-    // let title_font_height = canvas_height * 0.03;
-    // let title_font_height = 25.0;
-    let bar_height_unit_size = canvas_height * 0.0025;
-    // let bar_height_unit_size = 3.0;
-    let x_count_font_height = ((canvas_height * canvas_width) * 0.000015);
-    // let x_count_font_height = canvas_width * 0.0216;
-    // let x_count_font_height = 18.0;
-    let x_label_font_height = ((canvas_height * canvas_width) * 0.000015);
-    // let x_label_font_height = canvas_width * 0.0216;
-    // let x_label_font_height = 20.0;
-    let y_axis_marker_font_height = ((canvas_height * canvas_width) * 0.000015);
-    // let y_axis_marker_font_height = 18.0;
+
+    // Calculate the values used for controlling the graph positioning and display
+    let area_root = (canvas_height * canvas_width).sqrt();
+    let y_axis_caption_font_height = area_root * 0.015;
+    let x_axis_caption_font_height = area_root * 0.015;
+    let text_gap = area_root * 0.006;
+    let title_font_height = area_root * 0.025;
+
+    // let bar_height_unit_size = canvas_height * 0.0025; // FIXME: Use some kind of bounding box height rather than the canvas height
+    let x_count_font_height = area_root * 0.015;
+    let x_label_font_height = area_root * 0.015;
+    let y_axis_marker_font_height = area_root * 0.015;
+    let axis_thickness = area_root * 0.004;
 
     let top = border + gap;
     let display_width = canvas_width - border - 1.0;
     let display_height = canvas_height - border - 1.0;
-    let vert_size = highest_val as f64 * bar_height_unit_size;
-    let base_line = display_height - ((display_height - vert_size) / 2.0);
+
+    // FIXME: The 20.0 comes from the title placement code, and probably should be calculated instead
+    // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the line
+    let vert_size = canvas_height - (2.0 * border) - (2.0 * gap) - (title_font_height + 20.0) - (area_root * 0.2);
+    let bar_height_unit_size = vert_size / highest_val as f64;
+
+    // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the line
+    let base_line = display_height - ((display_height - vert_size) / 2.0) + (area_root * 0.05);
     let bar_label_y = base_line + x_label_font_height + text_gap + axis_thickness + text_gap;
     let y_base = base_line + axis_thickness + text_gap;
     let y_top = base_line - (vert_size * 1.2);
     let y_length = y_base - y_top;
 
     if DEBUG {
+        web_sys::console::log_1(&format!("area_root: {}", &area_root).into());
         web_sys::console::log_1(&format!("y_axis_caption_font_height: {}", &y_axis_caption_font_height).into());
         web_sys::console::log_1(&format!("x_axis_caption_font_height: {}", &x_axis_caption_font_height).into());
         web_sys::console::log_1(&format!("axis_thickness: {}", &axis_thickness).into());
@@ -337,17 +330,17 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.stroke();
 
     // Draw title
-    let title = "Marine Litter Survey - Keep Northern Ireland Beautiful"; // FIXME: Title needs to be passed in from the database data
+    let title = "Marine Litter Survey - Keep Northern Ireland Beautiful"; // FIXME: Title needs to be passed in with the database data
     ctx.set_font(&format!("bold {}pt serif", title_font_height));
     ctx.set_text_align(&"center");
     let title_left = display_width / 2.0;
-    ctx.fill_text(title, title_left, top + title_font_height + 20.0);
+    ctx.fill_text(title, title_left, top + title_font_height + 20.0); // FIXME: This 20.0 should probably be worked out dynamically
 
     // Draw Y axis caption
     // Info on how to rotate text on the canvas:
     //   https://newspaint.wordpress.com/2014/05/22/writing-rotated-text-on-a-javascript-canvas/
     let spin_x = display_width / 2.0;
-    let spin_y = y_top + ((y_base - y_top) / 2.0) + 50.0; // TODO: Figure out why 50 works well here, then autocalculate it for other graphs
+    let spin_y = y_top + ((y_base - y_top) / 2.0) + 50.0; // TODO: Figure out why 50.0 works well here, then autocalculate it for other graphs
     let y_axis_caption = "Number of items";
     ctx.save();
     ctx.translate(spin_x, spin_y);
