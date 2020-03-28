@@ -15,6 +15,7 @@ pub struct Record {
 
 #[derive(Serialize, Deserialize)]
 pub struct DbData {
+    Title: String,
     Tablename: String,
     Records: Vec<Vec<Record>>,
     ColNames: Vec<String>,
@@ -178,8 +179,6 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let x_axis_caption_font_height = area_root * 0.015;
     let text_gap = area_root * 0.006;
     let title_font_height = area_root * 0.025;
-
-    // let bar_height_unit_size = canvas_height * 0.0025; // FIXME: Use some kind of bounding box height rather than the canvas height
     let x_count_font_height = area_root * 0.015;
     let x_label_font_height = area_root * 0.015;
     let y_axis_marker_font_height = area_root * 0.015;
@@ -330,7 +329,16 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.stroke();
 
     // Draw title
-    let title = "Marine Litter Survey - Keep Northern Ireland Beautiful"; // FIXME: Title needs to be passed in with the database data
+    let mut title = data.Title.as_str();
+    if title.ends_with(".sqlite") {
+        title = title.trim_end_matches(".sqlite")
+    }
+    if title.ends_with(".sqlite3") {
+        title = title.trim_end_matches(".sqlite3")
+    }
+    if title.ends_with(".db") {
+        title = title.trim_end_matches(".db")
+    }
     ctx.set_font(&format!("bold {}pt serif", title_font_height));
     ctx.set_text_align(&"center");
     let title_left = display_width / 2.0;

@@ -260,7 +260,9 @@
 [[ template "footer" . ]]
 <script>
     // Pre-filled table row data
-    let barChartData = { Tablename: "[[ .Data.Tablename ]]",
+    let barChartData = {
+        Title: "[[ .Meta.Database ]]",
+        Tablename: "[[ .Data.Tablename ]]",
         Records: [[ .Data.Records ]],
         ColNames: [[ .Data.ColNames ]],
         RowCount: [[ .Data.RowCount ]],
