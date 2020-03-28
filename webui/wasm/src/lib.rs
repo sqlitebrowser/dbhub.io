@@ -20,8 +20,6 @@ pub struct DbData {
     ColNames: Vec<String>,
     RowCount: i32,
     ColCount: i32,
-    SortCol: String,
-    SortDir: String,
     Offset: i32,
 }
 
@@ -50,7 +48,7 @@ enum OrderDirection {
 }
 
 const GOLDEN_RATIO_CONJUGATE: f64 = 0.6180;
-const DEBUG: bool = false;
+const DEBUG: bool = true;
 
 // * Helper functions, as the web_sys pieces don't seem capable of being stored in globals *
 fn window() -> web_sys::Window {
@@ -138,19 +136,26 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         .unwrap()
         .dyn_into::<web_sys::HtmlCanvasElement>()
         .unwrap();
-    let mut width = canvas.width() as f64;
-    let mut height = canvas.height() as f64;
+    let mut canvas_width = canvas.width() as f64;
+    let mut canvas_height = canvas.height() as f64;
+
+    if DEBUG {
+        web_sys::console::log_1(&format!("Canvas element width: {} Canvas element height: {}", &canvas_width, &canvas_height).into());
+    }
 
     // Handle window resizing
     let current_body_width = window().inner_width().unwrap().as_f64().unwrap();
     let current_body_height = window().inner_height().unwrap().as_f64().unwrap();
-    if current_body_width != width || current_body_height != height {
-        width = current_body_width;
-        height = current_body_height;
-        canvas.set_attribute("width", &width.to_string());
-        canvas.set_attribute("height", &height.to_string());
+    if current_body_width != canvas_width || current_body_height != canvas_height {
+        canvas_width = current_body_width;
+        canvas_height = current_body_height;
+        canvas.set_attribute("width", &canvas_width.to_string());
+        canvas.set_attribute("height", &canvas_height.to_string());
     }
-    // canvas.set_tab_index(0); // Not sure if this is needed
+
+    if DEBUG {
+        web_sys::console::log_1(&format!("Canvas current body width: {} Canvas current body canvas_height: {}", &canvas_width, &canvas_height).into());
+    }
 
     // Get the 2D context for the canvas
     let ctx = canvas
@@ -163,27 +168,49 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     // * Bar graph setup *
 
     // Calculate the values used for controlling the graph positioning and display
-    let axis_caption_font_size = 20.0;
+    // FIXME: Most of these should be calculated as a percentage of either canvas height or width
+    let axis_caption_font_height = canvas_height * 0.0216;
+    // let axis_caption_font_height = 20.0;
     let axis_thickness = 5.0;
     let border = 2.0;
     let gap = 2.0;
     let graph_border = 50.0;
     let text_gap = 5.0;
-    let title_font_size = 25.0;
-    let unit_size = 3.0;
-    let x_count_font_size = 18.0;
-    let x_label_font_size = 20.0;
+    let title_font_height = 25.0;
+    let bar_unit_size = 3.0;
+    let x_count_font_height = 18.0;
+    let x_label_font_height = 20.0;
     let top = border + gap;
-    let display_width = width - border - 1.0;
-    let display_height = height - border - 1.0;
-    let vert_size = highest_val as f64 * unit_size;
+    let display_width = canvas_width - border - 1.0;
+    let display_height = canvas_height - border - 1.0;
+    let vert_size = highest_val as f64 * bar_unit_size;
     let base_line = display_height - ((display_height - vert_size) / 2.0);
-    let bar_label_y = base_line + x_label_font_size + text_gap + axis_thickness + text_gap;
+    let bar_label_y = base_line + x_label_font_height + text_gap + axis_thickness + text_gap;
     let y_base = base_line + axis_thickness + text_gap;
     let y_top = base_line - (vert_size * 1.2);
     let y_length = y_base - y_top;
 
-    // TODO: Calculate the graph height based upon the available size of the canvas, instead of using the current fixed unit size
+    if DEBUG {
+        web_sys::console::log_1(&format!("axis_caption_font_height: {}", &axis_caption_font_height).into());
+        web_sys::console::log_1(&format!("axis_thickness: {}", &axis_thickness).into());
+        web_sys::console::log_1(&format!("border: {}", &border).into());
+        web_sys::console::log_1(&format!("gap: {}", &gap).into());
+        web_sys::console::log_1(&format!("graph_border: {}", &graph_border).into());
+        web_sys::console::log_1(&format!("text_gap: {}", &text_gap).into());
+        web_sys::console::log_1(&format!("title_font_height: {}", &title_font_height).into());
+        web_sys::console::log_1(&format!("bar_unit_size: {}", &bar_unit_size).into());
+        web_sys::console::log_1(&format!("x_count_font_height: {}", &x_count_font_height).into());
+        web_sys::console::log_1(&format!("x_label_font_height: {}", &x_label_font_height).into());
+        web_sys::console::log_1(&format!("top: {}", &top).into());
+        web_sys::console::log_1(&format!("display_width: {}", &display_width).into());
+        web_sys::console::log_1(&format!("display_height: {}", &display_height).into());
+        web_sys::console::log_1(&format!("vert_size: {}", &vert_size).into());
+        web_sys::console::log_1(&format!("base_line: {}", &base_line).into());
+        web_sys::console::log_1(&format!("bar_label_y: {}", &bar_label_y).into());
+        web_sys::console::log_1(&format!("y_base: {}", &y_base).into());
+        web_sys::console::log_1(&format!("y_top: {}", &y_top).into());
+        web_sys::console::log_1(&format!("y_length: {}", &y_length).into());
+    }
 
     // TODO: Calculate the font sizes based upon the whether they fit in their general space
     //       We should be able to get the font size scaling down decently, without a huge effort
@@ -203,44 +230,53 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         + text_gap;
 
     // Calculate the y axis units of measurement
-    let (y_max, y_step) = axis_max(highest_val);
-    let y_unit = y_length / y_max;
-    let y_unit_step = y_unit * y_step;
+    let (y_axis_max_value, y_axis_step) = axis_max(highest_val);
+    let y_unit = y_length / y_axis_max_value;
+    let y_unit_step = y_unit * y_axis_step;
+
+    if DEBUG {
+        web_sys::console::log_1(&format!("Y axis max: {}, step {}, unit {}, unit step {}", &y_axis_max_value, &y_axis_step, &y_unit, &y_unit_step).into());
+    }
 
     // Clear the background
     ctx.set_fill_style(&"white".into());
-    ctx.fill_rect(0.0, 0.0, width, height);
+    ctx.fill_rect(0.0, 0.0, canvas_width, canvas_height);
 
     // Draw y axis marker lines
-    let y_marker_font_size = 18.0;
+    let y_marker_font_height = 18.0;
     let y_marker_left = axis_left - axis_thickness - text_gap - 5.0;
     ctx.set_stroke_style(&"rgb(220, 220, 220)".into());
     ctx.set_fill_style(&"black".into());
-    ctx.set_font(&format!("{}px serif", y_marker_font_size));
+    ctx.set_font(&format!("{}pt serif", y_marker_font_height));
     ctx.set_text_align(&"right");
     let mut i = y_base;
     while i >= y_top {
         let marker_label = &format!("{} ", ((y_base - i) / y_unit).round());
         let marker_metrics = ctx.measure_text(&marker_label).unwrap();
-        let y_marker_width = marker_metrics.width();
+        let y_marker_width = marker_metrics.width().round();
         ctx.begin_path();
         ctx.move_to(y_marker_left - y_marker_width, i);
         ctx.line_to(axis_right, i);
         ctx.stroke();
         ctx.fill_text(marker_label, axis_left - 15.0, i - 4.0);
         i -= y_unit_step;
+
+        if DEBUG {
+            web_sys::console::log_1(&format!(
+                "Y axis marker '{}', width: {} height {}", &marker_label, &y_marker_width, &y_marker_font_height).into()
+            );
+        }
     }
 
     // Draw simple bar graph using the category data
     let mut hue = palette;
     ctx.set_stroke_style(&"black".into());
     ctx.set_text_align(&"center");
-    let mut font_size;
     for bar in &draw_order {
         // Draw the bar
         let label = &bar.name;
         let num = bar.num;
-        let bar_height = num as f64 * unit_size;
+        let bar_height = num as f64 * bar_unit_size;
         hue += GOLDEN_RATIO_CONJUGATE;
         hue = hue % 1.0;
         ctx.set_fill_style(&hsv_to_rgb(hue, 0.5, 0.95).into());
@@ -255,13 +291,12 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         ctx.set_fill_style(&"black".into());
 
         // Draw the bar label horizontally centered
-        font_size = format!("{}px serif", x_label_font_size);
-        ctx.set_font(&font_size);
+        ctx.set_font(&format!("{}pt serif", x_label_font_height));
         let text_left = bar_width / 2.0;
         ctx.fill_text(label, bar_left + text_left, bar_label_y);
 
         // Draw the item count centered above the top of the bar
-        ctx.set_font(&format!("{}px serif", x_count_font_size));
+        ctx.set_font(&format!("{}pt serif", x_count_font_height));
         ctx.fill_text(
             &format!("{}", num),
             bar_left + text_left,
@@ -279,11 +314,11 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.stroke();
 
     // Draw title
-    let title = "Marine Litter Survey - Keep Northern Ireland Beautiful";
-    ctx.set_font(&format!("bold {}px serif", title_font_size));
+    let title = "Marine Litter Survey - Keep Northern Ireland Beautiful"; // FIXME: Title needs to be passed in from the database data
+    ctx.set_font(&format!("bold {}pt serif", title_font_height));
     ctx.set_text_align(&"center");
     let title_left = display_width / 2.0;
-    ctx.fill_text(title, title_left, top + title_font_size + 20.0);
+    ctx.fill_text(title, title_left, top + title_font_height + 20.0);
 
     // Draw Y axis caption
     // Info on how to rotate text on the canvas:
@@ -294,24 +329,24 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.save();
     ctx.translate(spin_x, spin_y);
     ctx.rotate(3.0 * std::f64::consts::PI / 2.0);
-    ctx.set_font(&format!("italic {}px serif", axis_caption_font_size));
+    ctx.set_font(&format!("italic {}pt serif", axis_caption_font_height));
     ctx.set_fill_style(&"black".into());
     ctx.set_text_align(&"left");
     ctx.fill_text(
         y_axis_caption,
         0.0,
-        -spin_x + axis_left - text_gap - axis_caption_font_size - 30.0, // TODO: Figure out why 30 works well here, then autocalculate it for other graphs
+        -spin_x + axis_left - text_gap - axis_caption_font_height - 30.0, // TODO: Figure out why 30 works well here, then autocalculate it for other graphs
     );
     ctx.restore();
 
     // Draw X axis caption
     let x_axis_caption = "Category";
-    ctx.set_font(&format!("italic {}px serif", axis_caption_font_size));
+    ctx.set_font(&format!("italic {}pt serif", axis_caption_font_height));
     let cap_left = display_width / 2.0;
     ctx.fill_text(
         x_axis_caption,
         cap_left,
-        bar_label_y + text_gap + axis_caption_font_size,
+        bar_label_y + text_gap + axis_caption_font_height,
     );
 
     // Draw a border around the graph area
@@ -319,9 +354,9 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.set_stroke_style(&"white".into());
     ctx.begin_path();
     ctx.move_to(0.0, 0.0);
-    ctx.line_to(width, 0.0);
-    ctx.line_to(width, height);
-    ctx.line_to(0.0, height);
+    ctx.line_to(canvas_width, 0.0);
+    ctx.line_to(canvas_width, canvas_height);
+    ctx.line_to(0.0, canvas_height);
     ctx.close_path();
     ctx.stroke();
     ctx.set_line_width(2.0);
