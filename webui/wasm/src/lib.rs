@@ -410,7 +410,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.set_font(&format!("{}pt serif", y_axis_marker_font_height));
     let mut i = y_base;
     while i >= y_top {
-        let marker_label = &format!("{}", ((y_base - i) / y_unit).round());
+        let marker_label = &format!("{} ", ((y_base - i) / y_unit).round());
         let marker_metrics = ctx.measure_text(&marker_label).unwrap();
         let y_axis_marker_width = marker_metrics.width();
         if y_axis_marker_width > y_axis_marker_largest_width {
@@ -454,7 +454,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.set_text_align(&"right");
     let mut i = y_base;
     while i >= y_top {
-        let marker_label = &format!("{}", ((y_base - i) / y_unit).round());
+        let marker_label = &format!("{} ", ((y_base - i) / y_unit).round());
         let marker_metrics = ctx.measure_text(&marker_label).unwrap();
         let y_axis_marker_width = marker_metrics.width();
         ctx.begin_path();
@@ -523,8 +523,8 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.set_line_width(axis_thickness);
     ctx.begin_path();
     ctx.move_to(axis_right, y_base);
-    ctx.line_to(axis_left - axis_thickness - x_axis_caption_text_gap, y_base);
-    ctx.line_to(axis_left - axis_thickness - x_axis_caption_text_gap, y_top);
+    ctx.line_to(axis_left, y_base);
+    ctx.line_to(axis_left, y_top);
     ctx.stroke();
 
     // Draw title
