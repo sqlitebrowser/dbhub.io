@@ -17,11 +17,12 @@ pub struct Record {
 pub struct DbData {
     Title: String,
     Tablename: String,
+    XAxisLabel: String,
+    YAxisLabel: String,
     Records: Vec<Vec<Record>>,
     ColNames: Vec<String>,
     RowCount: i32,
     ColCount: i32,
-    Offset: i32,
 }
 
 struct DrawObject {
@@ -179,6 +180,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let x_axis_caption_font_height = area_root * 0.015;
     let text_gap = area_root * 0.006;
     let title_font_height = area_root * 0.025;
+    let title_font_spacing = area_root * 0.025;
     let x_count_font_height = area_root * 0.015;
     let x_label_font_height = area_root * 0.015;
     let y_axis_marker_font_height = area_root * 0.015;
@@ -188,12 +190,11 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let display_width = canvas_width - border - 1.0;
     let display_height = canvas_height - border - 1.0;
 
-    // FIXME: The 20.0 comes from the title placement code, and probably should be calculated instead
-    // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the line
-    let vert_size = canvas_height - (2.0 * border) - (2.0 * gap) - (title_font_height + 20.0) - (area_root * 0.2);
+    // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the X axis line
+    let vert_size = canvas_height - (2.0 * border) - (2.0 * gap) - (title_font_height + title_font_height) - (area_root * 0.2);
     let bar_height_unit_size = vert_size / highest_val as f64;
 
-    // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the line
+    // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the X axis line
     let base_line = display_height - ((display_height - vert_size) / 2.0) + (area_root * 0.05);
     let bar_label_y = base_line + x_label_font_height + text_gap + axis_thickness + text_gap;
     let y_base = base_line + axis_thickness + text_gap;
@@ -225,7 +226,6 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     }
 
     // TODO: Calculate the font sizes based upon the whether they fit in their general space
-    //       We should be able to get the font size scaling down decently, without a huge effort
 
     // Calculate the bar size, gap, and centering based upon the number of bars
     let num_bars = item_counts.len() as f64;
@@ -342,20 +342,23 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.set_font(&format!("bold {}pt serif", title_font_height));
     ctx.set_text_align(&"center");
     let title_left = display_width / 2.0;
-    ctx.fill_text(title, title_left, top + title_font_height + 20.0); // FIXME: This 20.0 should probably be worked out dynamically
+    ctx.fill_text(title, title_left, top + title_font_height + title_font_spacing);
 
     // Draw Y axis caption
     // Info on how to rotate text on the canvas:
     //   https://newspaint.wordpress.com/2014/05/22/writing-rotated-text-on-a-javascript-canvas/
+    let y_axis_caption = &data.YAxisLabel;
+    let y_axis_caption_string = format!("italic {}pt serif", y_axis_caption_font_height);
+    let y_axis_caption_metrics = ctx.measure_text(&y_axis_caption_string).unwrap();
+    let y_axis_caption_width = y_axis_caption_metrics.width().round();
     let spin_x = display_width / 2.0;
-    let spin_y = y_top + ((y_base - y_top) / 2.0) + 50.0; // TODO: Figure out why 50.0 works well here, then autocalculate it for other graphs
-    let y_axis_caption = "Number of items";
+    let spin_y = y_top + ((y_base - y_top) / 2.0);
     ctx.save();
     ctx.translate(spin_x, spin_y);
     ctx.rotate(3.0 * std::f64::consts::PI / 2.0);
-    ctx.set_font(&format!("italic {}pt serif", y_axis_caption_font_height));
+    ctx.set_font(&y_axis_caption_string);
     ctx.set_fill_style(&"black".into());
-    ctx.set_text_align(&"left");
+    ctx.set_text_align(&"center");
     ctx.fill_text(
         y_axis_caption,
         0.0,
@@ -363,8 +366,12 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     );
     ctx.restore();
 
+    if DEBUG {
+        web_sys::console::log_1(&format!("y_axis_caption_width: {}", &y_axis_caption_width).into());
+    }
+
     // Draw X axis caption
-    let x_axis_caption = "Category";
+    let x_axis_caption = &data.XAxisLabel;
     ctx.set_font(&format!("italic {}pt serif", x_axis_caption_font_height));
     let cap_left = display_width / 2.0;
     ctx.fill_text(
