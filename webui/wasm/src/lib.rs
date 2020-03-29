@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use js_sys::Array;
 
 extern crate console_error_panic_hook;
 use std::panic;
@@ -50,7 +51,7 @@ enum OrderDirection {
 }
 
 const GOLDEN_RATIO_CONJUGATE: f64 = 0.6180;
-const DEBUG: bool = false;
+const DEBUG: bool = true;
 
 // * Helper functions, as the web_sys pieces don't seem capable of being stored in globals *
 fn window() -> web_sys::Window {
@@ -171,162 +172,316 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
     // Fixed value pieces
     let border = 2.0;
-    let gap = 2.0;
-    let graph_border = 50.0;
-
-    // Calculate the values used for controlling the graph positioning and display
-    let area_root = (canvas_height * canvas_width).sqrt();
-    let y_axis_caption_font_height = area_root * 0.015;
-    let x_axis_caption_font_height = area_root * 0.015;
-    let text_gap = area_root * 0.006;
-    let title_font_height = area_root * 0.025;
-    let title_font_spacing = area_root * 0.025;
-    let x_count_font_height = area_root * 0.015;
-    let x_label_font_height = area_root * 0.015;
-    let y_axis_marker_font_height = area_root * 0.015;
-    let axis_thickness = area_root * 0.004;
-
-    let top = border + gap;
+    let area_border = 2.0;
+    // let gap = 2.0;
     let display_width = canvas_width - border - 1.0;
     let display_height = canvas_height - border - 1.0;
 
-    // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the X axis line
-    let vert_size = canvas_height - (2.0 * border) - (2.0 * gap) - (title_font_height + title_font_height) - (area_root * 0.2);
-    let bar_height_unit_size = vert_size / highest_val as f64;
+    // let graph_border = 50.0;
 
-    // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the X axis line
-    let base_line = display_height - ((display_height - vert_size) / 2.0) + (area_root * 0.05);
-    let bar_label_y = base_line + x_label_font_height + text_gap + axis_thickness + text_gap;
-    let y_base = base_line + axis_thickness + text_gap;
-    let y_top = base_line - (vert_size * 1.2);
-    let y_length = y_base - y_top;
 
-    if DEBUG {
-        web_sys::console::log_1(&format!("area_root: {}", &area_root).into());
-        web_sys::console::log_1(&format!("y_axis_caption_font_height: {}", &y_axis_caption_font_height).into());
-        web_sys::console::log_1(&format!("x_axis_caption_font_height: {}", &x_axis_caption_font_height).into());
-        web_sys::console::log_1(&format!("axis_thickness: {}", &axis_thickness).into());
-        web_sys::console::log_1(&format!("border: {}", &border).into());
-        web_sys::console::log_1(&format!("gap: {}", &gap).into());
-        web_sys::console::log_1(&format!("graph_border: {}", &graph_border).into());
-        web_sys::console::log_1(&format!("text_gap: {}", &text_gap).into());
-        web_sys::console::log_1(&format!("title_font_height: {}", &title_font_height).into());
-        web_sys::console::log_1(&format!("bar_height_unit_size: {}", &bar_height_unit_size).into());
-        web_sys::console::log_1(&format!("x_count_font_height: {}", &x_count_font_height).into());
-        web_sys::console::log_1(&format!("x_label_font_height: {}", &x_label_font_height).into());
-        web_sys::console::log_1(&format!("top: {}", &top).into());
-        web_sys::console::log_1(&format!("display_width: {}", &display_width).into());
-        web_sys::console::log_1(&format!("display_height: {}", &display_height).into());
-        web_sys::console::log_1(&format!("vert_size: {}", &vert_size).into());
-        web_sys::console::log_1(&format!("base_line: {}", &base_line).into());
-        web_sys::console::log_1(&format!("bar_label_y: {}", &bar_label_y).into());
-        web_sys::console::log_1(&format!("y_base: {}", &y_base).into());
-        web_sys::console::log_1(&format!("y_top: {}", &y_top).into());
-        web_sys::console::log_1(&format!("y_length: {}", &y_length).into());
-    }
+    // Calculate the area available to each of the graph elements
+    let graph_space_width = display_width * 0.8;
+    let graph_space_height = display_height * 0.8;
 
-    // TODO: Calculate the font sizes based upon the whether they fit in their general space
+    let left_space_width = (display_width - graph_space_width) / 2.0;
+    let left_space_height = display_height * 0.8;
 
-    // Calculate the bar size, gap, and centering based upon the number of bars
-    let num_bars = item_counts.len() as f64;
-    let horiz_size = display_width - (graph_border * 2.0);
-    let b = horiz_size / num_bars;
-    let bar_width = b * 0.6;
-    let bar_gap = b - bar_width;
-    let mut bar_left = ((graph_border * 2.0) + bar_gap) / 2.0;
-    let axis_left = ((graph_border * 2.0) + bar_gap) / 2.0;
-    let axis_right = axis_left
-        + (num_bars * bar_width)
-        + ((num_bars - 1.0) * bar_gap)
-        + axis_thickness
-        + text_gap;
+    let right_space_width = left_space_width;
+    let right_space_height = display_height * 0.8;
 
-    // Calculate the y axis units of measurement
-    let (y_axis_max_value, y_axis_step) = axis_max(highest_val);
-    let y_unit = y_length / y_axis_max_value;
-    let y_unit_step = y_unit * y_axis_step;
+    let top_space_width = display_width;
+    let top_space_height = (display_height - graph_space_height) / 2.0;
 
-    if DEBUG {
-        web_sys::console::log_1(&format!("Y axis max: {}, step {}, unit {}, unit step {}", &y_axis_max_value, &y_axis_step, &y_unit, &y_unit_step).into());
-    }
+    let bottom_space_width = display_width;
+    let bottom_space_height = top_space_height;
+
+    // Derived co-ordinates
+    let left_space_top = border + area_border + top_space_height;
+    let left_space_left = border + area_border;
+    let left_space_bottom = left_space_top + left_space_height;
+    let left_space_right = left_space_left + left_space_width;
+
+    let right_space_top = border + area_border + top_space_height;
+    let right_space_left = border + area_border + left_space_width + graph_space_width - (area_border * 3.0);
+    let right_space_bottom = right_space_top + right_space_height;
+    let right_space_right = right_space_left + right_space_width;
+
+    let top_space_top = border + area_border;
+    let top_space_left = border + area_border;
+    let top_space_bottom = top_space_top + top_space_height;
+    let top_space_right = top_space_left + top_space_width - (area_border * 3.0);
+
+    let bottom_space_top = border + area_border + top_space_height + graph_space_height;
+    let bottom_space_left = border + area_border;
+    let bottom_space_bottom = bottom_space_top + bottom_space_height - (area_border * 3.0);
+    let bottom_space_right = bottom_space_left + bottom_space_width - (area_border * 3.0);
+
+    let graph_space_left = left_space_right;
+    let graph_space_top = top_space_bottom;
+    let graph_space_bottom = bottom_space_top;
+    let graph_space_right = right_space_left;
 
     // Clear the background
     ctx.set_fill_style(&"white".into());
     ctx.fill_rect(0.0, 0.0, canvas_width, canvas_height);
 
-    // Draw y axis marker lines
-    let y_marker_left = axis_left - axis_thickness - text_gap - 5.0;
-    ctx.set_stroke_style(&"rgb(220, 220, 220)".into());
-    ctx.set_fill_style(&"black".into());
-    ctx.set_font(&format!("{}pt serif", y_axis_marker_font_height));
-    ctx.set_text_align(&"right");
-    let mut y_axis_marker_largest_width = 0.0;
-    let mut i = y_base;
-    while i >= y_top {
-        let marker_label = &format!("{} ", ((y_base - i) / y_unit).round());
-        let marker_metrics = ctx.measure_text(&marker_label).unwrap();
-        let y_axis_marker_width = marker_metrics.width().round();
-        if y_axis_marker_width > y_axis_marker_largest_width {
-            y_axis_marker_largest_width = y_axis_marker_width;
-        }
-        ctx.begin_path();
-        ctx.move_to(y_marker_left - y_axis_marker_width, i);
-        ctx.line_to(axis_right, i);
-        ctx.stroke();
-        ctx.fill_text(marker_label, axis_left - 15.0, i - 4.0);
-        i -= y_unit_step;
+    if DEBUG {
+        // * Draw borders around each area of space *
 
-        if DEBUG {
-            web_sys::console::log_1(&format!(
-                "Y axis marker '{}', width: {} height {}", &marker_label, &y_axis_marker_width, &y_axis_marker_font_height).into()
-            );
-        }
-    }
-
-    // Draw simple bar graph using the category data
-    let mut hue = palette;
-    ctx.set_stroke_style(&"black".into());
-    ctx.set_text_align(&"center");
-    for bar in &draw_order {
-        // Draw the bar
-        let label = &bar.name;
-        let num = bar.num;
-        let bar_height = num as f64 * bar_height_unit_size;
-        hue += GOLDEN_RATIO_CONJUGATE;
-        hue = hue % 1.0;
-        ctx.set_fill_style(&hsv_to_rgb(hue, 0.5, 0.95).into());
+        // Left space
+        ctx.set_line_width(area_border);
+        ctx.set_stroke_style(&"blue".into());
         ctx.begin_path();
-        ctx.move_to(bar_left, base_line);
-        ctx.line_to(bar_left + bar_width, base_line);
-        ctx.line_to(bar_left + bar_width, base_line - bar_height);
-        ctx.line_to(bar_left, base_line - bar_height);
+        ctx.move_to(left_space_left, left_space_top);
+        ctx.line_to(left_space_right, left_space_top);
+        ctx.line_to(left_space_right, left_space_bottom);
+        ctx.line_to(left_space_left, left_space_bottom);
         ctx.close_path();
-        ctx.fill();
         ctx.stroke();
-        ctx.set_fill_style(&"black".into());
 
-        // Draw the bar label horizontally centered
-        ctx.set_font(&format!("{}pt serif", x_label_font_height));
-        let text_left = bar_width / 2.0;
-        ctx.fill_text(label, bar_left + text_left, bar_label_y);
+        // Right space
+        ctx.set_stroke_style(&"green".into());
+        ctx.begin_path();
+        ctx.move_to(right_space_left, right_space_top);
+        ctx.line_to(right_space_right, right_space_top);
+        ctx.line_to(right_space_right, right_space_bottom);
+        ctx.line_to(right_space_left, right_space_bottom);
+        ctx.close_path();
+        ctx.stroke();
 
-        // Draw the item count centered above the top of the bar
-        ctx.set_font(&format!("{}pt serif", x_count_font_height));
-        ctx.fill_text(
-            &format!("{}", num),
-            bar_left + text_left,
-            base_line - bar_height - text_gap,
-        );
-        bar_left += bar_gap + bar_width;
+        // Top space
+        ctx.set_stroke_style(&"red".into());
+        ctx.begin_path();
+        ctx.move_to(top_space_left, top_space_top);
+        ctx.line_to(top_space_right, top_space_top);
+        ctx.line_to(top_space_right, top_space_bottom);
+        ctx.line_to(top_space_left, top_space_bottom);
+        ctx.close_path();
+        ctx.stroke();
+
+        // Bottom space
+        ctx.set_stroke_style(&"cyan".into());
+        ctx.begin_path();
+        ctx.move_to(bottom_space_left, bottom_space_top);
+        ctx.line_to(bottom_space_right, bottom_space_top);
+        ctx.line_to(bottom_space_right, bottom_space_bottom);
+        ctx.line_to(bottom_space_left, bottom_space_bottom);
+        ctx.close_path();
+        ctx.stroke();
+
+        // Graph space
+        ctx.set_stroke_style(&"magenta".into());
+        ctx.begin_path();
+        ctx.move_to(graph_space_left, graph_space_top);
+        ctx.line_to(graph_space_right, graph_space_top);
+        ctx.line_to(graph_space_right, graph_space_bottom);
+        ctx.line_to(graph_space_left, graph_space_bottom);
+        ctx.close_path();
+        ctx.stroke();
+
+        // * Draw center lines for each area of space *
+
+        let dash = Array::new();
+        dash.push(&"1".into());
+        dash.push(&"3".into());
+        ctx.save();
+        ctx.set_line_width(1.0);
+        ctx.set_stroke_style(&"grey".into());
+        ctx.set_line_dash(&dash.into());
+
+        // Left space
+        ctx.begin_path();
+        ctx.move_to(left_space_left + (left_space_width / 2.0), left_space_top);
+        ctx.line_to(left_space_left + (left_space_width / 2.0), left_space_bottom);
+        ctx.stroke();
+        ctx.begin_path();
+        ctx.move_to(left_space_left, left_space_top + (left_space_height / 2.0));
+        ctx.line_to(left_space_right, left_space_top + (left_space_height / 2.0));
+        ctx.stroke();
+
+        // Right space
+        ctx.begin_path();
+        ctx.move_to(right_space_left + (right_space_width / 2.0), right_space_top);
+        ctx.line_to(right_space_left + (right_space_width / 2.0), right_space_bottom);
+        ctx.stroke();
+        ctx.begin_path();
+        ctx.move_to(right_space_left, right_space_top + (right_space_height / 2.0));
+        ctx.line_to(right_space_right, right_space_top + (right_space_height / 2.0));
+        ctx.stroke();
+
+        // Top space
+        ctx.begin_path();
+        ctx.move_to(top_space_left + (top_space_width / 2.0), top_space_top);
+        ctx.line_to(top_space_left + (top_space_width / 2.0), top_space_bottom);
+        ctx.stroke();
+        ctx.begin_path();
+        ctx.move_to(top_space_left, top_space_top + (top_space_height / 2.0));
+        ctx.line_to(top_space_right, top_space_top + (top_space_height / 2.0));
+        ctx.stroke();
+
+        // Bottom space
+        ctx.begin_path();
+        ctx.move_to(bottom_space_left + (bottom_space_width / 2.0), bottom_space_top);
+        ctx.line_to(bottom_space_left + (bottom_space_width / 2.0), bottom_space_bottom);
+        ctx.stroke();
+        ctx.begin_path();
+        ctx.move_to(bottom_space_left, bottom_space_top + (bottom_space_height / 2.0));
+        ctx.line_to(bottom_space_right, bottom_space_top + (bottom_space_height / 2.0));
+        ctx.stroke();
+
+        ctx.restore();
     }
 
-    // Draw axis
-    ctx.set_line_width(axis_thickness);
-    ctx.begin_path();
-    ctx.move_to(axis_right, y_base);
-    ctx.line_to(axis_left - axis_thickness - text_gap, y_base);
-    ctx.line_to(axis_left - axis_thickness - text_gap, y_top);
-    ctx.stroke();
+    // // Calculate the values used for controlling the graph positioning and display
+    let area_root = (canvas_height * canvas_width).sqrt();
+    let y_axis_caption_font_height = area_root * 0.015;
+    let x_axis_caption_font_height = area_root * 0.015;
+    // let text_gap = area_root * 0.006;
+    let title_font_height = area_root * 0.025;
+    // let title_font_spacing = area_root * 0.025;
+    // let x_count_font_height = area_root * 0.015;
+    // let x_label_font_height = area_root * 0.015;
+    // let y_axis_marker_font_height = area_root * 0.015;
+    // let axis_thickness = area_root * 0.004;
+    //
+    // let top = border + gap;
+    // let display_width = canvas_width - border - 1.0;
+    // let display_height = canvas_height - border - 1.0;
+    //
+    // // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the X axis line
+    // let vert_size = canvas_height - (2.0 * border) - (2.0 * gap) - (title_font_height + title_font_height) - (area_root * 0.2);
+    // let bar_height_unit_size = vert_size / highest_val as f64;
+    //
+    // // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the X axis line
+    // let base_line = display_height - ((display_height - vert_size) / 2.0) + (area_root * 0.05);
+    // let bar_label_y = base_line + x_label_font_height + text_gap + axis_thickness + text_gap;
+    // let y_base = base_line + axis_thickness + text_gap;
+    // let y_top = base_line - (vert_size * 1.2);
+    // let y_length = y_base - y_top;
+
+    // if DEBUG {
+    //     web_sys::console::log_1(&format!("area_root: {}", &area_root).into());
+    //     web_sys::console::log_1(&format!("y_axis_caption_font_height: {}", &y_axis_caption_font_height).into());
+    //     web_sys::console::log_1(&format!("x_axis_caption_font_height: {}", &x_axis_caption_font_height).into());
+    //     web_sys::console::log_1(&format!("axis_thickness: {}", &axis_thickness).into());
+    //     web_sys::console::log_1(&format!("border: {}", &border).into());
+    //     web_sys::console::log_1(&format!("gap: {}", &gap).into());
+    //     // web_sys::console::log_1(&format!("graph_border: {}", &graph_border).into());
+    //     web_sys::console::log_1(&format!("text_gap: {}", &text_gap).into());
+    //     web_sys::console::log_1(&format!("title_font_height: {}", &title_font_height).into());
+    //     web_sys::console::log_1(&format!("bar_height_unit_size: {}", &bar_height_unit_size).into());
+    //     web_sys::console::log_1(&format!("x_count_font_height: {}", &x_count_font_height).into());
+    //     web_sys::console::log_1(&format!("x_label_font_height: {}", &x_label_font_height).into());
+    //     web_sys::console::log_1(&format!("top: {}", &top).into());
+    //     web_sys::console::log_1(&format!("display_width: {}", &display_width).into());
+    //     web_sys::console::log_1(&format!("display_height: {}", &display_height).into());
+    //     web_sys::console::log_1(&format!("vert_size: {}", &vert_size).into());
+    //     web_sys::console::log_1(&format!("base_line: {}", &base_line).into());
+    //     web_sys::console::log_1(&format!("bar_label_y: {}", &bar_label_y).into());
+    //     web_sys::console::log_1(&format!("y_base: {}", &y_base).into());
+    //     web_sys::console::log_1(&format!("y_top: {}", &y_top).into());
+    //     web_sys::console::log_1(&format!("y_length: {}", &y_length).into());
+    // }
+
+    // TODO: Calculate the font sizes based upon the whether they fit in their general space
+
+    // // Calculate the bar size, gap, and centering based upon the number of bars
+    // let num_bars = item_counts.len() as f64;
+    // let horiz_size = display_width - (graph_border * 2.0);
+    // let b = horiz_size / num_bars;
+    // let bar_width = b * 0.6;
+    // let bar_gap = b - bar_width;
+    // let mut bar_left = ((graph_border * 2.0) + bar_gap) / 2.0;
+    // let axis_left = ((graph_border * 2.0) + bar_gap) / 2.0;
+    // let axis_right = axis_left
+    //     + (num_bars * bar_width)
+    //     + ((num_bars - 1.0) * bar_gap)
+    //     + axis_thickness
+    //     + text_gap;
+    //
+    // // Calculate the y axis units of measurement
+    // let (y_axis_max_value, y_axis_step) = axis_max(highest_val);
+    // let y_unit = y_length / y_axis_max_value;
+    // let y_unit_step = y_unit * y_axis_step;
+
+    // if DEBUG {
+    //     web_sys::console::log_1(&format!("Y axis max: {}, step {}, unit {}, unit step {}", &y_axis_max_value, &y_axis_step, &y_unit, &y_unit_step).into());
+    // }
+
+    // // Draw y axis marker lines
+    // let y_marker_left = axis_left - axis_thickness - text_gap - 5.0;
+    // ctx.set_stroke_style(&"rgb(220, 220, 220)".into());
+    // ctx.set_fill_style(&"black".into());
+    // ctx.set_font(&format!("{}pt serif", y_axis_marker_font_height));
+    // ctx.set_text_align(&"right");
+    // let mut y_axis_marker_largest_width = 0.0;
+    // let mut i = y_base;
+    // while i >= y_top {
+    //     let marker_label = &format!("{} ", ((y_base - i) / y_unit).round());
+    //     let marker_metrics = ctx.measure_text(&marker_label).unwrap();
+    //     let y_axis_marker_width = marker_metrics.width().round();
+    //     if y_axis_marker_width > y_axis_marker_largest_width {
+    //         y_axis_marker_largest_width = y_axis_marker_width;
+    //     }
+    //     ctx.begin_path();
+    //     ctx.move_to(y_marker_left - y_axis_marker_width, i);
+    //     ctx.line_to(axis_right, i);
+    //     ctx.stroke();
+    //     ctx.fill_text(marker_label, axis_left - 15.0, i - 4.0);
+    //     i -= y_unit_step;
+    //
+    //     if DEBUG {
+    //         web_sys::console::log_1(&format!(
+    //             "Y axis marker '{}', width: {} height {}", &marker_label, &y_axis_marker_width, &y_axis_marker_font_height).into()
+    //         );
+    //     }
+    // }
+
+    // // Draw simple bar graph using the category data
+    // let mut hue = palette;
+    // ctx.set_stroke_style(&"black".into());
+    // ctx.set_text_align(&"center");
+    // for bar in &draw_order {
+    //     // Draw the bar
+    //     let label = &bar.name;
+    //     let num = bar.num;
+    //     let bar_height = num as f64 * bar_height_unit_size;
+    //     hue += GOLDEN_RATIO_CONJUGATE;
+    //     hue = hue % 1.0;
+    //     ctx.set_fill_style(&hsv_to_rgb(hue, 0.5, 0.95).into());
+    //     ctx.begin_path();
+    //     ctx.move_to(bar_left, base_line);
+    //     ctx.line_to(bar_left + bar_width, base_line);
+    //     ctx.line_to(bar_left + bar_width, base_line - bar_height);
+    //     ctx.line_to(bar_left, base_line - bar_height);
+    //     ctx.close_path();
+    //     ctx.fill();
+    //     ctx.stroke();
+    //     ctx.set_fill_style(&"black".into());
+    //
+    //     // Draw the bar label horizontally centered
+    //     ctx.set_font(&format!("{}pt serif", x_label_font_height));
+    //     let text_left = bar_width / 2.0;
+    //     ctx.fill_text(label, bar_left + text_left, bar_label_y);
+    //
+    //     // Draw the item count centered above the top of the bar
+    //     ctx.set_font(&format!("{}pt serif", x_count_font_height));
+    //     ctx.fill_text(
+    //         &format!("{}", num),
+    //         bar_left + text_left,
+    //         base_line - bar_height - text_gap,
+    //     );
+    //     bar_left += bar_gap + bar_width;
+    // }
+
+    // // Draw axis
+    // ctx.set_line_width(axis_thickness);
+    // ctx.begin_path();
+    // ctx.move_to(axis_right, y_base);
+    // ctx.line_to(axis_left - axis_thickness - text_gap, y_base);
+    // ctx.line_to(axis_left - axis_thickness - text_gap, y_top);
+    // ctx.stroke();
 
     // Draw title
     let mut title = data.Title.as_str();
@@ -340,9 +495,11 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         title = title.trim_end_matches(".db")
     }
     ctx.set_font(&format!("bold {}pt serif", title_font_height));
+    ctx.set_fill_style(&"black".into());
     ctx.set_text_align(&"center");
-    let title_left = display_width / 2.0;
-    ctx.fill_text(title, title_left, top + title_font_height + title_font_spacing);
+    let title_x = graph_space_left + (graph_space_width / 2.0);
+    let title_y = top_space_top + (top_space_height / 2.0) + (title_font_height / 2.0);
+    ctx.fill_text(title, title_x, title_y);
 
     // Draw Y axis caption
     // Info on how to rotate text on the canvas:
@@ -351,8 +508,8 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let y_axis_caption_string = format!("italic {}pt serif", y_axis_caption_font_height);
     let y_axis_caption_metrics = ctx.measure_text(&y_axis_caption_string).unwrap();
     let y_axis_caption_width = y_axis_caption_metrics.width().round();
-    let spin_x = display_width / 2.0;
-    let spin_y = y_top + ((y_base - y_top) / 2.0);
+    let spin_x = (left_space_left + (left_space_width / 2.0)) + (y_axis_caption_font_height / 2.0);
+    let spin_y = canvas_height / 2.0;
     ctx.save();
     ctx.translate(spin_x, spin_y);
     ctx.rotate(3.0 * std::f64::consts::PI / 2.0);
@@ -362,7 +519,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.fill_text(
         y_axis_caption,
         0.0,
-        -spin_x + axis_left - text_gap - y_axis_caption_font_height - y_axis_marker_largest_width,
+        0.0
     );
     ctx.restore();
 
@@ -372,13 +529,31 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
     // Draw X axis caption
     let x_axis_caption = &data.XAxisLabel;
-    ctx.set_font(&format!("italic {}pt serif", x_axis_caption_font_height));
-    let cap_left = display_width / 2.0;
+    let x_axis_caption_string = format!("italic {}pt serif", x_axis_caption_font_height);
+    let x_axis_caption_metrics = ctx.measure_text(&x_axis_caption_string).unwrap();
+    let x_axis_caption_width = x_axis_caption_metrics.width().round();
+    let x_axis_caption_x = (graph_space_left + (graph_space_width / 2.0));
+    let x_axis_caption_y = bottom_space_top + (bottom_space_height / 2.0) + (x_axis_caption_font_height / 2.0);
+    ctx.set_font(&x_axis_caption_string);
+    ctx.set_fill_style(&"black".into());
+    ctx.set_text_align(&"center");
     ctx.fill_text(
         x_axis_caption,
-        cap_left,
-        bar_label_y + text_gap + x_axis_caption_font_height,
+        x_axis_caption_x,
+        x_axis_caption_y
     );
+
+    if DEBUG {
+        web_sys::console::log_1(&format!("graph_space_left: {}", &graph_space_left).into());
+        web_sys::console::log_1(&format!("graph_space_width: {}", &graph_space_width).into());
+        web_sys::console::log_1(&format!("x_axis_caption: {}", &x_axis_caption).into());
+        web_sys::console::log_1(&format!("x_axis_caption_font_height: {}", &x_axis_caption_font_height).into());
+        web_sys::console::log_1(&format!("x_axis_caption_width: {}", &x_axis_caption_width).into());
+        web_sys::console::log_1(&format!("x_axis_caption_x: {}", &x_axis_caption_x).into());
+        web_sys::console::log_1(&format!("bottom_space_top: {}", &bottom_space_top).into());
+        web_sys::console::log_1(&format!("bottom_space_height: {}", &bottom_space_height).into());
+        web_sys::console::log_1(&format!("x_axis_caption_y: {}", &x_axis_caption_y).into());
+    }
 
     // Draw a border around the graph area
     ctx.set_line_width(2.0);
