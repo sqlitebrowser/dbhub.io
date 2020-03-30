@@ -173,16 +173,12 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     // Fixed value pieces
     let border = 2.0;
     let area_border = 2.0;
-    // let gap = 2.0;
     let display_width = canvas_width - border - 1.0;
     let display_height = canvas_height - border - 1.0;
 
-    // let graph_border = 50.0;
-
-
     // Calculate the area available to each of the graph elements
-    let graph_space_width = display_width * 0.8;
-    let graph_space_height = display_height * 0.8;
+    let graph_space_width = display_width * 0.9; // Graph area is allowed to use 90% of the canvas width.  The side borders get the remaining 10% (5% each)
+    let graph_space_height = display_height * 0.80;
 
     let left_space_width = (display_width - graph_space_width) / 2.0;
     let left_space_height = display_height * 0.8;
@@ -334,7 +330,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     }
 
     // // Calculate the values used for controlling the graph positioning and display
-    let area_root = (canvas_height * canvas_width).sqrt();
+    let area_root = (canvas_height * canvas_width).sqrt(); // This seems like a ~simple + effective approach to handle scaling in either dimension
     let y_axis_caption_font_height = area_root * 0.015;
     let x_axis_caption_font_height = area_root * 0.015;
     let x_axis_caption_text_gap = area_root * 0.006;
@@ -344,14 +340,12 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let x_axis_label_font_height = area_root * 0.015;
     let y_axis_marker_font_height = area_root * 0.015;
     let axis_thickness = area_root * 0.004;
-    let bar_border = 1.0;
 
-
-    let base_line = graph_space_bottom - axis_thickness - x_axis_label_font_height - x_axis_caption_text_gap - x_axis_caption_text_gap;
+    let base_line = graph_space_bottom - axis_thickness - x_axis_label_font_height - (2.0 * x_axis_caption_text_gap);
     let vert_size = base_line - graph_space_top;
     let bar_height_unit_size = vert_size / highest_val as f64;
-
     let bar_label_y = graph_space_bottom;
+    let bar_border = 1.0;
     let y_base = base_line + axis_thickness + x_axis_caption_text_gap;
     let y_top = graph_space_top;
     let y_length = y_base - y_top;
@@ -447,7 +441,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         let y_axis_marker_width = marker_metrics.width();
         ctx.begin_path();
         ctx.move_to(y_marker_x - y_axis_marker_width, i);
-        ctx.line_to(graph_space_right, i);
+        ctx.line_to(graph_space_right - y_axis_marker_largest_width, i);
         ctx.stroke();
         ctx.fill_text(marker_label, y_marker_x, i - (area_root * 0.003));
         i -= y_unit_step;
@@ -455,13 +449,13 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
     // Calculate the bar size, gap, and centering based upon the number of bars
     let num_bars = item_counts.len() as f64;
-    let horiz_size = graph_space_width - y_axis_marker_largest_width;
+    let horiz_size = graph_space_width - (2.0 * y_axis_marker_largest_width);
     let bar_space = horiz_size / num_bars;
     let bar_width = bar_space * 0.6; // Bars take 60% of the space, gaps between take 40%
     let bar_gap = bar_space - bar_width;
     let mut bar_left = y_marker_x + (bar_gap / 2.0); // There is "1/2 a bar gap" space between the y axis edge, and the first bar
     let axis_left = y_marker_x;
-    let axis_right = graph_space_right;
+    let axis_right = graph_space_right - y_axis_marker_largest_width;
 
     // Draw simple bar graph using the category data
     let mut hue = palette;
@@ -550,8 +544,8 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let y_axis_caption_string = format!("italic {}pt serif", y_axis_caption_font_height);
     let y_axis_caption_metrics = ctx.measure_text(&y_axis_caption_string).unwrap();
     let y_axis_caption_width = y_axis_caption_metrics.width().round();
-    let spin_x = (left_space_left + (left_space_width / 2.0)) + (y_axis_caption_font_height / 2.0);
-    let spin_y = canvas_height / 2.0;
+    let spin_x = (left_space_left + (left_space_width / 2.0)) + y_axis_caption_font_height;
+    let spin_y = (canvas_height / 2.0) - axis_thickness - x_axis_label_font_height;
     ctx.save();
     ctx.translate(spin_x, spin_y);
     ctx.rotate(3.0 * std::f64::consts::PI / 2.0);
