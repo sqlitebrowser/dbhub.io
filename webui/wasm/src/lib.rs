@@ -89,17 +89,17 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         }
     }
 
-    // // Display the number of items for each category to the javascript console, for debugging purposes
-    // if DEBUG {
-    //     for (cat, cnt) in &item_counts {
-    //         web_sys::console::log_4(
-    //             &"Category: ".into(),
-    //             &(*cat).into(),
-    //             &" Count: ".into(),
-    //             &(*cnt).into(),
-    //         );
-    //     }
-    // }
+    // Display the number of items for each category to the javascript console, for debugging purposes
+    if DEBUG {
+        for (cat, cnt) in &item_counts {
+            web_sys::console::log_4(
+                &"Category: ".into(),
+                &(*cat).into(),
+                &" Count: ".into(),
+                &(*cnt).into(),
+            );
+        }
+    }
 
     // Determine the highest count value, so we can automatically size the graph to fit
     for (_cat, cnt) in &item_counts {
@@ -107,9 +107,9 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
             highest_val = *cnt;
         }
     }
-    // if DEBUG {
-    //     web_sys::console::log_2(&"Highest count: ".into(), &highest_val.into());
-    // }
+    if DEBUG {
+        web_sys::console::log_2(&"Highest count: ".into(), &highest_val.into());
+    }
 
     // * Sort the category data, so the draw order of bars doesn't change when the browser window is resized *
 
@@ -178,7 +178,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
     // Calculate the area available to each of the graph elements
     let graph_space_width = display_width * 0.9; // Graph area is allowed to use 90% of the canvas width.  The side borders get the remaining 10% (5% each)
-    let graph_space_height = display_height * 0.80;
+    let graph_space_height = display_height * 0.8;
 
     let left_space_width = (display_width - graph_space_width) / 2.0;
     let left_space_height = display_height * 0.8;
@@ -329,7 +329,8 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         ctx.restore();
     }
 
-    // // Calculate the values used for controlling the graph positioning and display
+    // Calculate the values used for controlling the graph positioning and display
+    // TODO: Add the table name in as a sub-heading
     let area_root = (canvas_height * canvas_width).sqrt(); // This seems like a ~simple + effective approach to handle scaling in either dimension
     let y_axis_caption_font_height = area_root * 0.015;
     let x_axis_caption_font_height = area_root * 0.015;
@@ -350,40 +351,10 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let y_top = graph_space_top;
     let y_length = y_base - y_top;
 
-    // if DEBUG {
-    //     web_sys::console::log_1(&format!("area_root: {}", &area_root).into());
-    //     web_sys::console::log_1(&format!("y_axis_caption_font_height: {}", &y_axis_caption_font_height).into());
-    //     web_sys::console::log_1(&format!("x_axis_caption_font_height: {}", &x_axis_caption_font_height).into());
-    //     web_sys::console::log_1(&format!("axis_thickness: {}", &axis_thickness).into());
-    //     web_sys::console::log_1(&format!("border: {}", &border).into());
-    //     web_sys::console::log_1(&format!("gap: {}", &gap).into());
-    //     // web_sys::console::log_1(&format!("graph_border: {}", &graph_border).into());
-    //     web_sys::console::log_1(&format!("x_axis_caption_text_gap: {}", &x_axis_caption_text_gap).into());
-    //     web_sys::console::log_1(&format!("title_font_height: {}", &title_font_height).into());
-    //     web_sys::console::log_1(&format!("bar_height_unit_size: {}", &bar_height_unit_size).into());
-    //     web_sys::console::log_1(&format!("x_count_font_height: {}", &x_count_font_height).into());
-    //     web_sys::console::log_1(&format!("x_axis_label_font_height: {}", &x_axis_label_font_height).into());
-    //     web_sys::console::log_1(&format!("top: {}", &top).into());
-    //     web_sys::console::log_1(&format!("display_width: {}", &display_width).into());
-    //     web_sys::console::log_1(&format!("display_height: {}", &display_height).into());
-    //     web_sys::console::log_1(&format!("vert_size: {}", &vert_size).into());
-    //     web_sys::console::log_1(&format!("base_line: {}", &base_line).into());
-    //     web_sys::console::log_1(&format!("bar_label_y: {}", &bar_label_y).into());
-    //     web_sys::console::log_1(&format!("y_base: {}", &y_base).into());
-    //     web_sys::console::log_1(&format!("y_top: {}", &y_top).into());
-    //     web_sys::console::log_1(&format!("y_length: {}", &y_length).into());
-    // }
-
-    // TODO: Calculate the font sizes based upon the whether they fit in their general space
-
     // Calculate the y axis units of measurement
     let (y_axis_max_value, y_axis_step) = axis_max(highest_val);
     let y_unit = y_length / y_axis_max_value;
     let y_unit_step = y_unit * y_axis_step;
-
-    // if DEBUG {
-    //     web_sys::console::log_1(&format!("Y axis max: {}, step {}, unit {}, unit step {}", &y_axis_max_value, &y_axis_step, &y_unit, &y_unit_step).into());
-    // }
 
     // * Draw y axis marker lines *
 
@@ -569,7 +540,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let x_axis_caption_metrics = ctx.measure_text(&x_axis_caption_string).unwrap();
     let x_axis_caption_width = x_axis_caption_metrics.width().round();
     let x_axis_caption_x = (graph_space_left + (graph_space_width / 2.0));
-    let x_axis_caption_y = bottom_space_top + (bottom_space_height / 2.0) + (x_axis_caption_font_height / 2.0);
+    let x_axis_caption_y = bottom_space_top + (bottom_space_height / 2.0);
     ctx.set_font(&x_axis_caption_string);
     ctx.set_fill_style(&"black".into());
     ctx.set_text_align(&"center");
