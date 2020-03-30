@@ -51,7 +51,7 @@ enum OrderDirection {
 }
 
 const GOLDEN_RATIO_CONJUGATE: f64 = 0.6180;
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 
 // * Helper functions, as the web_sys pieces don't seem capable of being stored in globals *
 fn window() -> web_sys::Window {
@@ -344,28 +344,16 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let x_axis_label_font_height = area_root * 0.015;
     let y_axis_marker_font_height = area_root * 0.015;
     let axis_thickness = area_root * 0.004;
-    //
-    // let top = border + gap;
-    // let display_width = canvas_width - border - 1.0;
-    // let display_height = canvas_height - border - 1.0;
+    let bar_border = 1.0;
 
-    // // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the X axis line
-    // let vert_size = canvas_height - (2.0 * border) - (2.0 * gap) - (title_font_height + title_font_height) - (area_root * 0.2);
-    let vert_size = graph_space_height; // FIXME: Just an experiment.  Needs to instead take into account the X axis, and it's labels
+
+    let base_line = graph_space_bottom - axis_thickness - x_axis_label_font_height - x_axis_caption_text_gap - x_axis_caption_text_gap;
+    let vert_size = base_line - graph_space_top;
     let bar_height_unit_size = vert_size / highest_val as f64;
 
-    // // FIXME: The area_root piece here is a placeholder, and should instead probably be the height of the X axis info below the X axis line
-    // let base_line = display_height - ((display_height - vert_size) / 2.0) + (area_root * 0.05);
-    let base_line = graph_space_bottom - axis_thickness - x_axis_label_font_height - x_axis_caption_text_gap;
-    // let base_line = graph_space_bottom - x_axis_label_font_height - x_axis_caption_text_gap;
-    let bar_label_y = base_line + x_axis_label_font_height + x_axis_caption_text_gap + axis_thickness + x_axis_caption_text_gap;
+    let bar_label_y = graph_space_bottom;
     let y_base = base_line + axis_thickness + x_axis_caption_text_gap;
-    // let y_base = base_line; // TODO: Seems like "graph_space_bottom" atm
-    // let y_base = base_line + axis_thickness;
     let y_top = graph_space_top;
-    // FIXME: What does this 1.2 magic number do?  Suspecting this is probably the source of error,
-    //        causing the overlap of the bar data and title text in the previous approach
-    // let y_top = base_line - (vert_size * 1.2);
     let y_length = y_base - y_top;
 
     // if DEBUG {
@@ -424,11 +412,11 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         );
     }
 
-    let y_marker_left = graph_space_left + y_axis_marker_largest_width;
+    let y_marker_x = graph_space_left + y_axis_marker_largest_width;
 
     if DEBUG {
         web_sys::console::log_1(&format!(
-            "y_marker_left: {}", &y_marker_left).into()
+            "y_marker_x: {}", &y_marker_x).into()
         );
 
         // Draw the Y axis marker labels alignment line
@@ -441,8 +429,8 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         ctx.set_line_dash(&dash.into());
 
         ctx.begin_path();
-        ctx.move_to(y_marker_left, graph_space_top);
-        ctx.line_to(y_marker_left, graph_space_bottom);
+        ctx.move_to(y_marker_x, graph_space_top);
+        ctx.line_to(y_marker_x, graph_space_bottom);
         ctx.stroke();
         ctx.restore();
     }
@@ -458,32 +446,26 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         let marker_metrics = ctx.measure_text(&marker_label).unwrap();
         let y_axis_marker_width = marker_metrics.width();
         ctx.begin_path();
-        ctx.move_to(y_marker_left - y_axis_marker_width, i);
+        ctx.move_to(y_marker_x - y_axis_marker_width, i);
         ctx.line_to(graph_space_right, i);
         ctx.stroke();
-        ctx.fill_text(marker_label, y_marker_left, i - (area_root * 0.003));
+        ctx.fill_text(marker_label, y_marker_x, i - (area_root * 0.003));
         i -= y_unit_step;
     }
 
     // Calculate the bar size, gap, and centering based upon the number of bars
     let num_bars = item_counts.len() as f64;
     let horiz_size = graph_space_width - y_axis_marker_largest_width;
-    // let horiz_size = display_width - (graph_border * 2.0);
-    let b = horiz_size / num_bars;
-    let bar_width = b * 0.6;
-    let bar_gap = b - bar_width;
-    let mut bar_left = y_marker_left;
-    // let mut bar_left = ((graph_border * 2.0) + bar_gap) / 2.0;
-    let axis_left = y_marker_left;
-    // let axis_left = ((graph_border * 2.0) + bar_gap) / 2.0;
-    let axis_right = axis_left
-        + (num_bars * bar_width)
-        + ((num_bars - 1.0) * bar_gap)
-        + axis_thickness
-        + x_axis_caption_text_gap;
+    let bar_space = horiz_size / num_bars;
+    let bar_width = bar_space * 0.6; // Bars take 60% of the space, gaps between take 40%
+    let bar_gap = bar_space - bar_width;
+    let mut bar_left = y_marker_x + (bar_gap / 2.0); // There is "1/2 a bar gap" space between the y axis edge, and the first bar
+    let axis_left = y_marker_x;
+    let axis_right = graph_space_right;
 
     // Draw simple bar graph using the category data
     let mut hue = palette;
+    ctx.set_line_width(bar_border);
     ctx.set_stroke_style(&"black".into());
     ctx.set_text_align(&"center");
     for bar in &draw_order {
@@ -495,10 +477,10 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         hue = hue % 1.0;
         ctx.set_fill_style(&hsv_to_rgb(hue, 0.5, 0.95).into());
         ctx.begin_path();
-        ctx.move_to(bar_left, base_line);
-        ctx.line_to(bar_left + bar_width, base_line);
-        ctx.line_to(bar_left + bar_width, base_line - bar_height);
-        ctx.line_to(bar_left, base_line - bar_height);
+        ctx.move_to(bar_left, y_base);
+        ctx.line_to(bar_left + bar_width - bar_border, y_base);
+        ctx.line_to(bar_left + bar_width - bar_border, y_base - bar_height);
+        ctx.line_to(bar_left, y_base - bar_height);
         ctx.close_path();
         ctx.fill();
         ctx.stroke();
@@ -506,15 +488,31 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
         // Draw the bar label horizontally centered
         ctx.set_font(&format!("{}pt serif", x_axis_label_font_height));
-        let text_left = bar_width / 2.0;
-        ctx.fill_text(label, bar_left + text_left, bar_label_y);
+        let text_left = bar_left + bar_width / 2.0;
+        ctx.fill_text(label, text_left, bar_label_y);
+
+        if DEBUG {
+            // Draw vertical center line down each bar
+            let dash = Array::new();
+            dash.push(&"1".into());
+            dash.push(&"3".into());
+            ctx.save();
+            ctx.set_line_width(1.0);
+            ctx.set_stroke_style(&"grey".into());
+            ctx.set_line_dash(&dash.into());
+            ctx.begin_path();
+            ctx.move_to(text_left, graph_space_bottom);
+            ctx.line_to(text_left, graph_space_top);
+            ctx.stroke();
+            ctx.restore();
+        }
 
         // Draw the item count centered above the top of the bar
         ctx.set_font(&format!("{}pt serif", x_count_font_height));
         ctx.fill_text(
             &format!("{}", num),
-            bar_left + text_left,
-            base_line - bar_height - x_axis_caption_text_gap,
+            text_left,
+            y_base - bar_height - x_axis_caption_text_gap,
         );
         bar_left += bar_gap + bar_width;
     }

@@ -362,6 +362,9 @@
                         // Update table data
                         barChartData = response.data;
                         $scope.db.Tablename = barChartData.Tablename;
+                        barChartData.Title = [[ .Meta.Database ]];
+                        barChartData.XAxisLabel = "Category";
+                        barChartData.YAxisLabel = "Number of items";
                         draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
                     }
                 )
