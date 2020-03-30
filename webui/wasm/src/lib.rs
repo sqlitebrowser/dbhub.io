@@ -178,19 +178,19 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
     // Calculate the area available to each of the graph elements
     let graph_space_width = display_width * 0.9; // Graph area is allowed to use 90% of the canvas width.  The side borders get the remaining 10% (5% each)
-    let graph_space_height = display_height * 0.8;
-
-    let left_space_width = (display_width - graph_space_width) / 2.0;
-    let left_space_height = display_height * 0.8;
-
-    let right_space_width = left_space_width;
-    let right_space_height = display_height * 0.8;
+    let graph_space_height = display_height * 0.75; // Graph area is allowed to use 75% if the canvas height.
 
     let top_space_width = display_width;
-    let top_space_height = (display_height - graph_space_height) / 2.0;
+    let top_space_height = (display_height - graph_space_height) * 0.75;
 
     let bottom_space_width = display_width;
-    let bottom_space_height = top_space_height;
+    let bottom_space_height = (display_height - graph_space_height) - top_space_height;
+
+    let left_space_width = (display_width - graph_space_width) / 2.0;
+    let left_space_height = display_height * 0.75;
+
+    let right_space_width = left_space_width;
+    let right_space_height = display_height * 0.75;
 
     // Derived co-ordinates
     let left_space_top = border + area_border + top_space_height;
@@ -330,13 +330,13 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     }
 
     // Calculate the values used for controlling the graph positioning and display
-    // TODO: Add the table name in as a sub-heading
     let area_root = (canvas_height * canvas_width).sqrt(); // This seems like a ~simple + effective approach to handle scaling in either dimension
     let y_axis_caption_font_height = area_root * 0.015;
     let x_axis_caption_font_height = area_root * 0.015;
     let x_axis_caption_text_gap = area_root * 0.006;
     let title_font_height = area_root * 0.025;
-    // let title_font_spacing = area_root * 0.025;
+    let sub_heading_font_height = area_root * 0.020;
+    let title_font_spacing = area_root * 0.025;
     let x_count_font_height = area_root * 0.015;
     let x_axis_label_font_height = area_root * 0.015;
     let y_axis_marker_font_height = area_root * 0.015;
@@ -490,7 +490,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.line_to(axis_left, y_top);
     ctx.stroke();
 
-    // Draw title
+    // Draw title (database name)
     let mut title = data.Title.as_str();
     if title.ends_with(".sqlite") {
         title = title.trim_end_matches(".sqlite")
@@ -505,8 +505,12 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.set_fill_style(&"black".into());
     ctx.set_text_align(&"center");
     let title_x = graph_space_left + (graph_space_width / 2.0);
-    let title_y = top_space_top + (top_space_height / 2.0) + (title_font_height / 2.0);
+    let title_y = top_space_top + (top_space_height / 2.0) - (title_font_spacing / 2.0);
     ctx.fill_text(title, title_x, title_y);
+
+    // Draw sub heading (table name)
+    ctx.set_font(&format!("{}pt serif", sub_heading_font_height));
+    ctx.fill_text(&format!("Table: {}", data.Tablename.as_str()), title_x, top_space_bottom - (title_font_spacing / 2.0) - sub_heading_font_height);
 
     // Draw Y axis caption
     // Info on how to rotate text on the canvas:
