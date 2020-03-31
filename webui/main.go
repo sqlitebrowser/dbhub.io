@@ -3334,6 +3334,7 @@ func main() {
 	http.Handle("/x/updaterelease/", gz.GzipHandler(logReq(updateReleaseHandler)))
 	http.Handle("/x/updatetag/", gz.GzipHandler(logReq(updateTagHandler)))
 	http.Handle("/x/uploaddata/", gz.GzipHandler(logReq(uploadDataHandler)))
+	http.Handle("/x/vis/", gz.GzipHandler(logReq(visRequestHandler)))
 	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
 	// CSS
@@ -5693,6 +5694,214 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Database upload succeeded.  Bounce the user to the page for their new database
 	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, "/", dbName), http.StatusSeeOther)
+}
+
+// This function handles requests for database visualisation data
+func visRequestHandler(w http.ResponseWriter, r *http.Request) {
+	pageName := "Visualisation Request Handler"
+
+	// Retrieve user, database, table, and commit ID
+	dbOwner, dbName, requestedTable, commitID, err := com.GetODTC(2, r) // 1 = Ignore "/x/vis/" at the start of the URL
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbFolder := "/"
+
+	// Extract X axis, Y axis, and aggregate type variables if present
+	xAxis := r.FormValue("xaxis")
+	yAxis := r.FormValue("yaxis")
+	aggTypeStr := r.FormValue("agg")
+
+	// Ensure minimum viable parameters are present
+	if xAxis == "" || yAxis == "" || requestedTable == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	aggType := 0
+	switch aggTypeStr {
+	case "":
+		// FIXME: Add support for no aggregation needed (probably just needs a new SQL query contructor added)
+		log.Println("No aggregate type requested.  Support needs adding")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	case "SUM":
+		aggType = 1
+	case "AVG":
+		aggType = 2
+	default:
+		log.Println("Unknown aggregate type requested")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Initial sanity check of the column names
+	if xAxis != "" {
+		// Validate the x axis string, as we use it in string smashing SQL queries so need to be even more
+		// careful than usual
+		err = com.ValidateFieldName(xAxis)
+		if err != nil {
+			log.Printf("Validation failed on requested X axis field name '%v': %v\n", xAxis, err.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+	if yAxis != "" {
+		// Validate the y axis string, as we use it in string smashing SQL queries so need to be even more
+		// careful than usual
+		err = com.ValidateFieldName(yAxis)
+		if err != nil {
+			log.Printf("Validation failed on requested Y axis field name '%v': %v\n", yAxis, err.Error())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
+	}
+	if u != nil {
+		loggedInUser = u.(string)
+	}
+
+	// Check if the user has access to the requested database
+	// FIXME: Double checking this is working, so we're not showing private DB's to un-logged-in people (etc)
+	bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Sanity check
+	if id == "" {
+		// The requested database wasn't found
+		log.Printf("%s: Requested database not found. Owner: '%s%s%s'", pageName, dbOwner, dbFolder, dbName)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Open the Minio database
+	sdb, err := com.OpenMinioObject(bucket, id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Automatically close the SQLite database when this function finishes
+	defer func() {
+		sdb.Close()
+	}()
+
+	// Retrieve the list of tables in the database
+	tables, err := sdb.Tables("")
+	if err != nil {
+		// An error occurred, so get the extended error code
+		if cerr, ok := err.(sqlite.ConnError); ok {
+			// Check if the error was due to the table being locked
+			extCode := cerr.ExtendedCode()
+			if extCode == 5 { // Magic number which (in this case) means "database is locked"
+				// Wait 3 seconds then try again
+				time.Sleep(3 * time.Second)
+				tables, err = sdb.Tables("")
+				if err != nil {
+					log.Printf("Error retrieving table names: %s", err)
+					return
+				}
+			} else {
+				log.Printf("Error retrieving table names: %s", err)
+				return
+			}
+		} else {
+			log.Printf("Error retrieving table names: %s", err)
+			return
+		}
+	}
+	if len(tables) == 0 {
+		// No table names were returned, so abort
+		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
+		return
+	}
+	vw, err := sdb.Views("")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	tables = append(tables, vw...)
+
+	// If a specific table was requested, check it exists
+	if requestedTable != "" {
+		tablePresent := false
+		for _, tableName := range tables {
+			if requestedTable == tableName {
+				tablePresent = true
+			}
+		}
+		if tablePresent == false {
+			// The requested table doesn't exist
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Verify the X and Y axis columns exist
+	colList, err := sdb.Columns("", requestedTable)
+	if err != nil {
+		log.Printf("Error when reading column names for table '%s': %v\n", requestedTable, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	xColExists := false
+	for _, j := range colList {
+		if j.Name == xAxis {
+			xColExists = true
+		}
+	}
+	if xColExists == false {
+		// The requested X axis column doesn't exist
+		log.Printf("Requested X axis column doesn't exist '%s' in table: '%v'\n", xAxis, requestedTable)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	yColExists := false
+	for _, j := range colList {
+		if j.Name == yAxis {
+			yColExists = true
+		}
+	}
+	if yColExists == false {
+		// The requested Y axis column doesn't exist
+		log.Printf("Requested Y axis column doesn't exist '%s' in table: '%v'\n", yAxis, requestedTable)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Run the SQLite visualisation query
+	visRows, err := com.RunSQLiteVisQuery(sdb, requestedTable, xAxis, yAxis, aggType)
+	if err != nil {
+		// Some kind of error when running the visualisation query
+		log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
+			dbFolder, dbName, commitID, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Format the output using json.MarshalIndent() for nice looking output
+	jsonResponse, err := json.MarshalIndent(visRows, "", " ")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Fprintf(w, "%s", jsonResponse)
 }
 
 // Handles JSON requests from the front end to toggle watching of a database.

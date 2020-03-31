@@ -10,8 +10,7 @@ use std::panic;
 #[derive(Serialize, Deserialize)]
 pub struct Record {
     Name: String,
-    Type: i32,
-    Value: String,
+    Value: u32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -20,10 +19,7 @@ pub struct DbData {
     Tablename: String,
     XAxisLabel: String,
     YAxisLabel: String,
-    Records: Vec<Vec<Record>>,
-    ColNames: Vec<String>,
-    RowCount: i32,
-    ColCount: i32,
+    Records: Vec<Record>,
 }
 
 struct DrawObject {
@@ -78,16 +74,9 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let mut highest_val = 0;
     let mut item_counts: HashMap<&String, u32> = HashMap::new();
     for row in &rows {
-        // TODO: Pass the X and Y axis selectors in with the database data
-        let cat_name = &row[10].Value;
-        let item_count = &row[12].Value;
-        let item_count: u32 = item_count.parse().unwrap();
-        if item_counts.contains_key(&cat_name) {
-            let c = item_counts[cat_name];
-            item_counts.insert(cat_name, c + item_count);
-        } else {
-            item_counts.insert(cat_name, item_count);
-        }
+        let cat_name = &row.Name;
+        let item_count = row.Value;
+        item_counts.insert(cat_name, item_count);
     }
 
     // Display the number of items for each category to the javascript console, for debugging purposes

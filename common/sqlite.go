@@ -490,6 +490,54 @@ func SanityCheck(fileName string) (tables []string, err error) {
 	return
 }
 
+// Runs a SQLite database query, for the visualisation tab.
+func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis string, aggType int) (VisResponse, error) {
+	// Construct the SQLite visualisation query
+	aggText := ""
+	switch aggType {
+	case 1:
+		aggText = "SUM"
+	case 2:
+		aggText = "AVG"
+	default:
+		return VisResponse{}, errors.New("Unknown aggregate type")
+	}
+	// TODO: Check if using sqlite.Mprintf() (as used in functions above) would be better
+	dbQuery :=
+		`SELECT
+			` + xAxis +`,
+			` + aggText + `(` + yAxis + `)
+		FROM
+			'` + dbTable + `'
+		GROUP BY
+			` + xAxis
+	var visRows VisResponse
+	stmt, err := sdb.Prepare(dbQuery)
+	if err != nil {
+		log.Printf("Error when preparing statement for database: %s\n", err)
+		return visRows, errors.New("Error when preparing the SQLite visualisation statement")
+	}
+
+	// Process each row
+	err = stmt.Select(func(s *sqlite.Stmt) error {
+		// Retrieve the data for each row
+		var name string
+		var val int
+		if err = s.Scan(&name, &val); err != nil {
+			_ = errors.New("Error when running the SQLite visualisation statement")
+		}
+		visRows.Records = append(visRows.Records, VisRow{Name: name, Value: val})
+		return nil
+	})
+	if err != nil {
+		log.Printf("Error when retrieving select data from database: %s\n", err)
+		return visRows, err
+	}
+	defer stmt.Finalize()
+
+	return visRows, nil
+}
+
 // Returns the list of tables and view in the SQLite database.
 func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 	// TODO: It might be useful to cache this info in PG or memcached

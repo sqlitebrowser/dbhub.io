@@ -448,6 +448,15 @@ type SQLiteRecordSet struct {
 	TotalRows int
 }
 
+type VisRow struct {
+	Name  string
+	Value int
+}
+
+type VisResponse struct {
+	Records []VisRow
+}
+
 type StatusUpdateEntry struct {
 	DiscID int    `json:"discussion_id"`
 	Title  string `json:"title"`

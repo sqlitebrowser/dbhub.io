@@ -235,24 +235,19 @@
             </span>
         </div>
     </div>
-    <div ng-show="showVis === true" class="row">
-        <div class="col-md-12">
-            <canvas id="barchart">Your browser doesn't appear to support the canvas tag.</canvas>
-        </div>
-    </div>
-    <div ng-show="showVis === false" class="row">
+    <div class="row">
         <div class="col-md-2">&nbsp;</div>
         <div class="col-md-8">
             <div class="row">
                 <div class="col-md-12">
-                    <h4 style="text-align: center;">Please choose the X and Y axis to visualise:</h4>
+                    <h3 style="text-align: center;">Please choose the X and Y axes to visualise:</h3>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-12">
                     <table class="table table-striped table-responsive settingsTable">
                         <tr>
-                            <th>X Axis</th>
+                            <th>X Axis column</th>
                             <td>
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                                     <button id="orderby" type="button" class="btn">{{ XAxisColumn }}</button>
@@ -269,7 +264,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th>Y Axis</th>
+                            <th>Y Axis column</th>
                             <td>
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                                     <button id="orderby" type="button" class="btn">{{ YAxisColumn }}</button>
@@ -323,6 +318,14 @@
     <div class="row" style="border: none;">
         &nbsp;
     </div>
+    <div ng-show="showVis === true" class="row">
+        <div class="col-md-12">
+            <canvas id="barchart">Your browser doesn't appear to support the canvas tag.</canvas>
+        </div>
+    </div>
+    <div class="row" style="border: none;">
+        &nbsp;
+    </div>
     <div class="row" style="border: none;">
         <div class="col-md-12" style="border: none;">
             <div style="border: 1px solid #DDD; border-radius: 7px; padding: 1px;">
@@ -350,9 +353,6 @@
         XAxisLabel: "Category",
         YAxisLabel: "Number of items",
         Records: [[ .Data.Records ]],
-        ColNames: [[ .Data.ColNames ]],
-        RowCount: [[ .Data.RowCount ]],
-        ColCount: [[ .Data.ColCount ]],
     }
     let dataReceived = false;
 </script>
@@ -425,7 +425,26 @@
 
         // Retrieve the initial data for visualisation
         $scope.doVis = function() {
-            console.log("doVis() called :)");
+            let args = "table="+$scope.db.Tablename+"&xaxis="+$scope.XAxisColumn+"&yaxis="+$scope.YAxisColumn;
+            if ($scope.shouldAgg === "true") {
+                args +="&agg="+$scope.AggType;
+            }
+            $http.get("/x/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
+                function (response) {
+
+                    // Update table data
+                    barChartData = response.data;
+                    barChartData.Tablename = $scope.db.Tablename;
+                    barChartData.Title = [[ .Meta.Database ]];
+                    barChartData.XAxisLabel = $scope.XAxisColumn;
+                    barChartData.YAxisLabel = $scope.YAxisColumn;
+
+                    // Display the visualisation
+                    $scope.showVis = true;
+                    dataReceived = true;
+                    draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+                }
+            )
         }
 
         // Change the X Axis Column
@@ -469,23 +488,10 @@
             draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
         }
 
-        // Retrieves the table data for a given table
+        // Retrieves the visualisation data for a different table, then updates the visualisation
         $scope.changeTable = function(newtable) {
-            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+newtable).then(
-                    function (response) {
-                        // Update table data
-                        barChartData = response.data;
-                        $scope.db.Tablename = barChartData.Tablename;
-                        barChartData.Title = [[ .Meta.Database ]];
-                        barChartData.XAxisLabel = "Category";
-                        barChartData.YAxisLabel = "Number of items";
-
-                        // Display the visualisation
-                        $scope.showVis = true;
-                        dataReceived = true;
-                        draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
-                    }
-                )
+            $scope.db.Tablename = newtable;
+            $scope.doVis();
         };
 
         // Fork the database
