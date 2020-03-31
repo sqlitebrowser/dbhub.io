@@ -241,65 +241,84 @@
         </div>
     </div>
     <div ng-show="showVis === false" class="row">
-        <div class="col-md-12">
+        <div class="col-md-2">&nbsp;</div>
+        <div class="col-md-8">
             <div class="row">
                 <div class="col-md-12">
-                    Please choose the X and Y axis to visualise:<br />
+                    <h4 style="text-align: center;">Please choose the X and Y axis to visualise:</h4>
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-2">
-                    &nbsp;
-                </div>
-                <div class="col-md-10">
-                    <div class="row">
-                        <div class="btn-group" uib-dropdown keyboard-nav="true">
-                            <button id="orderby" type="button" class="btn">{{ 'X Axis: ' + XAxisColumn }}</button>
+                <div class="col-md-12">
+                    <table class="table table-striped table-responsive settingsTable">
+                        <tr>
+                            <th>X Axis</th>
+                            <td>
+                                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="orderby" type="button" class="btn">{{ XAxisColumn }}</button>
 
-                            <button type="button" uib-dropdown-toggle class="btn btn-default">
-                                <span class="caret"></span>
-                            </button>
-                            <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                <li ng-repeat="row in columnNames" role="menuitem" ng-click="changeXAxisColumn(row)">
-                                    <a href="">{{ row }}</a>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="btn-group" uib-dropdown keyboard-nav="true">
-                            <button id="orderby" type="button" class="btn">{{ 'Y Axis: ' + YAxisColumn }}</button>
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="row in columnNames" role="menuitem" ng-click="changeXAxisColumn(row)">
+                                            <a href="">{{ row }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Y Axis</th>
+                            <td>
+                                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="orderby" type="button" class="btn">{{ YAxisColumn }}</button>
 
-                            <button type="button" uib-dropdown-toggle class="btn btn-default">
-                                <span class="caret"></span>
-                            </button>
-                            <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                <li ng-repeat="row in columnNames" role="menuitem" ng-click="changeYAxisColumn(row)">
-                                    <a href="">{{ row }}</a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="row">
-                        Should the Y Axis values be an aggregate (sum, avg, etc)?
-                        <div class="btn-group">
-                            <label class="btn btn-default" ng-model="shouldAgg" uib-btn-radio="'true'">Yes</label>
-                            <label class="btn btn-default" ng-model="shouldAgg" uib-btn-radio="'false'">No</label>
-                        </div>
-                        <div class="btn-group" uib-dropdown keyboard-nav="true">
-                            <button id="orderby" type="button" class="btn">{{ 'Aggregate type: ' + AggType }}</button>
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="row in columnNames" role="menuitem" ng-click="changeYAxisColumn(row)">
+                                            <a href="">{{ row }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Should the Y Axis values be an aggregate (sum, avg, etc)?</th>
+                            <td>
+                                <div class="btn-group">
+                                    <label class="btn btn-default" ng-model="shouldAgg" uib-btn-radio="'true'">Yes</label>
+                                    <label class="btn btn-default" ng-model="shouldAgg" uib-btn-radio="'false'">No</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>If yes, which type of aggregate?</th>
+                            <td>
+                                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="orderby" type="button" class="btn">{{ AggType }}</button>
 
-                            <button type="button" uib-dropdown-toggle class="btn btn-default">
-                                <span class="caret"></span>
-                            </button>
-                            <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                <li ng-repeat="row in aggTypes" role="menuitem" ng-click="changeAggType(row)">
-                                    <a href="">{{ row }}</a>
-                                </li>
-                            </ul>
-                        </div>
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="row in aggTypes" role="menuitem" ng-click="changeAggType(row)">
+                                            <a href="">{{ row }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="text-align: center;">
+                        <input type="submit" class="btn btn-success" value="Display" ng-click="doVis()">
                     </div>
                 </div>
             </div>
         </div>
+        <div class="col-md-2">&nbsp;</div>
     </div>
     <div class="row" style="border: none;">
         &nbsp;
@@ -403,6 +422,11 @@
         $scope.shouldAgg = "true";
         $scope.AggType = "SUM";
         $scope.aggTypes = ["SUM", "AVG"];
+
+        // Retrieve the initial data for visualisation
+        $scope.doVis = function() {
+            console.log("doVis() called :)");
+        }
 
         // Change the X Axis Column
         $scope.changeXAxisColumn = function(newcol) {
