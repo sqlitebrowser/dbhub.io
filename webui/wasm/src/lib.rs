@@ -78,6 +78,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let mut highest_val = 0;
     let mut item_counts: HashMap<&String, u32> = HashMap::new();
     for row in &rows {
+        // TODO: Pass the X and Y axis selectors in with the database data
         let cat_name = &row[10].Value;
         let item_count = &row[12].Value;
         let item_count: u32 = item_count.parse().unwrap();
@@ -343,8 +344,6 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let axis_thickness = area_root * 0.004;
 
     let base_line = graph_space_bottom - axis_thickness - x_axis_label_font_height - (2.0 * x_axis_caption_text_gap);
-    let vert_size = base_line - graph_space_top;
-    let bar_height_unit_size = vert_size / highest_val as f64;
     let bar_label_y = graph_space_bottom;
     let bar_border = 1.0;
     let y_base = base_line + axis_thickness + x_axis_caption_text_gap;
@@ -355,6 +354,14 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let (y_axis_max_value, y_axis_step) = axis_max(highest_val);
     let y_unit = y_length / y_axis_max_value;
     let y_unit_step = y_unit * y_axis_step;
+
+    if DEBUG {
+        web_sys::console::log_1(&format!("y_length: {}", &y_length).into());
+        web_sys::console::log_1(&format!("y_axis_max_value: {}", &y_axis_max_value).into());
+        web_sys::console::log_1(&format!("y_axis_step: {}", &y_axis_step).into());
+        web_sys::console::log_1(&format!("y_unit: {}", &y_unit).into());
+        web_sys::console::log_1(&format!("y_unit_step: {}", &y_unit_step).into());
+    }
 
     // * Draw y axis marker lines *
 
@@ -437,7 +444,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         // Draw the bar
         let label = &bar.name;
         let num = bar.num;
-        let bar_height = num as f64 * bar_height_unit_size;
+        let bar_height = num as f64 * y_unit;
         hue += GOLDEN_RATIO_CONJUGATE;
         hue = hue % 1.0;
         ctx.set_fill_style(&hsv_to_rgb(hue, 0.5, 0.95).into());
@@ -654,5 +661,24 @@ fn axis_max(val: u32) -> (f64, f64) {
         let x = val % 50.0;
         return (val + 50.0 - x, 50.0);
     }
-    (1000.0, 100.0)
+
+    // If val is less than 1000, return val rounded up to the nearest 100
+    if val < 1000.0 {
+        let x = val % 100.0;
+        return (val + 100.0 - x, 100.0);
+    }
+
+    // If val is less than 5000, return val rounded up to the nearest 500
+    if val < 5000.0 {
+        let x = val % 500.0;
+        return (val + 500.0 - x, 500.0);
+    }
+
+    // If val is less than 10000, return val rounded up to the nearest 1000
+    if val < 10000.0 {
+        let x = val % 1000.0;
+        return (val + 1000.0 - x, 1000.0);
+    }
+
+    (10000.0, 100.0)
 }
