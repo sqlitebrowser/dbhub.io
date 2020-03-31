@@ -3744,11 +3744,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		Meta      com.MetaInfo
 		MyStar    bool
 		MyWatch   bool
-		ShowStuff bool
 	}
-
-	//ShowStuff := false
-	ShowStuff := true
 
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -4133,9 +4129,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		// Ensure the correct Avatar URL is displayed
 		pageData.Meta.AvatarURL = avatarURL
 
-		// FIXME: Testing stuff out
-		pageData.ShowStuff = ShowStuff
-
 		// Render the page (using the caches)
 		if ok {
 			t := tmpl.Lookup("visualisePage")
@@ -4255,9 +4248,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure the correct Avatar URL is displayed
 	pageData.Meta.AvatarURL = avatarURL
-
-	// FIXME: Testing stuff out
-	pageData.ShowStuff = ShowStuff
 
 	// Retrieve the status updates count for the logged in user
 	if loggedInUser != "" {

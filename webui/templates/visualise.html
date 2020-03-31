@@ -10,7 +10,6 @@
         height:100%;
     }
 </style>
-[[ if .ShowStuff ]]
 <script src="/wasm/dbhub_vis.js"></script>
 <script>
     const { draw_bar_chart } = wasm_bindgen;
@@ -20,18 +19,21 @@
 
     // Handle browser resize events
     function resizeEvent() {
-        draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+        if (dataReceived === true) {
+            draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+        }
     }
     window.onresize = resizeEvent; // Redraw the bar chart when the window is resized
 
     // Draw the bar chart
     async function run() {
         await wasm_bindgen('/wasm/dbhub_vis_bg.wasm');
-        draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+        if (dataReceived === true) {
+            draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+        }
     }
     run();
 </script>
-[[ end ]]
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
@@ -233,19 +235,21 @@
             </span>
         </div>
     </div>
-    [[ if .ShowStuff ]]
-    <div class="row">
+    <div ng-show="showVis === true" class="row">
         <div class="col-md-12">
             <canvas id="barchart">Your browser doesn't appear to support the canvas tag.</canvas>
         </div>
     </div>
-    [[ else ]]
     <div class="row">
-        <div class="col-md-12">
-            Testing, Testing, 1, 2, 3
+        <div ng-show="showVis === false" class="col-md-12">
+            Please choose the X and Y axis to graph:
+
+            (( X Axis : Drop down list of columns to choose from ))
+            (( Y Axis : Drop down list of columns to choose from ))
+
+            (( Should the Y Axis be aggregated?  (eg SUM/AVG/etc) ))
         </div>
     </div>
-    [[ end ]]
     <div class="row" style="border: none;">
         &nbsp;
     </div>
@@ -280,6 +284,7 @@
         RowCount: [[ .Data.RowCount ]],
         ColCount: [[ .Data.ColCount ]],
     }
+    let dataReceived = false;
 </script>
 <script>
     // Simple filter to ensure '&nbsp;' is shown as a non-breaking space
@@ -339,8 +344,8 @@
             $scope.meta.Public = "Private";
         }
 
-        // Should the visualisation be displayed?
-        // $scope.showVis = false;
+        // Start out with the visualisation disabled
+        $scope.showVis = false;
 
         // Change the column sort approach
         $scope.ChartOrderName = "Category names";
@@ -378,6 +383,10 @@
                         barChartData.Title = [[ .Meta.Database ]];
                         barChartData.XAxisLabel = "Category";
                         barChartData.YAxisLabel = "Number of items";
+
+                        // Display the visualisation
+                        $scope.showVis = true;
+                        dataReceived = true;
                         draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
                     }
                 )
