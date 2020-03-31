@@ -10,6 +10,7 @@
         height:100%;
     }
 </style>
+[[ if .ShowStuff ]]
 <script src="/wasm/dbhub_vis.js"></script>
 <script>
     const { draw_bar_chart } = wasm_bindgen;
@@ -30,6 +31,7 @@
     }
     run();
 </script>
+[[ end ]]
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
@@ -222,7 +224,7 @@
                     <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
                         <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
                         [[ if (le .DB.Info.DBEntry.Size 100000000) ]]
-                            <!-- Don't display the CSV export options for large databases, as the current node setup doesn't have sufficent ram + swap for it. -->
+                            <!-- Don't display the CSV export options for large databases, as the current node setup doesn't have sufficient ram + swap for it. -->
                             <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
                             <li><a href="/x/downloadredashjson/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as Redash JSON</a></li>
                         [[ end ]]
@@ -231,11 +233,19 @@
             </span>
         </div>
     </div>
+    [[ if .ShowStuff ]]
     <div class="row">
         <div class="col-md-12">
             <canvas id="barchart">Your browser doesn't appear to support the canvas tag.</canvas>
         </div>
     </div>
+    [[ else ]]
+    <div class="row">
+        <div class="col-md-12">
+            Testing, Testing, 1, 2, 3
+        </div>
+    </div>
+    [[ end ]]
     <div class="row" style="border: none;">
         &nbsp;
     </div>
@@ -328,6 +338,9 @@
         } else {
             $scope.meta.Public = "Private";
         }
+
+        // Should the visualisation be displayed?
+        // $scope.showVis = false;
 
         // Change the column sort approach
         $scope.ChartOrderName = "Category names";

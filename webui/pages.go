@@ -3738,13 +3738,17 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	pageName := "Visualise data page"
 
 	var pageData struct {
-		Auth0   com.Auth0Set
-		Data    com.SQLiteRecordSet
-		DB      com.SQLiteDBinfo
-		Meta    com.MetaInfo
-		MyStar  bool
-		MyWatch bool
+		Auth0     com.Auth0Set
+		Data      com.SQLiteRecordSet
+		DB        com.SQLiteDBinfo
+		Meta      com.MetaInfo
+		MyStar    bool
+		MyWatch   bool
+		ShowStuff bool
 	}
+
+	//ShowStuff := false
+	ShowStuff := true
 
 	// Retrieve session data (if any)
 	var loggedInUser string
@@ -4013,6 +4017,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Determine the number of rows to display
+	// FIXME: The row limit needs to be removed for the visualisation tab
 	var tempMaxRows int
 	if loggedInUser != "" {
 		tempMaxRows = com.PrefUserMaxRows(loggedInUser)
@@ -4127,6 +4132,9 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 		// Ensure the correct Avatar URL is displayed
 		pageData.Meta.AvatarURL = avatarURL
+
+		// FIXME: Testing stuff out
+		pageData.ShowStuff = ShowStuff
 
 		// Render the page (using the caches)
 		if ok {
@@ -4247,6 +4255,9 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure the correct Avatar URL is displayed
 	pageData.Meta.AvatarURL = avatarURL
+
+	// FIXME: Testing stuff out
+	pageData.ShowStuff = ShowStuff
 
 	// Retrieve the status updates count for the logged in user
 	if loggedInUser != "" {

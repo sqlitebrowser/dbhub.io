@@ -181,7 +181,7 @@
                     <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
                         <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
                         [[ if (le .DB.Info.DBEntry.Size 100000000) ]]
-                            <!-- Don't display the CSV export options for large databases, as the current node setup doesn't have sufficent ram + swap for it. -->
+                            <!-- Don't display the CSV export options for large databases, as the current node setup doesn't have sufficient ram + swap for it. -->
                             <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
                             <li><a href="/x/downloadredashjson/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as Redash JSON</a></li>
                         [[ end ]]
