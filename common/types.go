@@ -448,15 +448,6 @@ type SQLiteRecordSet struct {
 	TotalRows int
 }
 
-type VisRow struct {
-	Name  string
-	Value int
-}
-
-type VisResponse struct {
-	Records []VisRow
-}
-
 type StatusUpdateEntry struct {
 	DiscID int    `json:"discussion_id"`
 	Title  string `json:"title"`
@@ -477,18 +468,6 @@ type UploadRow struct {
 	UploadDate time.Time `json:"upload_date"`
 }
 
-type WhereClause struct {
-	Column string
-	Type   string
-	Value  string
-}
-
-type UserInfo struct {
-	FullName     string `json:"full_name"`
-	LastModified time.Time
-	Username     string
-}
-
 type UserDetails struct {
 	AvatarURL   string
 	ClientCert  []byte
@@ -499,4 +478,34 @@ type UserDetails struct {
 	PHash       []byte
 	PVerify     string
 	Username    string
+}
+
+type UserInfo struct {
+	FullName     string `json:"full_name"`
+	LastModified time.Time
+	Username     string
+}
+
+type VisDataV1 struct {
+	XAXisColumn string
+	YAXisColumn string
+	AggType     int
+	OrderBy     int
+	OrderDir    int
+	ResultRows  VisResponse
+}
+
+type VisResponse struct {
+	Records []VisRow
+}
+
+type VisRow struct {
+	Name  string
+	Value int
+}
+
+type WhereClause struct {
+	Column string
+	Type   string
+	Value  string
 }

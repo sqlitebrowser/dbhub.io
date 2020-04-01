@@ -159,7 +159,7 @@
         </div>
     </div>
     <div class="row" style="padding-bottom: 10px;">
-        <div class="col-md-7">
+        <div class="col-md-10">
             <span class="pull-left">
                 <div class="dropdown">
                     <div class="btn-group" uib-dropdown keyboard-nav="true">
@@ -216,7 +216,7 @@
                 </div>
             </span>
         </div>
-        <div class="col-md-5">
+        <div class="col-md-2">
             <span class="pull-right">
                 <!-- <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button> -->
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
@@ -307,8 +307,14 @@
                             </td>
                         </tr>
                     </table>
+                    <div class="row" ng-if="statusMessage != ''">
+                        <div style="text-align: center; padding-bottom: 8px;">
+                            <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
+                        </div>
+                    </div>
                     <div style="text-align: center;">
                         <input type="submit" class="btn btn-success" value="Display" ng-click="doVis()">
+                        <input type="submit" class="btn btn-primary" value="Save as default" ng-click="saveAs('default')">
                     </div>
                 </div>
             </div>
@@ -431,7 +437,6 @@
             }
             $http.get("/x/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function (response) {
-
                     // Update table data
                     barChartData = response.data;
                     barChartData.Tablename = $scope.db.Tablename;
@@ -445,22 +450,47 @@
                     draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
                 }
             )
-        }
+        };
+
+        // Save the visualisation for easy later retrieval
+        $scope.statusMessage = "";
+        $scope.statusMessageColour = "red";
+        $scope.saveAs = function(visName) {
+            let args = "table="+$scope.db.Tablename;
+            args += "&xaxis="+$scope.XAxisColumn;
+            args += "&yaxis="+$scope.YAxisColumn;
+            args += "&visname="+visName;
+            args += "&orderby="+barChartOrderBy;
+            args += "&orderdir="+barChartOrderDirection;
+            if ($scope.shouldAgg === "true") {
+                args +="&agg="+$scope.AggType;
+            }
+            $http.get("/x/vissave/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
+                function success(response) {
+                    $scope.statusMessageColour = "green";
+                    $scope.statusMessage = "Visualisation saved";
+                }, function failure(response) {
+                    // The save failed, so display the returned error message
+                    $scope.statusMessageColour = "red";
+                    $scope.statusMessage = "Saving failed: " + response.data;
+                }
+            )
+        };
 
         // Change the X Axis Column
         $scope.changeXAxisColumn = function(newcol) {
             $scope.XAxisColumn = newcol;
-        }
+        };
 
         // Change the Y Axis Column
         $scope.changeYAxisColumn = function(newcol) {
             $scope.YAxisColumn = newcol;
-        }
+        };
 
         // Change the Y Axis Column
         $scope.changeAggType = function(newagg) {
             $scope.AggType = newagg;
-        }
+        };
 
         // Change the column sort approach
         $scope.ChartOrderName = "Category names";
@@ -473,7 +503,7 @@
             }
             $scope.ChartOrderName = ord;
             draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
-        }
+        };
 
         // Change the column sort direction
         $scope.ChartDirectionName = "Ascending";
@@ -486,7 +516,7 @@
             }
             $scope.ChartDirectionName = dir;
             draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
-        }
+        };
 
         // Retrieves the visualisation data for a different table, then updates the visualisation
         $scope.changeTable = function(newtable) {

@@ -4348,3 +4348,35 @@ func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, e
 	}
 	return
 }
+
+// Saves a set of visualisation parameters, and the cooked data (eg returned by the query) for later retrieval
+func VisualisationSave(dbOwner string, dbFolder string, dbName string, visName string, visData VisDataV1) (err error) {
+	var commandTag pgx.CommandTag
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND folder = $2
+				AND db_name = $3
+		)
+		INSERT INTO visualisations_saved (user_id, db_id, name, parameters)
+		SELECT (SELECT user_id FROM u), (SELECT db_id FROM d), $4, $5
+		ON CONFLICT (db_id, user_id, name)
+			DO UPDATE
+			SET parameters = $5`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, visName, visData)
+	if err != nil {
+		log.Printf("Saving visualisation '%s' for database '%s%s%s' failed: %v\n", visName, dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected while saving visualisation '%s' for database '%s%s%s'\n", numRows, visName, dbOwner, dbFolder, dbName)
+	}
+
+	return
+}
