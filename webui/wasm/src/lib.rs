@@ -634,6 +634,7 @@ fn hsv_to_rgb(h: f64, s: f64, v: f64) -> String {
 
 // axis_max calculates the maximum value for a given axis, and the step value to use when drawing its grid lines
 fn axis_max(val: u32) -> (f64, f64) {
+    // TODO: We should be able to generalise the below code to something very simple that autoscales
     let val = val as f64;
     if val < 10.0 {
         return (10.0, 1.0);
@@ -669,5 +670,17 @@ fn axis_max(val: u32) -> (f64, f64) {
         return (val + 1000.0 - x, 1000.0);
     }
 
-    (10000.0, 100.0)
+    // If val is less than 50000, return val rounded up to the nearest 5000
+    if val < 50000.0 {
+        let x = val % 5000.0;
+        return (val + 5000.0 - x, 5000.0);
+    }
+
+    // If val is less than 100000, return val rounded up to the nearest 10000
+    if val < 100000.0 {
+        let x = val % 10000.0;
+        return (val + 10000.0 - x, 10000.0);
+    }
+
+    (100000.0, 10000.0)
 }
