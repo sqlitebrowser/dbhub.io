@@ -4261,7 +4261,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	// Fill out various metadata fields
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = com.Conf.Web.ServerName
-	pageData.Meta.Title = fmt.Sprintf("%s %s %s", dbOwner, dbFolder, dbName)
+	pageData.Meta.Title = fmt.Sprintf("vis - %s %s %s", dbOwner, dbFolder, dbName)
 
 	// Retrieve default branch name details
 	if branchName == "" {
