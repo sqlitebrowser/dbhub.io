@@ -464,11 +464,7 @@
                     $scope.statusMessage = "";
 
                     // Update table data
-                    barChartData = response.data;
-                    barChartData.Tablename = $scope.db.Tablename;
-                    barChartData.Title = [[ .Meta.Database ]];
-                    barChartData.XAxisLabel = $scope.XAxisColumn;
-                    barChartData.YAxisLabel = $scope.YAxisColumn;
+                    barChartData.Records = response.data;
 
                     // Display the visualisation
                     $scope.showVis = true;

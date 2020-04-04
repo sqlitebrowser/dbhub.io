@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
@@ -3752,7 +3754,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		AggType     string
 		OrderBy     int
 		OrderDir    int
-		Records     []com.VisRow
+		Records     []com.VisRowV1
 	}
 
 	// Retrieve the database owner & name
@@ -3787,7 +3789,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		loggedInUser = u.(string)
 		pageData.Meta.LoggedInUser = loggedInUser
 	}
-
 
 	// Check if a specific database commit ID was given
 	commitID, err := com.GetFormCommit(r)
@@ -3831,8 +3832,8 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// TODO: Add support for passing in the sort order and direction
 	//// Extract sort column, sort direction, and offset variables if present
-	// TODO: Add support for passing in the sort order and direction here
 	//sortCol := r.FormValue("sort")
 	//sortDir := r.FormValue("dir")
 	//offsetStr := r.FormValue("offset")
@@ -3944,8 +3945,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
-	// TODO: If we need to reduce database calls, we can probably make a function merging this, GetBranches(), and
-	// TODO  GetCommitList() above.  Potentially also the DBDetails() call below too.
 	if commitID == "" && tagName != "" {
 		tags, err := com.GetTags(dbOwner, dbFolder, dbName)
 		if err != nil {
@@ -4036,7 +4035,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//// Generate predictable cache keys for the metadata and sqlite table rows
+	// TODO: Retrieve the cached SQLite table and column names from memcached
 	//mdataCacheKey := com.MetadataCacheKey("dwndb-meta", loggedInUser, dbOwner, dbFolder, dbName,
 	//	commitID)
 	//rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
@@ -4234,7 +4233,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Data.ColNames = c
 
 	// Retrieve the default visualisation parameters for this database, if they've been set
-	// TODO: ...
 	params, ok, err := com.GetVisualisationParams(dbOwner, dbFolder, dbName, "default")
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -4257,17 +4255,21 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 		pageData.OrderBy = params.OrderBy
 		pageData.OrderDir = params.OrderDir
-	}
 
-	// Retrieve the saved visualisation data (not parameters) for this database, if it's been set
-	data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, "default")
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if ok {
-		pageData.Records = data.Records
-		pageData.DataGiven = true
+		// Calculate the hash string to retrieve any saved data with
+		z := md5.Sum([]byte(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d/%s", strings.ToLower(dbOwner), dbFolder, dbName, commitID, params.XAXisColumn, params.YAXisColumn, params.AggType, "default")))
+		hash := hex.EncodeToString(z[:])
+
+		// Retrieve the saved data for this visualisation too, if it's available
+		data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ok {
+			pageData.Records = data
+			pageData.DataGiven = true
+		}
 	}
 
 	// Retrieve correctly capitalised username for the user

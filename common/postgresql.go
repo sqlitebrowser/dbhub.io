@@ -2153,6 +2153,81 @@ func GetUsernameFromEmail(email string) (userName string, avatarURL string, err 
 	return
 }
 
+// Retrieves a saved set of visualisation query results
+func GetVisualisationData(dbOwner string, dbFolder string, dbName string, commitID string, hash string) (data []VisRowV1, ok bool, err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND folder = $2
+				AND db_name = $3
+		)
+		SELECT results
+		FROM vis_result_cache as vis_cache, u, d
+		WHERE vis_cache.db_id = d.db_id
+			AND vis_cache.user_id = u.user_id
+			AND vis_cache.commit_id = $4
+			AND vis_cache.hash = $5`
+	e := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID, hash).Scan(&data)
+	if e != nil {
+		if e == pgx.ErrNoRows {
+			// There weren't any saved parameters for this database visualisation
+			return
+		}
+
+		// A real database error occurred
+		err = e
+		log.Printf("Checking if a database exists failed: %v\n", e)
+		return
+	}
+
+	// Data was successfully retrieved
+	ok = true
+	return
+}
+
+// Retrieves a saved set of visualisation parameters
+func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visName string) (params VisParamsV1, ok bool, err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND folder = $2
+				AND db_name = $3
+		)
+		SELECT parameters
+		FROM vis_params as vis, u, d
+		WHERE vis.db_id = d.db_id
+			AND vis.user_id = u.user_id
+			AND vis.name = $4`
+	e := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, visName).Scan(&params)
+	if e != nil {
+		if e == pgx.ErrNoRows {
+			// There weren't any saved parameters for this database visualisation
+			return
+		}
+
+		// A real database error occurred
+		err = e
+		log.Printf("Retrieving visualisation parameters for '%s%s%s', visualisation '%s' failed: %v\n", dbOwner, dbFolder, dbName, visName, e)
+		return
+	}
+
+	// Parameters were successfully retrieved
+	ok = true
+	return
+}
+
 // Increments the download count for a database
 func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) error {
 	dbQuery := `
@@ -4349,82 +4424,8 @@ func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, e
 	return
 }
 
-// Retrieves a given set of visualisation parameter
-// TODO: Move this function into correct alphabetical order
-func GetVisualisationData(dbOwner string, dbFolder string, dbName string, commitID string, visName string) (data VisResponse, ok bool, err error) {
-	// FIXME: The commit ID *needs* to be part of the selection process for this data
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		), d AS (
-			SELECT db.db_id
-			FROM sqlite_databases AS db, u
-			WHERE db.user_id = u.user_id
-				AND folder = $2
-				AND db_name = $3
-		)
-		SELECT parameters
-		FROM visualisations_saved as vis, u, d
-		WHERE vis.db_id = d.db_id
-			AND vis.user_id = u.user_id
-			AND vis.name = $4`
-	var z VisDataV1
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, visName).Scan(&z)
-	if err != nil {
-		log.Printf("Checking if a database exists failed: %v\n", err)
-		return
-	}
-
-	// TODO: Count the number of return rows.  If it's 0, eg no saved parameters found, we ensure ok is set to false before returning
-	ok = true
-
-	// FIXME: Temp workaround
-	data = z.ResultRows
-
-	return
-}
-
-// Retrieves a given set of visualisation parameter
-// TODO: Move this function into correct alphabetical order
-func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visName string) (params VisDataV1, ok bool, err error) {
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		), d AS (
-			SELECT db.db_id
-			FROM sqlite_databases AS db, u
-			WHERE db.user_id = u.user_id
-				AND folder = $2
-				AND db_name = $3
-		)
-		SELECT parameters
-		FROM visualisations_saved as vis, u, d
-		WHERE vis.db_id = d.db_id
-			AND vis.user_id = u.user_id
-			AND vis.name = $4`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, visName).Scan(&params)
-	if err != nil {
-		log.Printf("Checking if a database exists failed: %v\n", err)
-		return
-	}
-
-	// TODO: Count the number of return rows.  If it's 0, eg no saved parameters found, we ensure ok is set to false before returning
-
-	ok = true
-
-	return
-}
-
-// Saves a set of visualisation parameters for later retrieval
-//// Saves a set of visualisation parameters, and the cooked data (eg returned by the query) for later retrieval
-func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, visName string, visData VisDataV1) (err error) {
-	// TODO: Split the visualisation data out, so it's saved separately with something that includes the commitID
-
-	// TODO: Rename the "visualisations_saved" table to "vis_params"
+// Saves visualisation result data for later retrieval
+func VisualisationSaveData(dbOwner string, dbFolder string, dbName string, commitID string, hash string, visData []VisRowV1) (err error) {
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (
@@ -4438,12 +4439,43 @@ func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, vis
 				AND folder = $2
 				AND db_name = $3
 		)
-		INSERT INTO visualisations_saved (user_id, db_id, name, parameters)
+		INSERT INTO vis_result_cache (user_id, db_id, commit_id, hash, results)
+		SELECT (SELECT user_id FROM u), (SELECT db_id FROM d), $4, $5, $6
+		ON CONFLICT (db_id, user_id, commit_id, hash)
+			DO UPDATE
+			SET results = $6`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, commitID, hash, visData)
+	if err != nil {
+		log.Printf("Saving visualisation data for database '%s%s%s', commit '%s', hash '%s' failed: %v\n", dbOwner, dbFolder, dbName, commitID, hash, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected while saving visualisation data for database '%s%s%s', commit '%s', hash '%s'\n", numRows, dbOwner, dbFolder, dbName, commitID, hash)
+	}
+	return
+}
+
+// Saves a set of visualisation parameters for later retrieval
+func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, visName string, visParams VisParamsV1) (err error) {
+	var commandTag pgx.CommandTag
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND folder = $2
+				AND db_name = $3
+		)
+		INSERT INTO vis_params (user_id, db_id, name, parameters)
 		SELECT (SELECT user_id FROM u), (SELECT db_id FROM d), $4, $5
 		ON CONFLICT (db_id, user_id, name)
 			DO UPDATE
 			SET parameters = $5`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, visName, visData)
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, visName, visParams)
 	if err != nil {
 		log.Printf("Saving visualisation '%s' for database '%s%s%s' failed: %v\n", visName, dbOwner, dbFolder, dbName, err)
 		return err
@@ -4451,6 +4483,5 @@ func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, vis
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected while saving visualisation '%s' for database '%s%s%s'\n", numRows, visName, dbOwner, dbFolder, dbName)
 	}
-
 	return
 }

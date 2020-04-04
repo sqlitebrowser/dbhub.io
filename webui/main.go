@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/md5"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -19,7 +21,7 @@ import (
 	gz "github.com/NYTimes/gziphandler"
 	"github.com/bradfitz/gomemcache/memcache"
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
-	"github.com/gwenn/gosqlite"
+	sqlite "github.com/gwenn/gosqlite"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"golang.org/x/oauth2"
@@ -6126,14 +6128,14 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the visualisation query result, so we can save that too
-	visData := com.VisDataV1{
+	visParams := com.VisParamsV1{
 		XAXisColumn: xAxis,
 		YAXisColumn: yAxis,
 		AggType:     aggType,
 		OrderBy:     orderBy,
 		OrderDir:    orderDir,
 	}
-	visData.ResultRows, err = com.RunSQLiteVisQuery(sdb, requestedTable, xAxis, yAxis, aggType)
+	visData, err := com.RunSQLiteVisQuery(sdb, requestedTable, xAxis, yAxis, aggType)
 	if err != nil {
 		// Some kind of error when running the visualisation query
 		log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
@@ -6144,8 +6146,20 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Check if the # of rows returned from the query is 0, and if so let the user know + don't save
 
-	// Save the SQLite visualisation query
-	err = com.VisualisationSaveParams(dbOwner, dbFolder, dbName, visName, visData)
+	// Save the SQLite visualisation parameters
+	err = com.VisualisationSaveParams(dbOwner, dbFolder, dbName, visName, visParams)
+	if err != nil {
+		log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", visName,
+			dbOwner, dbFolder, dbName, commitID, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Save the SQLite visualisation data
+	z := md5.Sum([]byte(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d/%s", strings.ToLower(dbOwner), dbFolder, dbName, commitID, xAxis, yAxis, aggType, visName)))
+	hash := hex.EncodeToString(z[:])
+
+	err = com.VisualisationSaveData(dbOwner, dbFolder, dbName, commitID, hash, visData)
 	if err != nil {
 		log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", visName,
 			dbOwner, dbFolder, dbName, commitID, err.Error())

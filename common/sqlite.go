@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gwenn/gosqlite"
+	sqlite "github.com/gwenn/gosqlite"
 )
 
 // Returns the number of rows in a SQLite table.
@@ -491,7 +491,7 @@ func SanityCheck(fileName string) (tables []string, err error) {
 }
 
 // Runs a SQLite database query, for the visualisation tab.
-func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis string, aggType int) (VisResponse, error) {
+func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis string, aggType int) ([]VisRowV1, error) {
 	// Construct the SQLite visualisation query
 	aggText := ""
 	switch aggType {
@@ -500,18 +500,18 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis str
 	case 2:
 		aggText = "AVG"
 	default:
-		return VisResponse{}, errors.New("Unknown aggregate type")
+		return []VisRowV1{}, errors.New("Unknown aggregate type")
 	}
 	// TODO: Check if using sqlite.Mprintf() (as used in functions above) would be better
 	dbQuery :=
 		`SELECT
-			` + xAxis +`,
+			` + xAxis + `,
 			` + aggText + `(` + yAxis + `)
 		FROM
 			'` + dbTable + `'
 		GROUP BY
 			` + xAxis
-	var visRows VisResponse
+	var visRows []VisRowV1
 	stmt, err := sdb.Prepare(dbQuery)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\n", err)
@@ -526,7 +526,7 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis str
 		if err = s.Scan(&name, &val); err != nil {
 			_ = errors.New("Error when running the SQLite visualisation statement")
 		}
-		visRows.Records = append(visRows.Records, VisRow{Name: name, Value: val})
+		visRows = append(visRows, VisRowV1{Name: name, Value: val})
 		return nil
 	})
 	if err != nil {

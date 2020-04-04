@@ -486,20 +486,15 @@ type UserInfo struct {
 	Username     string
 }
 
-type VisDataV1 struct {
+type VisParamsV1 struct {
 	XAXisColumn string
 	YAXisColumn string
 	AggType     int
 	OrderBy     int
 	OrderDir    int
-	ResultRows  VisResponse
 }
 
-type VisResponse struct {
-	Records []VisRow
-}
-
-type VisRow struct {
+type VisRowV1 struct {
 	Name  string
 	Value int
 }
