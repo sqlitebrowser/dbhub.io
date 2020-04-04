@@ -6145,7 +6145,7 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Check if the # of rows returned from the query is 0, and if so let the user know + don't save
 
 	// Save the SQLite visualisation query
-	err = com.VisualisationSave(dbOwner, dbFolder, dbName, visName, visData)
+	err = com.VisualisationSaveParams(dbOwner, dbFolder, dbName, visName, visData)
 	if err != nil {
 		log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", visName,
 			dbOwner, dbFolder, dbName, commitID, err.Error())

@@ -4349,8 +4349,82 @@ func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, e
 	return
 }
 
-// Saves a set of visualisation parameters, and the cooked data (eg returned by the query) for later retrieval
-func VisualisationSave(dbOwner string, dbFolder string, dbName string, visName string, visData VisDataV1) (err error) {
+// Retrieves a given set of visualisation parameter
+// TODO: Move this function into correct alphabetical order
+func GetVisualisationData(dbOwner string, dbFolder string, dbName string, commitID string, visName string) (data VisResponse, ok bool, err error) {
+	// FIXME: The commit ID *needs* to be part of the selection process for this data
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND folder = $2
+				AND db_name = $3
+		)
+		SELECT parameters
+		FROM visualisations_saved as vis, u, d
+		WHERE vis.db_id = d.db_id
+			AND vis.user_id = u.user_id
+			AND vis.name = $4`
+	var z VisDataV1
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, visName).Scan(&z)
+	if err != nil {
+		log.Printf("Checking if a database exists failed: %v\n", err)
+		return
+	}
+
+	// TODO: Count the number of return rows.  If it's 0, eg no saved parameters found, we ensure ok is set to false before returning
+	ok = true
+
+	// FIXME: Temp workaround
+	data = z.ResultRows
+
+	return
+}
+
+// Retrieves a given set of visualisation parameter
+// TODO: Move this function into correct alphabetical order
+func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visName string) (params VisDataV1, ok bool, err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND folder = $2
+				AND db_name = $3
+		)
+		SELECT parameters
+		FROM visualisations_saved as vis, u, d
+		WHERE vis.db_id = d.db_id
+			AND vis.user_id = u.user_id
+			AND vis.name = $4`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, visName).Scan(&params)
+	if err != nil {
+		log.Printf("Checking if a database exists failed: %v\n", err)
+		return
+	}
+
+	// TODO: Count the number of return rows.  If it's 0, eg no saved parameters found, we ensure ok is set to false before returning
+
+	ok = true
+
+	return
+}
+
+// Saves a set of visualisation parameters for later retrieval
+//// Saves a set of visualisation parameters, and the cooked data (eg returned by the query) for later retrieval
+func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, visName string, visData VisDataV1) (err error) {
+	// TODO: Split the visualisation data out, so it's saved separately with something that includes the commitID
+
+	// TODO: Rename the "visualisations_saved" table to "vis_params"
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (

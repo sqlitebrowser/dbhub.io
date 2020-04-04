@@ -356,9 +356,9 @@
     let barChartData = {
         Title: "[[ .Meta.Database ]]",
         Tablename: "[[ .Data.Tablename ]]",
-        XAxisLabel: "Category",
-        YAxisLabel: "Number of items",
-        Records: [[ .Data.Records ]],
+        XAxisLabel: "",
+        YAxisLabel: "",
+        Records: [[ .Records ]],
     }
     let dataReceived = false;
 </script>
@@ -389,7 +389,6 @@
             FullDesc:     "[[ .DB.Info.FullDesc ]]",
             Licence:      "[[ .DB.Info.Licence ]]",
             LicenceURL:   "[[ .DB.Info.LicenceURL ]]",
-            MaxRows:      "[[ .DB.MaxRows ]]",
             MRs:          "[[ .DB.Info.MRs ]]",
             MyStar:       "[[ .MyStar ]]",
             MyWatch:      "[[ .MyWatch ]]",
@@ -420,23 +419,50 @@
             $scope.meta.Public = "Private";
         }
 
-        // Start out with the visualisation disabled
+        // Start out with the visualisation disabled, unless saved parameters were passed through
         $scope.showVis = false;
         $scope.columnNames = [[ .Data.ColNames ]];
         $scope.XAxisColumn = $scope.columnNames[0];
+        barChartData.XAxisLabel = $scope.XAxisColumn;
         $scope.YAxisColumn = $scope.columnNames[1];
+        barChartData.YAxisLabel = $scope.YAxisColumn;
         $scope.shouldAgg = "true";
         $scope.AggType = "SUM";
         $scope.aggTypes = ["SUM", "AVG"];
 
-        // Retrieve the initial data for visualisation
-        $scope.doVis = function() {
+        // If saved parameter data was passed through, update the initial values
+        if ("[[ .ParamsGiven ]]" === "true") {
+            $scope.XAxisColumn = "[[ .XAxis ]]";
+            barChartData.XAxisLabel = $scope.XAxisColumn;
+            $scope.YAxisColumn = "[[ .YAxis ]]";
+            barChartData.YAxisLabel = $scope.YAxisColumn;
+            $scope.shouldAgg = "true";
+            $scope.AggType = "[[ .AggType ]]";
+            barChartOrderBy = [[ .OrderBy ]];
+            barChartOrderDirection = [[ .OrderDir ]];
+        }
+
+        // If the data points for visualisation were provided, set the flag to indicate this
+        if ("[[ .DataGiven ]]" === "true") {
+            dataReceived = true;
+        }
+
+        // If both the visualisation parameters and data points were provided, set the flag to show the visualisation
+        if (("[[ .ParamsGiven ]]" === "true") && ("[[ .DataGiven ]]" === "true")) {
+            $scope.showVis = true;
+        }
+
+        // Retrieve the data for visualisation
+        $scope.doVis = async function() {
             let args = "table="+$scope.db.Tablename+"&xaxis="+$scope.XAxisColumn+"&yaxis="+$scope.YAxisColumn;
             if ($scope.shouldAgg === "true") {
                 args +="&agg="+$scope.AggType;
             }
             $http.get("/x/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
-                function (response) {
+                function success(response) {
+                    // Clear any existing error message
+                    $scope.statusMessage = "";
+
                     // Update table data
                     barChartData = response.data;
                     barChartData.Tablename = $scope.db.Tablename;
@@ -448,6 +474,11 @@
                     $scope.showVis = true;
                     dataReceived = true;
                     draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+                }, function failure(response) {
+                    // Retrieving data failed, so display the returned error message and hide the graph
+                    $scope.statusMessageColour = "red";
+                    $scope.statusMessage = "Retrieving data failed: " + response.data;
+                    $scope.showVis = false;
                 }
             )
         };
@@ -480,16 +511,31 @@
         // Change the X Axis Column
         $scope.changeXAxisColumn = function(newcol) {
             $scope.XAxisColumn = newcol;
+
+            // If the graph is being shown, update it
+            if ($scope.showVis == true) {
+                $scope.doVis();
+            }
         };
 
         // Change the Y Axis Column
         $scope.changeYAxisColumn = function(newcol) {
             $scope.YAxisColumn = newcol;
+
+            // If the graph is being shown, update it
+            if ($scope.showVis == true) {
+                $scope.doVis();
+            }
         };
 
-        // Change the Y Axis Column
+        // Change the Aggregate function
         $scope.changeAggType = function(newagg) {
             $scope.AggType = newagg;
+
+            // If the graph is being shown, update it
+            if ($scope.showVis == true) {
+                $scope.doVis();
+            }
         };
 
         // Change the column sort approach
