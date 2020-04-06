@@ -110,47 +110,26 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO: Add support for passing in the sort order and direction
-	//// Extract sort column, sort direction, and offset variables if present
-	//sortCol := r.FormValue("sort")
-	//sortDir := r.FormValue("dir")
-	//offsetStr := r.FormValue("offset")
-	//
-	//// If an offset was provided, validate it
-	//var rowOffset int
-	//if offsetStr != "" {
-	//	rowOffset, err = strconv.Atoi(offsetStr)
-	//	if err != nil {
-	//		errorPage(w, r, http.StatusBadRequest, err.Error())
-	//		return
-	//	}
-	//
-	//	// Ensure the row offset isn't negative
-	//	if rowOffset < 0 {
-	//		rowOffset = 0
-	//	}
-	//}
-	//
-	//// Sanity check the sort column name
-	//if sortCol != "" {
-	//	// Validate the sort column text, as we use it in string smashing SQL queries so need to be even more
-	//	// careful than usual
-	//	err = com.ValidateFieldName(sortCol)
-	//	if err != nil {
-	//		log.Printf("Validation failed on requested sort field name '%v': %v\n", sortCol,
-	//			err.Error())
-	//		errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
-	//		return
-	//	}
-	//}
-	//
-	//// If a sort direction was provided, validate it
-	//if sortDir != "" {
-	//	if sortDir != "ASC" && sortDir != "DESC" {
-	//		errorPage(w, r, http.StatusBadRequest, "Invalid sort direction")
-	//		return
-	//	}
-	//}
+	// If an order and direction were given, pass that through to the rendered page
+	orderByStr := r.FormValue("orderby")
+	orderDirStr := r.FormValue("orderdir")
+	switch orderByStr {
+	case "0":
+		pageData.OrderBy = 0
+	case "1":
+		pageData.OrderBy = 1
+	default:
+		// Ignore any empty or invalid values
+	}
+	// Parse the order direction input
+	switch orderDirStr {
+	case "0":
+		pageData.OrderDir = 0
+	case "1":
+		pageData.OrderDir = 1
+	default:
+		// Ignore any empty or invalid values
+	}
 
 	// Check if the database exists and the user has access to view it
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
@@ -313,111 +292,9 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO: Retrieve the cached SQLite table and column names from memcached
-	//mdataCacheKey := com.MetadataCacheKey("dwndb-meta", loggedInUser, dbOwner, dbFolder, dbName,
-	//	commitID)
-	//rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-	//	loggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
-	//
-	//// If a cached version of the page data exists, use it
-	//ok, err := com.GetCachedData(mdataCacheKey, &pageData)
-	//if err != nil {
-	//	log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
-	//}
-	//if ok {
-	//	// Grab the cached table data as well
-	//	ok, err := com.GetCachedData(rowCacheKey, &pageData.Data)
-	//	if err != nil {
-	//		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
-	//	}
-	//
-	//	//// Restore the correct MaxRow value
-	//	//pageData.DB.MaxRows = tempMaxRows
-	//
-	//	// Restore the correct username
-	//	pageData.Meta.LoggedInUser = loggedInUser
-	//
-	//	// Restore the correct discussion and MR count
-	//	pageData.DB.Info.Discussions = currentDisc
-	//	pageData.DB.Info.MRs = currentMRs
-	//
-	//	// Set the selected branch name
-	//	if branchName != "" {
-	//		pageData.DB.Info.Branch = branchName
-	//	}
-	//
-	//	// Fill out the branch info
-	//	pageData.DB.Info.BranchList = []string{}
-	//	if branchName != "" {
-	//		// If a specific branch was requested, ensure it's the first entry of the drop down
-	//		pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, branchName)
-	//	}
-	//	for i := range branchHeads {
-	//		if i != branchName {
-	//			err = com.ValidateBranchName(i)
-	//			if err == nil {
-	//				pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
-	//			}
-	//		}
-	//	}
-	//
-	//	// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
-	//	bCheck := map[string]struct{}{}
-	//	for _, j := range pageData.DB.Info.BranchList {
-	//		_, ok := bCheck[j]
-	//		if !ok {
-	//			// The branch name value isn't in the map already, so add it
-	//			bCheck[j] = struct{}{}
-	//		} else {
-	//			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
-	//			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
-	//				"logged in user '%s'", j, dbOwner, dbFolder, dbName, loggedInUser)
-	//		}
-	//	}
-	//
-	//	// Retrieve the "forked from" information
-	//	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
-	//	if err != nil {
-	//		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-	//		return
-	//	}
-	//	pageData.Meta.ForkOwner = frkOwn
-	//	pageData.Meta.ForkFolder = frkFol
-	//	pageData.Meta.ForkDatabase = frkDB
-	//	pageData.Meta.ForkDeleted = frkDel
-	//
-	//	// Get latest star and fork count
-	//	_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)
-	//	if err != nil {
-	//		errorPage(w, r, http.StatusInternalServerError, err.Error())
-	//		return
-	//	}
-	//
-	//	// Retrieve the status updates count for the logged in user
-	//	if loggedInUser != "" {
-	//		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-	//		if err != nil {
-	//			errorPage(w, r, http.StatusInternalServerError, err.Error())
-	//			return
-	//		}
-	//	}
-	//
-	//	// Ensure the correct Avatar URL is displayed
-	//	pageData.Meta.AvatarURL = avatarURL
-	//
-	//	// Render the page (using the caches)
-	//	if ok {
-	//		t := tmpl.Lookup("visualisePage")
-	//		err = t.Execute(w, pageData)
-	//		if err != nil {
-	//			log.Printf("Error: %s", err)
-	//		}
-	//		return
-	//	}
-	//
-	//	// Note - If the row data wasn't found in cache, we fall through and continue on with the rest of this
-	//	//        function, which grabs it and caches it for future use
-	//}
+	// TODO: Retrieve the cached SQLite table and column names from memcached.
+	//       Keyed to something like username+dbname+commitID+tablename
+	//       This can be done at a later point, if it turns out people are using the visualisation feature :)
 
 	// Get a handle from Minio for the database object
 	sdb, err := com.OpenMinioObject(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
@@ -494,8 +371,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the SQLite table and column names
-	// TODO: This sounds like good info to store in memcached
-	//       Keyed to something like username+dbname+commitID+tablename
 	pageData.Data.Tablename = dbTable
 	colList, err := sdb.Columns("", dbTable)
 	if err != nil {
@@ -650,36 +525,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	pageData.DB.Info.Discussions = currentDisc
 	pageData.DB.Info.MRs = currentMRs
 
-	//// Cache the page metadata
-	//err = com.CacheData(mdataCacheKey, pageData, com.Conf.Memcache.DefaultCacheTime)
-	//if err != nil {
-	//	log.Printf("%s: Error when caching page data: %v\n", pageName, err)
-	//}
-
-	// Grab the cached visualisation data if it's available
-	// TODO: Is this something we need to do here?
-	//ok, err = com.GetCachedData(rowCacheKey, &pageData.Data)
-	//if err != nil {
-	//	log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
-	//}
-	//
-	//// If the row data wasn't in cache, read it from the database
-	//if !ok {
-	//	pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, pageData.DB.MaxRows, sortCol, sortDir, rowOffset)
-	//	if err != nil {
-	//		// Some kind of error when reading the database data
-	//		errorPage(w, r, http.StatusBadRequest, err.Error())
-	//		return
-	//	}
-	//	pageData.Data.Tablename = dbTable
-	//}
-	//
-	//// Cache the table row data
-	//err = com.CacheData(rowCacheKey, pageData.Data, com.Conf.Memcache.DefaultCacheTime)
-	//if err != nil {
-	//	log.Printf("%s: Error when caching page data: %v\n", pageName, err)
-	//}
-
 	// Render the visualisation page
 	t := tmpl.Lookup("visualisePage")
 	err = t.Execute(w, pageData)
@@ -780,8 +625,6 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-
-	// TODO: Add caching.
 
 	// Open the Minio database
 	sdb, err := com.OpenMinioObject(bucket, id)
@@ -1143,7 +986,12 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Check if the # of rows returned from the query is 0, and if so let the user know + don't save
+	// If the # of rows returned from the query is 0, let the user know + don't save
+	if len(visData) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Query returned no result")
+		return
+	}
 
 	// Save the SQLite visualisation parameters
 	err = com.VisualisationSaveParams(dbOwner, dbFolder, dbName, visName, visParams)
