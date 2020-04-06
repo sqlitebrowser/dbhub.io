@@ -33,7 +33,7 @@ require (
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/memcachier/mc v2.0.1+incompatible // indirect
-	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.2
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo v1.10.2 // indirect
@@ -46,17 +46,18 @@ require (
 	github.com/shurcooL/github_flavored_markdown v0.0.0-20181002035957-2122de532470 // indirect
 	github.com/shurcooL/go v0.0.0-20190704215121-7189cc372560 // indirect
 	github.com/shurcooL/go-goon v0.0.0-20170922171312-37c2f522c041 // indirect
-	github.com/shurcooL/highlight_diff v0.0.0-20181222201841-111da2e7d480 // indirect
-	github.com/shurcooL/highlight_go v0.0.0-20181215221002-9d8641ddf2e1 // indirect
-	github.com/shurcooL/octicon v0.0.0-20181222203144-9ff1a4cf27f4 // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
+	github.com/shurcooL/highlight_diff v0.0.0-20181222201841-111da2e7d480
+	github.com/shurcooL/highlight_go v0.0.0-20181215221002-9d8641ddf2e1
+	github.com/shurcooL/octicon v0.0.0-20181222203144-9ff1a4cf27f4
+	github.com/shurcooL/sanitized_anchor_name v1.0.0
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect
-	github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d // indirect
-	github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e // indirect
-	github.com/sqlitebrowser/blackfriday v9.0.0+incompatible // indirect
+	github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d
+	github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e
+	github.com/sqlitebrowser/blackfriday v9.0.0+incompatible
 	github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
