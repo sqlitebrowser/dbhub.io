@@ -304,8 +304,10 @@
                         </div>
                     </div>
                     <div style="text-align: center;">
-                        <input type="submit" class="btn btn-success" value="Display" ng-click="doVis()">
+                        <input ng-hide="showVis === true" type="submit" class="btn btn-success" value="Display" ng-click="doVis()">
+                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <input type="submit" class="btn btn-primary" value="Save as default" ng-click="saveAs('default')">
+                        [[ end ]]
                     </div>
                 </div>
             </div>

@@ -611,7 +611,6 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database
-	// FIXME: Double check this is working, so we're not showing private DB's to un-logged-in people (etc)
 	bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -858,8 +857,14 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		loggedInUser = u.(string)
 	}
 
+	// Make sure the save request is coming from the database owner
+	if loggedInUser != dbOwner {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "Only the database owner is allowed to save a visualisation (at least for now)")
+		return
+	}
+
 	// Check if the user has access to the requested database
-	// FIXME: Double check this is working, so we're not showing private DB's to un-logged-in people (etc)
 	bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
