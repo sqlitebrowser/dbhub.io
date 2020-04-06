@@ -524,9 +524,19 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		pageData.YAxis = params.YAXisColumn
 		switch params.AggType {
 		case 1:
-			pageData.AggType = "SUM"
+			pageData.AggType = "avg"
 		case 2:
-			pageData.AggType = "AVG"
+			pageData.AggType = "count"
+		case 3:
+			pageData.AggType = "group_concat"
+		case 4:
+			pageData.AggType = "max"
+		case 5:
+			pageData.AggType = "min"
+		case 6:
+			pageData.AggType = "sum"
+		case 7:
+			pageData.AggType = "total"
 		default:
 			errorPage(w, r, http.StatusInternalServerError, "Unknown aggregate type returned from database")
 			return
@@ -534,11 +544,8 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		pageData.OrderBy = params.OrderBy
 		pageData.OrderDir = params.OrderDir
 
-		// Calculate the hash string to retrieve any saved data with
-		z := md5.Sum([]byte(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d/%s", strings.ToLower(dbOwner), dbFolder, dbName, commitID, params.XAXisColumn, params.YAXisColumn, params.AggType, "default")))
-		hash := hex.EncodeToString(z[:])
-
 		// Retrieve the saved data for this visualisation too, if it's available
+		hash := visHash(dbOwner, dbFolder, dbName, commitID, params.XAXisColumn, params.YAXisColumn, params.AggType, "default")
 		data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -699,21 +706,26 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 	aggTypeStr := r.FormValue("agg")
 
 	// Ensure minimum viable parameters are present
-	if xAxis == "" || yAxis == "" || requestedTable == "" {
+	if xAxis == "" || yAxis == "" || aggTypeStr == "" || requestedTable == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	aggType := 0
 	switch aggTypeStr {
-	case "":
-		// FIXME: Add support for no aggregation needed (probably just needs a new SQL query constructor added)
-		log.Println("No aggregate type requested.  Support needs adding")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	case "SUM":
+	case "avg":
 		aggType = 1
-	case "AVG":
+	case "count":
 		aggType = 2
+	case "group_concat":
+		aggType = 3
+	case "max":
+		aggType = 4
+	case "min":
+		aggType = 5
+	case "sum":
+		aggType = 6
+	case "total":
+		aggType = 7
 	default:
 		log.Println("Unknown aggregate type requested")
 		w.WriteHeader(http.StatusBadRequest)
@@ -769,8 +781,7 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Add caching.  This will need a different cache key approach to the main table data, as only identical
-	//       visualisation parameters for a given database commit should match
+	// TODO: Add caching.
 
 	// Open the Minio database
 	sdb, err := com.OpenMinioObject(bucket, id)
@@ -874,6 +885,7 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
 			dbFolder, dbName, commitID, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 
@@ -915,15 +927,20 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse the aggregation type
 	aggType := 0
 	switch aggTypeStr {
-	case "":
-		// FIXME: Add support for no aggregation needed (probably just needs a new SQL query constructor added?)
-		log.Println("No aggregate type requested.  Support needs adding")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	case "SUM":
+	case "avg":
 		aggType = 1
-	case "AVG":
+	case "count":
 		aggType = 2
+	case "group_concat":
+		aggType = 3
+	case "max":
+		aggType = 4
+	case "min":
+		aggType = 5
+	case "sum":
+		aggType = 6
+	case "total":
+		aggType = 7
 	default:
 		log.Println("Unknown aggregate type requested")
 		w.WriteHeader(http.StatusBadRequest)
@@ -1138,9 +1155,7 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the SQLite visualisation data
-	z := md5.Sum([]byte(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d/%s", strings.ToLower(dbOwner), dbFolder, dbName, commitID, xAxis, yAxis, aggType, visName)))
-	hash := hex.EncodeToString(z[:])
-
+	hash := visHash(dbOwner, dbFolder, dbName, commitID, xAxis, yAxis, aggType, visName)
 	err = com.VisualisationSaveData(dbOwner, dbFolder, dbName, commitID, hash, visData)
 	if err != nil {
 		log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", visName,
@@ -1151,4 +1166,10 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Save succeeded
 	w.WriteHeader(http.StatusOK)
+}
+
+// Calculate the hash string to save or retrieve any visualisation data with
+func visHash(dbOwner string, dbFolder string, dbName string, commitID string, xAxis string, yAxis string, aggType int, visName string) string {
+	z := md5.Sum([]byte(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d/%s", strings.ToLower(dbOwner), dbFolder, dbName, commitID, xAxis, yAxis, aggType, visName)))
+	return hex.EncodeToString(z[:])
 }

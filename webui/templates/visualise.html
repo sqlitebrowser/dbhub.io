@@ -281,16 +281,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th>Should the Y Axis values be an aggregate (sum, avg, etc)?</th>
-                            <td>
-                                <div class="btn-group">
-                                    <label class="btn btn-default" ng-model="shouldAgg" uib-btn-radio="'true'">Yes</label>
-                                    <label class="btn btn-default" ng-model="shouldAgg" uib-btn-radio="'false'">No</label>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>If yes, which type of aggregate?</th>
+                            <th>Which aggregate function? (<a href="https://www.sqlite.org/lang_aggfunc.html" target="_blank">info</a>)</th>
                             <td>
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                                     <button id="orderby" type="button" class="btn">{{ AggType }}</button>
@@ -426,9 +417,8 @@
         barChartData.XAxisLabel = $scope.XAxisColumn;
         $scope.YAxisColumn = $scope.columnNames[1];
         barChartData.YAxisLabel = $scope.YAxisColumn;
-        $scope.shouldAgg = "true";
-        $scope.AggType = "SUM";
-        $scope.aggTypes = ["SUM", "AVG"];
+        $scope.AggType = "sum";
+        $scope.aggTypes = ["avg", "count", "group_concat", "max", "min", "sum", "total"];
 
         // If saved parameter data was passed through, update the initial values
         if ("[[ .ParamsGiven ]]" === "true") {
@@ -436,7 +426,6 @@
             barChartData.XAxisLabel = $scope.XAxisColumn;
             $scope.YAxisColumn = "[[ .YAxis ]]";
             barChartData.YAxisLabel = $scope.YAxisColumn;
-            $scope.shouldAgg = "true";
             $scope.AggType = "[[ .AggType ]]";
             barChartOrderBy = [[ .OrderBy ]];
             barChartOrderDirection = [[ .OrderDir ]];
@@ -454,10 +443,10 @@
 
         // Retrieve the data for visualisation
         $scope.doVis = async function() {
-            let args = "table="+$scope.db.Tablename+"&xaxis="+$scope.XAxisColumn+"&yaxis="+$scope.YAxisColumn;
-            if ($scope.shouldAgg === "true") {
-                args +="&agg="+$scope.AggType;
-            }
+            let args = "table=" + $scope.db.Tablename;
+            args += "&xaxis=" + $scope.XAxisColumn;
+            args += "&yaxis=" + $scope.YAxisColumn;
+            args += "&agg=" + $scope.AggType;
             $http.get("/x/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function success(response) {
                     // Clear any existing error message
@@ -465,6 +454,9 @@
 
                     // Update table data
                     barChartData.Records = response.data;
+                    barChartData.Tablename = $scope.db.Tablename;
+                    barChartData.XAxisLabel = $scope.XAxisColumn;
+                    barChartData.YAxisLabel = $scope.YAxisColumn;
 
                     // Display the visualisation
                     $scope.showVis = true;
@@ -483,19 +475,17 @@
         $scope.statusMessage = "";
         $scope.statusMessageColour = "red";
         $scope.saveAs = function(visName) {
-            let args = "table="+$scope.db.Tablename;
-            args += "&xaxis="+$scope.XAxisColumn;
-            args += "&yaxis="+$scope.YAxisColumn;
-            args += "&visname="+visName;
-            args += "&orderby="+barChartOrderBy;
-            args += "&orderdir="+barChartOrderDirection;
-            if ($scope.shouldAgg === "true") {
-                args +="&agg="+$scope.AggType;
-            }
+            let args = "table=" + $scope.db.Tablename;
+            args += "&xaxis=" + $scope.XAxisColumn;
+            args += "&yaxis=" + $scope.YAxisColumn;
+            args += "&visname=" + visName;
+            args += "&orderby=" + barChartOrderBy;
+            args += "&orderdir=" + barChartOrderDirection;
+            args += "&agg=" + $scope.AggType;
             $http.get("/x/vissave/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
-                    $scope.statusMessage = "Visualisation saved";
+                    $scope.statusMessage = "Visualisation '" + visName + "' saved";
                 }, function failure(response) {
                     // The save failed, so display the returned error message
                     $scope.statusMessageColour = "red";

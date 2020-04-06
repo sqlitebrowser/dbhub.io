@@ -496,21 +496,29 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis str
 	aggText := ""
 	switch aggType {
 	case 1:
-		aggText = "SUM"
+		aggText = "avg"
 	case 2:
-		aggText = "AVG"
+		aggText = "count"
+	case 3:
+		aggText = "group_concat"
+	case 4:
+		aggText = "max"
+	case 5:
+		aggText = "min"
+	case 6:
+		aggText = "sum"
+	case 7:
+		aggText = "total"
 	default:
 		return []VisRowV1{}, errors.New("Unknown aggregate type")
 	}
-	// TODO: Check if using sqlite.Mprintf() (as used in functions above) would be better
-	dbQuery :=
-		`SELECT
-			` + xAxis + `,
-			` + aggText + `(` + yAxis + `)
-		FROM
-			'` + dbTable + `'
-		GROUP BY
-			` + xAxis
+
+	// Construct the SQL query using sqlite.Mprintf() for safety
+	dbQuery := sqlite.Mprintf(`SELECT "%s",`, xAxis)
+	dbQuery += sqlite.Mprintf(` %s(`, aggText)
+	dbQuery += sqlite.Mprintf(`"%s")`, yAxis)
+	dbQuery += sqlite.Mprintf(` FROM "%s"`, dbTable)
+	dbQuery += sqlite.Mprintf(` GROUP BY "%s"`, xAxis)
 	var visRows []VisRowV1
 	stmt, err := sdb.Prepare(dbQuery)
 	if err != nil {
