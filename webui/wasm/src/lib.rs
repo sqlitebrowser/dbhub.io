@@ -1,8 +1,8 @@
+use js_sys::Array;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use js_sys::Array;
 
 extern crate console_error_panic_hook;
 use std::panic;
@@ -29,10 +29,7 @@ struct DrawObject {
 
 impl DrawObject {
     pub fn new(name: String, num: u32) -> Self {
-        DrawObject {
-            name,
-            num
-        }
+        DrawObject { name, num }
     }
 }
 
@@ -133,7 +130,13 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let mut canvas_height = canvas.height() as f64;
 
     if DEBUG {
-        web_sys::console::log_1(&format!("Canvas element width: {} Canvas element height: {}", &canvas_width, &canvas_height).into());
+        web_sys::console::log_1(
+            &format!(
+                "Canvas element width: {} Canvas element height: {}",
+                &canvas_width, &canvas_height
+            )
+            .into(),
+        );
     }
 
     // Handle window resizing
@@ -147,7 +150,13 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     }
 
     if DEBUG {
-        web_sys::console::log_1(&format!("Canvas current body width: {} Canvas current body canvas_height: {}", &canvas_width, &canvas_height).into());
+        web_sys::console::log_1(
+            &format!(
+                "Canvas current body width: {} Canvas current body canvas_height: {}",
+                &canvas_width, &canvas_height
+            )
+            .into(),
+        );
     }
 
     // Get the 2D context for the canvas
@@ -189,7 +198,8 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let left_space_right = left_space_left + left_space_width;
 
     let right_space_top = border + area_border + top_space_height;
-    let right_space_left = border + area_border + left_space_width + graph_space_width - (area_border * 3.0);
+    let right_space_left =
+        border + area_border + left_space_width + graph_space_width - (area_border * 3.0);
     let right_space_bottom = right_space_top + right_space_height;
     let right_space_right = right_space_left + right_space_width;
 
@@ -279,7 +289,10 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         // Left space
         ctx.begin_path();
         ctx.move_to(left_space_left + (left_space_width / 2.0), left_space_top);
-        ctx.line_to(left_space_left + (left_space_width / 2.0), left_space_bottom);
+        ctx.line_to(
+            left_space_left + (left_space_width / 2.0),
+            left_space_bottom,
+        );
         ctx.stroke();
         ctx.begin_path();
         ctx.move_to(left_space_left, left_space_top + (left_space_height / 2.0));
@@ -288,12 +301,24 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
         // Right space
         ctx.begin_path();
-        ctx.move_to(right_space_left + (right_space_width / 2.0), right_space_top);
-        ctx.line_to(right_space_left + (right_space_width / 2.0), right_space_bottom);
+        ctx.move_to(
+            right_space_left + (right_space_width / 2.0),
+            right_space_top,
+        );
+        ctx.line_to(
+            right_space_left + (right_space_width / 2.0),
+            right_space_bottom,
+        );
         ctx.stroke();
         ctx.begin_path();
-        ctx.move_to(right_space_left, right_space_top + (right_space_height / 2.0));
-        ctx.line_to(right_space_right, right_space_top + (right_space_height / 2.0));
+        ctx.move_to(
+            right_space_left,
+            right_space_top + (right_space_height / 2.0),
+        );
+        ctx.line_to(
+            right_space_right,
+            right_space_top + (right_space_height / 2.0),
+        );
         ctx.stroke();
 
         // Top space
@@ -308,12 +333,24 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
         // Bottom space
         ctx.begin_path();
-        ctx.move_to(bottom_space_left + (bottom_space_width / 2.0), bottom_space_top);
-        ctx.line_to(bottom_space_left + (bottom_space_width / 2.0), bottom_space_bottom);
+        ctx.move_to(
+            bottom_space_left + (bottom_space_width / 2.0),
+            bottom_space_top,
+        );
+        ctx.line_to(
+            bottom_space_left + (bottom_space_width / 2.0),
+            bottom_space_bottom,
+        );
         ctx.stroke();
         ctx.begin_path();
-        ctx.move_to(bottom_space_left, bottom_space_top + (bottom_space_height / 2.0));
-        ctx.line_to(bottom_space_right, bottom_space_top + (bottom_space_height / 2.0));
+        ctx.move_to(
+            bottom_space_left,
+            bottom_space_top + (bottom_space_height / 2.0),
+        );
+        ctx.line_to(
+            bottom_space_right,
+            bottom_space_top + (bottom_space_height / 2.0),
+        );
         ctx.stroke();
 
         ctx.restore();
@@ -332,7 +369,10 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     let y_axis_marker_font_height = area_root * 0.015;
     let axis_thickness = area_root * 0.004;
 
-    let base_line = graph_space_bottom - axis_thickness - x_axis_label_font_height - (2.0 * x_axis_caption_text_gap);
+    let base_line = graph_space_bottom
+        - axis_thickness
+        - x_axis_label_font_height
+        - (2.0 * x_axis_caption_text_gap);
     let bar_label_y = graph_space_bottom;
     let bar_border = 1.0;
     let y_base = base_line + axis_thickness + x_axis_caption_text_gap;
@@ -368,17 +408,19 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
         i -= y_unit_step;
     }
     if DEBUG {
-        web_sys::console::log_1(&format!(
-            "Widest Y axis marker: {} pixels", &y_axis_marker_largest_width).into()
+        web_sys::console::log_1(
+            &format!(
+                "Widest Y axis marker: {} pixels",
+                &y_axis_marker_largest_width
+            )
+            .into(),
         );
     }
 
     let y_marker_x = graph_space_left + y_axis_marker_largest_width;
 
     if DEBUG {
-        web_sys::console::log_1(&format!(
-            "y_marker_x: {}", &y_marker_x).into()
-        );
+        web_sys::console::log_1(&format!("y_marker_x: {}", &y_marker_x).into());
 
         // Draw the Y axis marker labels alignment line
         let dash = Array::new();
@@ -506,7 +548,11 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
 
     // Draw sub heading (table name)
     ctx.set_font(&format!("{}pt serif", sub_heading_font_height));
-    ctx.fill_text(&format!("Table: {}", data.Tablename.as_str()), title_x, top_space_bottom - (title_font_spacing / 2.0) - sub_heading_font_height);
+    ctx.fill_text(
+        &format!("Table: {}", data.Tablename.as_str()),
+        title_x,
+        top_space_bottom - (title_font_spacing / 2.0) - sub_heading_font_height,
+    );
 
     // Draw Y axis caption
     // Info on how to rotate text on the canvas:
@@ -523,11 +569,7 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.set_font(&y_axis_caption_string);
     ctx.set_fill_style(&"black".into());
     ctx.set_text_align(&"center");
-    ctx.fill_text(
-        y_axis_caption,
-        0.0,
-        0.0
-    );
+    ctx.fill_text(y_axis_caption, 0.0, 0.0);
     ctx.restore();
 
     if DEBUG {
@@ -544,17 +586,19 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.set_font(&x_axis_caption_string);
     ctx.set_fill_style(&"black".into());
     ctx.set_text_align(&"center");
-    ctx.fill_text(
-        x_axis_caption,
-        x_axis_caption_x,
-        x_axis_caption_y
-    );
+    ctx.fill_text(x_axis_caption, x_axis_caption_x, x_axis_caption_y);
 
     if DEBUG {
         web_sys::console::log_1(&format!("graph_space_left: {}", &graph_space_left).into());
         web_sys::console::log_1(&format!("graph_space_width: {}", &graph_space_width).into());
         web_sys::console::log_1(&format!("x_axis_caption: {}", &x_axis_caption).into());
-        web_sys::console::log_1(&format!("x_axis_caption_font_height: {}", &x_axis_caption_font_height).into());
+        web_sys::console::log_1(
+            &format!(
+                "x_axis_caption_font_height: {}",
+                &x_axis_caption_font_height
+            )
+            .into(),
+        );
         web_sys::console::log_1(&format!("x_axis_caption_width: {}", &x_axis_caption_width).into());
         web_sys::console::log_1(&format!("x_axis_caption_x: {}", &x_axis_caption_x).into());
         web_sys::console::log_1(&format!("bottom_space_top: {}", &bottom_space_top).into());
@@ -634,53 +678,25 @@ fn hsv_to_rgb(h: f64, s: f64, v: f64) -> String {
 
 // axis_max calculates the maximum value for a given axis, and the step value to use when drawing its grid lines
 fn axis_max(val: u32) -> (f64, f64) {
-    // TODO: We should be able to generalise the below code to something very simple that autoscales
-    let val = val as f64;
-    if val < 10.0 {
-        return (10.0, 1.0);
+    // Note that this approach is just the first thing I thought of.  There might be a simpler way. :)
+    let mut scale = 1;
+    let mut tmp = val as f64 / 10.0;
+    while tmp > 10.0 {
+        scale += 1;
+        tmp = tmp / 10.0;
     }
-
-    // If val is less than 100, return val rounded up to the next 10
-    if val < 100.0 {
-        let x = val % 10.0;
-        return (val + 10.0 - x, 10.0);
+    let major_digit: f64;
+    if tmp <= 5.0 {
+        major_digit = 5.0;
+    } else {
+        major_digit = 10.0;
     }
-
-    // If val is less than 500, return val rounded up to the next 50
-    if val < 500.0 {
-        let x = val % 50.0;
-        return (val + 50.0 - x, 50.0);
+    let mut output = 10.0;
+    while scale > 1 {
+        output = output * 10.0;
+        scale -= 1;
     }
-
-    // If val is less than 1000, return val rounded up to the nearest 100
-    if val < 1000.0 {
-        let x = val % 100.0;
-        return (val + 100.0 - x, 100.0);
-    }
-
-    // If val is less than 5000, return val rounded up to the nearest 500
-    if val < 5000.0 {
-        let x = val % 500.0;
-        return (val + 500.0 - x, 500.0);
-    }
-
-    // If val is less than 10000, return val rounded up to the nearest 1000
-    if val < 10000.0 {
-        let x = val % 1000.0;
-        return (val + 1000.0 - x, 1000.0);
-    }
-
-    // If val is less than 50000, return val rounded up to the nearest 5000
-    if val < 50000.0 {
-        let x = val % 5000.0;
-        return (val + 5000.0 - x, 5000.0);
-    }
-
-    // If val is less than 100000, return val rounded up to the nearest 10000
-    if val < 100000.0 {
-        let x = val % 10000.0;
-        return (val + 10000.0 - x, 10000.0);
-    }
-
-    (100000.0, 10000.0)
+    let combined = major_digit * output;
+    let increment = combined / 10.0;
+    return (combined, increment);
 }
