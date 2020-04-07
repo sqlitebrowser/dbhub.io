@@ -444,15 +444,27 @@ pub fn draw_bar_chart(palette: f64, js_data: &JsValue, order_by: u32, order_dire
     ctx.set_font(&format!("{}pt serif", y_axis_marker_font_height));
     ctx.set_text_align(&"right");
     let mut i = y_base;
-    while i >= y_top {
-        let marker_label = &format!("{} ", ((y_base - i) / y_unit).round());
+    while i >= y_top - 1.0 {
+        let marker_amt: f64;
+        if y_axis_step < 1.0 {
+            marker_amt = (y_base - i) / y_unit;
+        } else {
+            marker_amt = ((y_base - i) / y_unit).round();
+        }
+
+        // If the y axis is showing amounts less than 0, then display the number to 1 digit of precision
+        let mut marker_label = format!("{} ", marker_amt);
+        if y_axis_step < 1.0 {
+            marker_label = format!("{0:.1} ", marker_amt);
+        }
+
         let marker_metrics = ctx.measure_text(&marker_label).unwrap();
         let y_axis_marker_width = marker_metrics.width();
         ctx.begin_path();
         ctx.move_to(y_marker_x - y_axis_marker_width, i);
         ctx.line_to(graph_space_right - y_axis_marker_largest_width, i);
         ctx.stroke();
-        ctx.fill_text(marker_label, y_marker_x, i - (area_root * 0.003));
+        ctx.fill_text(&marker_label, y_marker_x, i - (area_root * 0.003));
         i -= y_unit_step;
     }
 
@@ -679,24 +691,29 @@ fn hsv_to_rgb(h: f64, s: f64, v: f64) -> String {
 // axis_max calculates the maximum value for a given axis, and the step value to use when drawing its grid lines
 fn axis_max(val: u32) -> (f64, f64) {
     // Note that this approach is just the first thing I thought of.  There might be a simpler way. :)
+
+    // Determine the scaling amounts
     let mut scale = 1;
     let mut tmp = val as f64 / 10.0;
     while tmp > 10.0 {
         scale += 1;
         tmp = tmp / 10.0;
     }
-    let major_digit: f64;
-    if tmp <= 5.0 {
-        major_digit = 5.0;
-    } else {
-        major_digit = 10.0;
+
+    // Determine the major digits of the returned maximum value
+    let mut major_digits = (tmp / 1.0).trunc();
+    major_digits += 1.0;
+    if (tmp % 1.0) < 0.5 {
+        major_digits -= 0.5;
     }
+
+    // Calculate the returned maximum and increment amounts
     let mut output = 10.0;
     while scale > 1 {
         output = output * 10.0;
         scale -= 1;
     }
-    let combined = major_digit * output;
+    let combined = major_digits * output;
     let increment = combined / 10.0;
     return (combined, increment);
 }
