@@ -287,7 +287,7 @@
     <div class="row" style="border: none;">
         &nbsp;
     </div>
-    <div class="row">
+    <div ng-show="showVis === true" class="row">
         <div class="col-md-12">
             <div id="vis" style="width:100%;"></div>
         </div>
@@ -418,6 +418,7 @@
 
         // If both the visualisation parameters and data points were provided, set the flag to show the visualisation
         if (("[[ .ParamsGiven ]]" === "true") && ("[[ .DataGiven ]]" === "true")) {
+            $scope.showVis = true;
             let tmpData = barChartData.Records;
             myData[0].x = [];
             myData[0].y = [];
@@ -502,9 +503,9 @@
             $scope.XAxisColumn = newcol;
 
             // If the graph is being shown, update it
-            // if ($scope.showVis == true) {
+            if ($scope.showVis === true) {
                 $scope.doVis();
-            // }
+            }
         };
 
         // Change the Y Axis Column
@@ -512,9 +513,9 @@
             $scope.YAxisColumn = newcol;
 
             // If the graph is being shown, update it
-            // if ($scope.showVis == true) {
+            if ($scope.showVis === true) {
                 $scope.doVis();
-            // }
+            }
         };
 
         // Change the Aggregate function
@@ -522,9 +523,9 @@
             $scope.AggType = newagg;
 
             // If the graph is being shown, update it
-            // if ($scope.showVis == true) {
+            if ($scope.showVis === true) {
                 $scope.doVis();
-            // }
+            }
         };
 
         // // Change the column sort approach
