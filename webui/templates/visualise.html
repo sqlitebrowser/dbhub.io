@@ -3,36 +3,24 @@
 <html ng-app="DBHub" ng-controller="visualiseView">
 [[ template "head" . ]]
 <body>
-<style>
-    #barchart {
-        opacity:1.0;
-        width: 100%;
-        height:100%;
-    }
-</style>
-<script src="/wasm/dbhub_vis.js"></script>
+<script src="https://cdn.plot.ly/plotly-1.53.0.min.js"></script>
 <script>
-    const { draw_bar_chart } = wasm_bindgen;
-    let palette = 1.0;
-    let barChartOrderBy = 0;
-    let barChartOrderDirection = 0;
-
-    // Handle browser resize events
-    function resizeEvent() {
-        if (dataReceived === true) {
-            draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
-        }
-    }
-    window.onresize = resizeEvent; // Redraw the bar chart when the window is resized
-
-    // Draw the bar chart
-    async function run() {
-        await wasm_bindgen('/wasm/dbhub_vis_bg.wasm');
-        if (dataReceived === true) {
-            draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
-        }
-    }
-    run();
+    // // Handle browser resize events
+    // function resizeEvent() {
+    //     if (dataReceived === true) {
+    //         draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+    //     }
+    // }
+    // window.onresize = resizeEvent; // Redraw the bar chart when the window is resized
+    //
+    // // Draw the bar chart
+    // async function run() {
+    //     await wasm_bindgen('/wasm/dbhub_vis_bg.wasm');
+    //     if (dataReceived === true) {
+    //         draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+    //     }
+    // }
+    // run();
 </script>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
@@ -317,9 +305,9 @@
     <div class="row" style="border: none;">
         &nbsp;
     </div>
-    <div ng-show="showVis === true" class="row">
+    <div class="row">
         <div class="col-md-12">
-            <canvas id="barchart">Your browser doesn't appear to support the canvas tag.</canvas>
+            <div id="vis" style="width:100%;"></div>
         </div>
     </div>
     <div class="row" style="border: none;">
@@ -354,6 +342,14 @@
         Records: [[ .Records ]],
     }
     let dataReceived = false;
+
+    // Plot.ly pieces
+    visDiv = document.getElementById('vis');
+    let myData = [
+        {
+            type: 'bar'
+        }
+    ];
 </script>
 <script>
     // Simple filter to ensure '&nbsp;' is shown as a non-breaking space
@@ -440,7 +436,14 @@
 
         // If both the visualisation parameters and data points were provided, set the flag to show the visualisation
         if (("[[ .ParamsGiven ]]" === "true") && ("[[ .DataGiven ]]" === "true")) {
-            $scope.showVis = true;
+            let tmpData = barChartData.Records;
+            myData[0].x = [];
+            myData[0].y = [];
+            for (num = 0; num < tmpData.length; num++){
+                myData[0].x.push(tmpData[num]["Name"]);
+                myData[0].y.push(tmpData[num]["Value"]);
+            }
+            Plotly.newPlot(visDiv, myData);
         }
 
         // Retrieve the data for visualisation
@@ -463,7 +466,15 @@
                     // Display the visualisation
                     $scope.showVis = true;
                     dataReceived = true;
-                    draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+
+                    let tmpData = barChartData.Records;
+                    myData[0].x = [];
+                    myData[0].y = [];
+                    for (num = 0; num < tmpData.length; num++){
+                        myData[0].x.push(tmpData[num]["Name"]);
+                        myData[0].y.push(tmpData[num]["Value"]);
+                    }
+                    Plotly.newPlot(visDiv, myData);
                 }, function failure(response) {
                     // Retrieving data failed, so display the returned error message and hide the graph
                     $scope.statusMessageColour = "red";
@@ -501,9 +512,9 @@
             $scope.XAxisColumn = newcol;
 
             // If the graph is being shown, update it
-            if ($scope.showVis == true) {
+            // if ($scope.showVis == true) {
                 $scope.doVis();
-            }
+            // }
         };
 
         // Change the Y Axis Column
@@ -511,9 +522,9 @@
             $scope.YAxisColumn = newcol;
 
             // If the graph is being shown, update it
-            if ($scope.showVis == true) {
+            // if ($scope.showVis == true) {
                 $scope.doVis();
-            }
+            // }
         };
 
         // Change the Aggregate function
@@ -521,36 +532,36 @@
             $scope.AggType = newagg;
 
             // If the graph is being shown, update it
-            if ($scope.showVis == true) {
+            // if ($scope.showVis == true) {
                 $scope.doVis();
-            }
+            // }
         };
 
-        // Change the column sort approach
-        $scope.ChartOrderName = "Category names";
-        $scope.ChartOrderBy = ["Category names", "Item totals"];
-        $scope.chartChangeOrder = function(ord) {
-            if (ord === "Category names") {
-                barChartOrderBy = 0;
-            } else {
-                barChartOrderBy = 1;
-            }
-            $scope.ChartOrderName = ord;
-            draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
-        };
-
-        // Change the column sort direction
-        $scope.ChartDirectionName = "Ascending";
-        $scope.ChartDirectionBy = ["Ascending", "Descending"];
-        $scope.chartChangeDirection = function(dir) {
-            if (dir === "Ascending") {
-                barChartOrderDirection = 0;
-            } else {
-                barChartOrderDirection = 1;
-            }
-            $scope.ChartDirectionName = dir;
-            draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
-        };
+        // // Change the column sort approach
+        // $scope.ChartOrderName = "Category names";
+        // $scope.ChartOrderBy = ["Category names", "Item totals"];
+        // $scope.chartChangeOrder = function(ord) {
+        //     if (ord === "Category names") {
+        //         barChartOrderBy = 0;
+        //     } else {
+        //         barChartOrderBy = 1;
+        //     }
+        //     $scope.ChartOrderName = ord;
+        //     draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+        // };
+        //
+        // // Change the column sort direction
+        // $scope.ChartDirectionName = "Ascending";
+        // $scope.ChartDirectionBy = ["Ascending", "Descending"];
+        // $scope.chartChangeDirection = function(dir) {
+        //     if (dir === "Ascending") {
+        //         barChartOrderDirection = 0;
+        //     } else {
+        //         barChartOrderDirection = 1;
+        //     }
+        //     $scope.ChartDirectionName = dir;
+        //     draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
+        // };
 
         // Retrieves the visualisation data for a different table, then updates the visualisation
         $scope.changeTable = function(newtable) {
