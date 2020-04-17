@@ -354,22 +354,21 @@
         barChartData.Title = plotTitle.replace(/\.db$/, "");
     }
 
-    // Plot.ly pieces
+    // Plotly pieces
     let plotData = [
         {
             type: "bar",
             orientation: "v"
         }
     ];
-    let plotLayout = {
-        title: barChartData.Title,
-    };
+    let plotLayout = {};
     let plotConfig = {
         watermark: false,
         displaylogo: false
     };
-</script>
-<script>
+
+    // * AngularJS pieces start here *
+
     // Simple filter to ensure '&nbsp;' is shown as a non-breaking space
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.filter("fixSpaces", ['$sce', '$sanitize', function($sce, $sanitize) {
@@ -428,6 +427,18 @@
 
         // Display a Plotly chart
         $scope.doChart = function(updateData) {
+            // Recreate the layout structure, to ensure the plot is fully redrawn.  Without this, the chart info is
+            // drawn all mixed up, even with newPlot() :(
+            plotLayout = {
+                title: barChartData.Title,
+                xaxis: {
+                    visible: true,
+                },
+                yaxis: {
+                    visible: true,
+                },
+            };
+
             // Reorganise the bar chart data horizontally or vertically
             if (updateData) {
                 let tmpData = barChartData.Records;
@@ -439,6 +450,8 @@
                         let val = tmpData[num]["Value"];
                         plotData[0].x.push(name);
                         plotData[0].y.push(val);
+                        plotLayout.xaxis.title = { text: barChartData.XAxisLabel};
+                        plotLayout.yaxis.title = { text: barChartData.YAxisLabel};
                     }
                 } else {
                     for (num = 0; num < tmpData.length; num++) {
@@ -446,15 +459,11 @@
                         let val = tmpData[num]["Value"];
                         plotData[0].x.push(val);
                         plotData[0].y.push(name);
+                        plotLayout.xaxis.title = { text: barChartData.YAxisLabel};
+                        plotLayout.yaxis.title = { text: barChartData.XAxisLabel};
                     }
                 }
             }
-
-            // Recreating the layout structure ensures the plot is fully redrawn.  Without this, the chart info is
-            // drawn all mixed up, even with newPlot() :(
-            plotLayout = {
-                title: barChartData.Title,
-            };
 
             // Redraw the chart
             Plotly.react("vis", plotData, plotLayout, plotConfig);
