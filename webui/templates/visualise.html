@@ -3,7 +3,7 @@
 <html ng-app="DBHub" ng-controller="visualiseView">
 [[ template "head" . ]]
 <body>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="/js/plotly-1.53.0.min.js"></script>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
@@ -327,13 +327,18 @@
 
     // Plot.ly pieces
     visDiv = document.getElementById('vis');
-    let myData = [
+    let plotData = [
         {
-            type: 'bar'
+            type: "bar",
+            orientation: "v"
         }
     ];
-    let myLayout = {
+    let plotLayout = {
         title: barChartData.Title,
+    };
+    let plotConfig = {
+        watermark: false,
+        displaylogo: false
     };
 </script>
 <script>
@@ -393,6 +398,39 @@
             $scope.meta.Public = "Private";
         }
 
+        // Display a Plotly chart
+        $scope.doChart = function(updateData) {
+
+            // Remove any database file extension from the chart title
+            if (barChartData.Title.endsWith(".sqlite")) {
+                plotLayout.title = barChartData.Title.replace(/\.sqlite$/, "")
+            }
+            if (barChartData.Title.endsWith(".sqlite3")) {
+                plotLayout.title = barChartData.Title.replace(/\.sqlite3$/, "")
+            }
+            if (barChartData.Title.endsWith(".db")) {
+                plotLayout.title = barChartData.Title.replace(/\.db$/, "")
+            }
+
+            if (updateData) {
+                let tmpData = barChartData.Records;
+                plotData[0].x = [];
+                plotData[0].y = [];
+                if (plotData[0].orientation === "v") {
+                    for (num = 0; num < tmpData.length; num++) {
+                        plotData[0].x.push(tmpData[num]["Name"]);
+                        plotData[0].y.push(tmpData[num]["Value"]);
+                    }
+                } else {
+                    for (num = 0; num < tmpData.length; num++) {
+                        plotData[0].x.push(tmpData[num]["Value"]);
+                        plotData[0].y.push(tmpData[num]["Name"]);
+                    }
+                }
+            }
+            Plotly.newPlot(visDiv, plotData, plotLayout, plotConfig);
+        };
+
         // Start out with the visualisation disabled, unless saved parameters were passed through
         $scope.showVis = false;
         $scope.columnNames = [[ .Data.ColNames ]];
@@ -422,20 +460,13 @@
         // If both the visualisation parameters and data points were provided, set the flag to show the visualisation
         if (("[[ .ParamsGiven ]]" === "true") && ("[[ .DataGiven ]]" === "true")) {
             $scope.showVis = true;
-            let tmpData = barChartData.Records;
-            myData[0].x = [];
-            myData[0].y = [];
-            for (num = 0; num < tmpData.length; num++){
-                myData[0].x.push(tmpData[num]["Name"]);
-                myData[0].y.push(tmpData[num]["Value"]);
-            }
-            Plotly.newPlot(visDiv, myData, myLayout);
+            $scope.doChart(true);
         }
 
         // Handle browser resize events
         function resizeEvent() {
             if (dataReceived === true) {
-                Plotly.newPlot(visDiv, myData, myLayout);
+                $scope.doChart(false);
             }
         }
         window.onresize = resizeEvent; // Redraw the bar chart when the window is resized
@@ -460,15 +491,7 @@
                     // Display the visualisation
                     $scope.showVis = true;
                     dataReceived = true;
-
-                    let tmpData = barChartData.Records;
-                    myData[0].x = [];
-                    myData[0].y = [];
-                    for (num = 0; num < tmpData.length; num++){
-                        myData[0].x.push(tmpData[num]["Name"]);
-                        myData[0].y.push(tmpData[num]["Value"]);
-                    }
-                    Plotly.newPlot(visDiv, myData, myLayout);
+                    $scope.doChart(true);
                 }, function failure(response) {
                     // Retrieving data failed, so display the returned error message and hide the graph
                     $scope.statusMessageColour = "red";
