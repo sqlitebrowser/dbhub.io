@@ -398,6 +398,8 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		pageData.XAxis = params.XAXisColumn
 		pageData.YAxis = params.YAXisColumn
 		switch params.AggType {
+		case 0:
+			pageData.AggType = "---"
 		case 1:
 			pageData.AggType = "avg"
 		case 2:
@@ -557,6 +559,8 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	aggType := 0
 	switch aggTypeStr {
+	case "---":
+		aggType = 0
 	case "avg":
 		aggType = 1
 	case "count":
@@ -684,6 +688,7 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 		if tablePresent == false {
 			// The requested table doesn't exist
 			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, "%s", fmt.Sprintf("The requested table '%v' doesn't exist in that database", requestedTable))
 			return
 		}
 	}
@@ -703,8 +708,10 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if xColExists == false {
 		// The requested X axis column doesn't exist
-		log.Printf("Requested X axis column doesn't exist '%s' in table: '%v'\n", xAxis, requestedTable)
+		msg := fmt.Sprintf("Requested X axis column '%s' doesn't exist in table: '%v'", xAxis, requestedTable)
+		log.Println(msg)
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "%s", msg)
 		return
 	}
 	yColExists := false
@@ -715,8 +722,10 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if yColExists == false {
 		// The requested Y axis column doesn't exist
-		log.Printf("Requested Y axis column doesn't exist '%s' in table: '%v'\n", yAxis, requestedTable)
+		msg := fmt.Sprintf("Requested Y axis column '%s' doesn't exist in table: '%v'\n", yAxis, requestedTable)
+		log.Printf(msg)
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "%s", msg)
 		return
 	}
 
@@ -769,6 +778,8 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse the aggregation type
 	aggType := 0
 	switch aggTypeStr {
+	case "---":
+		aggType = 0
 	case "avg":
 		aggType = 1
 	case "count":

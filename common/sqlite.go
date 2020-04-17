@@ -495,6 +495,8 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis str
 	// Construct the SQLite visualisation query
 	aggText := ""
 	switch aggType {
+	case 0:
+		aggText = ""
 	case 1:
 		aggText = "avg"
 	case 2:
@@ -514,11 +516,18 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis str
 	}
 
 	// Construct the SQL query using sqlite.Mprintf() for safety
-	dbQuery := sqlite.Mprintf(`SELECT "%s",`, xAxis)
-	dbQuery += sqlite.Mprintf(` %s(`, aggText)
-	dbQuery += sqlite.Mprintf(`"%s")`, yAxis)
-	dbQuery += sqlite.Mprintf(` FROM "%s"`, dbTable)
-	dbQuery += sqlite.Mprintf(` GROUP BY "%s"`, xAxis)
+	var dbQuery string
+	if aggText != "" {
+		dbQuery = sqlite.Mprintf(`SELECT "%s",`, xAxis)
+		dbQuery += sqlite.Mprintf(` %s(`, aggText)
+		dbQuery += sqlite.Mprintf(`"%s")`, yAxis)
+		dbQuery += sqlite.Mprintf(` FROM "%s"`, dbTable)
+		dbQuery += sqlite.Mprintf(` GROUP BY "%s"`, xAxis)
+	} else {
+		dbQuery = sqlite.Mprintf(`SELECT "%s",`, xAxis)
+		dbQuery += sqlite.Mprintf(` "%s"`, yAxis)
+		dbQuery += sqlite.Mprintf(` FROM "%s"`, dbTable)
+	}
 	var visRows []VisRowV1
 	stmt, err := sdb.Prepare(dbQuery)
 	if err != nil {
