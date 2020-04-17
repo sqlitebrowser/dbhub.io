@@ -267,6 +267,24 @@
                                 </div>
                             </td>
                         </tr>
+                        <tr>
+                            <th>Horizontal or vertical bar chart?</th>
+                            <td>
+                                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="orderby" type="button" class="btn">{{ BarCharDirection }}</button>
+
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li role="menuitem">
+                                            <a href="" ng-click="barChartChangeDir('h')">Horizontal</a>
+                                            <a href="" ng-click="barChartChangeDir('v')">Vertical</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
                     </table>
                     <div class="row" ng-if="statusMessage != ''">
                         <div style="text-align: center; padding-bottom: 8px;">
@@ -317,7 +335,6 @@
 <script>
     // Pre-filled table row data
     let barChartData = {
-        Title: "[[ .Meta.Database ]]",
         Tablename: "[[ .Data.Tablename ]]",
         XAxisLabel: "",
         YAxisLabel: "",
@@ -325,8 +342,19 @@
     }
     let dataReceived = false;
 
+    // Remove any database file extension from the chart title
+    let plotTitle = "[[ .Meta.Database ]]";
+    if (plotTitle.endsWith(".sqlite")) {
+        barChartData.Title = plotTitle.replace(/\.sqlite$/, "");
+    }
+    if (plotTitle.endsWith(".sqlite3")) {
+        barChartData.Title = plotTitle.replace(/\.sqlite3$/, "");
+    }
+    if (plotTitle.endsWith(".db")) {
+        barChartData.Title = plotTitle.replace(/\.db$/, "");
+    }
+
     // Plot.ly pieces
-    visDiv = document.getElementById('vis');
     let plotData = [
         {
             type: "bar",
@@ -400,35 +428,36 @@
 
         // Display a Plotly chart
         $scope.doChart = function(updateData) {
-
-            // Remove any database file extension from the chart title
-            if (barChartData.Title.endsWith(".sqlite")) {
-                plotLayout.title = barChartData.Title.replace(/\.sqlite$/, "")
-            }
-            if (barChartData.Title.endsWith(".sqlite3")) {
-                plotLayout.title = barChartData.Title.replace(/\.sqlite3$/, "")
-            }
-            if (barChartData.Title.endsWith(".db")) {
-                plotLayout.title = barChartData.Title.replace(/\.db$/, "")
-            }
-
+            // Reorganise the bar chart data horizontally or vertically
             if (updateData) {
                 let tmpData = barChartData.Records;
                 plotData[0].x = [];
                 plotData[0].y = [];
                 if (plotData[0].orientation === "v") {
                     for (num = 0; num < tmpData.length; num++) {
-                        plotData[0].x.push(tmpData[num]["Name"]);
-                        plotData[0].y.push(tmpData[num]["Value"]);
+                        let name = tmpData[num]["Name"];
+                        let val = tmpData[num]["Value"];
+                        plotData[0].x.push(name);
+                        plotData[0].y.push(val);
                     }
                 } else {
                     for (num = 0; num < tmpData.length; num++) {
-                        plotData[0].x.push(tmpData[num]["Value"]);
-                        plotData[0].y.push(tmpData[num]["Name"]);
+                        let name = tmpData[num]["Name"];
+                        let val = tmpData[num]["Value"];
+                        plotData[0].x.push(val);
+                        plotData[0].y.push(name);
                     }
                 }
             }
-            Plotly.newPlot(visDiv, plotData, plotLayout, plotConfig);
+
+            // Recreating the layout structure ensures the plot is fully redrawn.  Without this, the chart info is
+            // drawn all mixed up, even with newPlot() :(
+            plotLayout = {
+                title: barChartData.Title,
+            };
+
+            // Redraw the chart
+            Plotly.react("vis", plotData, plotLayout, plotConfig);
         };
 
         // Start out with the visualisation disabled, unless saved parameters were passed through
@@ -440,6 +469,19 @@
         barChartData.YAxisLabel = $scope.YAxisColumn;
         $scope.AggType = "sum";
         $scope.aggTypes = ["avg", "count", "group_concat", "max", "min", "sum", "total"];
+        $scope.BarCharDirection = "Vertical";
+
+        // Change the bar chart bar direction
+        $scope.barChartChangeDir = function(dir) {
+            if (dir === "h") {
+                plotData[0].orientation = "h";
+                $scope.BarCharDirection = "Horizontal";
+            } else {
+                plotData[0].orientation = "v";
+                $scope.BarCharDirection = "Vertical";
+            }
+            $scope.doChart(true);
+        };
 
         // If saved parameter data was passed through, update the initial values
         if ("[[ .ParamsGiven ]]" === "true") {
