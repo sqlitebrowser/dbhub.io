@@ -574,6 +574,7 @@
 
         // Set up chart type
         $scope.ChartType = "[[ .ChartType ]]";
+        if ($scope.ChartType === "") { $scope.ChartType = "Vertical bar chart"; } // Set a default type if no saved data passed
         switch ($scope.ChartType) {
             case "Horizontal bar chart":
                 plotData[0].type = "bar";
