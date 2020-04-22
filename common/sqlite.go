@@ -491,10 +491,15 @@ func SanityCheck(fileName string) (tables []string, err error) {
 }
 
 // Runs a SQLite database query, for the visualisation tab.
-func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis string, aggType int) ([]VisRowV1, error) {
+func RunSQLiteVisQuery(sdb *sqlite.Conn, params VisParamsV1) ([]VisRowV1, error) {
+	xTable := params.XAxisTable
+	xAxis := params.XAXisColumn
+	yTable := params.YAxisTable
+	yAxis := params.YAXisColumn
+
 	// Construct the SQLite visualisation query
 	aggText := ""
-	switch aggType {
+	switch params.AggType {
 	case 0:
 		aggText = ""
 	case 1:
@@ -515,18 +520,52 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, dbTable string, xAxis string, yAxis str
 		return []VisRowV1{}, errors.New("Unknown aggregate type")
 	}
 
-	// Construct the SQL query using sqlite.Mprintf() for safety
+	joinText := ""
+	switch params.JoinType {
+	case 0:
+		joinText = ""
+	case 1:
+		joinText = "INNER JOIN"
+	case 2:
+		joinText = "LEFT OUTER JOIN"
+	case 3:
+		joinText = "CROSS JOIN"
+	default:
+		return []VisRowV1{}, errors.New("Unknown join type")
+	}
+
+	// * Construct the SQL query using sqlite.Mprintf() for safety *
 	var dbQuery string
-	if aggText != "" {
-		dbQuery = sqlite.Mprintf(`SELECT "%s",`, xAxis)
-		dbQuery += sqlite.Mprintf(` %s(`, aggText)
-		dbQuery += sqlite.Mprintf(`"%s")`, yAxis)
-		dbQuery += sqlite.Mprintf(` FROM "%s"`, dbTable)
-		dbQuery += sqlite.Mprintf(` GROUP BY "%s"`, xAxis)
+
+	// Check if we're joining tables
+	if xTable == yTable {
+		// Simple query, no join needed
+		if aggText != "" {
+			dbQuery = sqlite.Mprintf(`SELECT "%s",`, xAxis)
+			dbQuery += sqlite.Mprintf(` %s(`, aggText)
+			dbQuery += sqlite.Mprintf(`"%s")`, yAxis)
+			dbQuery += sqlite.Mprintf(` FROM "%s"`, xTable)
+			dbQuery += sqlite.Mprintf(` GROUP BY "%s"`, xAxis)
+		} else {
+			dbQuery = sqlite.Mprintf(`SELECT "%s",`, xAxis)
+			dbQuery += sqlite.Mprintf(` "%s"`, yAxis)
+			dbQuery += sqlite.Mprintf(` FROM "%s"`, xTable)
+		}
 	} else {
-		dbQuery = sqlite.Mprintf(`SELECT "%s",`, xAxis)
-		dbQuery += sqlite.Mprintf(` "%s"`, yAxis)
-		dbQuery += sqlite.Mprintf(` FROM "%s"`, dbTable)
+		// We're joining tables
+		dbQuery = sqlite.Mprintf(`SELECT "%s"`, xTable)
+		dbQuery += sqlite.Mprintf(`."%s",`, xAxis)
+		dbQuery += sqlite.Mprintf(` "%s"`, yTable)
+		dbQuery += sqlite.Mprintf(`."%s"`, yAxis)
+		dbQuery += sqlite.Mprintf(` FROM "%s"`, xTable)
+		dbQuery += sqlite.Mprintf(` %s`, joinText)
+		dbQuery += sqlite.Mprintf(` "%s"`, yTable)
+		if params.JoinType == 1 || params.JoinType == 2 { // INNER JOIN and LEFT OUTER JOIN
+			dbQuery += sqlite.Mprintf(` ON "%s"`, xTable)
+			dbQuery += sqlite.Mprintf(`."%s"`, params.JoinXCol)
+			dbQuery += sqlite.Mprintf(` = "%s"`, yTable)
+			dbQuery += sqlite.Mprintf(`."%s"`, params.JoinYCol)
+		}
 	}
 	var visRows []VisRowV1
 	stmt, err := sdb.Prepare(dbQuery)

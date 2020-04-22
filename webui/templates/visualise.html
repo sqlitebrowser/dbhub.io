@@ -133,18 +133,6 @@
             <span class="pull-left">
                 <div class="dropdown">
                     <div class="btn-group" uib-dropdown keyboard-nav="true">
-                        <button id="viewtable" type="button" class="btn">Table/view: {{ db.Tablename }}</button>
-
-                        <button type="button" uib-dropdown-toggle class="btn btn-default">
-                            <span class="caret"></span>
-                        </button>
-                        <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                            <li ng-repeat="row in meta.Tables" role="menuitem" ng-click="changeTable(row)">
-                                <a href="">{{ row }}</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="btn-group" uib-dropdown keyboard-nav="true">
                         <button id="viewbranch" type="button" class="btn">{{ 'Branch: ' + meta.Branch }}</button>
 
                         <button type="button" uib-dropdown-toggle class="btn btn-default">
@@ -152,30 +140,6 @@
                         </button>
                         <ul uib-dropdown-menu class="dropdown-menu" role="menu">
                             <li ng-repeat="row in meta.BranchList" role="menuitem" ng-click="changeBranch(row)">
-                                <a href="">{{ row }}</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="btn-group" uib-dropdown keyboard-nav="true">
-                        <button id="orderby" type="button" class="btn">{{ 'Order by: ' + ChartOrderName }}</button>
-
-                        <button type="button" uib-dropdown-toggle class="btn btn-default">
-                            <span class="caret"></span>
-                        </button>
-                        <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                            <li ng-repeat="row in ChartOrderBy" role="menuitem" ng-click="chartChangeOrder(row)">
-                                <a href="">{{ row }}</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="btn-group" uib-dropdown keyboard-nav="true">
-                        <button id="orderby" type="button" class="btn">{{ 'Order direction: ' + ChartDirectionName }}</button>
-
-                        <button type="button" uib-dropdown-toggle class="btn btn-default">
-                            <span class="caret"></span>
-                        </button>
-                        <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                            <li ng-repeat="row in ChartDirectionBy" role="menuitem" ng-click="chartChangeDirection(row)">
                                 <a href="">{{ row }}</a>
                             </li>
                         </ul>
@@ -195,11 +159,6 @@
                     </button>
                     <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
                         <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
-                        [[ if (le .DB.Info.DBEntry.Size 100000000) ]]
-                            <!-- Don't display the CSV export options for large databases, as the current node setup doesn't have sufficient ram + swap for it. -->
-                            <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
-                            <li><a href="/x/downloadredashjson/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as Redash JSON</a></li>
-                        [[ end ]]
                     </ul>
                 </div>
             </span>
@@ -210,14 +169,31 @@
         <div class="col-md-8">
             <div class="row">
                 <div class="col-md-12">
-                    <h3 style="text-align: center;">Please choose the X and Y axes to visualise:</h3>
+                    <h3 style="text-align: center;">Please choose the X and Y axes to visualise</h3>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-12">
                     <table class="table table-striped table-responsive settingsTable">
                         <tr>
-                            <th>X Axis column</th>
+                            <th width="35%">First axis table</th>
+                            <td>
+                                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="viewtable" type="button" class="btn">Table/view: {{ XTablename }}</button>
+
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="row in meta.Tables" role="menuitem" ng-click="changeXAxisTable(row)">
+                                            <a href="">{{ row }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th width="35%">First axis column</th>
                             <td>
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                                     <button id="orderby" type="button" class="btn">{{ XAxisColumn }}</button>
@@ -226,7 +202,26 @@
                                         <span class="caret"></span>
                                     </button>
                                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                        <li ng-repeat="row in columnNames" role="menuitem" ng-click="changeXAxisColumn(row)">
+                                        <li ng-repeat="row in XColumnNames" role="menuitem" ng-click="changeXAxisColumn(row)">
+                                            <a href="">{{ row }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <table class="table table-striped table-responsive settingsTable">
+                        <tr>
+                            <th>Second axis table</th>
+                            <td>
+                                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="viewtable" type="button" class="btn">Table/view: {{ YTablename }}</button>
+
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="row in meta.Tables" role="menuitem" ng-click="changeYAxisTable(row)">
                                             <a href="">{{ row }}</a>
                                         </li>
                                     </ul>
@@ -234,7 +229,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th>Y Axis column</th>
+                            <th width="35%">Second axis column</th>
                             <td>
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                                     <button id="orderby" type="button" class="btn">{{ YAxisColumn }}</button>
@@ -243,15 +238,77 @@
                                         <span class="caret"></span>
                                     </button>
                                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                        <li ng-repeat="row in columnNames" role="menuitem" ng-click="changeYAxisColumn(row)">
+                                        <li ng-repeat="row in YColumnNames" role="menuitem" ng-click="changeYAxisColumn(row)">
                                             <a href="">{{ row }}</a>
                                         </li>
                                     </ul>
                                 </div>
                             </td>
                         </tr>
+                    </table>
+
+                    <div ng-show="showJoinChooser === true" class="row">
+                        <div class="col-md-12">
+                            <h3 style="text-align: center;">JOIN type for the tables</h3>
+                        </div>
+                    </div>
+                    <table ng-show="showJoinChooser === true" class="table table-striped table-responsive settingsTable">
                         <tr>
-                            <th>Which aggregate function? (<a href="https://www.sqlite.org/lang_aggfunc.html" target="_blank">info</a>)</th>
+                            <th width="35%">Join type</th>
+                            <td>
+                                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="orderby" type="button" class="btn">{{ JoinType }}</button>
+
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="row in joinTypes" role="menuitem" ng-click="changeJoinType(row)">
+                                            <a href="">{{ row }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr ng-show="JoinType === 'INNER JOIN' || JoinType === 'LEFT OUTER JOIN'">
+                            <th width="35%">ON clause</th>
+                            <td>{{ XTablename }}.<div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="orderby" type="button" class="btn">{{ JoinXColumn }}</button>
+
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="col in XColumnNames" role="menuitem" ng-click="changeJoinXColumn(col)">
+                                            <a href="">{{ col }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            = {{ YTablename }}.<div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="orderby" type="button" class="btn">{{ JoinYColumn }}</button>
+
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="col in YColumnNames" role="menuitem" ng-click="changeJoinYColumn(col)">
+                                            <a href="">{{ col }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h3 style="text-align: center;">Do you want to use an aggregate function on the second axis? (<a href="https://www.sqlite.org/lang_aggfunc.html" target="_blank">info</a>)</h3>
+                        </div>
+                    </div>
+
+                    <table class="table table-striped table-responsive settingsTable">
+                        <tr>
+                            <th width="35%">Aggregate function?</th>
                             <td>
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                                     <button id="orderby" type="button" class="btn">{{ AggType }}</button>
@@ -267,8 +324,29 @@
                                 </div>
                             </td>
                         </tr>
+                    </table>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h3 style="text-align: center;">Generated SQL</h3>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <textarea id="sql" rows="4"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h3 style="text-align: center;">Chart settings</h3>
+                        </div>
+                    </div>
+
+                    <table class="table table-striped table-responsive settingsTable">
                         <tr>
-                            <th>Horizontal or vertical bar chart?</th>
+                            <th width="35%">Chart type</th>
                             <td>
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                                     <button id="orderby" type="button" class="btn">{{ BarCharDirection }}</button>
@@ -278,21 +356,22 @@
                                     </button>
                                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
                                         <li role="menuitem">
-                                            <a href="" ng-click="barChartChangeDir('h')">Horizontal</a>
-                                            <a href="" ng-click="barChartChangeDir('v')">Vertical</a>
+                                            <a href="" ng-click="chartChangeType('h')">Horizontal bar chart</a>
+                                            <a href="" ng-click="chartChangeType('v')">Vertical bar chart</a>
                                         </li>
                                     </ul>
                                 </div>
                             </td>
                         </tr>
                     </table>
+
                     <div class="row" ng-if="statusMessage != ''">
                         <div style="text-align: center; padding-bottom: 8px;">
                             <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
                         </div>
                     </div>
                     <div style="text-align: center;">
-                        <input ng-hide="showVis === true" type="submit" class="btn btn-success" value="Display" ng-click="doVis()">
+                        <input type="submit" class="btn btn-success" value="Display" ng-click="doVis()">
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                         <input type="submit" class="btn btn-primary" value="Save as default" ng-click="saveAs('default')">
                         [[ end ]]
@@ -313,7 +392,7 @@
     <div class="row" style="border: none;">
         &nbsp;
     </div>
-    <div class="row" style="border: none;">
+    <div id="descdiv" class="row" style="border: none;">
         <div class="col-md-12" style="border: none;">
             <div style="border: 1px solid #DDD; border-radius: 7px; padding: 1px;">
                 <table class="table table-striped table-responsive" style="margin: 0;">
@@ -335,7 +414,8 @@
 <script>
     // Pre-filled table row data
     let barChartData = {
-        Tablename: "[[ .Data.Tablename ]]",
+        XTablename: "[[ .XAxisTable ]]",
+        YTablename: "[[ .YAxisTable ]]",
         XAxisLabel: "",
         YAxisLabel: "",
         Records: [[ .Records ]],
@@ -415,8 +495,9 @@
             [[ end ]]
         }
 
-        // Set the table name
-        $scope.db = { Tablename: "[[ .Data.Tablename ]]"};
+        // Set the table names
+        $scope.XTablename = "[[ .XAxisTable ]]";
+        $scope.YTablename = "[[ .YAxisTable ]]";
 
         // Set the displayed public/private value
         if ("[[ .DB.Info.Public ]]" === "true") {
@@ -431,6 +512,8 @@
             // drawn all mixed up, even with newPlot() :(
             plotLayout = {
                 title: barChartData.Title,
+                autosize: true,
+                width: document.getElementById("descdiv").offsetWidth,
                 xaxis: {
                     visible: true,
                 },
@@ -440,7 +523,7 @@
             };
 
             // Reorganise the bar chart data horizontally or vertically
-            if (updateData) {
+            if (updateData && (barChartData.Records != null)) {
                 let tmpData = barChartData.Records;
                 plotData[0].x = [];
                 plotData[0].y = [];
@@ -450,8 +533,6 @@
                         let val = tmpData[num]["Value"];
                         plotData[0].x.push(name);
                         plotData[0].y.push(val);
-                        plotLayout.xaxis.title = { text: barChartData.XAxisLabel};
-                        plotLayout.yaxis.title = { text: barChartData.YAxisLabel};
                     }
                 } else {
                     for (num = 0; num < tmpData.length; num++) {
@@ -459,10 +540,17 @@
                         let val = tmpData[num]["Value"];
                         plotData[0].x.push(val);
                         plotData[0].y.push(name);
-                        plotLayout.xaxis.title = { text: barChartData.YAxisLabel};
-                        plotLayout.yaxis.title = { text: barChartData.XAxisLabel};
                     }
                 }
+            }
+
+            // Update axis titles
+            if (plotData[0].orientation === "v") {
+                plotLayout.xaxis.title = { text: barChartData.XAxisLabel};
+                plotLayout.yaxis.title = { text: barChartData.YAxisLabel};
+            } else {
+                plotLayout.xaxis.title = { text: barChartData.YAxisLabel};
+                plotLayout.yaxis.title = { text: barChartData.XAxisLabel};
             }
 
             // Redraw the chart
@@ -471,36 +559,61 @@
 
         // Start out with the visualisation disabled, unless saved parameters were passed through
         $scope.showVis = false;
-        $scope.columnNames = [[ .Data.ColNames ]];
-        $scope.XAxisColumn = $scope.columnNames[0];
+        $scope.XColumnNames = [[ .XAxisColNames ]];
+        $scope.XAxisColumn = $scope.XColumnNames[0];
         barChartData.XAxisLabel = $scope.XAxisColumn;
-        $scope.YAxisColumn = $scope.columnNames[1];
+        $scope.YColumnNames = [[ .YAxisColNames ]];
+        $scope.YAxisColumn = $scope.YColumnNames[1];
         barChartData.YAxisLabel = $scope.YAxisColumn;
         $scope.AggType = "---";
         $scope.aggTypes = ["---", "avg", "count", "group_concat", "max", "min", "sum", "total"];
-        $scope.BarCharDirection = "Vertical";
 
-        // Change the bar chart bar direction
-        $scope.barChartChangeDir = function(dir) {
-            if (dir === "h") {
+        // Set up chart type
+        $scope.BarCharDirection = "[[ .ChartType ]]";
+        switch ($scope.BarCharDirection) {
+            case "Horizontal bar chart":
                 plotData[0].orientation = "h";
-                $scope.BarCharDirection = "Horizontal";
+                break;
+            case "Vertical bar chart":
+                plotData[0].orientation = "v";
+        }
+
+        // JOIN chooser pieces
+        $scope.showJoinChooser = false;
+        if ($scope.XTablename !== $scope.YTablename) {
+            $scope.showJoinChooser = true;
+        }
+        $scope.JoinType = "[[ .JoinType ]]";
+        $scope.joinTypes = ["---", "INNER JOIN", "LEFT OUTER JOIN"];
+        // $scope.joinTypes = ["---", "INNER JOIN", "LEFT OUTER JOIN", "CROSS JOIN"];
+        $scope.JoinXColumn = "";
+        $scope.JoinYColumn = "";
+        if ($scope.JoinType === "INNER JOIN" || $scope.JoinType === "LEFT OUTER JOIN") {
+            $scope.JoinXColumn = $scope.XColumnNames[0];
+            $scope.JoinYColumn = $scope.YColumnNames[0];
+        }
+
+        // Change the type of chart
+        $scope.chartChangeType = function(newType) {
+            if (newType === "h") {
+                plotData[0].orientation = "h";
+                $scope.BarCharDirection = "Horizontal bar chart";
             } else {
                 plotData[0].orientation = "v";
-                $scope.BarCharDirection = "Vertical";
+                $scope.BarCharDirection = "Vertical bar chart";
             }
             $scope.doChart(true);
         };
 
         // If saved parameter data was passed through, update the initial values
         if ("[[ .ParamsGiven ]]" === "true") {
-            $scope.XAxisColumn = "[[ .XAxis ]]";
+            $scope.XTablename = "[[ .XAxisTable ]]";
+            $scope.XAxisColumn = "[[ .XAxisCol ]]";
             barChartData.XAxisLabel = $scope.XAxisColumn;
-            $scope.YAxisColumn = "[[ .YAxis ]]";
+            $scope.YTablename = "[[ .YAxisTable ]]";
+            $scope.YAxisColumn = "[[ .YAxisCol ]]";
             barChartData.YAxisLabel = $scope.YAxisColumn;
             $scope.AggType = "[[ .AggType ]]";
-            barChartOrderBy = [[ .OrderBy ]];
-            barChartOrderDirection = [[ .OrderDir ]];
         }
 
         // If the data points for visualisation were provided, set the flag to indicate this
@@ -524,10 +637,25 @@
 
         // Retrieve the data for visualisation
         $scope.doVis = async function() {
-            let args = "table=" + $scope.db.Tablename;
+            let args = "xtable=" + $scope.XTablename;
+            args += "&ytable=" + $scope.YTablename;
             args += "&xaxis=" + $scope.XAxisColumn;
             args += "&yaxis=" + $scope.YAxisColumn;
             args += "&agg=" + $scope.AggType;
+            if ($scope.XTablename !== $scope.YTablename) {
+                // The user has selected a join of some sort
+                if ($scope.JoinType === "---") {
+                    // Can't retrieve valid data until viable JOIN pieces are selected
+                    $scope.showVis = false;
+                    return;
+                }
+
+                args += "&join=" + $scope.JoinType;
+                if ($scope.JoinType === "INNER JOIN" || $scope.JoinType === "LEFT OUTER JOIN") {
+                    args += "&joinxcol=" + $scope.JoinXColumn;
+                    args += "&joinycol=" + $scope.JoinYColumn;
+                }
+            }
             $http.get("/x/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function success(response) {
                     // Clear any existing error message
@@ -535,7 +663,8 @@
 
                     // Update table data
                     barChartData.Records = response.data;
-                    barChartData.Tablename = $scope.db.Tablename;
+                    barChartData.XTablename = $scope.XTablename;
+                    barChartData.YTablename = $scope.YTablename;
                     barChartData.XAxisLabel = $scope.XAxisColumn;
                     barChartData.YAxisLabel = $scope.YAxisColumn;
 
@@ -543,6 +672,9 @@
                     $scope.showVis = true;
                     dataReceived = true;
                     $scope.doChart(true);
+
+                    // Clear any existing status message
+                    $scope.statusMessage = "";
                 }, function failure(response) {
                     // Retrieving data failed, so display the returned error message and hide the graph
                     $scope.statusMessageColour = "red";
@@ -556,13 +688,33 @@
         $scope.statusMessage = "";
         $scope.statusMessageColour = "red";
         $scope.saveAs = function(visName) {
-            let args = "table=" + $scope.db.Tablename;
+            let args = "xtable=" + $scope.XTablename;
+            args += "&ytable=" + $scope.YTablename;
             args += "&xaxis=" + $scope.XAxisColumn;
             args += "&yaxis=" + $scope.YAxisColumn;
             args += "&visname=" + visName;
-            args += "&orderby=" + barChartOrderBy;
-            args += "&orderdir=" + barChartOrderDirection;
+            switch ($scope.BarCharDirection) {
+                case "Horizontal bar chart":
+                    args += "&charttype=hbc";
+                    break;
+                case "Vertical bar chart":
+                    args += "&charttype=vbc";
+                    break;
+            }
             args += "&agg=" + $scope.AggType;
+            if ($scope.XTablename !== $scope.YTablename) {
+                // The user has selected a join of some sort
+                if ($scope.JoinType === "---") {
+                    // Can't save until viable JOIN pieces are selected
+                    return;
+                }
+
+                args += "&join=" + $scope.JoinType;
+                if ($scope.JoinType === "INNER JOIN" || $scope.JoinType === "LEFT OUTER JOIN") {
+                    args += "&joinxcol=" + $scope.JoinXColumn;
+                    args += "&joinycol=" + $scope.JoinYColumn;
+                }
+            }
             $http.get("/x/vissave/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
@@ -575,9 +727,79 @@
             )
         };
 
+        // Update the generated SQL display
+        $scope.updateSQL = function() {
+            // Update the generated SQL display
+            let sqlWindow = document.getElementById("sql");
+            if ($scope.XTablename === $scope.YTablename) {
+                if ($scope.AggType === "---") {
+                    sqlWindow.innerHTML = "SELECT\n    " +
+                        $scope.XAxisColumn + ", " + $scope.YAxisColumn + "\n" +
+                        "FROM\n    " + $scope.XTablename + ";";
+                    sqlWindow.rows = 4;
+                } else {
+                    sqlWindow.innerHTML = "SELECT\n    " +
+                        $scope.XAxisColumn + ", " + $scope.AggType + "(" + $scope.YAxisColumn + ")\n" +
+                        "FROM\n    " + $scope.XTablename + "\n" +
+                        "GROUP BY " + $scope.XAxisColumn + ";";
+                    sqlWindow.rows = 5;
+                }
+            } else {
+                 let joinText = "SELECT\n    " +
+                    $scope.XTablename + "." + $scope.XAxisColumn + ", " +
+                    $scope.YTablename + "." + $scope.YAxisColumn + "\n";
+                if ($scope.JoinType === "---") {
+                    // No JOIN
+                    joinText = "Please choose JOIN type and columns";
+                } else if ($scope.JoinType === "INNER JOIN") {
+                    // INNER JOIN
+                    joinText += "FROM\n    " + $scope.XTablename + " INNER JOIN " + $scope.YTablename + " ON " +
+                        $scope.XTablename + "." + $scope.JoinXColumn + " = " + $scope.YTablename + "." + $scope.JoinYColumn + ";";
+                } else if ($scope.JoinType === "LEFT OUTER JOIN") {
+                    // LEFT OUTER JOIN
+                    joinText += "FROM\n    " + $scope.XTablename + " LEFT OUTER JOIN " + $scope.YTablename + " ON " +
+                        $scope.XTablename + "." + $scope.JoinXColumn + " = " + $scope.YTablename + "." + $scope.JoinYColumn + ";";
+                } else {
+                    joinText += "FROM\n    " + $scope.XTablename + " " + $scope.JoinType + " " + $scope.YTablename + ";";
+                }
+                sqlWindow.innerHTML = joinText;
+                sqlWindow.rows = 4;
+            }
+        }
+        // Display the initial generated SQL
+        $scope.updateSQL();
+
+        // Change the X Axis table
+        $scope.changeXAxisTable = function(newtable) {
+            $scope.XTablename = newtable;
+            // Retrieve the column names for the new table
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
+                newtable).then(
+                function success(response) {
+                    // Display the join chooser if needed
+                    if ($scope.XTablename === $scope.YTablename) {
+                        $scope.showJoinChooser = false;
+                    } else {
+                        $scope.showJoinChooser = true;
+                    }
+
+                    // Update X axis columns
+                    $scope.showVis = true;
+                    $scope.XColumnNames = response.data.ColNames;
+                    $scope.changeXAxisColumn($scope.XColumnNames[0]);
+                }, function failure(response) {
+                    // Retrieving column names failed, so display the returned error message
+                    $scope.statusMessageColour = "red";
+                    $scope.statusMessage = "Retrieving column names failed: " + response.data;
+                    $scope.showVis = false;
+                }
+            )
+        };
+
         // Change the X Axis Column
         $scope.changeXAxisColumn = function(newcol) {
             $scope.XAxisColumn = newcol;
+            $scope.updateSQL();
 
             // If the graph is being shown, update it
             if ($scope.showVis === true) {
@@ -585,9 +807,37 @@
             }
         };
 
+        // Change the Y Axis table
+        $scope.changeYAxisTable = function(newtable) {
+            $scope.YTablename = newtable;
+            // Retrieve the column names for the new table
+            $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
+                newtable).then(
+                function success(response) {
+                    // Display the join chooser if needed
+                    if ($scope.XTablename === $scope.YTablename) {
+                        $scope.showJoinChooser = false;
+                    } else {
+                        $scope.showJoinChooser = true;
+                    }
+
+                    // Update Y axis columns
+                    $scope.showVis = true;
+                    $scope.YColumnNames = response.data.ColNames;
+                    $scope.changeYAxisColumn($scope.YColumnNames[0]);
+                }, function failure(response) {
+                    // Retrieving column names failed, so display the returned error message
+                    $scope.statusMessageColour = "red";
+                    $scope.statusMessage = "Retrieving column names failed: " + response.data;
+                    $scope.showVis = false;
+                }
+            )
+        };
+
         // Change the Y Axis Column
         $scope.changeYAxisColumn = function(newcol) {
             $scope.YAxisColumn = newcol;
+            $scope.updateSQL();
 
             // If the graph is being shown, update it
             if ($scope.showVis === true) {
@@ -598,6 +848,7 @@
         // Change the Aggregate function
         $scope.changeAggType = function(newagg) {
             $scope.AggType = newagg;
+            $scope.updateSQL();
 
             // If the graph is being shown, update it
             if ($scope.showVis === true) {
@@ -605,36 +856,42 @@
             }
         };
 
-        // // Change the column sort approach
-        // $scope.ChartOrderName = "Category names";
-        // $scope.ChartOrderBy = ["Category names", "Item totals"];
-        // $scope.chartChangeOrder = function(ord) {
-        //     if (ord === "Category names") {
-        //         barChartOrderBy = 0;
-        //     } else {
-        //         barChartOrderBy = 1;
-        //     }
-        //     $scope.ChartOrderName = ord;
-        //     draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
-        // };
-        //
-        // // Change the column sort direction
-        // $scope.ChartDirectionName = "Ascending";
-        // $scope.ChartDirectionBy = ["Ascending", "Descending"];
-        // $scope.chartChangeDirection = function(dir) {
-        //     if (dir === "Ascending") {
-        //         barChartOrderDirection = 0;
-        //     } else {
-        //         barChartOrderDirection = 1;
-        //     }
-        //     $scope.ChartDirectionName = dir;
-        //     draw_bar_chart(palette, barChartData, barChartOrderBy, barChartOrderDirection);
-        // };
+        // Change the SQLite JOIN type
+        $scope.changeJoinType = function(newjoin) {
+            $scope.JoinType = newjoin;
+            $scope.updateSQL();
 
-        // Retrieves the visualisation data for a different table, then updates the visualisation
-        $scope.changeTable = function(newtable) {
-            $scope.db.Tablename = newtable;
-            $scope.doVis();
+            if ($scope.JoinType === "INNER JOIN") {
+                $scope.JoinXColumn = $scope.XColumnNames[0];
+                $scope.JoinYColumn = $scope.YColumnNames[0];
+            }
+
+            // If the graph is being shown, update it
+            if ($scope.showVis === true) {
+                $scope.doVis();
+            }
+        };
+
+        // Change the JOIN X axis column
+        $scope.changeJoinXColumn = function(col) {
+            $scope.JoinXColumn = col;
+            $scope.updateSQL();
+
+            // If the graph is being shown, update it
+            if ($scope.showVis === true) {
+                $scope.doVis();
+            }
+        };
+
+        // Change the JOIN Y axis column
+        $scope.changeJoinYColumn = function(col) {
+            $scope.JoinYColumn = col;
+            $scope.updateSQL();
+
+            // If the graph is being shown, update it
+            if ($scope.showVis === true) {
+                $scope.doVis();
+            }
         };
 
         // Fork the database
