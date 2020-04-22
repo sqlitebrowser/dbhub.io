@@ -349,15 +349,16 @@
                             <th width="35%">Chart type</th>
                             <td>
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
-                                    <button id="orderby" type="button" class="btn">{{ BarCharDirection }}</button>
+                                    <button id="orderby" type="button" class="btn">{{ ChartType }}</button>
 
                                     <button type="button" uib-dropdown-toggle class="btn btn-default">
                                         <span class="caret"></span>
                                     </button>
                                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
                                         <li role="menuitem">
-                                            <a href="" ng-click="chartChangeType('h')">Horizontal bar chart</a>
-                                            <a href="" ng-click="chartChangeType('v')">Vertical bar chart</a>
+                                            <a href="" ng-click="chartChangeType('hbc')">Horizontal bar chart</a>
+                                            <a href="" ng-click="chartChangeType('vbc')">Vertical bar chart</a>
+                                            <a href="" ng-click="chartChangeType('lc')">Line chart</a>
                                         </li>
                                     </ul>
                                 </div>
@@ -432,6 +433,9 @@
     }
     if (plotTitle.endsWith(".db")) {
         barChartData.Title = plotTitle.replace(/\.db$/, "");
+    }
+    if (plotTitle.endsWith(".db3")) {
+        barChartData.Title = plotTitle.replace(/\.db3$/, "");
     }
 
     // Plotly pieces
@@ -569,13 +573,20 @@
         $scope.aggTypes = ["---", "avg", "count", "group_concat", "max", "min", "sum", "total"];
 
         // Set up chart type
-        $scope.BarCharDirection = "[[ .ChartType ]]";
-        switch ($scope.BarCharDirection) {
+        $scope.ChartType = "[[ .ChartType ]]";
+        switch ($scope.ChartType) {
             case "Horizontal bar chart":
+                plotData[0].type = "bar";
                 plotData[0].orientation = "h";
                 break;
             case "Vertical bar chart":
+                plotData[0].type = "bar";
                 plotData[0].orientation = "v";
+                break;
+            case "Line chart":
+                plotData[0].type = "scatter";
+                plotData[0].orientation = "v";
+                break;
         }
 
         // JOIN chooser pieces
@@ -595,12 +606,21 @@
 
         // Change the type of chart
         $scope.chartChangeType = function(newType) {
-            if (newType === "h") {
-                plotData[0].orientation = "h";
-                $scope.BarCharDirection = "Horizontal bar chart";
-            } else {
-                plotData[0].orientation = "v";
-                $scope.BarCharDirection = "Vertical bar chart";
+            switch (newType) {
+                case "hbc":
+                    plotData[0].type = "bar";
+                    plotData[0].orientation = "h";
+                    $scope.ChartType = "Horizontal bar chart";
+                    break;
+                case "vbc":
+                    plotData[0].type = "bar";
+                    plotData[0].orientation = "v";
+                    $scope.ChartType = "Vertical bar chart";
+                    break;
+                case "lc":
+                    plotData[0].type = "scatter";
+                    plotData[0].orientation = "v";
+                    $scope.ChartType = "Line chart";
             }
             $scope.doChart(true);
         };
@@ -693,12 +713,15 @@
             args += "&xaxis=" + $scope.XAxisColumn;
             args += "&yaxis=" + $scope.YAxisColumn;
             args += "&visname=" + visName;
-            switch ($scope.BarCharDirection) {
+            switch ($scope.ChartType) {
                 case "Horizontal bar chart":
                     args += "&charttype=hbc";
                     break;
                 case "Vertical bar chart":
                     args += "&charttype=vbc";
+                    break;
+                case "Line chart":
+                    args += "&charttype=lc";
                     break;
             }
             args += "&agg=" + $scope.AggType;
