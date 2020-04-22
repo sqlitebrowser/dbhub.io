@@ -596,6 +596,7 @@
             $scope.showJoinChooser = true;
         }
         $scope.JoinType = "[[ .JoinType ]]";
+        if ($scope.JoinType === "") { $scope.JoinType = "---"; }
         $scope.joinTypes = ["---", "INNER JOIN", "LEFT OUTER JOIN"];
         // $scope.joinTypes = ["---", "INNER JOIN", "LEFT OUTER JOIN", "CROSS JOIN"];
         $scope.JoinXColumn = "";
