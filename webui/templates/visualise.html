@@ -359,6 +359,7 @@
                                             <a href="" ng-click="chartChangeType('hbc')">Horizontal bar chart</a>
                                             <a href="" ng-click="chartChangeType('vbc')">Vertical bar chart</a>
                                             <a href="" ng-click="chartChangeType('lc')">Line chart</a>
+                                            <a href="" ng-click="chartChangeType('pie')">Pie chart</a>
                                         </li>
                                     </ul>
                                 </div>
@@ -414,7 +415,7 @@
 [[ template "footer" . ]]
 <script>
     // Pre-filled table row data
-    let barChartData = {
+    let chartData = {
         XTablename: "[[ .XAxisTable ]]",
         YTablename: "[[ .YAxisTable ]]",
         XAxisLabel: "",
@@ -426,16 +427,16 @@
     // Remove any database file extension from the chart title
     let plotTitle = "[[ .Meta.Database ]]";
     if (plotTitle.endsWith(".sqlite")) {
-        barChartData.Title = plotTitle.replace(/\.sqlite$/, "");
+        chartData.Title = plotTitle.replace(/\.sqlite$/, "");
     }
     if (plotTitle.endsWith(".sqlite3")) {
-        barChartData.Title = plotTitle.replace(/\.sqlite3$/, "");
+        chartData.Title = plotTitle.replace(/\.sqlite3$/, "");
     }
     if (plotTitle.endsWith(".db")) {
-        barChartData.Title = plotTitle.replace(/\.db$/, "");
+        chartData.Title = plotTitle.replace(/\.db$/, "");
     }
     if (plotTitle.endsWith(".db3")) {
-        barChartData.Title = plotTitle.replace(/\.db3$/, "");
+        chartData.Title = plotTitle.replace(/\.db3$/, "");
     }
 
     // Plotly pieces
@@ -515,7 +516,7 @@
             // Recreate the layout structure, to ensure the plot is fully redrawn.  Without this, the chart info is
             // drawn all mixed up, even with newPlot() :(
             plotLayout = {
-                title: barChartData.Title,
+                title: chartData.Title,
                 autosize: true,
                 width: document.getElementById("descdiv").offsetWidth,
                 xaxis: {
@@ -527,34 +528,48 @@
             };
 
             // Reorganise the bar chart data horizontally or vertically
-            if (updateData && (barChartData.Records != null)) {
-                let tmpData = barChartData.Records;
-                plotData[0].x = [];
-                plotData[0].y = [];
-                if (plotData[0].orientation === "v") {
-                    for (num = 0; num < tmpData.length; num++) {
-                        let name = tmpData[num]["Name"];
-                        let val = tmpData[num]["Value"];
-                        plotData[0].x.push(name);
-                        plotData[0].y.push(val);
-                    }
-                } else {
-                    for (num = 0; num < tmpData.length; num++) {
-                        let name = tmpData[num]["Name"];
-                        let val = tmpData[num]["Value"];
-                        plotData[0].x.push(val);
-                        plotData[0].y.push(name);
-                    }
+            if (updateData && (chartData.Records != null)) {
+                let tmpData = chartData.Records;
+                switch (plotData[0].type) {
+                    case "bar":
+                    case "scatter":
+                        plotData[0].x = [];
+                        plotData[0].y = [];
+                        if (plotData[0].orientation === "v") {
+                            for (num = 0; num < tmpData.length; num++) {
+                                let name = tmpData[num]["Name"];
+                                let val = tmpData[num]["Value"];
+                                plotData[0].x.push(name);
+                                plotData[0].y.push(val);
+                            }
+                        } else {
+                            for (num = 0; num < tmpData.length; num++) {
+                                let name = tmpData[num]["Name"];
+                                let val = tmpData[num]["Value"];
+                                plotData[0].x.push(val);
+                                plotData[0].y.push(name);
+                            }
+                        }
+                        break;
+                    case "pie":
+                        plotData[0].labels = [];
+                        plotData[0].values = [];
+                        for (num = 0; num < tmpData.length; num++) {
+                            let name = tmpData[num]["Name"];
+                            let val = tmpData[num]["Value"];
+                            plotData[0].labels.push(name);
+                            plotData[0].values.push(val);
+                        }
                 }
             }
 
             // Update axis titles
             if (plotData[0].orientation === "v") {
-                plotLayout.xaxis.title = { text: barChartData.XAxisLabel};
-                plotLayout.yaxis.title = { text: barChartData.YAxisLabel};
+                plotLayout.xaxis.title = { text: chartData.XAxisLabel};
+                plotLayout.yaxis.title = { text: chartData.YAxisLabel};
             } else {
-                plotLayout.xaxis.title = { text: barChartData.YAxisLabel};
-                plotLayout.yaxis.title = { text: barChartData.XAxisLabel};
+                plotLayout.xaxis.title = { text: chartData.YAxisLabel};
+                plotLayout.yaxis.title = { text: chartData.XAxisLabel};
             }
 
             // Redraw the chart
@@ -565,10 +580,10 @@
         $scope.showVis = false;
         $scope.XColumnNames = [[ .XAxisColNames ]];
         $scope.XAxisColumn = $scope.XColumnNames[0];
-        barChartData.XAxisLabel = $scope.XAxisColumn;
+        chartData.XAxisLabel = $scope.XAxisColumn;
         $scope.YColumnNames = [[ .YAxisColNames ]];
         $scope.YAxisColumn = $scope.YColumnNames[1];
-        barChartData.YAxisLabel = $scope.YAxisColumn;
+        chartData.YAxisLabel = $scope.YAxisColumn;
         $scope.AggType = "---";
         $scope.aggTypes = ["---", "avg", "count", "group_concat", "max", "min", "sum", "total"];
 
@@ -587,6 +602,9 @@
             case "Line chart":
                 plotData[0].type = "scatter";
                 plotData[0].orientation = "v";
+                break;
+            case "Pie chart":
+                plotData[0].type = "pie";
                 break;
         }
 
@@ -623,6 +641,10 @@
                     plotData[0].type = "scatter";
                     plotData[0].orientation = "v";
                     $scope.ChartType = "Line chart";
+                    break;
+                case "pie":
+                    plotData[0].type = "pie";
+                    $scope.ChartType = "Pie chart";
             }
             $scope.doChart(true);
         };
@@ -631,10 +653,10 @@
         if ("[[ .ParamsGiven ]]" === "true") {
             $scope.XTablename = "[[ .XAxisTable ]]";
             $scope.XAxisColumn = "[[ .XAxisCol ]]";
-            barChartData.XAxisLabel = $scope.XAxisColumn;
+            chartData.XAxisLabel = $scope.XAxisColumn;
             $scope.YTablename = "[[ .YAxisTable ]]";
             $scope.YAxisColumn = "[[ .YAxisCol ]]";
-            barChartData.YAxisLabel = $scope.YAxisColumn;
+            chartData.YAxisLabel = $scope.YAxisColumn;
             $scope.AggType = "[[ .AggType ]]";
         }
 
@@ -684,11 +706,11 @@
                     $scope.statusMessage = "";
 
                     // Update table data
-                    barChartData.Records = response.data;
-                    barChartData.XTablename = $scope.XTablename;
-                    barChartData.YTablename = $scope.YTablename;
-                    barChartData.XAxisLabel = $scope.XAxisColumn;
-                    barChartData.YAxisLabel = $scope.YAxisColumn;
+                    chartData.Records = response.data;
+                    chartData.XTablename = $scope.XTablename;
+                    chartData.YTablename = $scope.YTablename;
+                    chartData.XAxisLabel = $scope.XAxisColumn;
+                    chartData.YAxisLabel = $scope.YAxisColumn;
 
                     // Display the visualisation
                     $scope.showVis = true;
@@ -724,6 +746,9 @@
                     break;
                 case "Line chart":
                     args += "&charttype=lc";
+                    break;
+                case "Pie chart":
+                    args += "&charttype=pie";
                     break;
             }
             args += "&agg=" + $scope.AggType;

@@ -456,6 +456,8 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 			pageData.ChartType = "Vertical bar chart"
 		case "lc":
 			pageData.ChartType = "Line chart"
+		case "pie":
+			pageData.ChartType = "Pie chart"
 		default:
 			pageData.ChartType = "Vertical bar chart"
 		}
@@ -991,7 +993,7 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Ensure only valid chart types are accepted
-	if chartType != "hbc" && chartType != "vbc" && chartType != "lc" {
+	if chartType != "hbc" && chartType != "vbc" && chartType != "lc" && chartType != "pie" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Unknown chart type")
 		return
