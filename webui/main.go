@@ -3376,17 +3376,17 @@ func main() {
 	})))
 
 	// Javascript
-	http.Handle("/js/angular-1.7.8.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-1.7.8.min.js"))
+	http.Handle("/js/angular-1.7.9.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-1.7.9.min.js"))
 	})))
 	http.Handle("/js/angular.min.js.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-1.7.8.min.js.map"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-1.7.9.min.js.map"))
 	})))
-	http.Handle("/js/angular-sanitize-1.7.8.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.7.8.min.js"))
+	http.Handle("/js/angular-sanitize-1.7.9.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.7.9.min.js"))
 	})))
 	http.Handle("/js/angular-sanitize.min.js.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.7.8.min.js.map"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.7.9.min.js.map"))
 	})))
 	http.Handle("/js/angular-bootstrap-lightbox.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-bootstrap-lightbox.min.js"))
@@ -3394,11 +3394,11 @@ func main() {
 	http.Handle("/js/local.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "local.js"))
 	})))
-	http.Handle("/js/lock-11.14.1.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-11.14.1.min.js"))
+	http.Handle("/js/lock-11.23.1.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-11.23.1.min.js"))
 	})))
 	http.Handle("/js/lock.min.js.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-11.14.1.min.js.map"))
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-11.23.1.min.js.map"))
 	})))
 
 	http.Handle("/js/plotly-1.53.0.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
@@ -3413,18 +3413,6 @@ func main() {
 
 	http.Handle("/js/ui-bootstrap-tpls-2.5.0.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "ui-bootstrap-tpls-2.5.0.min.js"))
-	})))
-
-	// WebAssembly loader
-	http.Handle("/wasm/dbhub_vis.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "wasm", "pkg", "dbhub_vis.js"))
-	})))
-
-	// WebAssembly files
-	http.Handle("/wasm/dbhub_vis_bg.wasm", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Cache-Control", "no-cache") // Not sure if this should be kept when rolled out to production
-		w.Header().Set("content-type", "application/wasm")
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "wasm", "pkg", "dbhub_vis_bg.wasm"))
 	})))
 
 	// Other static files
