@@ -939,7 +939,21 @@
                     // Update X axis columns
                     $scope.showVis = true;
                     $scope.XColumnNames = response.data.ColNames;
-                    $scope.changeXAxisColumn($scope.XColumnNames[0]);
+
+                    // If the same column name exists in the new table, use that
+                    let colExists = false;
+                    for (i = 0; i < $scope.XColumnNames.length; i++) {
+                        if ($scope.XAxisColumn === $scope.XColumnNames[i]) {
+                            colExists = true;
+                        }
+                    }
+                    if (colExists) {
+                        // We call this anyway, so the SQL and graph are updated
+                        $scope.changeXAxisColumn($scope.XAxisColumn);
+                    } else {
+                        // Column name doesn't exist in the new table, so just pick the first column
+                        $scope.changeXAxisColumn($scope.XColumnNames[0]);
+                    }
                 }, function failure(response) {
                     // Retrieving column names failed, so display the returned error message
                     $scope.statusMessageColour = "red";
@@ -977,7 +991,21 @@
                     // Update Y axis columns
                     $scope.showVis = true;
                     $scope.YColumnNames = response.data.ColNames;
-                    $scope.changeYAxisColumn($scope.YColumnNames[0]);
+
+                    // If the same column name exists in the new table, use that
+                    let colExists = false;
+                    for (i = 0; i < $scope.YColumnNames.length; i++) {
+                        if ($scope.YAxisColumn === $scope.YColumnNames[i]) {
+                            colExists = true;
+                        }
+                    }
+                    if (colExists) {
+                        // We call this anyway, so the SQL and graph are updated
+                        $scope.changeYAxisColumn($scope.YAxisColumn);
+                    } else {
+                        // Column name doesn't exist in the new table, so just pick the first column
+                        $scope.changeYAxisColumn($scope.YColumnNames[0]);
+                    }
                 }, function failure(response) {
                     // Retrieving column names failed, so display the returned error message
                     $scope.statusMessageColour = "red";
