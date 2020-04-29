@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -3553,7 +3554,13 @@ func main() {
 
 	// Start webUI server
 	log.Printf("DBHub server starting on https://%s\n", com.Conf.Web.ServerName)
-	err = http.ListenAndServeTLS(com.Conf.Web.BindAddress, com.Conf.Web.Certificate, com.Conf.Web.CertificateKey, nil)
+	srv := &http.Server{
+		Addr: com.Conf.Web.BindAddress,
+		TLSConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12, // TLS 1.2 is now the lowest acceptable level
+		},
+	}
+	err = srv.ListenAndServeTLS(com.Conf.Web.Certificate, com.Conf.Web.CertificateKey)
 
 	// Shut down nicely
 	com.DisconnectPostgreSQL()
