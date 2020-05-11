@@ -164,6 +164,38 @@ ALTER SEQUENCE public.database_uploads_up_id_seq OWNED BY public.database_upload
 
 
 --
+-- Name: db4s_connects; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.db4s_connects (
+    connect_id bigint NOT NULL,
+    user_id integer,
+    ip_addr text,
+    user_agent text,
+    connect_date timestamp with time zone
+);
+
+
+--
+-- Name: db4s_connects_connect_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.db4s_connects_connect_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: db4s_connects_connect_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.db4s_connects_connect_id_seq OWNED BY public.db4s_connects.connect_id;
+
+
+--
 -- Name: discussion_comments; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -469,6 +501,13 @@ ALTER TABLE ONLY public.database_uploads ALTER COLUMN up_id SET DEFAULT nextval(
 
 
 --
+-- Name: db4s_connects connect_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.db4s_connects ALTER COLUMN connect_id SET DEFAULT nextval('public.db4s_connects_connect_id_seq'::regclass);
+
+
+--
 -- Name: discussion_comments com_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -673,6 +712,20 @@ CREATE INDEX database_licences_lic_sha256_idx ON public.database_licences USING 
 --
 
 CREATE INDEX database_licences_user_id_friendly_name_idx ON public.database_licences USING btree (user_id, friendly_name);
+
+
+--
+-- Name: db4s_connects_connect_date_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX db4s_connects_connect_date_index ON public.db4s_connects USING btree (connect_date);
+
+
+--
+-- Name: db4s_connects_user_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX db4s_connects_user_id_index ON public.db4s_connects USING btree (user_id);
 
 
 --

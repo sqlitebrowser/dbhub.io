@@ -240,7 +240,8 @@ func generateDefaultList(pageName string, userAcc string) (defaultList []byte, e
 	pageName += ":generateDefaultList()"
 
 	// Retrieve the list of most recently modified (available) databases
-	unsorted, err := com.DB4SDefaultList(userAcc)
+	var unsorted map[string]com.UserInfo
+	unsorted, err = com.DB4SDefaultList(userAcc)
 	if err != nil {
 		// Return an empty set
 		return []byte{'{', '}'}, err
@@ -299,7 +300,18 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	if numPieces == 2 {
 		// Check if the request was for the root directory
 		if pathStrings[1] == "" {
-			// Yep, root directory request
+			// Yep, root directory request.  Log it and generate the browse list
+			var userAgent string
+			ua, ok := r.Header["User-Agent"]
+			if ok {
+				userAgent = ua[0]
+			}
+			if err := com.LogDB4SConnect(userAcc, r.RemoteAddr, userAgent, time.Now().UTC()); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// Generate the list of potential user directories for browsing
 			defaultList, err := generateDefaultList(pageName, userAcc)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

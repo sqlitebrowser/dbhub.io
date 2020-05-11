@@ -96,6 +96,7 @@ type DB4SInfo struct {
 	CAChain        string `toml:"ca_chain"`
 	Certificate    string
 	CertificateKey string `toml:"certificate_key"`
+	Debug          bool
 	Port           int
 	Server         string
 }
