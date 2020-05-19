@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	sqlite "github.com/gwenn/gosqlite"
 )
@@ -607,16 +608,26 @@ func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 	// Retrieve the list of tables in the database
 	tables, err := sdb.Tables("")
 	if err != nil {
-		log.Printf("Error retrieving table names: %v\n", err)
+		// An error occurred, so get the extended error code
 		if cerr, ok := err.(sqlite.ConnError); ok {
-			log.Printf("Error code: %v\n", cerr.Code())
-			log.Printf("Extended error code: %v\n", cerr.ExtendedCode())
-			log.Printf("Extended error message: %v\n", cerr.Error())
-			log.Printf("Extended error filename: %v\n", cerr.Filename())
+			// Check if the error was due to the table being locked
+			extCode := cerr.ExtendedCode()
+			if extCode == 5 { // Magic number which (in this case) means "database is locked"
+				// Wait 3 seconds then try again
+				time.Sleep(3 * time.Second)
+				tables, err = sdb.Tables("")
+				if err != nil {
+					log.Printf("Error retrieving table names: %s", err)
+					return nil, err
+				}
+			} else {
+				log.Printf("Error retrieving table names: %s", err)
+				return nil, err
+			}
 		} else {
-			log.Printf("Expected a connection error, but got a '%v'\n", reflect.TypeOf(cerr))
+			log.Printf("Error retrieving table names: %s", err)
+			return nil, err
 		}
-		return nil, err
 	}
 	if len(tables) == 0 {
 		// No table names were returned, so abort

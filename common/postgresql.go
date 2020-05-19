@@ -2334,7 +2334,7 @@ func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser stri
 }
 
 // Return the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from owner/folder/database URL
-// fragment, // loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
+// fragment, loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
 // string ("") as the loggedInUser parameter if the true value isn't set or known.
 // If the requested database doesn't exist, or the loggedInUser doesn't have access to it, then an error will be
 // returned.

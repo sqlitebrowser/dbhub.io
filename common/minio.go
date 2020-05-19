@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -55,65 +56,10 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 // Retrieves a SQLite database from Minio, opens it, returns the connection handle.
 // Also returns the name of the temp file created, which the caller needs to delete (os.Remove()) when finished with it
 func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
-
-	// Check if the database file already exists
-	newDB := filepath.Join(Conf.DiskCache.Directory, bucket, id)
-	if _, err := os.Stat(newDB); os.IsNotExist(err) {
-		// * The database doesn't yet exist locally, so fetch it from Minio
-
-		// Check if a the database file is already being fetched from Minio by a different caller
-		//  eg check if there is a "<filename>.new" file already in the disk cache
-		if _, err := os.Stat(newDB + ".new"); os.IsNotExist(err) {
-			// * The database isn't already being fetched, so we're ok to proceed
-
-			// Get a handle from Minio for the database object
-			userDB, err := MinioHandle(bucket, id)
-			if err != nil {
-				return nil, err
-			}
-
-			// Close the object handle when this function finishes
-			defer func() {
-				MinioHandleClose(userDB)
-			}()
-
-			// Create the needed directory path in the disk cache
-			err = os.MkdirAll(filepath.Join(Conf.DiskCache.Directory, bucket), 0750)
-
-			// Save the database locally to the local disk cache, with ".new" on the end (will be renamed after file is
-			// finished writing)
-			f, err := os.OpenFile(newDB+".new", os.O_CREATE|os.O_WRONLY, 0750)
-			if err != nil {
-				log.Printf("Error creating new database file in the disk cache: %v\n", err)
-				return nil, errors.New("Internal server error")
-			}
-			bytesWritten, err := io.Copy(f, userDB)
-			if err != nil {
-				log.Printf("Error writing to new database file in the disk cache : %v\n", err)
-				return nil, errors.New("Internal server error")
-			}
-			if bytesWritten == 0 {
-				log.Printf("0 bytes written to the new SQLite database file: %s\n", newDB+".new")
-				return nil, errors.New("Internal server error")
-			}
-			f.Close()
-
-			// Now that the database file has been fully written to disk, remove the .new on the end of the name
-			err = os.Rename(newDB+".new", newDB)
-			if err != nil {
-				log.Printf("Error when renaming .new database file to final form in the disk cache: %s\n", err.Error())
-				return nil, errors.New("Internal server error")
-			}
-		} else {
-			// TODO: This is not a great approach, but should be ok for initial "get it working" code.
-			// TODO  Instead, it should probably loop around a few times checking for the file to be finished being
-			// TODO  created.
-			// TODO  Also, it's probably a decent idea to compare the file timestamp details os.Chtimes()? with the
-			// TODO  current system time, to detect and handle the case where the "<filename>.new" file is a stale one
-			// TODO  left over from some other (interrupted) process.  In which case nuke that and proceed to recreate
-			// TODO  it.
-			return nil, errors.New("Database retrieval in progress, try again in a few seconds")
-		}
+	// Retrieve database file from Minio, using cached version if it's already there
+	newDB, err := RetrieveDatabase(bucket, id)
+	if err != nil {
+		return nil, err
 	}
 
 	// Open database
@@ -127,6 +73,115 @@ func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 	err = sdb.EnableExtendedResultCodes(true)
 	if err != nil {
 		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
+		return nil, err
+	}
+	return sdb, nil
+}
+
+// Retrieves a SQLite database file from Minio.  If there's a locally cached version already available though, use that
+func RetrieveDatabase(bucket string, id string) (dbPath string, err error) {
+	// Check if the database file already exists
+	newDB := filepath.Join(Conf.DiskCache.Directory, bucket, id)
+	if _, err = os.Stat(newDB); os.IsNotExist(err) {
+		// * The database doesn't yet exist locally, so fetch it from Minio
+
+		// Check if a the database file is already being fetched from Minio by a different caller
+		//  eg check if there is a "<filename>.new" file already in the disk cache
+		if _, err = os.Stat(newDB + ".new"); os.IsNotExist(err) {
+			// * The database isn't already being fetched, so we're ok to proceed
+
+			// Get a handle from Minio for the database object
+			var userDB *minio.Object
+			userDB, err = MinioHandle(bucket, id)
+			if err != nil {
+				return "", err
+			}
+
+			// Close the object handle when this function finishes
+			defer func() {
+				MinioHandleClose(userDB)
+			}()
+
+			// Create the needed directory path in the disk cache
+			err = os.MkdirAll(filepath.Join(Conf.DiskCache.Directory, bucket), 0750)
+
+			// Save the database locally to the local disk cache, with ".new" on the end (will be renamed after file is
+			// finished writing)
+			var f *os.File
+			f, err = os.OpenFile(newDB+".new", os.O_CREATE|os.O_WRONLY, 0750)
+			if err != nil {
+				log.Printf("Error creating new database file in the disk cache: %v\n", err)
+				return "", errors.New("Internal server error")
+			}
+			bytesWritten, err := io.Copy(f, userDB)
+			if err != nil {
+				log.Printf("Error writing to new database file in the disk cache : %v\n", err)
+				return "", errors.New("Internal server error")
+			}
+			if bytesWritten == 0 {
+				log.Printf("0 bytes written to the new SQLite database file: %s\n", newDB+".new")
+				return "", errors.New("Internal server error")
+			}
+			f.Close()
+
+			// Now that the database file has been fully written to disk, remove the .new on the end of the name
+			err = os.Rename(newDB+".new", newDB)
+			if err != nil {
+				log.Printf("Error when renaming .new database file to final form in the disk cache: %s\n", err.Error())
+				return "", errors.New("Internal server error")
+			}
+			dbPath = newDB
+		} else {
+			// TODO: This is not a great approach, but should be ok for initial "get it working" code.
+			// TODO  Instead, it should probably loop around a few times checking for the file to be finished being
+			// TODO  created.
+			// TODO  Also, it's probably a decent idea to compare the file timestamp details os.Chtimes()? with the
+			// TODO  current system time, to detect and handle the case where the "<filename>.new" file is a stale one
+			// TODO  left over from some other (interrupted) process.  In which case nuke that and proceed to recreate
+			// TODO  it.
+			return "", errors.New("Database retrieval in progress, try again in a few seconds")
+		}
+	}
+	return
+}
+
+func RetrieveDefensiveSQLiteDatabase(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (sdb *sqlite.Conn, err error) {
+	// Check if the user has access to the requested database
+	var bucket, id string
+	bucket, id, _, err = MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Sanity check
+	if id == "" {
+		// The requested database wasn't found, or the user doesn't have permission to access it
+		err = fmt.Errorf("Requested database not found")
+		log.Printf("Requested database not found. Owner: '%s%s%s'", dbOwner, dbFolder, dbName)
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
+
+	// Retrieve database file from Minio, using locally cached version if it's already there
+	newDB, err := RetrieveDatabase(bucket, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Open the SQLite database super carefully: https://www.sqlite.org/security.html
+	// TODO: Implement the Defense Against Dark Arts recommendations
+	// TODO: Also check that the given database doesn't have any user defined functions present, just in case
+	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
+	if err != nil {
+		log.Printf("Couldn't open database: %s", err)
+		return nil, errors.New("Internal server error")
+	}
+	err = sdb.EnableExtendedResultCodes(true)
+	if err != nil {
+		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
+		return nil, err
 	}
 	return sdb, nil
 }
