@@ -1,7 +1,8 @@
-[![Build Status][1]][2] [![GoDoc](https://godoc.org/github.com/gwenn/yacr?status.svg)](https://godoc.org/github.com/gwenn/yacr) [![Go Report Card](https://goreportcard.com/badge/github.com/gwenn/yacr)](https://goreportcard.com/report/github.com/gwenn/yacr) [![Coverage Status](https://coveralls.io/repos/github/gwenn/yacr/badge.svg?branch=master)](https://coveralls.io/github/gwenn/yacr?branch=master)
+[![Build Status](https://github.com/gwenn/yacr/workflows/CI/badge.svg)](https://github.com/gwenn/yacr/actions)
+[![GoDoc](https://godoc.org/github.com/gwenn/yacr?status.svg)](https://godoc.org/github.com/gwenn/yacr)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gwenn/yacr)](https://goreportcard.com/report/github.com/gwenn/yacr)
+[![Coverage Status](https://coveralls.io/repos/github/gwenn/yacr/badge.svg?branch=master)](https://coveralls.io/github/gwenn/yacr?branch=master)
 
-[1]: https://secure.travis-ci.org/gwenn/yacr.png
-[2]: http://www.travis-ci.org/gwenn/yacr
 Yet another CSV reader (and writer) with small memory usage.
 
 All credit goes to:

@@ -8,7 +8,7 @@ package sqlite
 #include <sqlite3.h>
 #include <stdlib.h>
 
-int goSqlite3CreateModule(sqlite3 *db, const char *zName, void *pClientData);
+extern int goSqlite3CreateModule(sqlite3 *db, const char *zName, void *pClientData);
 */
 import "C"
 

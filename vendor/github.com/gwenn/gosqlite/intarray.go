@@ -10,8 +10,8 @@ package sqlite
 
 // An sqlite3_intarray is an abstract type to stores an instance of an integer array.
 typedef struct sqlite3_intarray sqlite3_intarray;
-int sqlite3_intarray_bind(sqlite3_intarray *pIntArray, int nElements, sqlite3_int64 *aElements, void (*xFree)(void*));
-int sqlite3_intarray_create(sqlite3 *db, const char *zName, sqlite3_intarray **ppReturn);
+extern int sqlite3_intarray_bind(sqlite3_intarray *pIntArray, int nElements, sqlite3_int64 *aElements, void (*xFree)(void*));
+extern int sqlite3_intarray_create(sqlite3 *db, const char *zName, sqlite3_intarray **ppReturn);
 */
 import "C"
 

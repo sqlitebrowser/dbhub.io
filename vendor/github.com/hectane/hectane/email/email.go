@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/mail"
 	"net/textproto"
@@ -113,7 +114,7 @@ func (e *Email) newMessages(s *queue.Storage, from, body string) ([]*queue.Messa
 // Convert the email into an array of messages grouped by host suitable for
 // delivery to the mail queue.
 func (e *Email) Messages(s *queue.Storage) ([]*queue.Message, error) {
-	from, err := mail.ParseAddress(e.From)
+	from, err := mail.ParseAddress(mime.QEncoding.Encode("utf-8", e.From))
 	if err != nil {
 		return nil, err
 	}

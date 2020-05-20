@@ -1,7 +1,7 @@
-[![GoDoc](https://godoc.org/github.com/gwenn/gosqlite?status.svg)](https://godoc.org/github.com/gwenn/gosqlite) [![Build Status][1]][2] [![Go Report Card](https://goreportcard.com/badge/github.com/gwenn/gosqlite)](https://goreportcard.com/report/github.com/gwenn/gosqlite) [![Coverage Status](https://coveralls.io/repos/github/gwenn/gosqlite/badge.svg?branch=master)](https://coveralls.io/github/gwenn/gosqlite?branch=master)
-
-[1]: https://secure.travis-ci.org/gwenn/gosqlite.png
-[2]: http://www.travis-ci.org/gwenn/gosqlite
+[![GoDoc](https://godoc.org/github.com/gwenn/gosqlite?status.svg)](https://godoc.org/github.com/gwenn/gosqlite)
+[![Build Status](https://github.com/gwenn/gosqlite/workflows/CI/badge.svg)](https://github.com/gwenn/gosqlite/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gwenn/gosqlite)](https://goreportcard.com/report/github.com/gwenn/gosqlite)
+[![Coverage Status](https://coveralls.io/repos/github/gwenn/gosqlite/badge.svg?branch=master)](https://coveralls.io/github/gwenn/gosqlite?branch=master)
 
 Yet another SQLite binding based on:
  - original [Russ Cox's](http://code.google.com/p/gosqlite/) implementation (or [here](https://github.com/rsc/sqlite)),

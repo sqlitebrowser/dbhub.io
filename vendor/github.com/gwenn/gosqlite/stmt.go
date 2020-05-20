@@ -114,7 +114,7 @@ func (c *Conn) prepare(sql string, args ...interface{}) (*Stmt, error) {
 	if len(args) > 0 {
 		err := s.Bind(args...)
 		if err != nil {
-			s.finalize()
+			_ = s.finalize()
 			return nil, err
 		}
 	}
@@ -130,7 +130,7 @@ func (c *Conn) Prepare(sql string, args ...interface{}) (*Stmt, error) {
 		if len(args) > 0 {
 			err := s.Bind(args...)
 			if err != nil {
-				s.finalize() // don't put it back in the cache
+				_ = s.finalize() // don't put it back in the cache
 				return nil, err
 			}
 		}

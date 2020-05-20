@@ -20,11 +20,11 @@ import (
 func init() {
 	sql.Register("sqlite3", &impl{open: defaultOpen})
 	if os.Getenv("SQLITE_LOG") != "" {
-		ConfigLog(func(d interface{}, err error, msg string) {
+		_ = ConfigLog(func(d interface{}, err error, msg string) {
 			log.Printf("%s: %s, %s\n", d, err, msg)
 		}, "SQLITE")
 	}
-	ConfigMemStatus(false)
+	_ = ConfigMemStatus(false)
 }
 
 // impl is an adapter to database/sql/driver
@@ -130,12 +130,12 @@ func (c *conn) Ping(ctx context.Context) error {
 // PRAGMA schema_version may be used to detect when the database schema is altered
 
 // https://golang.org/pkg/database/sql/driver/#Conn
-func (c *conn) Prepare(query string) (driver.Stmt, error) {
+func (c *conn) Prepare(_ string) (driver.Stmt, error) {
 	panic("use PrepareContext")
 }
 
 // https://golang.org/pkg/database/sql/driver/#ConnPrepareContext
-func (c *conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
+func (c *conn) PrepareContext(_ context.Context, query string) (driver.Stmt, error) {
 	if c.c.IsClosed() {
 		return nil, driver.ErrBadConn
 	}
@@ -186,7 +186,7 @@ func (c *conn) ExecContext(ctx context.Context, query string, args []driver.Name
 		}
 		err = s.exec()
 		if err != nil {
-			s.finalize()
+			_ = s.finalize()
 			return nil, ctxError(ctx, err)
 		}
 		if err = s.finalize(); err != nil {
@@ -228,12 +228,12 @@ func (c *conn) Begin() (driver.Tx, error) {
 }
 
 // https://golang.org/pkg/database/sql/driver/#ConnBeginTx
-func (c *conn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.Tx, error) {
+func (c *conn) BeginTx(_ context.Context, opts driver.TxOptions) (driver.Tx, error) {
 	if c.c.IsClosed() {
 		return nil, driver.ErrBadConn
 	}
 	if !c.c.GetAutocommit() {
-		return nil, errors.New("Nested transactions are not supported")
+		return nil, errors.New("nested transactions are not supported")
 	}
 	if err := c.c.SetQueryOnly("", opts.ReadOnly); err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func (c *conn) Rollback() error {
 }
 
 // https://golang.org/pkg/database/sql/driver/#SessionResetter
-func (c *conn) ResetSession(ctx context.Context) error {
+func (c *conn) ResetSession(_ context.Context) error {
 	// closed or pending transaction or at least one statement busy
 	if c.c.IsClosed() || !c.c.GetAutocommit() /*|| c.c.IsBusy()*/ {
 		return driver.ErrBadConn
@@ -288,13 +288,13 @@ func (s *stmt) NumInput() int {
 
 // https://golang.org/pkg/database/sql/driver/#Stmt
 // Deprecated
-func (s *stmt) Exec(args []driver.Value) (driver.Result, error) {
+func (s *stmt) Exec(_ []driver.Value) (driver.Result, error) {
 	panic("Using ExecContext")
 }
 
 // https://golang.org/pkg/database/sql/driver/#Stmt
 // Deprecated
-func (s *stmt) Query(args []driver.Value) (driver.Rows, error) {
+func (s *stmt) Query(_ []driver.Value) (driver.Rows, error) {
 	panic("Use QueryContext")
 }
 
@@ -326,15 +326,6 @@ func (s *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driv
 		s.s.c.ProgressHandler(progressHandler, 100, ctx)
 	}
 	return &rowsImpl{s, nil, ctx}, nil
-}
-
-func (s *stmt) bind(args []driver.Value) error {
-	for i, v := range args {
-		if err := s.s.BindByIndex(i+1, v); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // https://golang.org/pkg/database/sql/driver/#Rows
