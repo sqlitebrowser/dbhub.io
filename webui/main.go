@@ -2048,7 +2048,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Get a handle from Minio for the SQLite database object
-		sdb, err := com.OpenMinioObject(bkt, id)
+		sdb, err := com.OpenSQLiteDatabase(bkt, id)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -2761,7 +2761,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(bucket, id)
+	sdb, err := com.OpenSQLiteDatabase(bucket, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -2952,7 +2952,7 @@ func downloadRedashJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(bucket, id)
+	sdb, err := com.OpenSQLiteDatabase(bucket, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -4106,7 +4106,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(bkt, id)
+	sdb, err := com.OpenSQLiteDatabase(bkt, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -4548,7 +4548,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a handle from Minio for the SQLite database object
-	sdb, err := com.OpenMinioObject(bkt, id)
+	sdb, err := com.OpenSQLiteDatabase(bkt, id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4742,7 +4742,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		// * Data wasn't in cache, so we gather it from the SQLite database *
 
 		// Open the Minio database
-		sdb, err := com.OpenMinioObject(bucket, id)
+		sdb, err := com.OpenSQLiteDatabase(bucket, id)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return

@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 
-	sqlite "github.com/gwenn/gosqlite"
 	"github.com/minio/minio-go"
 )
 
@@ -53,33 +51,8 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 	return
 }
 
-// Retrieves a SQLite database from Minio, opens it, returns the connection handle.
-// Also returns the name of the temp file created, which the caller needs to delete (os.Remove()) when finished with it
-func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
-	// Retrieve database file from Minio, using cached version if it's already there
-	newDB, err := RetrieveDatabase(bucket, id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Open database
-	// NOTE - OpenFullMutex seems like the right thing for ensuring multiple connections to a database file don't
-	// screw things up, but it wouldn't be a bad idea to keep it in mind if weirdness shows up
-	sdb, err := sqlite.Open(newDB, sqlite.OpenReadWrite|sqlite.OpenFullMutex)
-	if err != nil {
-		log.Printf("Couldn't open database: %s", err)
-		return nil, errors.New("Internal server error")
-	}
-	err = sdb.EnableExtendedResultCodes(true)
-	if err != nil {
-		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
-		return nil, err
-	}
-	return sdb, nil
-}
-
 // Retrieves a SQLite database file from Minio.  If there's a locally cached version already available though, use that
-func RetrieveDatabase(bucket string, id string) (dbPath string, err error) {
+func RetrieveDatabaseFile(bucket string, id string) (dbPath string, err error) {
 	// Check if the database file already exists
 	newDB := filepath.Join(Conf.DiskCache.Directory, bucket, id)
 	if _, err = os.Stat(newDB); os.IsNotExist(err) {
@@ -143,47 +116,6 @@ func RetrieveDatabase(bucket string, id string) (dbPath string, err error) {
 		}
 	}
 	return
-}
-
-func RetrieveDefensiveSQLiteDatabase(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (sdb *sqlite.Conn, err error) {
-	// Check if the user has access to the requested database
-	var bucket, id string
-	bucket, id, _, err = MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// Sanity check
-	if id == "" {
-		// The requested database wasn't found, or the user doesn't have permission to access it
-		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found. Owner: '%s%s%s'", dbOwner, dbFolder, dbName)
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "%s", err.Error())
-		return
-	}
-
-	// Retrieve database file from Minio, using locally cached version if it's already there
-	newDB, err := RetrieveDatabase(bucket, id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Open the SQLite database super carefully: https://www.sqlite.org/security.html
-	// TODO: Implement the Defense Against Dark Arts recommendations
-	// TODO: Also check that the given database doesn't have any user defined functions present, just in case
-	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
-	if err != nil {
-		log.Printf("Couldn't open database: %s", err)
-		return nil, errors.New("Internal server error")
-	}
-	err = sdb.EnableExtendedResultCodes(true)
-	if err != nil {
-		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
-		return nil, err
-	}
-	return sdb, nil
 }
 
 // Store a database file in Minio.

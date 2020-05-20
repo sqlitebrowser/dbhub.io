@@ -1637,7 +1637,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
+	sdb, err := com.OpenSQLiteDatabase(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
 		pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:])
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -3100,7 +3100,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	// Get a handle from Minio for the database object
 	bkt := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
 	id := pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:]
-	sdb, err := com.OpenMinioObject(bkt, id)
+	sdb, err := com.OpenSQLiteDatabase(bkt, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

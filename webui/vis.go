@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -299,7 +298,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	//       This can be done at a later point, if it turns out people are using the visualisation feature :)
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
+	sdb, err := com.OpenSQLiteDatabase(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
 		pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:])
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -669,7 +668,7 @@ fmt.Printf("\nDecoded input: '%s'\n\n", decoded)
 	// Check for the presence of unicode control characters and similar in the decoded string
 	invalidChar := false
 	for _, r := range string(decoded) {
-		if unicode.IsControl(r) || unicode.Is(unicode.C, r){
+		if unicode.IsControl(r) || unicode.Is(unicode.C, r) {
 			invalidChar = true
 		}
 	}
@@ -693,9 +692,9 @@ fmt.Printf("\nDecoded input: '%s'\n\n", decoded)
 	}
 
 	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
-	sdb, err := com.RetrieveDefensiveSQLiteDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	sdb, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
-		// The return handled was already done in RetrieveSQLiteDatabase()
+		// The return handled was already done in OpenSQLiteDatabaseDefensive()
 		return
 	}
 
@@ -707,7 +706,7 @@ fmt.Printf("\nDecoded input: '%s'\n\n", decoded)
 	// TODO: Open the database in defensive mode: https://www.sqlite.org/security.html
 
 	// TODO: Execute the SQLite select query (or queries)
-	com.RunUserVisQuery()
+	//com.RunUserVisQuery()
 
 	// TODO: Return the results
 }
@@ -863,9 +862,9 @@ func visRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
-	sdb, err := com.RetrieveDefensiveSQLiteDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	sdb, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
-		// The return handled was already done in RetrieveSQLiteDatabase()
+		// The return handled was already done in OpenSQLiteDatabaseDefensive()
 		return
 	}
 
@@ -1101,9 +1100,9 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
-	sdb, err := com.RetrieveDefensiveSQLiteDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	sdb, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
-		// The return handling was already done in RetrieveSQLiteDatabase()
+		// The return handling was already done in OpenSQLiteDatabaseDefensive()
 		return
 	}
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
@@ -23,6 +24,163 @@ func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 		return 0, errors.New("Database query failure")
 	}
 	return rowCount, nil
+}
+
+// Retrieves a SQLite database from Minio, opens it, then returns the connection handle.
+func OpenSQLiteDatabase(bucket string, id string) (*sqlite.Conn, error) {
+	// Retrieve database file from Minio, using cached version if it's already there
+	newDB, err := RetrieveDatabaseFile(bucket, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Open database
+	// NOTE - OpenFullMutex seems like the right thing for ensuring multiple connections to a database file don't
+	// screw things up, but it wouldn't be a bad idea to keep it in mind if weirdness shows up
+	sdb, err := sqlite.Open(newDB, sqlite.OpenReadWrite|sqlite.OpenFullMutex)
+	if err != nil {
+		log.Printf("Couldn't open database: %s", err)
+		return nil, errors.New("Internal server error")
+	}
+	err = sdb.EnableExtendedResultCodes(true)
+	if err != nil {
+		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
+		return nil, err
+	}
+	return sdb, nil
+}
+
+// Similar to OpenSQLiteDatabase(), but opens the database Read Only and implements recommended defensive precautions
+// for potentially malicious user provided SQL queries
+func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (sdb *sqlite.Conn, err error) {
+	// Check if the user has access to the requested database
+	var bucket, id string
+	bucket, id, _, err = MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Sanity check
+	if id == "" {
+		// The requested database wasn't found, or the user doesn't have permission to access it
+		err = fmt.Errorf("Requested database not found")
+		log.Printf("Requested database not found. Owner: '%s%s%s'", dbOwner, dbFolder, dbName)
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
+
+	// Retrieve database file from Minio, using locally cached version if it's already there
+	newDB, err := RetrieveDatabaseFile(bucket, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Open the SQLite database super carefully: https://www.sqlite.org/security.html
+	// TODO: Implement the Defense Against Dark Arts recommendations
+	// TODO: Also check that the given database doesn't have any user defined functions present, just in case
+	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
+	if err != nil {
+		log.Printf("Couldn't open database: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return nil, err
+	}
+	err = sdb.EnableExtendedResultCodes(true)
+	if err != nil {
+		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return nil, err
+	}
+
+	// Enable defensive mode
+	var ok bool
+	ok, err = sdb.EnableDefensive()
+	if !ok {
+		log.Printf("Couldn't enable defensive mode! Error: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return nil, err
+	}
+
+	// Adjust limits for the SQLite connection
+	var newLimits = []struct {
+		name sqlite.Limit
+		val  int32
+	}{
+		{
+			name: sqlite.LimitLength,
+			val:  1000000, // 1,000,000
+		},
+		{
+			name: sqlite.LimitSQLLength,
+			val:  100000, // 100,000
+		},
+		{
+			name: sqlite.LimitColumn,
+			val:  100,
+		},
+		{
+			name: sqlite.LimitExprDepth,
+			val:  10,
+		},
+		{
+			name: sqlite.LimitCompoundSelect,
+			val:  3,
+		},
+		{
+			name: sqlite.LimitVdbeOp,
+			val:  25000,
+		},
+		{
+			name: sqlite.LimitFunctionArg,
+			val:  8,
+		},
+		{
+			name: sqlite.LimitAttached,
+			val:  0,
+		},
+		{
+			name: sqlite.LimitLikePatternLength,
+			val:  50,
+		},
+		{
+			name: sqlite.LimitVariableNumber,
+			val:  10,
+		},
+		{
+			name: sqlite.LimitTriggerLength,
+			val:  10,
+		},
+	}
+	for _, j := range newLimits {
+		sdb.SetLimit(j.name, j.val)
+		if sdb.Limit(sqlite.LimitLength) != j.val {
+			err = fmt.Errorf("Was not able to set SQLite limit '%v' to desired value", j.name)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err.Error())
+			return nil, err
+		}
+	}
+
+	// TODO: Set an authorizer, so only SELECT statements can be run
+
+	// TODO: Set up a progress handler and timer (or something) to abort statements which run too long
+
+	// TODO: Limit the maximum amount of memory SQLite will allocate (sqlite3_hard_heap_limit64())
+	//       https://www.sqlite.org/c3ref/hard_heap_limit64.html
+	//       This may need adding to gwenn/gosqlite.  It'd probably also be useful to measure the usage on DBHub.io
+	//       too, to get an idea of a reasonable starting value. eg: https://www.sqlite.org/c3ref/memory_highwater.html
+
+	// TODO: Disable creation and/or redefinition of user defined functions
+	//       https://www.sqlite.org/c3ref/create_function.html
+
+	// TODO: Disable creation of table-valued functions
+	//       https://www.sqlite.org/vtab.html#tabfunc2
+
+	return sdb, nil
 }
 
 // Reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then read all rows.
@@ -429,68 +587,6 @@ func ReadSQLiteDBRedash(sdb *sqlite.Conn, dbTable string) (dash RedashTableData,
 	return dash, nil
 }
 
-// Performs basic sanity checks of an uploaded database.
-func SanityCheck(fileName string) (tables []string, err error) {
-	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
-	sqliteDB, err := sqlite.Open(fileName, sqlite.OpenReadOnly)
-	if err != nil {
-		log.Printf("Couldn't open database when sanity checking upload: %s", err)
-		err = fmt.Errorf("Internal error when uploading database")
-		return
-	}
-	defer sqliteDB.Close()
-
-	// Run an integrity check on the uploaded database
-	var ok bool
-	var results []string
-	err = sqliteDB.Select("PRAGMA integrity_check", func(s *sqlite.Stmt) error {
-		// Retrieve a row from the integrity check result
-		var a string
-		if err = s.Scan(&a); err != nil {
-			// Error where reading the row, so ensure the integrity check returns a failure result
-			ok = false
-			return err
-		}
-
-		// If the returned row was the text string "ok", then we mark the integrity check as passed.  Any other
-		// string or set of strings means the check failed
-		switch a {
-		case "ok":
-			ok = true
-		default:
-			ok = false
-			results = append(results, a)
-		}
-		return nil
-	})
-
-	// Check for a failure
-	if !ok || err != nil {
-		log.Printf("Error when running an integrity check on the database: %s\n", err)
-		if len(results) > 0 {
-			for _, b := range results {
-				log.Printf("  * %v\n", b)
-			}
-		}
-		return
-	}
-
-	// Ensure the uploaded database has tables.  An empty database serves no useful purpose.
-	tables, err = sqliteDB.Tables("")
-	if err != nil {
-		log.Printf("Error retrieving table names when sanity checking upload: %s", err)
-		err = fmt.Errorf("Error when sanity checking file.  Possibly encrypted or not a database?")
-		return
-	}
-	if len(tables) == 0 {
-		// No table names were returned, so abort
-		log.Print("The attempted upload failed, as it doesn't seem to have any tables.")
-		err = fmt.Errorf("Database has no tables?")
-		return
-	}
-	return
-}
-
 // Runs a SQLite database query, for the visualisation tab.
 func RunSQLiteVisQuery(sdb *sqlite.Conn, params VisParamsV1) ([]VisRowV1, error) {
 	xTable := params.XAxisTable
@@ -599,6 +695,68 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, params VisParamsV1) ([]VisRowV1, error)
 func RunUserVisQuery(loggedInUser string, userQuery string) (visRows []VisRowV1, err error) {
 	// TODO: ...
 
+	return
+}
+
+// Performs basic sanity checks of an uploaded database.
+func SanityCheck(fileName string) (tables []string, err error) {
+	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
+	sqliteDB, err := sqlite.Open(fileName, sqlite.OpenReadOnly)
+	if err != nil {
+		log.Printf("Couldn't open database when sanity checking upload: %s", err)
+		err = fmt.Errorf("Internal error when uploading database")
+		return
+	}
+	defer sqliteDB.Close()
+
+	// Run an integrity check on the uploaded database
+	var ok bool
+	var results []string
+	err = sqliteDB.Select("PRAGMA integrity_check", func(s *sqlite.Stmt) error {
+		// Retrieve a row from the integrity check result
+		var a string
+		if err = s.Scan(&a); err != nil {
+			// Error where reading the row, so ensure the integrity check returns a failure result
+			ok = false
+			return err
+		}
+
+		// If the returned row was the text string "ok", then we mark the integrity check as passed.  Any other
+		// string or set of strings means the check failed
+		switch a {
+		case "ok":
+			ok = true
+		default:
+			ok = false
+			results = append(results, a)
+		}
+		return nil
+	})
+
+	// Check for a failure
+	if !ok || err != nil {
+		log.Printf("Error when running an integrity check on the database: %s\n", err)
+		if len(results) > 0 {
+			for _, b := range results {
+				log.Printf("  * %v\n", b)
+			}
+		}
+		return
+	}
+
+	// Ensure the uploaded database has tables.  An empty database serves no useful purpose.
+	tables, err = sqliteDB.Tables("")
+	if err != nil {
+		log.Printf("Error retrieving table names when sanity checking upload: %s", err)
+		err = fmt.Errorf("Error when sanity checking file.  Possibly encrypted or not a database?")
+		return
+	}
+	if len(tables) == 0 {
+		// No table names were returned, so abort
+		log.Print("The attempted upload failed, as it doesn't seem to have any tables.")
+		err = fmt.Errorf("Database has no tables?")
+		return
+	}
 	return
 }
 
