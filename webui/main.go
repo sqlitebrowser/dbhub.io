@@ -4831,7 +4831,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Read the data from the database
-		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, maxRows, sortCol, sortDir, rowOffset)
+		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, sortCol, sortDir, maxRows, rowOffset)
 		if err != nil {
 			// Some kind of error when reading the database data
 			log.Printf("Error occurred when reading table data for '%s%s%s', commit '%s': %s\n", dbOwner,

@@ -52,9 +52,9 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 }
 
 // Retrieves a SQLite database file from Minio.  If there's a locally cached version already available though, use that
-func RetrieveDatabaseFile(bucket string, id string) (dbPath string, err error) {
+func RetrieveDatabaseFile(bucket string, id string) (newDB string, err error) {
 	// Check if the database file already exists
-	newDB := filepath.Join(Conf.DiskCache.Directory, bucket, id)
+	newDB = filepath.Join(Conf.DiskCache.Directory, bucket, id)
 	if _, err = os.Stat(newDB); os.IsNotExist(err) {
 		// * The database doesn't yet exist locally, so fetch it from Minio
 
@@ -103,7 +103,6 @@ func RetrieveDatabaseFile(bucket string, id string) (dbPath string, err error) {
 				log.Printf("Error when renaming .new database file to final form in the disk cache: %s\n", err.Error())
 				return "", errors.New("Internal server error")
 			}
-			dbPath = newDB
 		} else {
 			// TODO: This is not a great approach, but should be ok for initial "get it working" code.
 			// TODO  Instead, it should probably loop around a few times checking for the file to be finished being

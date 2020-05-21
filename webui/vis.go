@@ -297,7 +297,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	//       Keyed to something like username+dbname+commitID+tablename
 	//       This can be done at a later point, if it turns out people are using the visualisation feature :)
 
-	// Get a handle from Minio for the database object
+	// Get a handle for the database object
 	sdb, err := com.OpenSQLiteDatabase(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
 		pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:])
 	if err != nil {
@@ -656,25 +656,26 @@ func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-fmt.Printf("\nDecoded input: '%s'\n\n", decoded)
-
 	// Ensure the decoded string is valid UTF-8
 	if !utf8.Valid(decoded) {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "SQL string contains invalid characters: '%s'", err)
+		fmt.Fprintf(w, "SQL string contains invalid characters: '%v'", err)
 		return
 	}
 
 	// Check for the presence of unicode control characters and similar in the decoded string
 	invalidChar := false
-	for _, r := range string(decoded) {
-		if unicode.IsControl(r) || unicode.Is(unicode.C, r) {
-			invalidChar = true
+	decodedStr := string(decoded)
+	for _, j := range decodedStr {
+		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
+			if j != 10 { // 10 == new line, which is safe to allow.  Everything else should (probably) raise an error
+				invalidChar = true
+			}
 		}
 	}
 	if invalidChar {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "SQL string contains invalid characters: '%s'", err)
+		fmt.Fprintf(w, "SQL string contains invalid characters: '%v'", err)
 		return
 	}
 
@@ -703,16 +704,31 @@ fmt.Printf("\nDecoded input: '%s'\n\n", decoded)
 		sdb.Close()
 	}()
 
-	// TODO: Open the database in defensive mode: https://www.sqlite.org/security.html
+	// TODO: Finish opening the database in defensive mode: https://www.sqlite.org/security.html
 
-	// TODO: Execute the SQLite select query (or queries)
-	//com.RunUserVisQuery()
+	// Execute the SQLite select query (or queries)
+	var results []com.VisRowV1
+	results, err = com.RunUserVisQuery(sdb, decodedStr)
+	if err != nil {
+		// Some kind of error when running the visualisation query
+		log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
+			dbFolder, dbName, commitID, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return
+	}
 
-	// TODO: Return the results
+	// Return the results
+	jsonResponse, err := json.Marshal(results)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Fprintf(w, "%s", jsonResponse)
 }
 
-// Calculate the hash string to save or retrieve any visualisation data with
-func visHash(dbOwner string, dbFolder string, dbName string, commitID string, visName string, params com.VisParamsV1) string {
+// Calculate the hash string for saving or retrieving any visualisation data
+func visHash(dbOwner, dbFolder, dbName, commitID, visName string, params com.VisParamsV1) string {
 	z := md5.Sum([]byte(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%d/%d/%s/%s/%s", strings.ToLower(dbOwner), dbFolder,
 		dbName, commitID, params.XAxisTable, params.XAXisColumn, params.YAxisTable, params.YAXisColumn, params.AggType,
 		params.JoinType, params.JoinXCol, params.JoinYCol, visName)))
@@ -1178,8 +1194,8 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Verify the desired tables and columns exist in the given SQLite database
-func visVerifyTablesAndColumns(w http.ResponseWriter, r *http.Request, sdb *sqlite.Conn, tables []string, xTable string,
-	xAxis string, yTable string, yAxis string, joinXCol string, joinYCol string, joinType int) (err error) {
+func visVerifyTablesAndColumns(w http.ResponseWriter, r *http.Request, sdb *sqlite.Conn, tables []string, xTable, xAxis,
+	yTable, yAxis, joinXCol, joinYCol string, joinType int) (err error) {
 	// Check the desired tables exist
 	xTablePresent := false
 	yTablePresent := false

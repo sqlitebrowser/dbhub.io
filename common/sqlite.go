@@ -14,6 +14,207 @@ import (
 	sqlite "github.com/gwenn/gosqlite"
 )
 
+// SQLite Functions
+type function string
+
+const (
+	// Core functions: https://sqlite.org/lang_corefunc.html
+	fnAbs                     function = "abs"
+	fnChanges                 function = "changes"
+	fnChar                    function = "char"
+	fnCoalesce                function = "coalesce"
+	fnGlob                    function = "glob"
+	fnHex                     function = "hex"
+	fnIfNull                  function = "ifnull"
+	fnInstr                   function = "instr"
+	fnLastInsertRowID         function = "last_insert_rowid"
+	fnLength                  function = "length"
+	fnLike                    function = "like"
+	fnLikelihood              function = "likelihood"
+	fnLikely                  function = "likely"
+	fnLoadExtension           function = "load_extension"
+	fnLower                   function = "lower"
+	fnLTrim                   function = "ltrim"
+	fnMax                     function = "max"
+	fnMin                     function = "min"
+	fnNullIf                  function = "nullif"
+	fnPrintF                  function = "printf"
+	fnQuot                    function = "quote"
+	fnRandom                  function = "random"
+	fnRandomBlob              function = "randomblob"
+	fnReplace                 function = "replace"
+	fnRound                   function = "round"
+	fnRTrim                   function = "rtrim"
+	fnSoundEx                 function = "soundex"
+	fnSQLiteCompileOptionGet  function = "sqlite_compileoption_get"
+	fnSQLiteCompileOptionUsed function = "sqlite_compileoption_used"
+	fnSQLiteOffset            function = "sqlite_offset"
+	fnSQLiteSourceID          function = "sqlite_source_id"
+	fnSQLiteVersion           function = "sqlite_version"
+	fnSubstr                  function = "substr"
+	fnTotalChanges            function = "total_changes"
+	fnTrim                    function = "trim"
+	fnTypeOf                  function = "typeof"
+	fnUnicode                 function = "unicode"
+	fnUnlikely                function = "unlikely"
+	fnUpper                   function = "upper"
+	fnZeroBlob                function = "zeroblob"
+
+	// Date and Time functions: https://sqlite.org/lang_datefunc.html
+	fnDate      function = "date"
+	fnTime      function = "time"
+	fnDateTime  function = "datetime"
+	fnJulianDay function = "julianday"
+	fnStrfTime  function = "strftime"
+
+	// Aggregate functions: https://sqlite.org/lang_aggfunc.html
+	fnAvg         function = "avg"
+	fnCount       function = "count"
+	fnGroupConcat function = "group_concat"
+	fnSum         function = "sum"
+	fnTotal       function = "total"
+
+	// Window functions: https://sqlite.org/windowfunctions.html
+	fnRowNumber   function = "row_number"
+	fnRank        function = "rank"
+	fnDenseRank   function = "dense_rank"
+	fnPercentRank function = "percent_rank"
+	fnCumeDist    function = "cume_dist"
+	fnNTile       function = "ntile"
+	fnLag         function = "lag"
+	fnLead        function = "lead"
+	fnFirstValue  function = "first_value"
+	fnLastValue   function = "last_value"
+	fnNthValue    function = "nth_value"
+
+	// JSON1 functions: https://sqlite.org/json1.html
+	fnJson            function = "json"
+	fnJsonArray       function = "json_array"
+	fnJsonArrayLength function = "json_array_length"
+	fnJsonExtract     function = "json_extract"
+	fnJsonInsert      function = "json_insert"
+	fnJsonObject      function = "json_object"
+	fnJsonPatch       function = "json_patch"
+	fnJsonRemove      function = "json_remove"
+	fnJsonReplace     function = "json_replace"
+	fnJsonSet         function = "json_set"
+	fnJsonType        function = "json_type"
+	fnJsonValid       function = "json_valid"
+	fnJsonQuote       function = "json_quote"
+	fnJsonGroupArray  function = "json_group_array"
+	fnJsonGroupObject function = "json_group_object"
+	fnJsonEach        function = "json_each"
+	fnJsonTree        function = "json_tree"
+)
+
+var SQLiteFunctions = []function{
+	fnAbs,
+	fnChanges,
+	fnChar,
+	fnCoalesce,
+	fnGlob,
+	fnHex,
+	fnIfNull,
+	fnInstr,
+	fnLastInsertRowID,
+	fnLength,
+	fnLike,
+	fnLikelihood,
+	fnLikely,
+	fnLoadExtension,
+	fnLower,
+	fnLTrim,
+	fnMax,
+	fnMin,
+	fnNullIf,
+	fnPrintF,
+	fnQuot,
+	fnRandom,
+	fnRandomBlob,
+	fnReplace,
+	fnRound,
+	fnRTrim,
+	fnSoundEx,
+	fnSQLiteCompileOptionGet,
+	fnSQLiteCompileOptionUsed,
+	fnSQLiteOffset,
+	fnSQLiteSourceID,
+	fnSQLiteVersion,
+	fnSubstr,
+	fnTotalChanges,
+	fnTrim,
+	fnTypeOf,
+	fnUnicode,
+	fnUnlikely,
+	fnUpper,
+	fnZeroBlob,
+	fnDate,
+	fnTime,
+	fnDateTime,
+	fnJulianDay,
+	fnStrfTime,
+	fnAvg,
+	fnCount,
+	fnGroupConcat,
+	fnSum,
+	fnTotal,
+	fnRowNumber,
+	fnRank,
+	fnDenseRank,
+	fnPercentRank,
+	fnCumeDist,
+	fnNTile,
+	fnLag,
+	fnLead,
+	fnFirstValue,
+	fnLastValue,
+	fnNthValue,
+	fnJson,
+	fnJsonArray,
+	fnJsonArrayLength,
+	fnJsonExtract,
+	fnJsonInsert,
+	fnJsonObject,
+	fnJsonPatch,
+	fnJsonRemove,
+	fnJsonReplace,
+	fnJsonSet,
+	fnJsonType,
+	fnJsonValid,
+	fnJsonQuote,
+	fnJsonGroupArray,
+	fnJsonGroupObject,
+	fnJsonEach,
+	fnJsonTree,
+}
+
+// A SQLite authorizer callback which only allows SELECT queries and their needed sub-operations to run
+func AuthorizerSelect(d interface{}, action sqlite.Action, tableName, funcName, dbName, triggerName string) sqlite.Auth {
+	// We make sure the "action" code is either SELECT, READ (needed for reading data), or one of the in-built/allowed
+	// functions
+	switch action {
+	case sqlite.Select:
+		return sqlite.AuthOk
+	case sqlite.Read:
+		return sqlite.AuthOk
+	case sqlite.Function:
+		// Check if the function name is known (eg allowed), or unknown (eg disallowed)
+		knownFunction := false
+		for _, f := range SQLiteFunctions {
+			if funcName == string(f) { // funcName holds the name of the function being executed
+				knownFunction = true
+			}
+		}
+		if knownFunction {
+			// Only known functions are allowed
+			return sqlite.AuthOk
+		}
+	}
+
+	// All other action types, functions, etc are denied
+	return sqlite.AuthDeny
+}
+
 // Returns the number of rows in a SQLite table.
 func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 	dbQuery := `SELECT count(*) FROM "` + dbTable + `"`
@@ -27,7 +228,7 @@ func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 }
 
 // Retrieves a SQLite database from Minio, opens it, then returns the connection handle.
-func OpenSQLiteDatabase(bucket string, id string) (*sqlite.Conn, error) {
+func OpenSQLiteDatabase(bucket, id string) (*sqlite.Conn, error) {
 	// Retrieve database file from Minio, using cached version if it's already there
 	newDB, err := RetrieveDatabaseFile(bucket, id)
 	if err != nil {
@@ -52,7 +253,7 @@ func OpenSQLiteDatabase(bucket string, id string) (*sqlite.Conn, error) {
 
 // Similar to OpenSQLiteDatabase(), but opens the database Read Only and implements recommended defensive precautions
 // for potentially malicious user provided SQL queries
-func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (sdb *sqlite.Conn, err error) {
+func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID, loggedInUser string) (sdb *sqlite.Conn, err error) {
 	// Check if the user has access to the requested database
 	var bucket, id string
 	bucket, id, _, err = MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
@@ -78,8 +279,6 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	}
 
 	// Open the SQLite database super carefully: https://www.sqlite.org/security.html
-	// TODO: Implement the Defense Against Dark Arts recommendations
-	// TODO: Also check that the given database doesn't have any user defined functions present, just in case
 	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
 	if err != nil {
 		log.Printf("Couldn't open database: %s", err)
@@ -157,7 +356,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	}
 	for _, j := range newLimits {
 		sdb.SetLimit(j.name, j.val)
-		if sdb.Limit(sqlite.LimitLength) != j.val {
+		if sdb.Limit(j.name) != j.val {
 			err = fmt.Errorf("Was not able to set SQLite limit '%v' to desired value", j.name)
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, "%s", err.Error())
@@ -165,7 +364,13 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		}
 	}
 
-	// TODO: Set an authorizer, so only SELECT statements can be run
+	// Set an authorizer which only allows SELECT statements to run
+	err = sdb.SetAuthorizer(AuthorizerSelect, "SELECT authorizer")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return nil, err
+	}
 
 	// TODO: Set up a progress handler and timer (or something) to abort statements which run too long
 
@@ -184,13 +389,12 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 }
 
 // Reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then read all rows.
-func ReadSQLiteDB(sdb *sqlite.Conn, dbTable string, maxRows int, sortCol string, sortDir string, rowOffset int) (SQLiteRecordSet, error) {
-	return ReadSQLiteDBCols(sdb, dbTable, false, false, maxRows, sortCol, sortDir, rowOffset)
+func ReadSQLiteDB(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, maxRows, rowOffset int) (SQLiteRecordSet, error) {
+	return ReadSQLiteDBCols(sdb, dbTable, sortCol, sortDir, false, false, maxRows, rowOffset)
 }
 
 // Reads up to maxRows # of rows from a SQLite database.  Only returns the requested columns.
-func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable string, ignoreBinary bool, ignoreNull bool, maxRows int,
-	sortCol string, sortDir string, rowOffset int) (SQLiteRecordSet, error) {
+func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignoreBinary, ignoreNull bool, maxRows, rowOffset int) (SQLiteRecordSet, error) {
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parametrised.  Limitation from SQLite's implementation? :(
 	var dataRows SQLiteRecordSet
@@ -692,8 +896,29 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, params VisParamsV1) ([]VisRowV1, error)
 }
 
 // Runs user provided SQL query for visualisation
-func RunUserVisQuery(loggedInUser string, userQuery string) (visRows []VisRowV1, err error) {
-	// TODO: ...
+func RunUserVisQuery(sdb *sqlite.Conn, dbQuery string) (visRows []VisRowV1, err error) {
+	stmt, err := sdb.Prepare(dbQuery)
+	if err != nil {
+		log.Printf("Error when preparing statement for database: %s\n", err)
+		return visRows, errors.New("Error when preparing the SQLite query")
+	}
+	// Process each row
+	err = stmt.Select(func(s *sqlite.Stmt) error {
+		// Retrieve the data for each row
+		// TODO: This will very likely need something that checks the # of returned fields, type of values, etc.
+		var name string
+		var val int
+		if err = s.Scan(&name, &val); err != nil {
+			_ = errors.New("Error when running the SQLite visualisation statement")
+		}
+		visRows = append(visRows, VisRowV1{Name: name, Value: val})
+		return nil
+	})
+	if err != nil {
+		log.Printf("Error when retrieving select data from database: %s\n", err)
+		return visRows, err
+	}
+	defer stmt.Finalize()
 
 	return
 }
