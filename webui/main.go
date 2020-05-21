@@ -3209,6 +3209,7 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 
 func main() {
 	// Read server configuration
+	// TODO: It might be sensible to add a config option pointing to the SQLite 3 library path for LD_LIBRARY_PATH purposes
 	var err error
 	if err = com.ReadConfig(); err != nil {
 		log.Fatalf("Configuration file problem\n\n%v", err)
@@ -3218,6 +3219,11 @@ func main() {
 	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
 	if err != nil {
 		log.Fatalf("Setting temp directory environment variable failed: '%s'\n", err.Error())
+	}
+
+	// Ensure the SQLite library is recent enough
+	if ver := com.SQLiteVersionNumber(); ver < 3031000 {
+		log.Fatalf("Aborting.  SQLite version is too old: %v, needs to be at least SQLite 3.31.0.\n ", sqlite.Version())
 	}
 
 	// Open the request log for writing

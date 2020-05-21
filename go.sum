@@ -46,10 +46,10 @@ github.com/gorilla/securecookie v1.1.1 h1:miw7JPhV+b/lAHSXz4qd/nN9jRiAFV5FwjeKyC
 github.com/gorilla/securecookie v1.1.1/go.mod h1:ra0sb63/xPlUeL+yeDciTfxMRAA+MP+HVt/4epWDjd4=
 github.com/gorilla/sessions v1.2.0 h1:S7P+1Hm5V/AT9cjEcUD5uDaQSX0OE577aCXgoaKpYbQ=
 github.com/gorilla/sessions v1.2.0/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/zI+bUmuGM=
-github.com/gwenn/gosqlite v0.0.0-20200508062129-fa2dbeecf24c h1:KVdB1jCSNsDkehqMCtuSj/m30rj7WUfz33dte0XVplY=
-github.com/gwenn/gosqlite v0.0.0-20200508062129-fa2dbeecf24c/go.mod h1:WBYs9HfQGOYDCz7rFwMk7aHkbTTB0cUkQe3pZQARvIg=
 github.com/gwenn/gosqlite v0.0.0-20200520180043-0ec759227b8f h1:M86ozk90VxXkCbbvZtRv94uD97XcnQ1sCzqy2SpAHHA=
 github.com/gwenn/gosqlite v0.0.0-20200520180043-0ec759227b8f/go.mod h1:WBYs9HfQGOYDCz7rFwMk7aHkbTTB0cUkQe3pZQARvIg=
+github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237 h1:RY/HYWiI6K/HL8ePZYpgvMGf4wX3/FgGxgE8kPh8vDM=
+github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237/go.mod h1:WBYs9HfQGOYDCz7rFwMk7aHkbTTB0cUkQe3pZQARvIg=
 github.com/gwenn/yacr v0.0.0-20200110180258-a66d8c42d0ff h1:xv97Y/sC4qXwoZQ9HEhgoeDN/7j4JfA5qBWLNxihZQo=
 github.com/gwenn/yacr v0.0.0-20200110180258-a66d8c42d0ff/go.mod h1:5SNcBGxZ5OaJAMJCSI/x3V7SGsvXqbwnwP/sHZLgYsw=
 github.com/gwenn/yacr v0.0.0-20200112083327-bbe82c1f4d60 h1:JX4Yy6S9U/f3Jix82M58NLIAFeW/UjBFVrnYn5GS4X8=

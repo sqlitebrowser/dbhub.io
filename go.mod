@@ -20,7 +20,7 @@ require (
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/gorilla/sessions v1.2.0 // indirect
-	github.com/gwenn/gosqlite v0.0.0-20200520180043-0ec759227b8f
+	github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237
 	github.com/gwenn/yacr v0.0.0-20200112083327-bbe82c1f4d60 // indirect
 	github.com/hectane/go-attest v0.1.2 // indirect
 	github.com/hectane/go-nonblockingchan v0.1.0 // indirect

@@ -293,8 +293,8 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	}
 
 	// Enable the defensive flag
-	var enabled, ok bool
-	if ok, err = sdb.EnableDefensive(true); !ok || err != nil {
+	var enabled bool
+	if enabled, err = sdb.EnableDefensive(true); !enabled || err != nil {
 		log.Printf("Couldn't enable the defensive flag: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
@@ -310,7 +310,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	}
 
 	// Turn off the trusted schema flag
-	if ok, err = sdb.EnableTrustedSchema(false); !ok || err != nil {
+	if enabled, err = sdb.EnableTrustedSchema(false); enabled || err != nil {
 		log.Printf("Couldn't disable the trusted schema flag: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
@@ -1064,4 +1064,14 @@ func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 	// Merge the table and view arrays
 	tables = append(tables, vw...)
 	return tables, nil
+}
+
+// Returns the version number of the available SQLite library, in string format
+func SQLiteVersion() string {
+	return sqlite.Version()
+}
+
+// Returns the version number of the available SQLite library, in 300X00Y format
+func SQLiteVersionNumber() int32 {
+	return sqlite.VersionNumber()
 }

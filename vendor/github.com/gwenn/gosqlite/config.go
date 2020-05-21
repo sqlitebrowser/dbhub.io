@@ -21,9 +21,12 @@ static inline int goSqlite3Config(int op, int mode) {
 	return sqlite3_config(op, mode);
 }
 
-// Workaround for missing define in older SQLite
+// Workaround for missing defines in older SQLite
 #if SQLITE_VERSION_NUMBER < 3026000
 #define SQLITE_DBCONFIG_DEFENSIVE 1010
+#endif
+#if SQLITE_VERSION_NUMBER < 3031000
+#define SQLITE_DBCONFIG_TRUSTED_SCHEMA 1017
 #endif
 */
 import "C"
@@ -86,7 +89,7 @@ func EnableSharedCache(b bool) error {
 
 /* Database Connection Configuration Options
 //   https://www.sqlite.org/c3ref/c_dbconfig_defensive.html
- */
+*/
 
 // EnableFKey enables or disables the enforcement of foreign key constraints.
 // Calls sqlite3_db_config(db, SQLITE_DBCONFIG_ENABLE_FKEY, b).
@@ -122,17 +125,58 @@ func (c *Conn) AreTriggersEnabled() (bool, error) {
 	return c.queryOrSetEnableDbConfig(C.SQLITE_DBCONFIG_ENABLE_TRIGGER, -1)
 }
 
-// EnableDefensive enables defensive mode for the database connection.
-// Calls sqlite3_db_config(db, SQLITE_DBCONFIG_DEFENSIVE, 1).
+// EnableDefensive enables or disables the defensive flag.
+// Calls sqlite3_db_config(db, SQLITE_DBCONFIG_DEFENSIVE, b).
 //
 // (See https://www.sqlite.org/c3ref/c_dbconfig_defensive.html#sqlitedbconfigdefensive)
-func (c *Conn) EnableDefensive() (bool, error) {
+func (c *Conn) EnableDefensive(b bool) (bool, error) {
 	if C.SQLITE_VERSION_NUMBER < 3026000 {
 		// SQLITE_DBCONFIG_DEFENSIVE was added in SQLite 3.26.0:
 		//   https://github.com/sqlite/sqlite/commit/a296cda016dfcf81674b04c041637fa0a4f426ac
 		return false, errors.New("SQLITE_DBCONFIG_DEFENSIVE isn't present in the called SQLite library")
 	}
-	return c.queryOrSetEnableDbConfig(C.SQLITE_DBCONFIG_DEFENSIVE, 1)
+	return c.queryOrSetEnableDbConfig(C.SQLITE_DBCONFIG_DEFENSIVE, btocint(b))
+}
+
+// IsDefensiveEnabled reports if the defensive flag is enabled or not.
+// Calls sqlite3_db_config(db, SQLITE_DBCONFIG_DEFENSIVE, -1).
+//
+// (See https://www.sqlite.org/c3ref/c_dbconfig_defensive.html#sqlitedbconfigdefensive)
+func (c *Conn) IsDefensiveEnabled() (bool, error) {
+	if C.SQLITE_VERSION_NUMBER < 3026000 {
+		// SQLITE_DBCONFIG_DEFENSIVE was added in SQLite 3.26.0:
+		//   https://github.com/sqlite/sqlite/commit/a296cda016dfcf81674b04c041637fa0a4f426ac
+		return false, errors.New("SQLITE_DBCONFIG_DEFENSIVE isn't present in the called SQLite library")
+	}
+	return c.queryOrSetEnableDbConfig(C.SQLITE_DBCONFIG_DEFENSIVE, -1)
+}
+
+// EnableTrustedSchema tells SQLite whether or not to assume that database schemas are untainted by malicious content.
+// Calls sqlite3_db_config(db, SQLITE_DBCONFIG_TRUSTED_SCHEMA, b).
+// Another way is PRAGMA trusted_schema = boolean;
+//
+// (See https://sqlite.org/c3ref/c_dbconfig_defensive.html#sqlitedbconfigtrustedschema)
+func (c *Conn) EnableTrustedSchema(b bool) (bool, error) {
+	if C.SQLITE_VERSION_NUMBER < 3031000 {
+		// SQLITE_DBCONFIG_TRUSTED_SCHEMA was added in SQLite 3.31.0:
+		//   https://github.com/sqlite/sqlite/commit/b77da374ab6dfeaac5def640da91f219da7fa5c0
+		return false, errors.New("SQLITE_DBCONFIG_TRUSTED_SCHEMA isn't present in the called SQLite library")
+	}
+	return c.queryOrSetEnableDbConfig(C.SQLITE_DBCONFIG_TRUSTED_SCHEMA, btocint(b))
+}
+
+// IsTrustedSchema reports whether or not the SQLITE_DBCONFIG_TRUSTED_SCHEMA option is enabled.
+// Calls sqlite3_db_config(db, SQLITE_DBCONFIG_TRUSTED_SCHEMA, -1).
+// Another way is PRAGMA trusted_schema;
+//
+// (See https://sqlite.org/c3ref/c_dbconfig_defensive.html#sqlitedbconfigtrustedschema)
+func (c *Conn) IsTrustedSchema() (bool, error) {
+	if C.SQLITE_VERSION_NUMBER < 3031000 {
+		// SQLITE_DBCONFIG_TRUSTED_SCHEMA was added in SQLite 3.31.0:
+		//   https://github.com/sqlite/sqlite/commit/b77da374ab6dfeaac5def640da91f219da7fa5c0
+		return false, errors.New("SQLITE_DBCONFIG_TRUSTED_SCHEMA isn't present in the called SQLite library")
+	}
+	return c.queryOrSetEnableDbConfig(C.SQLITE_DBCONFIG_TRUSTED_SCHEMA, -1)
 }
 
 func (c *Conn) queryOrSetEnableDbConfig(key, i C.int) (bool, error) {

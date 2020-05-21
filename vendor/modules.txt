@@ -35,7 +35,7 @@ github.com/gorilla/securecookie
 # github.com/gorilla/sessions v1.2.0
 ## explicit
 github.com/gorilla/sessions
-# github.com/gwenn/gosqlite v0.0.0-20200520180043-0ec759227b8f
+# github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237
 ## explicit
 github.com/gwenn/gosqlite
 # github.com/gwenn/yacr v0.0.0-20200112083327-bbe82c1f4d60
