@@ -285,19 +285,41 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		fmt.Fprintf(w, "%s", err.Error())
 		return nil, err
 	}
-	err = sdb.EnableExtendedResultCodes(true)
-	if err != nil {
+	if err = sdb.EnableExtendedResultCodes(true); err != nil {
 		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return nil, err
 	}
 
-	// Enable defensive mode
-	var ok bool
-	ok, err = sdb.EnableDefensive()
-	if !ok {
-		log.Printf("Couldn't enable defensive mode! Error: %v\n", err)
+	// Enable the defensive flag
+	var enabled, ok bool
+	if ok, err = sdb.EnableDefensive(true); !ok || err != nil {
+		log.Printf("Couldn't enable the defensive flag: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return nil, err
+	}
+
+	// Verify the defensive flag was enabled
+	if enabled, err = sdb.IsDefensiveEnabled(); !enabled || err != nil {
+		log.Printf("The defensive flag wasn't enabled after all: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return nil, err
+	}
+
+	// Turn off the trusted schema flag
+	if ok, err = sdb.EnableTrustedSchema(false); !ok || err != nil {
+		log.Printf("Couldn't disable the trusted schema flag: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return nil, err
+	}
+
+	// Verify the trusted schema flag was turned off
+	if enabled, err = sdb.IsTrustedSchema(); enabled || err != nil {
+		log.Printf("The trusted schema flag wasn't disabled after all: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return nil, err
@@ -387,6 +409,9 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 
 	// TODO: Should we add some of the commonly used extra functions?
 	//       eg: https://github.com/sqlitebrowser/sqlitebrowser/blob/master/src/extensions/extension-functions.c
+
+	// TODO: It could be interesting to add the Spatialite functions when we have the country (choropleth) chart
+	//       operational
 
 	return sdb, nil
 }
