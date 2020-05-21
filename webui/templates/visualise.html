@@ -167,7 +167,7 @@
     <div class="row">
         <div class="col-md-2">&nbsp;</div>
         <div class="col-md-8">
-            <uib-tabset active="active">
+            <uib-tabset active="activetab">
                 <!-- Basic parameters selector -->
                 <uib-tab index="0">
                     <uib-tab-heading><span style="color: #555;">Simple</span></uib-tab-heading>
@@ -430,8 +430,7 @@
                 <!-- User defined SQL tab -->
                 <uib-tab index="2">
                     <uib-tab-heading><span style="color: #555;">Expert</span></uib-tab-heading>
-                    <textarea id="expertsql" rows="8" ng-attr-placeholder="Your custom SQL here.
-[ Not yet implemented ]"></textarea>
+                    <textarea id="expertsql" rows="8" ng-attr-placeholder="Your custom SQL here."></textarea>
 
                     <div class="row">
                         <div class="col-md-12">
@@ -615,6 +614,9 @@
         // Set the table names
         $scope.XTablename = "[[ .XAxisTable ]]";
         $scope.YTablename = "[[ .YAxisTable ]]";
+
+        // Holds the number of the active tab
+        $scope.activetab = 0;
 
         // Set the displayed public/private value
         if ("[[ .DB.Info.Public ]]" === "true") {
@@ -801,10 +803,10 @@
         // Retrieve the data for visualisation
         $scope.doVis = async function() {
             let args = "";
-            let customSQL = document.getElementById("expertsql").value;
 
-            // If custom SQL has been given in the Expert tab, execute that and ignore the Simple+Advanced tabs
-            if (customSQL !== "") {
+            // If the Expert tab is visible, execute the custom from there, ignoring the Simple+Advanced tabs
+            if ($scope.activetab === 2) {
+                let customSQL = document.getElementById("expertsql").value;
                 args = "sql=" + window.btoa(customSQL); // Base64 encode the whole string, so even line breaks are preserved
                 $http.get("/x/execsql/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                     function success(response) {
