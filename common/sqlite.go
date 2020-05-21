@@ -19,6 +19,7 @@ type function string
 
 const (
 	// Core functions: https://sqlite.org/lang_corefunc.html
+	//fnLoadExtension           function = "load_extension" // Loading extensions is definitely not allowed
 	fnAbs                     function = "abs"
 	fnChanges                 function = "changes"
 	fnChar                    function = "char"
@@ -32,7 +33,6 @@ const (
 	fnLike                    function = "like"
 	fnLikelihood              function = "likelihood"
 	fnLikely                  function = "likely"
-	fnLoadExtension           function = "load_extension"
 	fnLower                   function = "lower"
 	fnLTrim                   function = "ltrim"
 	fnMax                     function = "max"
@@ -121,7 +121,6 @@ var SQLiteFunctions = []function{
 	fnLike,
 	fnLikelihood,
 	fnLikely,
-	fnLoadExtension,
 	fnLower,
 	fnLTrim,
 	fnMax,
@@ -364,7 +363,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		}
 	}
 
-	// Set an authorizer which only allows SELECT statements to run
+	// Set a SQLite authorizer which only allows SELECT statements to run
 	err = sdb.SetAuthorizer(AuthorizerSelect, "SELECT authorizer")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -373,6 +372,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	}
 
 	// TODO: Set up a progress handler and timer (or something) to abort statements which run too long
+	//       https://www.sqlite.org/c3ref/interrupt.html
 
 	// TODO: Limit the maximum amount of memory SQLite will allocate (sqlite3_hard_heap_limit64())
 	//       https://www.sqlite.org/c3ref/hard_heap_limit64.html
@@ -384,6 +384,9 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 
 	// TODO: Disable creation of table-valued functions
 	//       https://www.sqlite.org/vtab.html#tabfunc2
+
+	// TODO: Should we add some of the commonly used extra functions?
+	//       eg: https://github.com/sqlitebrowser/sqlitebrowser/blob/master/src/extensions/extension-functions.c
 
 	return sdb, nil
 }
