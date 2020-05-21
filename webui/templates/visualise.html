@@ -941,32 +941,32 @@
                     if ($scope.AggType === "---") {
                         sqlWindow.innerHTML = "SELECT\n    " +
                             $scope.XAxisColumn + ", " + $scope.YAxisColumn + "\n" +
-                            "FROM\n    " + $scope.XTablename + ";";
+                            "FROM\n    '" + $scope.XTablename + "';";
                         sqlWindow.rows = 4;
                     } else {
                         sqlWindow.innerHTML = "SELECT\n    " +
                             $scope.XAxisColumn + ", " + $scope.AggType + "(" + $scope.YAxisColumn + ")\n" +
-                            "FROM\n    " + $scope.XTablename + "\n" +
+                            "FROM\n    '" + $scope.XTablename + "'\n" +
                             "GROUP BY " + $scope.XAxisColumn + ";";
                         sqlWindow.rows = 5;
                     }
                 } else {
-                    let joinText = "SELECT\n    " +
-                        $scope.XTablename + "." + $scope.XAxisColumn + ", " +
-                        $scope.YTablename + "." + $scope.YAxisColumn + "\n";
+                    let joinText = "SELECT\n    '" +
+                        $scope.XTablename + "'." + $scope.XAxisColumn + ", '" +
+                        $scope.YTablename + "'." + $scope.YAxisColumn + "\n";
                     if ($scope.JoinType === "---") {
                         // No JOIN
                         joinText = "Please choose JOIN type and columns";
                     } else if ($scope.JoinType === "INNER JOIN") {
                         // INNER JOIN
-                        joinText += "FROM\n    " + $scope.XTablename + " INNER JOIN " + $scope.YTablename + " ON " +
-                            $scope.XTablename + "." + $scope.JoinXColumn + " = " + $scope.YTablename + "." + $scope.JoinYColumn + ";";
+                        joinText += "FROM\n    '" + $scope.XTablename + "' INNER JOIN '" + $scope.YTablename + "' ON '" +
+                            $scope.XTablename + "'." + $scope.JoinXColumn + " = '" + $scope.YTablename + "'." + $scope.JoinYColumn + ";";
                     } else if ($scope.JoinType === "LEFT OUTER JOIN") {
                         // LEFT OUTER JOIN
-                        joinText += "FROM\n    " + $scope.XTablename + " LEFT OUTER JOIN " + $scope.YTablename + " ON " +
-                            $scope.XTablename + "." + $scope.JoinXColumn + " = " + $scope.YTablename + "." + $scope.JoinYColumn + ";";
+                        joinText += "FROM\n    '" + $scope.XTablename + "' LEFT OUTER JOIN '" + $scope.YTablename + "' ON '" +
+                            $scope.XTablename + "'." + $scope.JoinXColumn + " = '" + $scope.YTablename + "'." + $scope.JoinYColumn + ";";
                     } else {
-                        joinText += "FROM\n    " + $scope.XTablename + " " + $scope.JoinType + " " + $scope.YTablename + ";";
+                        joinText += "FROM\n    '" + $scope.XTablename + "' " + $scope.JoinType + " '" + $scope.YTablename + "';";
                     }
                     sqlWindow.innerHTML = joinText;
                     sqlWindow.rows = 4;
