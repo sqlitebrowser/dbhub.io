@@ -398,6 +398,10 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		return nil, err
 	}
 
+	// TODO: We should double check that all of the special characters SQLite accepts are caught by the unicode
+	//       "control characters" check.
+	//         * https://github.com/sqlite/sqlite/blob/f25f8d58349db52398168579a1d696fa4937dc1f/src/tokenize.c#L29-L57
+
 	// TODO: Set up a progress handler and timer (or something) to abort statements which run too long
 	//       https://www.sqlite.org/c3ref/interrupt.html
 
@@ -426,7 +430,6 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 	// shouldn't be parametrised.  Limitation from SQLite's implementation? :(
 	var dataRows SQLiteRecordSet
 	var err error
-	var stmt *sqlite.Stmt
 
 	// Make sure we don't try to index non-tables
 	isTable := false
@@ -490,9 +493,6 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 		}
 	}
 
-	// Set the table name
-	dataRows.Tablename = dbTable
-
 	// Construct the main SQL query
 	dbQuery := sqlite.Mprintf(`SELECT * FROM "%w"`, dbTable)
 
@@ -520,101 +520,11 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 		dbQuery = fmt.Sprintf("%s OFFSET %d", dbQuery, rowOffset)
 	}
 
-	// Use the sort column as needed
-	stmt, err = sdb.Prepare(dbQuery)
+	// Execute the query and retrieve the data
+	dataRows, err = SQLiteRunQuery(sdb, dbQuery, ignoreBinary, ignoreNull)
 	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\n", err)
-		return dataRows, errors.New("Error when reading data from the SQLite database")
+		return dataRows, err
 	}
-
-	// Retrieve the field names
-	dataRows.ColNames = stmt.ColumnNames()
-	dataRows.ColCount = len(dataRows.ColNames)
-
-	// Process each row
-	fieldCount := -1
-	err = stmt.Select(func(s *sqlite.Stmt) error {
-
-		// Get the number of fields in the result
-		if fieldCount == -1 {
-			fieldCount = stmt.DataCount()
-		}
-
-		// Retrieve the data for each row
-		var row []DataValue
-		addRow := true
-		for i := 0; i < fieldCount; i++ {
-			// Retrieve the data type for the field
-			fieldType := stmt.ColumnType(i)
-
-			isNull := false
-			switch fieldType {
-			case sqlite.Integer:
-				var val int
-				val, isNull, err = s.ScanInt(i)
-				if err != nil {
-					log.Printf("Something went wrong with ScanInt(): %v\n", err)
-					break
-				}
-				if !isNull {
-					stringVal := fmt.Sprintf("%d", val)
-					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Integer,
-						Value: stringVal})
-				}
-			case sqlite.Float:
-				var val float64
-				val, isNull, err = s.ScanDouble(i)
-				if err != nil {
-					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
-					break
-				}
-				if !isNull {
-					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
-					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Float,
-						Value: stringVal})
-				}
-			case sqlite.Text:
-				var val string
-				val, isNull = s.ScanText(i)
-				if !isNull {
-					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Text,
-						Value: val})
-				}
-			case sqlite.Blob:
-				// BLOBs can be ignored (via flag to this function) for situations like the vis data
-				if !ignoreBinary {
-					_, isNull = s.ScanBlob(i)
-					if !isNull {
-						row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Binary,
-							Value: "<i>BINARY DATA</i>"})
-					}
-				} else {
-					addRow = false
-				}
-			case sqlite.Null:
-				isNull = true
-			}
-			if isNull && !ignoreNull {
-				// NULLS can be ignored (via flag to this function) for situations like the vis data
-				row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Null,
-					Value: "<i>NULL</i>"})
-			}
-			if isNull && ignoreNull {
-				addRow = false
-			}
-		}
-		if addRow == true {
-			dataRows.Records = append(dataRows.Records, row)
-			dataRows.RowCount++
-		}
-
-		return nil
-	})
-	if err != nil {
-		log.Printf("Error when retrieving select data from database: %s\n", err)
-		return dataRows, errors.New("Error when reading data from the SQLite database")
-	}
-	defer stmt.Finalize()
 
 	// Add count of total rows to returned data
 	tmpCount, err := GetSQLiteRowCount(sdb, dbTable)
@@ -623,11 +533,11 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 	}
 	dataRows.RowCount = tmpCount
 
-	// Fill out the sort column, direction, and row offset
+	// Fill out other data fields
+	dataRows.Tablename = dbTable
 	dataRows.SortCol = sortCol
 	dataRows.SortDir = sortDir
 	dataRows.Offset = rowOffset
-
 	return dataRows, nil
 }
 
@@ -1012,6 +922,117 @@ func SanityCheck(fileName string) (tables []string, err error) {
 	return
 }
 
+func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull bool) (dataRows SQLiteRecordSet, err error) {
+	// Use the sort column as needed
+	var stmt *sqlite.Stmt
+	stmt, err = sdb.Prepare(dbQuery)
+	if err != nil {
+		log.Printf("Error when preparing statement for database: %s\n", err)
+		return dataRows, errors.New("Error when reading data from the SQLite database")
+	}
+	defer stmt.Finalize()
+
+	// Retrieve the field names
+	dataRows.ColNames = stmt.ColumnNames()
+	dataRows.ColCount = len(dataRows.ColNames)
+
+	// Process each row
+	fieldCount := -1
+	err = stmt.Select(func(s *sqlite.Stmt) error {
+
+		// Get the number of fields in the result
+		if fieldCount == -1 {
+			fieldCount = stmt.DataCount()
+		}
+
+		// Retrieve the data for each row
+		var row []DataValue
+		addRow := true
+		for i := 0; i < fieldCount; i++ {
+			// Retrieve the data type for the field
+			fieldType := stmt.ColumnType(i)
+
+			isNull := false
+			switch fieldType {
+			case sqlite.Integer:
+				var val int
+				val, isNull, err = s.ScanInt(i)
+				if err != nil {
+					log.Printf("Something went wrong with ScanInt(): %v\n", err)
+					break
+				}
+				if !isNull {
+					stringVal := fmt.Sprintf("%d", val)
+					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Integer,
+						Value: stringVal})
+				}
+			case sqlite.Float:
+				var val float64
+				val, isNull, err = s.ScanDouble(i)
+				if err != nil {
+					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
+					break
+				}
+				if !isNull {
+					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
+					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Float,
+						Value: stringVal})
+				}
+			case sqlite.Text:
+				var val string
+				val, isNull = s.ScanText(i)
+				if !isNull {
+					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Text,
+						Value: val})
+				}
+			case sqlite.Blob:
+				// BLOBs can be ignored (via flag to this function) for situations like the vis data
+				if !ignoreBinary {
+					_, isNull = s.ScanBlob(i)
+					if !isNull {
+						row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Binary,
+							Value: "<i>BINARY DATA</i>"})
+					}
+				} else {
+					addRow = false
+				}
+			case sqlite.Null:
+				isNull = true
+			}
+			if isNull && !ignoreNull {
+				// NULLS can be ignored (via flag to this function) for situations like the vis data
+				row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Null,
+					Value: "<i>NULL</i>"})
+			}
+			if isNull && ignoreNull {
+				addRow = false
+			}
+		}
+		if addRow == true {
+			dataRows.Records = append(dataRows.Records, row)
+			dataRows.RowCount++
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Printf("Error when retrieving select data from database: %s\n", err)
+		return dataRows, errors.New("Error when reading data from the SQLite database")
+	}
+
+	return
+}
+
+// Returns the version number of the available SQLite library, in string format
+func SQLiteVersion() string {
+	return sqlite.Version()
+}
+
+// Returns the version number of the available SQLite library, in 300X00Y format
+func SQLiteVersionNumber() int32 {
+	return sqlite.VersionNumber()
+}
+
 // Returns the list of tables and view in the SQLite database.
 func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 	// TODO: It might be useful to cache this info in PG or memcached
@@ -1063,14 +1084,4 @@ func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 	// Merge the table and view arrays
 	tables = append(tables, vw...)
 	return tables, nil
-}
-
-// Returns the version number of the available SQLite library, in string format
-func SQLiteVersion() string {
-	return sqlite.Version()
-}
-
-// Returns the version number of the available SQLite library, in 300X00Y format
-func SQLiteVersionNumber() int32 {
-	return sqlite.VersionNumber()
 }

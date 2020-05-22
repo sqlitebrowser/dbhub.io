@@ -432,6 +432,18 @@
                     <uib-tab-heading><span style="color: #555;">Expert</span></uib-tab-heading>
                     <textarea id="expertsql" rows="8" ng-attr-placeholder="Your custom SQL here."></textarea>
 
+                    <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0; padding-bottom: 0;">
+                        <thead>
+                        <tr>
+                            <th ng-repeat="header in db.ColNames" style="padding: 7px 0 6px 6px;"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="row in db.Records">
+                            <td ng-repeat="val in row" dir="auto"><pre style="background-color: transparent; border: none; padding: 0px; margin: 0px;" ng-bind-html="val.Value | fixSpaces"></pre></td>
+                        </tr>
+                    </table>
+
                     <div class="row">
                         <div class="col-md-12">
                             <h3 style="text-align: center;">Chart settings</h3>
@@ -609,6 +621,17 @@
             [[ else ]]
                 Loggedin: "false",
             [[ end ]]
+        }
+
+        // Pre-filled table row data
+        $scope.db = { Tablename: "",
+            Records: {},
+            ColNames: {},
+            RowCount: 0,
+            ColCount: 0,
+            SortCol:  0,
+            SortDir:  0,
+            Offset:   0,
         }
 
         // Set the table names
@@ -804,26 +827,27 @@
         $scope.doVis = async function() {
             let args = "";
 
-            // If the Expert tab is visible, execute the custom from there, ignoring the Simple+Advanced tabs
+            // If the Expert tab is visible, execute the custom SQL from there, ignoring the Simple+Advanced tabs
             if ($scope.activetab === 2) {
                 let customSQL = document.getElementById("expertsql").value;
                 args = "sql=" + window.btoa(customSQL); // Base64 encode the whole string, so even line breaks are preserved
                 $http.get("/x/execsql/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                     function success(response) {
-                        // Clear any existing error message
-                        $scope.statusMessage = "";
-
                         // Update table data
-                        chartData.Records = response.data;
-                        chartData.XTablename = $scope.XTablename;
-                        chartData.YTablename = $scope.YTablename;
-                        chartData.XAxisLabel = $scope.XAxisColumn;
-                        chartData.YAxisLabel = $scope.YAxisColumn;
+                        $scope.db = response.data;
+
+                        // Update chart data
+                        // TODO: Convert the data in $scope.db.Records into what the Plotly.js chart wants in chartData.Records
+                        // chartData.Records = response.data;
+                        // chartData.XTablename = $scope.XTablename;
+                        // chartData.YTablename = $scope.YTablename;
+                        // chartData.XAxisLabel = $scope.XAxisColumn;
+                        // chartData.YAxisLabel = $scope.YAxisColumn;
 
                         // Display the visualisation
-                        $scope.showVis = true;
-                        dataReceived = true;
-                        $scope.doChart(true);
+                        // $scope.showVis = true;
+                        // dataReceived = true;
+                        // $scope.doChart(true);
 
                         // Clear any existing status message
                         $scope.statusMessage = "";
@@ -832,6 +856,10 @@
                         $scope.statusMessageColour = "red";
                         $scope.statusMessage = "Retrieving data failed: " + response.data;
                         $scope.showVis = false;
+
+                        // Clear out any existing table data too
+                        $scope.db.ColNames = {};
+                        $scope.db.Records = {};
                     }
                 )
                 return;

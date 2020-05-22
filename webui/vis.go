@@ -704,11 +704,9 @@ func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 		sdb.Close()
 	}()
 
-	// TODO: Finish opening the database in defensive mode: https://www.sqlite.org/security.html
-
 	// Execute the SQLite select query (or queries)
-	var results []com.VisRowV1
-	results, err = com.RunUserVisQuery(sdb, decodedStr)
+	var dataRows com.SQLiteRecordSet
+	dataRows, err = com.SQLiteRunQuery(sdb, decodedStr, true, true)
 	if err != nil {
 		// Some kind of error when running the visualisation query
 		log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
@@ -719,7 +717,7 @@ func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the results
-	jsonResponse, err := json.Marshal(results)
+	jsonResponse, err := json.Marshal(dataRows)
 	if err != nil {
 		log.Println(err)
 		return
