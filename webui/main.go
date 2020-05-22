@@ -3222,7 +3222,7 @@ func main() {
 	}
 
 	// Ensure the SQLite library is recent enough
-	if ver := com.SQLiteVersionNumber(); ver < 3031000 {
+	if com.SQLiteVersionNumber() < 3031000 {
 		log.Fatalf("Aborting.  SQLite version is too old: %v, needs to be at least SQLite 3.31.0.\n ", sqlite.Version())
 	}
 

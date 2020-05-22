@@ -192,6 +192,11 @@ func AuthorizerSelect(d interface{}, action sqlite.Action, tableName, funcName, 
 	// We make sure the "action" code is either SELECT, READ (needed for reading data), or one of the in-built/allowed
 	// functions
 	switch action {
+	case sqlite.Pragma:
+		// (Only) the "table_info" Pragma is allowed.  It's used by SQLite internally for querying table structure
+		if tableName == "table_info" {
+			return sqlite.AuthOk
+		}
 	case sqlite.Select:
 		return sqlite.AuthOk
 	case sqlite.Read:
@@ -400,12 +405,6 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	//       https://www.sqlite.org/c3ref/hard_heap_limit64.html
 	//       This may need adding to gwenn/gosqlite.  It'd probably also be useful to measure the usage on DBHub.io
 	//       too, to get an idea of a reasonable starting value. eg: https://www.sqlite.org/c3ref/memory_highwater.html
-
-	// TODO: Disable creation and/or redefinition of user defined functions
-	//       https://www.sqlite.org/c3ref/create_function.html
-
-	// TODO: Disable creation of table-valued functions
-	//       https://www.sqlite.org/vtab.html#tabfunc2
 
 	// TODO: Should we add some of the commonly used extra functions?
 	//       eg: https://github.com/sqlitebrowser/sqlitebrowser/blob/master/src/extensions/extension-functions.c
@@ -928,7 +927,7 @@ func RunUserVisQuery(sdb *sqlite.Conn, dbQuery string) (visRows []VisRowV1, err 
 	stmt, err := sdb.Prepare(dbQuery)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\n", err)
-		return visRows, errors.New("Error when preparing the SQLite query")
+		return visRows, err
 	}
 	// Process each row
 	err = stmt.Select(func(s *sqlite.Stmt) error {
