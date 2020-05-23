@@ -435,7 +435,7 @@
                     <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0; padding-bottom: 0;">
                         <thead>
                         <tr>
-                            <th ng-repeat="header in db.ColNames" style="padding: 7px 0 6px 6px;"></th>
+                            <th ng-repeat="header in db.ColNames" style="padding: 7px 0 6px 6px;">{{ header }}</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -836,18 +836,22 @@
                         // Update table data
                         $scope.db = response.data;
 
-                        // Update chart data
-                        // TODO: Convert the data in $scope.db.Records into what the Plotly.js chart wants in chartData.Records
-                        // chartData.Records = response.data;
-                        // chartData.XTablename = $scope.XTablename;
-                        // chartData.YTablename = $scope.YTablename;
-                        // chartData.XAxisLabel = $scope.XAxisColumn;
-                        // chartData.YAxisLabel = $scope.YAxisColumn;
+                        // Convert the data in $scope.db.Records to what the Plotly.js chart requires
+                        chartData.Records = [];
+                        for (i = 0; i < $scope.db.RowCount; i++) {
+                            let name = $scope.db.Records[i][0].Value;
+                            let val = $scope.db.Records[i][1].Value;
+                            chartData.Records[i] = { "Name": name, "Value": val};
+                        }
+                        chartData.XTablename = "";
+                        chartData.YTablename = "";
+                        chartData.XAxisLabel = $scope.db.ColNames[0];
+                        chartData.YAxisLabel = $scope.db.ColNames[1];
 
                         // Display the visualisation
-                        // $scope.showVis = true;
-                        // dataReceived = true;
-                        // $scope.doChart(true);
+                        $scope.showVis = true;
+                        dataReceived = true;
+                        $scope.doChart(true);
 
                         // Clear any existing status message
                         $scope.statusMessage = "";

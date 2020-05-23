@@ -809,7 +809,7 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, params VisParamsV1) ([]VisRowV1, error)
 	stmt, err := sdb.Prepare(dbQuery)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\n", err)
-		return visRows, errors.New("Error when preparing the SQLite visualisation statement")
+		return visRows, err
 	}
 
 	// Process each row
@@ -928,7 +928,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 	stmt, err = sdb.Prepare(dbQuery)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\n", err)
-		return dataRows, errors.New("Error when reading data from the SQLite database")
+		return dataRows, err
 	}
 	defer stmt.Finalize()
 
