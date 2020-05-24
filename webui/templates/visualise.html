@@ -212,64 +212,59 @@
                             </td>
                         </tr>
                         <tr>
-                            <th width="35%">xxx</th>
-                            <td></td>
+                            <th width="35%">X axis column</th>
+                            <td>
+                                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                                    <button id="orderby" type="button" class="btn">{{ XAxisColumn }}</button>
+
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                        <li ng-repeat="row in XColumnNames" role="menuitem" ng-click="changeXAxisColumn(row)">
+                                            <a href="">{{ row }}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
                         </tr>
                         <tr>
-                            <th width="35%">xxx</th>
-                            <td></td>
+                            <th width="35%">Y axis columns</th>
+                            <td>
+                                <select ng-model="YAxisColumns" multiple>
+                                    <option ng-repeat="row in YColumnNameOptions" value="{{ row }}">{{ row }}</option>
+                                </select>
+                            </td>
                         </tr>
                         <tr>
-                            <th width="35%">xxx</th>
-                            <td></td>
+                            <th width="35%">Show legend</th>
+                            <td>
+                                <div class="btn-group">
+                                    <label class="btn btn-default" ng-model="radioShowLegend" uib-btn-radio="true">Yes</label>
+                                    <label class="btn btn-default" ng-model="radioShowLegend" uib-btn-radio="false">No</label>
+                                </div>
+                            </td>
                         </tr>
                     </table>
-
-                    <!--                    <div>X axis column:
-                                            <div class="btn-group" uib-dropdown keyboard-nav="true">
-                                                <button id="orderby" type="button" class="btn">{{ XAxisColumn }}</button>
-
-                                                <button type="button" uib-dropdown-toggle class="btn btn-default">
-                                                    <span class="caret"></span>
-                                                </button>
-                                                <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                                    <li ng-repeat="row in XColumnNames" role="menuitem" ng-click="changeXAxisColumn(row)">
-                                                        <a href="">{{ row }}</a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <div>Y axis column:
-                                            <div class="btn-group" uib-dropdown keyboard-nav="true">
-                                                <button id="orderby" type="button" class="btn">{{ YAxisColumn }}</button>
-
-                                                <button type="button" uib-dropdown-toggle class="btn btn-default">
-                                                    <span class="caret"></span>
-                                                </button>
-                                                <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                                    <li ng-repeat="row in YColumnNames" role="menuitem" ng-click="changeYAxisColumn(row)">
-                                                        <a href="">{{ row }}</a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                    -->
                 </uib-tab>
 
                 <uib-tab index="2">
                     <uib-tab-heading><span style="color: #555;">X Axis</span></uib-tab-heading>
-
                     <table class="table table-striped table-responsive settingsTable">
                         <tr>
                             <th width="35%">Name</th>
-                            <td></td>
+                            <td><input type="text" ng-model="XAxisName" ng-trim="true"></td>
                         </tr>
                         <tr>
                             <th width="35%">Show Labels</th>
-                            <td></td>
+                            <td>
+                                <div class="btn-group">
+                                    <label class="btn btn-default" ng-model="radioXAxisShowLabels" uib-btn-radio="true">Yes</label>
+                                    <label class="btn btn-default" ng-model="radioXAxisShowLabels" uib-btn-radio="false">No</label>
+                                </div>
+                            </td>
                         </tr>
                     </table>
-
                 </uib-tab>
 
 <!-- SELECT
@@ -281,21 +276,37 @@ GROUP BY Category; -->
                 <uib-tab index="3">
                     <uib-tab-heading><span style="color: #555;">Y Axis</span></uib-tab-heading>
 
-                    Left Y Axis
-
+                    <h3>Y Axis - Left</h3>
                     <table class="table table-striped table-responsive settingsTable">
                         <tr>
                             <th width="35%">Name</th>
-                            <td></td>
+                            <td><input type="text" ng-model="YLeftAxisName" ng-trim="true"></td>
+                        </tr>
+                        <tr>
+                            <th width="35%">Show Labels</th>
+                            <td>
+                                <div class="btn-group">
+                                    <label class="btn btn-default" ng-model="radioYLeftAxisShowLabels" uib-btn-radio="true">Yes</label>
+                                    <label class="btn btn-default" ng-model="radioYLeftAxisShowLabels" uib-btn-radio="false">No</label>
+                                </div>
+                            </td>
                         </tr>
                     </table>
 
-                    Right Y Axis
-
+                    <h3>Y Axis - Right</h3>
                     <table class="table table-striped table-responsive settingsTable">
                         <tr>
                             <th width="35%">Name</th>
-                            <td></td>
+                            <td><input type="text" ng-model="YRightAxisName" ng-trim="true"></td>
+                        </tr>
+                        <tr>
+                            <th width="35%">Show Labels</th>
+                            <td>
+                                <div class="btn-group">
+                                    <label class="btn btn-default" ng-model="radioYRightAxisShowLabels" uib-btn-radio="true">Yes</label>
+                                    <label class="btn btn-default" ng-model="radioYRightAxisShowLabels" uib-btn-radio="false">No</label>
+                                </div>
+                            </td>
                         </tr>
                     </table>
                 </uib-tab>
@@ -322,7 +333,7 @@ GROUP BY Category; -->
                                 <td>[ type ]</td>
                             </tr>
                             <tr>
-                                <th width="35%">1</th>
+                                <th width="35%">2</th>
                                 <td>[ ]</td>
                                 <td>[ ]</td>
                                 <td>[ stuff ]</td>
@@ -330,7 +341,6 @@ GROUP BY Category; -->
                             </tr>
                         </tbody>
                     </table>
-
 
                 </uib-tab>
 
@@ -353,23 +363,9 @@ GROUP BY Category; -->
                     </table>
 
                 </uib-tab>
-
-<!--                <uib-tab index="6">
-                    <uib-tab-heading><span style="color: #555;">Data Labels</span></uib-tab-heading>
-
-                    <table class="table table-striped table-responsive settingsTable">
-                        <tr>
-                            <td width="35%">xxx</td>
-                            <td>[ colour info ]</td>
-                        </tr>
-                    </table>
-
-                </uib-tab>
--->
-
             </uib-tabset>
         </div>
-        <div class="col-md-2">&nbsp;</div>
+        <div class="col-md-2"><p>&nbsp;</p></div>
     </div>
     <div class="row">
         <div class="col-md-2">&nbsp;</div>
@@ -516,12 +512,17 @@ GROUP BY Category; -->
             Offset:   0,
         }
 
-        // Set the table names
-        $scope.XTablename = "[[ .XAxisTable ]]";
-        $scope.YTablename = "[[ .YAxisTable ]]";
-
         // Keeps track of the active tab
         $scope.activetab = 0;
+
+        // Various chart settings
+        $scope.radioShowLegend = true;
+        $scope.radioXAxisShowLabels = true;
+        $scope.radioYLeftAxisShowLabels = true;
+        $scope.radioYRightAxisShowLabels = true;
+        $scope.XAxisName = "";
+        $scope.YLeftAxisName = "";
+        $scope.YRightAxisName = "";
 
         // Set the displayed public/private value
         if ("[[ .DB.Info.Public ]]" === "true") {
@@ -555,14 +556,14 @@ GROUP BY Category; -->
                         plotData[0].x = [];
                         plotData[0].y = [];
                         if (plotData[0].orientation === "v") {
-                            for (num = 0; num < tmpData.length; num++) {
+                            for (let num = 0; num < tmpData.length; num++) {
                                 let name = tmpData[num]["Name"];
                                 let val = tmpData[num]["Value"];
                                 plotData[0].x.push(name);
                                 plotData[0].y.push(val);
                             }
                         } else {
-                            for (num = 0; num < tmpData.length; num++) {
+                            for (let num = 0; num < tmpData.length; num++) {
                                 let name = tmpData[num]["Name"];
                                 let val = tmpData[num]["Value"];
                                 plotData[0].x.push(val);
@@ -573,7 +574,7 @@ GROUP BY Category; -->
                     case "pie":
                         plotData[0].labels = [];
                         plotData[0].values = [];
-                        for (num = 0; num < tmpData.length; num++) {
+                        for (let num = 0; num < tmpData.length; num++) {
                             let name = tmpData[num]["Name"];
                             let val = tmpData[num]["Value"];
                             plotData[0].labels.push(name);
@@ -601,21 +602,22 @@ GROUP BY Category; -->
         $scope.XAxisColumn = $scope.XColumnNames[0];
         chartData.XAxisLabel = $scope.XAxisColumn;
         $scope.YColumnNames = [[ .YAxisColNames ]];
-        $scope.YAxisColumn = $scope.YColumnNames[1];
+        $scope.YColumnNameOptions = $scope.YColumnNames;
+        $scope.YAxisColumns = $scope.YColumnNameOptions[0];
+        // $scope.YAxisColumns = [];
+        // $scope.YAxisColumns = $scope.YColumnNames[1];
         chartData.YAxisLabel = $scope.YAxisColumn;
-        $scope.aggTypes = [
-            {"Name": "---", "Display": "No thanks"},
-            {"Name": "avg", "Display": "avg()"},
-            {"Name": "count", "Display": "count()"},
-            {"Name": "group_concat", "Display": "group_concat()"},
-            {"Name": "min", "Display": "min()"},
-            {"Name": "max", "Display": "max()"},
-            {"Name": "sum", "Display": "sum()"},
-            {"Name": "total", "Display": "total()"
-            }
-        ]
-        $scope.AggType = $scope.aggTypes[0].Name;
-        $scope.AggText = $scope.aggTypes[0].Display;
+        // $scope.aggTypes = [
+        //     {"Name": "---", "Display": "No thanks"},
+        //     {"Name": "avg", "Display": "avg()"},
+        //     {"Name": "count", "Display": "count()"},
+        //     {"Name": "group_concat", "Display": "group_concat()"},
+        //     {"Name": "min", "Display": "min()"},
+        //     {"Name": "max", "Display": "max()"},
+        //     {"Name": "sum", "Display": "sum()"},
+        //     {"Name": "total", "Display": "total()"
+        //     }
+        // ]
 
         // Set up chart type
         $scope.ChartType = "[[ .ChartType ]]";
@@ -637,40 +639,6 @@ GROUP BY Category; -->
                 plotData[0].type = "pie";
                 break;
         }
-
-        // // JOIN chooser pieces
-        // $scope.showJoinChooser = false;
-        // if ($scope.XTablename !== $scope.YTablename) {
-        //     $scope.showJoinChooser = true;
-        // }
-        // $scope.JoinType = "[[ .JoinType ]]";
-        // if ($scope.JoinType === "") { $scope.JoinType = "---"; }
-        // $scope.joinTypes = ["---", "INNER JOIN", "LEFT OUTER JOIN"];
-        // // $scope.joinTypes = ["---", "INNER JOIN", "LEFT OUTER JOIN", "CROSS JOIN"];
-        // $scope.JoinXColumn = "";
-        // $scope.JoinYColumn = "";
-        // if ($scope.JoinType === "INNER JOIN" || $scope.JoinType === "LEFT OUTER JOIN") {
-        //     $scope.JoinXColumn = $scope.XColumnNames[0];
-        //     $scope.JoinYColumn = $scope.YColumnNames[0];
-        // }
-
-        // // Change the Aggregate function
-        // $scope.changeAggType = function(newagg) {
-        //     // Look up details for the new aggregate function
-        //     for (i = 0; i < $scope.aggTypes.length; i++) {
-        //         if ($scope.aggTypes[i].Name === newagg) {
-        //             let z = $scope.aggTypes[i];
-        //             $scope.AggType = z.Name;
-        //             $scope.AggText = z.Display;
-        //         }
-        //     }
-        //     $scope.updateSQL();
-        //
-        //     // If the graph is being shown, update it
-        //     if ($scope.showVis === true) {
-        //         $scope.doVis();
-        //     }
-        // };
 
         // Change the type of chart
         $scope.chartChangeType = function(newType) {
@@ -707,117 +675,56 @@ GROUP BY Category; -->
 
         // Retrieve the data for visualisation
         $scope.doVis = function() {
-        // $scope.doVis = async function() {
             let args = "";
+            let customSQL = document.getElementById("expertsql").value;
+            args = "sql=" + window.btoa(customSQL); // Base64 encode the whole string, so even line breaks are preserved
+            $http.get("/x/execsql/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
+                function success(response) {
+                    // Update table data
+                    $scope.db = response.data;
 
-            // If the Expert tab is visible, execute the custom SQL from there, ignoring the Simple+Advanced tabs
-            // if ($scope.activetab === 2) {
-                let customSQL = document.getElementById("expertsql").value;
-                args = "sql=" + window.btoa(customSQL); // Base64 encode the whole string, so even line breaks are preserved
-                $http.get("/x/execsql/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
-                    function success(response) {
-                        // Update table data
-                        $scope.db = response.data;
-
-                        // Convert the data in $scope.db.Records to what the Plotly.js chart requires
-                        chartData.Records = [];
-                        for (i = 0; i < $scope.db.RowCount; i++) {
-                            let name = $scope.db.Records[i][0].Value;
-                            let val = $scope.db.Records[i][1].Value;
-                            chartData.Records[i] = { "Name": name, "Value": val};
-                        }
-                        chartData.XTablename = "";
-                        chartData.YTablename = "";
-                        chartData.XAxisLabel = $scope.db.ColNames[0];
-                        chartData.YAxisLabel = $scope.db.ColNames[1];
-
-                        $scope.XColumnNames = $scope.db.ColNames;
-                        $scope.YColumnNames = $scope.db.ColNames;
-
-                        // console.log("First round");
-                        // console.log("***********");
-                        // console.log($scope.XColumnNames);
-
-                        // Display the visualisation
-                        $scope.showVis = true;
-                        dataReceived = true;
-                        $scope.doChart(true);
-
-                        // console.log("Second round");
-                        // console.log("************");
-                        // console.log($scope.XColumnNames);
-
-                        // Clear any existing status message
-                        $scope.statusMessage = "";
-                    }, function failure(response) {
-                        // Retrieving data failed, so display the returned error message and hide the graph
-                        $scope.statusMessageColour = "red";
-                        $scope.statusMessage = "Retrieving data failed: " + response.data;
-                        $scope.showVis = false;
-
-                        // Clear out any existing table data too
-                        $scope.db.ColNames = {};
-                        $scope.db.Records = {};
+                    // Convert the data in $scope.db.Records to what the Plotly.js chart requires
+                    // TODO: Is it feasible to structure the data directly from the Go side into Plotly.js's required format?
+                    chartData.Records = [];
+                    for (i = 0; i < $scope.db.RowCount; i++) {
+                        let name = $scope.db.Records[i][0].Value;
+                        let val = $scope.db.Records[i][1].Value;
+                        chartData.Records[i] = { "Name": name, "Value": val};
                     }
-                )
-                return;
-            // }
+                    chartData.XTablename = "";
+                    chartData.YTablename = "";
+                    chartData.XAxisLabel = $scope.db.ColNames[0];
+                    chartData.YAxisLabel = $scope.db.ColNames[1];
 
-            // // Use the contents of the Simple and Advanced tabs
-            // args = "xtable=" + $scope.XTablename;
-            // args += "&ytable=" + $scope.YTablename;
-            // args += "&xaxis=" + $scope.XAxisColumn;
-            // args += "&yaxis=" + $scope.YAxisColumn;
-            // args += "&agg=" + $scope.AggType;
-            // if ($scope.XTablename !== $scope.YTablename) {
-            //     // The user has selected a join of some sort
-            //     if ($scope.JoinType === "---") {
-            //         // Can't retrieve valid data until viable JOIN pieces are selected
-            //         $scope.showVis = false;
-            //         return;
-            //     }
-            //
-            //     args += "&join=" + $scope.JoinType;
-            //     if ($scope.JoinType === "INNER JOIN" || $scope.JoinType === "LEFT OUTER JOIN") {
-            //         args += "&joinxcol=" + $scope.JoinXColumn;
-            //         args += "&joinycol=" + $scope.JoinYColumn;
-            //     }
-            // }
-            // $http.get("/x/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
-            //     function success(response) {
-            //         // Clear any existing error message
-            //         $scope.statusMessage = "";
-            //
-            //         // Update table data
-            //         chartData.Records = response.data;
-            //         chartData.XTablename = $scope.XTablename;
-            //         chartData.YTablename = $scope.YTablename;
-            //         chartData.XAxisLabel = $scope.XAxisColumn;
-            //         chartData.YAxisLabel = $scope.YAxisColumn;
-            //
-            //         // Display the visualisation
-            //         $scope.showVis = true;
-            //         dataReceived = true;
-            //         $scope.doChart(true);
-            //
-            //         // Clear any existing status message
-            //         $scope.statusMessage = "";
-            //     }, function failure(response) {
-            //         // Retrieving data failed, so display the returned error message and hide the graph
-            //         $scope.statusMessageColour = "red";
-            //         $scope.statusMessage = "Retrieving data failed: " + response.data;
-            //         $scope.showVis = false;
-            //     }
-            // )
+                    $scope.XColumnNames = $scope.db.ColNames;
+                    $scope.YColumnNames = $scope.db.ColNames;
+
+                    // Display the visualisation
+                    $scope.showVis = true;
+                    dataReceived = true;
+                    $scope.doChart(true);
+
+                    // Clear any existing status message
+                    $scope.statusMessage = "";
+                }, function failure(response) {
+                    // Retrieving data failed, so display the returned error message and hide the graph
+                    $scope.statusMessageColour = "red";
+                    $scope.statusMessage = "Retrieving data failed: " + response.data;
+                    $scope.showVis = false;
+
+                    // Clear out any existing table data too
+                    $scope.db.ColNames = {};
+                    $scope.db.Records = {};
+                }
+            )
+            return;
         };
 
         // Save the visualisation for easy later retrieval
         $scope.statusMessage = "";
         $scope.statusMessageColour = "red";
         $scope.saveAs = function(visName) {
-            let args = "xtable=" + $scope.XTablename;
-            args += "&ytable=" + $scope.YTablename;
-            args += "&xaxis=" + $scope.XAxisColumn;
+            let args = "xaxis=" + $scope.XAxisColumn;
             args += "&yaxis=" + $scope.YAxisColumn;
             args += "&visname=" + visName;
             switch ($scope.ChartType) {
@@ -834,20 +741,6 @@ GROUP BY Category; -->
                     args += "&charttype=pie";
                     break;
             }
-            args += "&agg=" + $scope.AggType;
-            if ($scope.XTablename !== $scope.YTablename) {
-                // The user has selected a join of some sort
-                if ($scope.JoinType === "---") {
-                    // Can't save until viable JOIN pieces are selected
-                    return;
-                }
-
-                args += "&join=" + $scope.JoinType;
-                if ($scope.JoinType === "INNER JOIN" || $scope.JoinType === "LEFT OUTER JOIN") {
-                    args += "&joinxcol=" + $scope.JoinXColumn;
-                    args += "&joinycol=" + $scope.JoinYColumn;
-                }
-            }
             $http.get("/x/vissave/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
@@ -860,210 +753,46 @@ GROUP BY Category; -->
             )
         };
 
-        // // Update the generated SQL display
-        // $scope.updateSQL = function() {
-        //     // Update the generated SQL display
-        //     let sqlWindow = document.getElementById("sqlwin");
-        //     if (sqlWindow != null) {
-        //         if ($scope.XTablename === $scope.YTablename) {
-        //             if ($scope.AggType === "---") {
-        //                 sqlWindow.innerHTML = "SELECT\n    " +
-        //                     $scope.XAxisColumn + ", " + $scope.YAxisColumn + "\n" +
-        //                     "FROM\n    '" + $scope.XTablename + "';";
-        //                 sqlWindow.rows = 4;
-        //             } else {
-        //                 sqlWindow.innerHTML = "SELECT\n    " +
-        //                     $scope.XAxisColumn + ", " + $scope.AggType + "(" + $scope.YAxisColumn + ")\n" +
-        //                     "FROM\n    '" + $scope.XTablename + "'\n" +
-        //                     "GROUP BY " + $scope.XAxisColumn + ";";
-        //                 sqlWindow.rows = 5;
-        //             }
-        //         } else {
-        //             let joinText = "SELECT\n    '" +
-        //                 $scope.XTablename + "'." + $scope.XAxisColumn + ", '" +
-        //                 $scope.YTablename + "'." + $scope.YAxisColumn + "\n";
-        //             if ($scope.JoinType === "---") {
-        //                 // No JOIN
-        //                 joinText = "Please choose JOIN type and columns";
-        //             } else if ($scope.JoinType === "INNER JOIN") {
-        //                 // INNER JOIN
-        //                 joinText += "FROM\n    '" + $scope.XTablename + "' INNER JOIN '" + $scope.YTablename + "' ON '" +
-        //                     $scope.XTablename + "'." + $scope.JoinXColumn + " = '" + $scope.YTablename + "'." + $scope.JoinYColumn + ";";
-        //             } else if ($scope.JoinType === "LEFT OUTER JOIN") {
-        //                 // LEFT OUTER JOIN
-        //                 joinText += "FROM\n    '" + $scope.XTablename + "' LEFT OUTER JOIN '" + $scope.YTablename + "' ON '" +
-        //                     $scope.XTablename + "'." + $scope.JoinXColumn + " = '" + $scope.YTablename + "'." + $scope.JoinYColumn + ";";
-        //             } else {
-        //                 joinText += "FROM\n    '" + $scope.XTablename + "' " + $scope.JoinType + " '" + $scope.YTablename + "';";
-        //             }
-        //             sqlWindow.innerHTML = joinText;
-        //             sqlWindow.rows = 4;
-        //         }
-        //     }
-        // }
-        // // Display the initial generated SQL
-        // $scope.updateSQL();
+        // Change the X Axis Column
+        $scope.changeXAxisColumn = function(newcol) {
+            $scope.XAxisColumn = newcol;
 
-        // // Change the both tables
-        // $scope.changeBothTables = function(newtable) {
-        //     $scope.YTablename = newtable;
-        //     $scope.changeXAxisTable(newtable);
-        // }
+            // Update the Y Axis Column selection list, removing the X Axis Column
+            $scope.YColumnNameOptions = [];
+            let numCols = $scope.db.ColNames.length;
+            for (let i = 0; i < numCols; i++) {
+                if ($scope.db.ColNames[i] !== newcol) {
+                    $scope.YColumnNameOptions.push($scope.db.ColNames[i]);
+                }
+            }
 
-        // // Change the X Axis table
-        // $scope.changeXAxisTable = function(newtable) {
-        //     $scope.XTablename = newtable;
-        //     // Retrieve the column names for the new table
-        //     $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
-        //         newtable).then(
-        //         function success(response) {
-        //             // Display the join chooser if needed
-        //             if ($scope.XTablename === $scope.YTablename) {
-        //                 $scope.showJoinChooser = false;
-        //             } else {
-        //                 $scope.showJoinChooser = true;
-        //             }
-        //
-        //             // Update X axis columns
-        //             $scope.showVis = true;
-        //             $scope.XColumnNames = response.data.ColNames;
-        //
-        //             // If the same column name exists in the new table, use that
-        //             let colExists = false;
-        //             for (i = 0; i < $scope.XColumnNames.length; i++) {
-        //                 if ($scope.XAxisColumn === $scope.XColumnNames[i]) {
-        //                     colExists = true;
-        //                 }
-        //             }
-        //             if (colExists) {
-        //                 // We call this anyway, so the SQL and graph are updated
-        //                 $scope.changeXAxisColumn($scope.XAxisColumn);
-        //             } else {
-        //                 // Column name doesn't exist in the new table, so just pick the first column
-        //                 $scope.changeXAxisColumn($scope.XColumnNames[0]);
-        //             }
-        //         }, function failure(response) {
-        //             // Retrieving column names failed, so display the returned error message
-        //             $scope.statusMessageColour = "red";
-        //             $scope.statusMessage = "Retrieving column names failed: " + response.data;
-        //             $scope.showVis = false;
-        //         }
-        //     )
-        // };
+            // If there is only one potential Y axis column, automatically select it
+            if ($scope.YColumnNameOptions.length === 1) {
+                $scope.YAxisColumns = $scope.YColumnNameOptions;
+            }
 
-        // // Change the X Axis Column
-        // $scope.changeXAxisColumn = function(newcol) {
-        //     $scope.XAxisColumn = newcol;
-        //     $scope.updateSQL();
-        //
-        //     // If the graph is being shown, update it
-        //     if ($scope.showVis === true) {
-        //         $scope.doVis();
-        //     }
-        // };
+            // If the graph is being shown, update it
+            if ($scope.showVis === true) {
+                $scope.doVis();
+            }
+        };
 
-        // // Change the Y Axis table
-        // $scope.changeYAxisTable = function(newtable) {
-        //     $scope.YTablename = newtable;
-        //     // Retrieve the column names for the new table
-        //     $http.get("/x/table/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table="+
-        //         newtable).then(
-        //         function success(response) {
-        //             // Display the join chooser if needed
-        //             if ($scope.XTablename === $scope.YTablename) {
-        //                 $scope.showJoinChooser = false;
-        //             } else {
-        //                 $scope.showJoinChooser = true;
-        //             }
-        //
-        //             // Update Y axis columns
-        //             $scope.showVis = true;
-        //             $scope.YColumnNames = response.data.ColNames;
-        //
-        //             // If the same column name exists in the new table, use that
-        //             let colExists = false;
-        //             for (i = 0; i < $scope.YColumnNames.length; i++) {
-        //                 if ($scope.YAxisColumn === $scope.YColumnNames[i]) {
-        //                     colExists = true;
-        //                 }
-        //             }
-        //             if (colExists) {
-        //                 // We call this anyway, so the SQL and graph are updated
-        //                 $scope.changeYAxisColumn($scope.YAxisColumn);
-        //             } else {
-        //                 // Column name doesn't exist in the new table, so just pick the first column
-        //                 $scope.changeYAxisColumn($scope.YColumnNames[0]);
-        //             }
-        //         }, function failure(response) {
-        //             // Retrieving column names failed, so display the returned error message
-        //             $scope.statusMessageColour = "red";
-        //             $scope.statusMessage = "Retrieving column names failed: " + response.data;
-        //             $scope.showVis = false;
-        //         }
-        //     )
-        // };
-        //
-        // // Change the Y Axis Column
-        // $scope.changeYAxisColumn = function(newcol) {
-        //     $scope.YAxisColumn = newcol;
-        //     $scope.updateSQL();
-        //
-        //     // If the graph is being shown, update it
-        //     if ($scope.showVis === true) {
-        //         $scope.doVis();
-        //     }
-        // };
-        //
-        // // Change the SQLite JOIN type
-        // $scope.changeJoinType = function(newjoin) {
-        //     $scope.JoinType = newjoin;
-        //     $scope.updateSQL();
-        //
-        //     if ($scope.JoinType === "INNER JOIN") {
-        //         $scope.JoinXColumn = $scope.XColumnNames[0];
-        //         $scope.JoinYColumn = $scope.YColumnNames[0];
-        //     }
-        //
-        //     // If the graph is being shown, update it
-        //     if ($scope.showVis === true) {
-        //         $scope.doVis();
-        //     }
-        // };
-        //
-        // // Change the JOIN X axis column
-        // $scope.changeJoinXColumn = function(col) {
-        //     $scope.JoinXColumn = col;
-        //     $scope.updateSQL();
-        //
-        //     // If the graph is being shown, update it
-        //     if ($scope.showVis === true) {
-        //         $scope.doVis();
-        //     }
-        // };
-        //
-        // // Change the JOIN Y axis column
-        // $scope.changeJoinYColumn = function(col) {
-        //     $scope.JoinYColumn = col;
-        //     $scope.updateSQL();
-        //
-        //     // If the graph is being shown, update it
-        //     if ($scope.showVis === true) {
-        //         $scope.doVis();
-        //     }
-        // };
+        // Change the Y Axis Column
+        $scope.changeYAxisColumn = function(newcol) {
+            $scope.YAxisColumn = newcol;
+
+            // If the graph is being shown, update it
+            if ($scope.showVis === true) {
+                $scope.doVis();
+            }
+        };
 
         // If saved parameter data was passed through, update the initial values
         if ("[[ .ParamsGiven ]]" === "true") {
-            $scope.XTablename = "[[ .XAxisTable ]]";
             $scope.XAxisColumn = "[[ .XAxisCol ]]";
             chartData.XAxisLabel = $scope.XAxisColumn;
-            $scope.YTablename = "[[ .YAxisTable ]]";
             $scope.YAxisColumn = "[[ .YAxisCol ]]";
             chartData.YAxisLabel = $scope.YAxisColumn;
-            $scope.AggType = "[[ .AggType ]]";
-            // if ($scope.AggType !== "") { // Initial setup
-            //     $scope.changeAggType($scope.AggType);
-            // }
         }
 
         // If the data points for visualisation were provided, set the flag to indicate this
