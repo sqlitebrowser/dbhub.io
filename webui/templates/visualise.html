@@ -259,20 +259,20 @@ GROUP BY Category;
                             </td>
                         </tr>
                         <tr>
-                            <th width="35%">Show X Axis Labels</th>
+                            <th width="35%">Show X Axis</th>
                             <td>
-                                <div class="btn-group">
-                                    <label class="btn btn-default" ng-model="radioXAxisShowLabels" uib-btn-radio="true">Yes</label>
-                                    <label class="btn btn-default" ng-model="radioXAxisShowLabels" uib-btn-radio="false">No</label>
+                                <div class="btn-group" ng-click="doChart(false)">
+                                    <label class="btn btn-default" ng-model="radioXAxisShowLabels" uib-btn-radio="true" ng-click="toggleXLabel(true)">Yes</label>
+                                    <label class="btn btn-default" ng-model="radioXAxisShowLabels" uib-btn-radio="false" ng-click="toggleXLabel(false)">No</label>
                                 </div>
                             </td>
                         </tr>
                         <tr>
-                            <th width="35%">Show Y Axis Labels</th>
+                            <th width="35%">Show Y Axis</th>
                             <td>
-                                <div class="btn-group">
-                                    <label class="btn btn-default" ng-model="radioYAxisShowLabels" uib-btn-radio="true">Yes</label>
-                                    <label class="btn btn-default" ng-model="radioYAxisShowLabels" uib-btn-radio="false">No</label>
+                                <div class="btn-group" ng-click="doChart(false)">
+                                    <label class="btn btn-default" ng-model="radioYAxisShowLabels" uib-btn-radio="true" ng-click="toggleYLabel(true)">Yes</label>
+                                    <label class="btn btn-default" ng-model="radioYAxisShowLabels" uib-btn-radio="false" ng-click="toggleYLabel(false)">No</label>
                                 </div>
                             </td>
                         </tr>
@@ -465,13 +465,11 @@ GROUP BY Category;
                 autosize: true,
                 title: chartData.Title,
                 width: document.getElementById("descdiv").offsetWidth,
-                xaxis: {
-                    visible: true,
-                },
-                yaxis: {
-                    visible: true,
-                },
+                xaxis: {},
+                yaxis: {},
             };
+            plotLayout.xaxis.visible = $scope.radioXAxisShowLabels;
+            plotLayout.yaxis.visible = $scope.radioYAxisShowLabels;
 
             // Organise chart data to suit the selected chart type
             if (updateData && ($scope.db.Records != null)) {
@@ -511,11 +509,11 @@ GROUP BY Category;
 
             // Update axis titles
             if (plotData[0].orientation === "v") {
-                plotLayout.xaxis.title = { text: chartData.XAxisLabel};
-                plotLayout.yaxis.title = { text: chartData.YAxisLabel};
+                plotLayout.xaxis.title = { text: chartData.XAxisLabel };
+                plotLayout.yaxis.title = { text: chartData.YAxisLabel };
             } else {
-                plotLayout.xaxis.title = { text: chartData.YAxisLabel};
-                plotLayout.yaxis.title = { text: chartData.XAxisLabel};
+                plotLayout.xaxis.title = { text: chartData.YAxisLabel };
+                plotLayout.yaxis.title = { text: chartData.XAxisLabel };
             }
 
             // (Re)draw the chart
@@ -529,6 +527,14 @@ GROUP BY Category;
         $scope.YColumnNames = [];
         $scope.YColumnNameOptions = [];
         $scope.YAxisColumn = "";
+
+        // Functions for toggling on/off the axis label display
+        $scope.toggleXLabel = function(newVal) {
+            $scope.radioXAxisShowLabels = newVal;
+        }
+        $scope.toggleYLabel = function(newVal) {
+            $scope.radioYAxisShowLabels = newVal;
+        }
 
         // Handle browser resize events
         function resizeEvent() {
@@ -606,10 +612,9 @@ GROUP BY Category;
                     // Update the list of available Y column names
                     $scope.updateYAxisColumnList();
 
-                    // If there were only two columns in the returned data, try displaying the chart
+                    // Try displaying the chart
                     dataReceived = true;
-                    if ($scope.db.ColNames.length === 2) {
-                        // Display the visualisation
+                    if ($scope.db.ColNames.length > 1) {
                         $scope.showVis = true;
                         $scope.doChart(true);
                     }
@@ -624,7 +629,6 @@ GROUP BY Category;
                     $scope.db.Records = {};
                 }
             )
-            return;
         };
 
         // Save the visualisation for easy later retrieval
