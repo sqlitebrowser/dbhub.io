@@ -6,14 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	com "github.com/sqlitebrowser/dbhub.io/common"
+	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"log"
 	"net/http"
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	com "github.com/sqlitebrowser/dbhub.io/common"
-	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 )
 
 func visualisePage(w http.ResponseWriter, r *http.Request) {
@@ -27,17 +26,10 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		ParamsGiven   bool
 		DataGiven     bool
 		ChartType     string
-		XAxisTable    string
 		XAxisCol      string
-		XAxisColNames []string
-		YAxisTable    string
 		YAxisCol      string
-		YAxisColNames []string
-		AggType       string
-		JoinType      string
-		JoinXCol      string
-		JoinYCol      string
 		Records       []com.VisRowV1
+		SQL           string
 	}
 
 	// Retrieve the database owner & name
@@ -79,26 +71,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Invalid database commit ID")
 		return
 	}
-
-	//// If any table names were supplied, validate them
-	//xTable := r.FormValue("xtable")
-	//if xTable != "" {
-	//	err = com.ValidatePGTable(xTable)
-	//	if err != nil {
-	//		// Validation failed, so don't pass on the table name
-	//		log.Printf("%s: Validation failed for X axis table name: %s", pageName, err)
-	//		xTable = ""
-	//	}
-	//}
-	//yTable := r.FormValue("ytable")
-	//if yTable != "" {
-	//	err = com.ValidatePGTable(yTable)
-	//	if err != nil {
-	//		// Validation failed, so don't pass on the table name
-	//		log.Printf("%s: Validation failed for Y axis table name: %s", pageName, err)
-	//		yTable = ""
-	//	}
-	//}
 
 	// Check if a branch name was requested
 	branchName, err := com.GetFormBranch(r)
@@ -258,25 +230,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	////// If a specific table wasn't requested, use the user specified default (if present)
-	////if xTable == "" || yTable == "" {
-	//	// Ensure the default table name validates.  This catches a case where a database was uploaded with an invalid
-	//	// table name and somehow because selected as the default
-	//	a := pageData.DB.Info.DefaultTable
-	//	if a != "" {
-	//		err = com.ValidatePGTable(a)
-	//		if err == nil {
-	//			//// The database table name is acceptable, so use it
-	//			//if xTable == "" {
-	//			//	xTable = pageData.DB.Info.DefaultTable
-	//			//}
-	//			//if yTable == "" {
-	//			//	yTable = pageData.DB.Info.DefaultTable
-	//			//}
-	//		}
-	//	}
-	////}
-
 	// Retrieve the details for the logged in user
 	var avatarURL string
 	if loggedInUser != "" {
@@ -315,194 +268,32 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.DB.Info.Tables = tables
 
-	//// If a specific table was requested, check that it's present
-	//if xTable != "" || yTable != "" {
-	//	// Check the requested table is present
-	//	xTablePresent := false
-	//	yTablePresent := false
-	//	for _, tbl := range tables {
-	//		if tbl == xTable {
-	//			xTablePresent = true
-	//		}
-	//		if tbl == yTable {
-	//			yTablePresent = true
-	//		}
-	//	}
-	//	if xTablePresent == false {
-	//		// The requested X axis table doesn't exist in the database, so pick one of the tables that is
-	//		for _, t := range tables {
-	//			err = com.ValidatePGTable(t)
-	//			if err == nil {
-	//				// Validation passed, so use this table
-	//				xTable = t
-	//				pageData.DB.Info.DefaultTable = t
-	//				break
-	//			}
-	//		}
-	//	}
-	//	if yTablePresent == false {
-	//		// The requested Y axis table doesn't exist in the database, so pick one of the tables that is
-	//		for _, t := range tables {
-	//			err = com.ValidatePGTable(t)
-	//			if err == nil {
-	//				// Validation passed, so use this table
-	//				yTable = t
-	//				pageData.DB.Info.DefaultTable = t
-	//				break
-	//			}
-	//		}
-	//	}
-	//}
-	//
-	//// If specific tables weren't requested, use the first table in the database that passes validation
-	//if xTable == "" {
-	//	for _, i := range pageData.DB.Info.Tables {
-	//		if i != "" {
-	//			err = com.ValidatePGTable(i)
-	//			if err == nil {
-	//				// The database table name is acceptable, so use it
-	//				xTable = i
-	//				break
-	//			}
-	//		}
-	//	}
-	//}
-	//if yTable == "" {
-	//	for _, i := range pageData.DB.Info.Tables {
-	//		if i != "" {
-	//			err = com.ValidatePGTable(i)
-	//			if err == nil {
-	//				// The database table name is acceptable, so use it
-	//				yTable = i
-	//				break
-	//			}
-	//		}
-	//	}
-	//}
-	//
-	//// Validate the table names, just to be careful
-	//if xTable != "" {
-	//	err = com.ValidatePGTable(xTable)
-	//	if err != nil {
-	//		// Validation failed, so don't pass on the table name
-	//
-	//		// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
-	//		// bot picking up AngularJS in a string and doing a request with it
-	//		if xTable != "{{ db.Tablename }}" {
-	//			log.Printf("%s: Validation failed for table name: '%s': %s", pageName, xTable, err)
-	//		}
-	//		errorPage(w, r, http.StatusBadRequest, "Validation failed for X axis table name")
-	//		return
-	//	}
-	//}
-	//if yTable != "" {
-	//	err = com.ValidatePGTable(yTable)
-	//	if err != nil {
-	//		// Validation failed, so don't pass on the table name
-	//
-	//		// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
-	//		// bot picking up AngularJS in a string and doing a request with it
-	//		if yTable != "{{ db.Tablename }}" {
-	//			log.Printf("%s: Validation failed for table name: '%s': %s", pageName, yTable, err)
-	//		}
-	//		errorPage(w, r, http.StatusBadRequest, "Validation failed for Y axis table name")
-	//		return
-	//	}
-	//}
-	//
-	//// Retrieve the SQLite X axis column names
-	//pageData.XAxisTable = xTable
-	//xColList, err := sdb.Columns("", xTable)
-	//if err != nil {
-	//	log.Printf("Error when reading column names for table '%s': %v\n", xTable, err.Error())
-	//	errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-	//	return
-	//}
-	//var c []string
-	//for _, j := range xColList {
-	//	c = append(c, j.Name)
-	//}
-	//pageData.XAxisColNames = c
-	//
-	//// Retrieve the SQLite Y axis column names
-	//pageData.YAxisTable = yTable
-	//yColList, err := sdb.Columns("", yTable)
-	//if err != nil {
-	//	log.Printf("Error when reading column names for table '%s': %v\n", yTable, err.Error())
-	//	errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-	//	return
-	//}
-	//var c2 []string
-	//for _, j := range yColList {
-	//	c2 = append(c2, j.Name)
-	//}
-	//pageData.YAxisColNames = c2
+	// Retrieve the default visualisation parameters for this database, if they've been set
+	params, ok, err := com.GetVisualisationParams(dbOwner, dbFolder, dbName, "default")
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
 
-	//// Retrieve the default visualisation parameters for this database, if they've been set
-	//params, ok, err := com.GetVisualisationParams(dbOwner, dbFolder, dbName, "default")
-	//if err != nil {
-	//	errorPage(w, r, http.StatusInternalServerError, err.Error())
-	//	return
-	//}
+	// If saved parameters were found, pass them through to the web page
+	if ok {
+		pageData.ParamsGiven = true
+		switch params.ChartType {
+		case "hbc":
+			pageData.ChartType = "Horizontal bar chart"
+		case "vbc":
+			pageData.ChartType = "Vertical bar chart"
+		case "lc":
+			pageData.ChartType = "Line chart"
+		case "pie":
+			pageData.ChartType = "Pie chart"
+		default:
+			pageData.ChartType = "Vertical bar chart"
+		}
+		pageData.XAxisCol = params.XAXisColumn
+		pageData.YAxisCol = params.YAXisColumn
+		pageData.SQL = params.SQL
 
-	//// If saved parameters were found, pass them through to the web page
-	//if ok {
-	//	pageData.ParamsGiven = true
-	//	switch params.ChartType {
-	//	case "hbc":
-	//		pageData.ChartType = "Horizontal bar chart"
-	//	case "vbc":
-	//		pageData.ChartType = "Vertical bar chart"
-	//	case "lc":
-	//		pageData.ChartType = "Line chart"
-	//	case "pie":
-	//		pageData.ChartType = "Pie chart"
-	//	default:
-	//		pageData.ChartType = "Vertical bar chart"
-	//	}
-	//	pageData.XAxisTable = params.XAxisTable
-	//	pageData.XAxisCol = params.XAXisColumn
-	//	pageData.YAxisTable = params.YAxisTable
-	//	pageData.YAxisCol = params.YAXisColumn
-	//	switch params.AggType {
-	//	case 0:
-	//		pageData.AggType = "---"
-	//	case 1:
-	//		pageData.AggType = "avg"
-	//	case 2:
-	//		pageData.AggType = "count"
-	//	case 3:
-	//		pageData.AggType = "group_concat"
-	//	case 4:
-	//		pageData.AggType = "max"
-	//	case 5:
-	//		pageData.AggType = "min"
-	//	case 6:
-	//		pageData.AggType = "sum"
-	//	case 7:
-	//		pageData.AggType = "total"
-	//	default:
-	//		errorPage(w, r, http.StatusInternalServerError, "Unknown aggregate type returned from database")
-	//		log.Printf("Unknown aggregate type: %v\n", params.JoinType)
-	//		return
-	//	}
-	//	switch params.JoinType {
-	//	case 0:
-	//		pageData.JoinType = "---"
-	//	case 1:
-	//		pageData.JoinType = "INNER JOIN"
-	//	case 2:
-	//		pageData.JoinType = "LEFT OUTER JOIN"
-	//	case 3:
-	//		pageData.JoinType = "CROSS JOIN"
-	//	default:
-	//		errorPage(w, r, http.StatusInternalServerError, "Unknown join type returned from database")
-	//		log.Printf("Unknown JOIN type: %v\n", params.JoinType)
-	//		return
-	//	}
-	//	pageData.JoinXCol = params.JoinXCol
-	//	pageData.JoinYCol = params.JoinYCol
-	//
 	//	// Retrieve the saved data for this visualisation too, if it's available
 	//	hash := visHash(dbOwner, dbFolder, dbName, commitID, "default", params)
 	//	data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
@@ -514,7 +305,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	//		pageData.Records = data
 	//		pageData.DataGiven = true
 	//	}
-	//}
+	}
 
 	// Retrieve correctly capitalised username for the user
 	usr, err := com.User(dbOwner)
@@ -617,6 +408,45 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Checks if a given string is unicode, and safe for using in SQLite queries (eg no SQLite control characters)
+func visCheckUnicode(rawInput string) (str string, err error) {
+	var decoded []byte
+	decoded, err = base64.StdEncoding.DecodeString(rawInput)
+	if err != nil {
+		//fmt.Errorf("Error when decoding query: '%s'", err)
+		return
+	}
+
+	// Ensure the decoded string is valid UTF-8
+	if !utf8.Valid(decoded) {
+		//w.WriteHeader(http.StatusBadRequest)
+		err = fmt.Errorf("SQL string contains invalid characters: '%v'", err)
+		return
+	}
+
+	// Check for the presence of unicode control characters and similar in the decoded string
+	invalidChar := false
+	decodedStr := string(decoded)
+	for _, j := range decodedStr {
+		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
+			if j != 10 { // 10 == new line, which is safe to allow.  Everything else should (probably) raise an error
+				invalidChar = true
+			}
+		}
+	}
+	if invalidChar {
+		//w.WriteHeader(http.StatusBadRequest)
+		err = fmt.Errorf("SQL string contains invalid characters: '%v'", err)
+		return
+	}
+
+	// TODO: Double check that none of the characters SQLite treats specially are missed
+	//         * https://github.com/sqlite/sqlite/blob/91960aa53ff5b08f28b9edb627d8a1b62231e125/src/tokenize.c#L29-L57
+
+	// No errors, so return the string
+	return decodedStr, nil
+}
+
 // Executes a custom SQLite SELECT query.
 func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
@@ -646,33 +476,10 @@ func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
-	decoded, err := base64.StdEncoding.DecodeString(rawInput)
+	decodedStr, err := visCheckUnicode(rawInput)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Error when decoding query: '%s'", err)
-		return
-	}
-
-	// Ensure the decoded string is valid UTF-8
-	if !utf8.Valid(decoded) {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "SQL string contains invalid characters: '%v'", err)
-		return
-	}
-
-	// Check for the presence of unicode control characters and similar in the decoded string
-	invalidChar := false
-	decodedStr := string(decoded)
-	for _, j := range decodedStr {
-		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
-			if j != 10 { // 10 == new line, which is safe to allow.  Everything else should (probably) raise an error
-				invalidChar = true
-			}
-		}
-	}
-	if invalidChar {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "SQL string contains invalid characters: '%v'", err)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
@@ -742,18 +549,14 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Extract X axis, Y axis, and aggregate type variables if present
 	chartType := r.FormValue("charttype")
-	xTable := r.FormValue("xtable")
 	xAxis := r.FormValue("xaxis")
-	yTable := r.FormValue("ytable")
 	yAxis := r.FormValue("yaxis")
-	aggTypeStr := r.FormValue("agg")
 	visName := r.FormValue("visname")
-	joinTypeStr := r.FormValue("join")
-	joinXCol := r.FormValue("joinxcol")
-	joinYCol := r.FormValue("joinycol")
+	sqlStr := r.FormValue("sql")
+	// TODO: The remaining chart settings (eg "Show X Axis"), colours, etc should be added here
 
 	// Ensure minimum viable parameters are present
-	if chartType == "" || xTable == "" || xAxis == "" || yTable == "" || yAxis == "" || visName == "" {
+	if chartType == "" || xAxis == "" || yAxis == "" || visName == "" || sqlStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -763,88 +566,6 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Unknown chart type")
 		return
-	}
-
-	// Validate the X axis table name
-	if xTable != "" {
-		err := com.ValidatePGTable(xTable)
-		if err != nil {
-			msg := fmt.Sprintf("Invalid table name '%s' for X Axis", xTable)
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "%s", msg)
-			return
-		}
-	}
-
-	// Validate the Y axis table name
-	if yTable != "" {
-		err := com.ValidatePGTable(yTable)
-		if err != nil {
-			msg := fmt.Sprintf("Invalid table name '%s' for Y Axis", yTable)
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "%s", msg)
-			return
-		}
-	}
-
-	// Parse the aggregation type
-	aggType := 0
-	switch aggTypeStr {
-	case "---":
-		aggType = 0
-	case "avg":
-		aggType = 1
-	case "count":
-		aggType = 2
-	case "group_concat":
-		aggType = 3
-	case "max":
-		aggType = 4
-	case "min":
-		aggType = 5
-	case "sum":
-		aggType = 6
-	case "total":
-		aggType = 7
-	default:
-		log.Println("Unknown aggregate type requested")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// Validate the join type
-	joinType := 0
-	switch joinTypeStr {
-	case "":
-	case "INNER JOIN":
-		joinType = 1
-	case "LEFT OUTER JOIN":
-		joinType = 2
-	case "CROSS JOIN":
-		joinType = 3
-	default:
-		log.Println("Unknown join type requested")
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "%s", "Unknown join type requested")
-		return
-	}
-
-	// Validate the join columns
-	if joinXCol != "" {
-		err = com.ValidateFieldName(joinXCol)
-		if err != nil {
-			log.Printf("Validation failed on requested JOIN column field name '%v': %v\n", joinXCol, err.Error())
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-	}
-	if joinYCol != "" {
-		err = com.ValidateFieldName(joinYCol)
-		if err != nil {
-			log.Printf("Validation failed on requested JOIN column field name '%v': %v\n", joinYCol, err.Error())
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
 	}
 
 	// Validate the X axis field name
@@ -865,16 +586,19 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Initial sanity check of the visualisation name
 	// TODO: We'll probably need to figure out a better validation character set than the fieldname one
-	//       Something along the lines of "all valid unicode letters", excluding things like control characters and
-	//       any of the special characters the SQLite tokeniser recognises:
-	//           https://github.com/sqlite/sqlite/blob/5a8cd2e40ce5287e638f77d4922068dbf7ba7e03/src/tokenize.c#L21-L57
-	//       ICU also has a StringPrep page, which looks to have info on potential ways to check for Unicode control
-	//       characters and similar: http://userguide.icu-project.org/strings/stringprep
-	//       The outdated goodsign/icu project may be useful too: https://github.com/goodsign/icu
+	//         * The unicode parsing code in sqlite.go OpenSQLiteDatabaseDefensive() may be reusable for this
 	err = com.ValidateFieldName(visName)
 	if err != nil {
 		log.Printf("Validation failed on requested visualisation name '%v': %v\n", visName, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Make sure the incoming SQLite query is "safe"
+	decodedStr, err := visCheckUnicode(sqlStr)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
@@ -923,48 +647,28 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		sdb.Close()
 	}()
 
-	//// Retrieve the list of tables and views in the SQLite database
-	//tables, err := sdb.Tables("")
-	//if err != nil {
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	fmt.Fprint(w, "Internal error occurred when retrieving SQLite table and view names")
-	//	return
-	//}
-
-	//// Verify the desired tables and columns exist
-	//err = visVerifyTablesAndColumns(w, r, sdb, tables, xTable, xAxis, yTable, yAxis, joinXCol, joinYCol, joinType)
-	//if err != nil {
-	//	// The return handling was already done in visVerifyTablesAndColumns()
-	//	return
-	//}
-
 	// Retrieve the visualisation query result, so we can save that too
-	vParams := com.VisParamsV1{
+	vParams := com.VisParamsV2{
 		ChartType:   chartType,
-		XAxisTable:  xTable,
 		XAXisColumn: xAxis,
-		YAxisTable:  yTable,
 		YAXisColumn: yAxis,
-		AggType:     aggType,
-		JoinType:    joinType,
-		JoinXCol:    joinXCol,
-		JoinYCol:    joinYCol,
+		SQL: decodedStr,
 	}
-	visData, err := com.RunSQLiteVisQuery(sdb, vParams)
-	if err != nil {
-		// Some kind of error when running the visualisation query
-		log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
-			dbFolder, dbName, commitID, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// If the # of rows returned from the query is 0, let the user know + don't save
-	if len(visData) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Query returned no result")
-		return
-	}
+	//visData, err := com.RunSQLiteVisQuery(sdb, vParams)
+	//if err != nil {
+	//	// Some kind of error when running the visualisation query
+	//	log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
+	//		dbFolder, dbName, commitID, err.Error())
+	//	w.WriteHeader(http.StatusInternalServerError)
+	//	return
+	//}
+	//
+	//// If the # of rows returned from the query is 0, let the user know + don't save
+	//if len(visData) == 0 {
+	//	w.WriteHeader(http.StatusBadRequest)
+	//	fmt.Fprint(w, "Query returned no result")
+	//	return
+	//}
 
 	// Save the SQLite visualisation parameters
 	err = com.VisualisationSaveParams(dbOwner, dbFolder, dbName, visName, vParams)
@@ -975,15 +679,15 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Save the SQLite visualisation data
-	hash := visHash(dbOwner, dbFolder, dbName, commitID, visName, vParams)
-	err = com.VisualisationSaveData(dbOwner, dbFolder, dbName, commitID, hash, visData)
-	if err != nil {
-		log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", visName,
-			dbOwner, dbFolder, dbName, commitID, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	//// Save the SQLite visualisation data
+	//hash := visHash(dbOwner, dbFolder, dbName, commitID, visName, vParams)
+	//err = com.VisualisationSaveData(dbOwner, dbFolder, dbName, commitID, hash, visData)
+	//if err != nil {
+	//	log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", visName,
+	//		dbOwner, dbFolder, dbName, commitID, err.Error())
+	//	w.WriteHeader(http.StatusInternalServerError)
+	//	return
+	//}
 
 	// Save succeeded
 	w.WriteHeader(http.StatusOK)

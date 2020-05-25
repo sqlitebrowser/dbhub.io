@@ -486,6 +486,7 @@ type UserInfo struct {
 	Username     string
 }
 
+// No longer used
 type VisParamsV1 struct {
 	ChartType   string
 	XAxisTable  string
@@ -498,6 +499,13 @@ type VisParamsV1 struct {
 	JoinYCol    string
 	OrderBy     int // No longer used
 	OrderDir    int // No longer used
+}
+
+type VisParamsV2 struct {
+	ChartType   string
+	YAXisColumn string
+	XAXisColumn string
+	SQL         string
 }
 
 type VisRowV1 struct {

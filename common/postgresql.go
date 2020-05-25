@@ -2192,7 +2192,7 @@ func GetVisualisationData(dbOwner string, dbFolder string, dbName string, commit
 }
 
 // Retrieves a saved set of visualisation parameters
-func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visName string) (params VisParamsV1, ok bool, err error) {
+func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visName string) (params VisParamsV2, ok bool, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -4456,7 +4456,7 @@ func VisualisationSaveData(dbOwner string, dbFolder string, dbName string, commi
 }
 
 // Saves a set of visualisation parameters for later retrieval
-func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, visName string, visParams VisParamsV1) (err error) {
+func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, visName string, visParams VisParamsV2) (err error) {
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (
