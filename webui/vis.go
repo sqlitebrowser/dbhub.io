@@ -17,8 +17,6 @@ import (
 )
 
 func visualisePage(w http.ResponseWriter, r *http.Request) {
-	pageName := "Visualise data page"
-
 	var pageData struct {
 		Auth0         com.Auth0Set
 		Data          com.SQLiteRecordSet
@@ -82,25 +80,25 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If any table names were supplied, validate them
-	xTable := r.FormValue("xtable")
-	if xTable != "" {
-		err = com.ValidatePGTable(xTable)
-		if err != nil {
-			// Validation failed, so don't pass on the table name
-			log.Printf("%s: Validation failed for X axis table name: %s", pageName, err)
-			xTable = ""
-		}
-	}
-	yTable := r.FormValue("ytable")
-	if yTable != "" {
-		err = com.ValidatePGTable(yTable)
-		if err != nil {
-			// Validation failed, so don't pass on the table name
-			log.Printf("%s: Validation failed for Y axis table name: %s", pageName, err)
-			yTable = ""
-		}
-	}
+	//// If any table names were supplied, validate them
+	//xTable := r.FormValue("xtable")
+	//if xTable != "" {
+	//	err = com.ValidatePGTable(xTable)
+	//	if err != nil {
+	//		// Validation failed, so don't pass on the table name
+	//		log.Printf("%s: Validation failed for X axis table name: %s", pageName, err)
+	//		xTable = ""
+	//	}
+	//}
+	//yTable := r.FormValue("ytable")
+	//if yTable != "" {
+	//	err = com.ValidatePGTable(yTable)
+	//	if err != nil {
+	//		// Validation failed, so don't pass on the table name
+	//		log.Printf("%s: Validation failed for Y axis table name: %s", pageName, err)
+	//		yTable = ""
+	//	}
+	//}
 
 	// Check if a branch name was requested
 	branchName, err := com.GetFormBranch(r)
@@ -260,24 +258,24 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If a specific table wasn't requested, use the user specified default (if present)
-	if xTable == "" || yTable == "" {
-		// Ensure the default table name validates.  This catches a case where a database was uploaded with an invalid
-		// table name and somehow because selected as the default
-		a := pageData.DB.Info.DefaultTable
-		if a != "" {
-			err = com.ValidatePGTable(a)
-			if err == nil {
-				// The database table name is acceptable, so use it
-				if xTable == "" {
-					xTable = pageData.DB.Info.DefaultTable
-				}
-				if yTable == "" {
-					yTable = pageData.DB.Info.DefaultTable
-				}
-			}
-		}
-	}
+	////// If a specific table wasn't requested, use the user specified default (if present)
+	////if xTable == "" || yTable == "" {
+	//	// Ensure the default table name validates.  This catches a case where a database was uploaded with an invalid
+	//	// table name and somehow because selected as the default
+	//	a := pageData.DB.Info.DefaultTable
+	//	if a != "" {
+	//		err = com.ValidatePGTable(a)
+	//		if err == nil {
+	//			//// The database table name is acceptable, so use it
+	//			//if xTable == "" {
+	//			//	xTable = pageData.DB.Info.DefaultTable
+	//			//}
+	//			//if yTable == "" {
+	//			//	yTable = pageData.DB.Info.DefaultTable
+	//			//}
+	//		}
+	//	}
+	////}
 
 	// Retrieve the details for the logged in user
 	var avatarURL string
@@ -317,206 +315,206 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.DB.Info.Tables = tables
 
-	// If a specific table was requested, check that it's present
-	if xTable != "" || yTable != "" {
-		// Check the requested table is present
-		xTablePresent := false
-		yTablePresent := false
-		for _, tbl := range tables {
-			if tbl == xTable {
-				xTablePresent = true
-			}
-			if tbl == yTable {
-				yTablePresent = true
-			}
-		}
-		if xTablePresent == false {
-			// The requested X axis table doesn't exist in the database, so pick one of the tables that is
-			for _, t := range tables {
-				err = com.ValidatePGTable(t)
-				if err == nil {
-					// Validation passed, so use this table
-					xTable = t
-					pageData.DB.Info.DefaultTable = t
-					break
-				}
-			}
-		}
-		if yTablePresent == false {
-			// The requested Y axis table doesn't exist in the database, so pick one of the tables that is
-			for _, t := range tables {
-				err = com.ValidatePGTable(t)
-				if err == nil {
-					// Validation passed, so use this table
-					yTable = t
-					pageData.DB.Info.DefaultTable = t
-					break
-				}
-			}
-		}
-	}
+	//// If a specific table was requested, check that it's present
+	//if xTable != "" || yTable != "" {
+	//	// Check the requested table is present
+	//	xTablePresent := false
+	//	yTablePresent := false
+	//	for _, tbl := range tables {
+	//		if tbl == xTable {
+	//			xTablePresent = true
+	//		}
+	//		if tbl == yTable {
+	//			yTablePresent = true
+	//		}
+	//	}
+	//	if xTablePresent == false {
+	//		// The requested X axis table doesn't exist in the database, so pick one of the tables that is
+	//		for _, t := range tables {
+	//			err = com.ValidatePGTable(t)
+	//			if err == nil {
+	//				// Validation passed, so use this table
+	//				xTable = t
+	//				pageData.DB.Info.DefaultTable = t
+	//				break
+	//			}
+	//		}
+	//	}
+	//	if yTablePresent == false {
+	//		// The requested Y axis table doesn't exist in the database, so pick one of the tables that is
+	//		for _, t := range tables {
+	//			err = com.ValidatePGTable(t)
+	//			if err == nil {
+	//				// Validation passed, so use this table
+	//				yTable = t
+	//				pageData.DB.Info.DefaultTable = t
+	//				break
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//// If specific tables weren't requested, use the first table in the database that passes validation
+	//if xTable == "" {
+	//	for _, i := range pageData.DB.Info.Tables {
+	//		if i != "" {
+	//			err = com.ValidatePGTable(i)
+	//			if err == nil {
+	//				// The database table name is acceptable, so use it
+	//				xTable = i
+	//				break
+	//			}
+	//		}
+	//	}
+	//}
+	//if yTable == "" {
+	//	for _, i := range pageData.DB.Info.Tables {
+	//		if i != "" {
+	//			err = com.ValidatePGTable(i)
+	//			if err == nil {
+	//				// The database table name is acceptable, so use it
+	//				yTable = i
+	//				break
+	//			}
+	//		}
+	//	}
+	//}
+	//
+	//// Validate the table names, just to be careful
+	//if xTable != "" {
+	//	err = com.ValidatePGTable(xTable)
+	//	if err != nil {
+	//		// Validation failed, so don't pass on the table name
+	//
+	//		// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
+	//		// bot picking up AngularJS in a string and doing a request with it
+	//		if xTable != "{{ db.Tablename }}" {
+	//			log.Printf("%s: Validation failed for table name: '%s': %s", pageName, xTable, err)
+	//		}
+	//		errorPage(w, r, http.StatusBadRequest, "Validation failed for X axis table name")
+	//		return
+	//	}
+	//}
+	//if yTable != "" {
+	//	err = com.ValidatePGTable(yTable)
+	//	if err != nil {
+	//		// Validation failed, so don't pass on the table name
+	//
+	//		// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
+	//		// bot picking up AngularJS in a string and doing a request with it
+	//		if yTable != "{{ db.Tablename }}" {
+	//			log.Printf("%s: Validation failed for table name: '%s': %s", pageName, yTable, err)
+	//		}
+	//		errorPage(w, r, http.StatusBadRequest, "Validation failed for Y axis table name")
+	//		return
+	//	}
+	//}
+	//
+	//// Retrieve the SQLite X axis column names
+	//pageData.XAxisTable = xTable
+	//xColList, err := sdb.Columns("", xTable)
+	//if err != nil {
+	//	log.Printf("Error when reading column names for table '%s': %v\n", xTable, err.Error())
+	//	errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+	//	return
+	//}
+	//var c []string
+	//for _, j := range xColList {
+	//	c = append(c, j.Name)
+	//}
+	//pageData.XAxisColNames = c
+	//
+	//// Retrieve the SQLite Y axis column names
+	//pageData.YAxisTable = yTable
+	//yColList, err := sdb.Columns("", yTable)
+	//if err != nil {
+	//	log.Printf("Error when reading column names for table '%s': %v\n", yTable, err.Error())
+	//	errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+	//	return
+	//}
+	//var c2 []string
+	//for _, j := range yColList {
+	//	c2 = append(c2, j.Name)
+	//}
+	//pageData.YAxisColNames = c2
 
-	// If specific tables weren't requested, use the first table in the database that passes validation
-	if xTable == "" {
-		for _, i := range pageData.DB.Info.Tables {
-			if i != "" {
-				err = com.ValidatePGTable(i)
-				if err == nil {
-					// The database table name is acceptable, so use it
-					xTable = i
-					break
-				}
-			}
-		}
-	}
-	if yTable == "" {
-		for _, i := range pageData.DB.Info.Tables {
-			if i != "" {
-				err = com.ValidatePGTable(i)
-				if err == nil {
-					// The database table name is acceptable, so use it
-					yTable = i
-					break
-				}
-			}
-		}
-	}
+	//// Retrieve the default visualisation parameters for this database, if they've been set
+	//params, ok, err := com.GetVisualisationParams(dbOwner, dbFolder, dbName, "default")
+	//if err != nil {
+	//	errorPage(w, r, http.StatusInternalServerError, err.Error())
+	//	return
+	//}
 
-	// Validate the table names, just to be careful
-	if xTable != "" {
-		err = com.ValidatePGTable(xTable)
-		if err != nil {
-			// Validation failed, so don't pass on the table name
-
-			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
-			// bot picking up AngularJS in a string and doing a request with it
-			if xTable != "{{ db.Tablename }}" {
-				log.Printf("%s: Validation failed for table name: '%s': %s", pageName, xTable, err)
-			}
-			errorPage(w, r, http.StatusBadRequest, "Validation failed for X axis table name")
-			return
-		}
-	}
-	if yTable != "" {
-		err = com.ValidatePGTable(yTable)
-		if err != nil {
-			// Validation failed, so don't pass on the table name
-
-			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
-			// bot picking up AngularJS in a string and doing a request with it
-			if yTable != "{{ db.Tablename }}" {
-				log.Printf("%s: Validation failed for table name: '%s': %s", pageName, yTable, err)
-			}
-			errorPage(w, r, http.StatusBadRequest, "Validation failed for Y axis table name")
-			return
-		}
-	}
-
-	// Retrieve the SQLite X axis column names
-	pageData.XAxisTable = xTable
-	xColList, err := sdb.Columns("", xTable)
-	if err != nil {
-		log.Printf("Error when reading column names for table '%s': %v\n", xTable, err.Error())
-		errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-		return
-	}
-	var c []string
-	for _, j := range xColList {
-		c = append(c, j.Name)
-	}
-	pageData.XAxisColNames = c
-
-	// Retrieve the SQLite Y axis column names
-	pageData.YAxisTable = yTable
-	yColList, err := sdb.Columns("", yTable)
-	if err != nil {
-		log.Printf("Error when reading column names for table '%s': %v\n", yTable, err.Error())
-		errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-		return
-	}
-	var c2 []string
-	for _, j := range yColList {
-		c2 = append(c2, j.Name)
-	}
-	pageData.YAxisColNames = c2
-
-	// Retrieve the default visualisation parameters for this database, if they've been set
-	params, ok, err := com.GetVisualisationParams(dbOwner, dbFolder, dbName, "default")
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// If saved parameters were found, pass them through to the web page
-	if ok {
-		pageData.ParamsGiven = true
-		switch params.ChartType {
-		case "hbc":
-			pageData.ChartType = "Horizontal bar chart"
-		case "vbc":
-			pageData.ChartType = "Vertical bar chart"
-		case "lc":
-			pageData.ChartType = "Line chart"
-		case "pie":
-			pageData.ChartType = "Pie chart"
-		default:
-			pageData.ChartType = "Vertical bar chart"
-		}
-		pageData.XAxisTable = params.XAxisTable
-		pageData.XAxisCol = params.XAXisColumn
-		pageData.YAxisTable = params.YAxisTable
-		pageData.YAxisCol = params.YAXisColumn
-		switch params.AggType {
-		case 0:
-			pageData.AggType = "---"
-		case 1:
-			pageData.AggType = "avg"
-		case 2:
-			pageData.AggType = "count"
-		case 3:
-			pageData.AggType = "group_concat"
-		case 4:
-			pageData.AggType = "max"
-		case 5:
-			pageData.AggType = "min"
-		case 6:
-			pageData.AggType = "sum"
-		case 7:
-			pageData.AggType = "total"
-		default:
-			errorPage(w, r, http.StatusInternalServerError, "Unknown aggregate type returned from database")
-			log.Printf("Unknown aggregate type: %v\n", params.JoinType)
-			return
-		}
-		switch params.JoinType {
-		case 0:
-			pageData.JoinType = "---"
-		case 1:
-			pageData.JoinType = "INNER JOIN"
-		case 2:
-			pageData.JoinType = "LEFT OUTER JOIN"
-		case 3:
-			pageData.JoinType = "CROSS JOIN"
-		default:
-			errorPage(w, r, http.StatusInternalServerError, "Unknown join type returned from database")
-			log.Printf("Unknown JOIN type: %v\n", params.JoinType)
-			return
-		}
-		pageData.JoinXCol = params.JoinXCol
-		pageData.JoinYCol = params.JoinYCol
-
-		// Retrieve the saved data for this visualisation too, if it's available
-		hash := visHash(dbOwner, dbFolder, dbName, commitID, "default", params)
-		data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ok {
-			pageData.Records = data
-			pageData.DataGiven = true
-		}
-	}
+	//// If saved parameters were found, pass them through to the web page
+	//if ok {
+	//	pageData.ParamsGiven = true
+	//	switch params.ChartType {
+	//	case "hbc":
+	//		pageData.ChartType = "Horizontal bar chart"
+	//	case "vbc":
+	//		pageData.ChartType = "Vertical bar chart"
+	//	case "lc":
+	//		pageData.ChartType = "Line chart"
+	//	case "pie":
+	//		pageData.ChartType = "Pie chart"
+	//	default:
+	//		pageData.ChartType = "Vertical bar chart"
+	//	}
+	//	pageData.XAxisTable = params.XAxisTable
+	//	pageData.XAxisCol = params.XAXisColumn
+	//	pageData.YAxisTable = params.YAxisTable
+	//	pageData.YAxisCol = params.YAXisColumn
+	//	switch params.AggType {
+	//	case 0:
+	//		pageData.AggType = "---"
+	//	case 1:
+	//		pageData.AggType = "avg"
+	//	case 2:
+	//		pageData.AggType = "count"
+	//	case 3:
+	//		pageData.AggType = "group_concat"
+	//	case 4:
+	//		pageData.AggType = "max"
+	//	case 5:
+	//		pageData.AggType = "min"
+	//	case 6:
+	//		pageData.AggType = "sum"
+	//	case 7:
+	//		pageData.AggType = "total"
+	//	default:
+	//		errorPage(w, r, http.StatusInternalServerError, "Unknown aggregate type returned from database")
+	//		log.Printf("Unknown aggregate type: %v\n", params.JoinType)
+	//		return
+	//	}
+	//	switch params.JoinType {
+	//	case 0:
+	//		pageData.JoinType = "---"
+	//	case 1:
+	//		pageData.JoinType = "INNER JOIN"
+	//	case 2:
+	//		pageData.JoinType = "LEFT OUTER JOIN"
+	//	case 3:
+	//		pageData.JoinType = "CROSS JOIN"
+	//	default:
+	//		errorPage(w, r, http.StatusInternalServerError, "Unknown join type returned from database")
+	//		log.Printf("Unknown JOIN type: %v\n", params.JoinType)
+	//		return
+	//	}
+	//	pageData.JoinXCol = params.JoinXCol
+	//	pageData.JoinYCol = params.JoinYCol
+	//
+	//	// Retrieve the saved data for this visualisation too, if it's available
+	//	hash := visHash(dbOwner, dbFolder, dbName, commitID, "default", params)
+	//	data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
+	//	if err != nil {
+	//		errorPage(w, r, http.StatusInternalServerError, err.Error())
+	//		return
+	//	}
+	//	if ok {
+	//		pageData.Records = data
+	//		pageData.DataGiven = true
+	//	}
+	//}
 
 	// Retrieve correctly capitalised username for the user
 	usr, err := com.User(dbOwner)
