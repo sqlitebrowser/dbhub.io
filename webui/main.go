@@ -3341,7 +3341,6 @@ func main() {
 	http.Handle("/x/updaterelease/", gz.GzipHandler(logReq(updateReleaseHandler)))
 	http.Handle("/x/updatetag/", gz.GzipHandler(logReq(updateTagHandler)))
 	http.Handle("/x/uploaddata/", gz.GzipHandler(logReq(uploadDataHandler)))
-	http.Handle("/x/vis/", gz.GzipHandler(logReq(visRequestHandler)))
 	http.Handle("/x/vissave/", gz.GzipHandler(logReq(visSaveRequestHandler)))
 	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
