@@ -20,6 +20,7 @@ type function string
 const (
 	// Core functions: https://sqlite.org/lang_corefunc.html
 	//fnLoadExtension           function = "load_extension" // Loading extensions is definitely not allowed
+	//fnUnicode                 function = "unicode"        // Disabling, at least for now, as it might be possible to construct unsafe strings with it
 	fnAbs                     function = "abs"
 	fnChanges                 function = "changes"
 	fnChar                    function = "char"
@@ -55,7 +56,6 @@ const (
 	fnTotalChanges            function = "total_changes"
 	fnTrim                    function = "trim"
 	fnTypeOf                  function = "typeof"
-	fnUnicode                 function = "unicode"
 	fnUnlikely                function = "unlikely"
 	fnUpper                   function = "upper"
 	fnZeroBlob                function = "zeroblob"
@@ -143,7 +143,6 @@ var SQLiteFunctions = []function{
 	fnTotalChanges,
 	fnTrim,
 	fnTypeOf,
-	fnUnicode,
 	fnUnlikely,
 	fnUpper,
 	fnZeroBlob,
@@ -404,6 +403,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 
 	// TODO: Set up a progress handler and timer (or something) to abort statements which run too long
 	//       https://www.sqlite.org/c3ref/interrupt.html
+	//         * Not sure if it's really needed though, as we've already reduced the resources SQLite can allocate
 
 	// TODO: Limit the maximum amount of memory SQLite will allocate (sqlite3_hard_heap_limit64())
 	//       https://www.sqlite.org/c3ref/hard_heap_limit64.html
@@ -728,138 +728,6 @@ func ReadSQLiteDBRedash(sdb *sqlite.Conn, dbTable string) (dash RedashTableData,
 	return dash, nil
 }
 
-// Runs a SQLite database query, for the visualisation tab.
-func RunSQLiteVisQuery(sdb *sqlite.Conn, params VisParamsV1) ([]VisRowV1, error) {
-	xTable := params.XAxisTable
-	xAxis := params.XAXisColumn
-	yTable := params.YAxisTable
-	yAxis := params.YAXisColumn
-
-	// Construct the SQLite visualisation query
-	aggText := ""
-	switch params.AggType {
-	case 0:
-		aggText = ""
-	case 1:
-		aggText = "avg"
-	case 2:
-		aggText = "count"
-	case 3:
-		aggText = "group_concat"
-	case 4:
-		aggText = "max"
-	case 5:
-		aggText = "min"
-	case 6:
-		aggText = "sum"
-	case 7:
-		aggText = "total"
-	default:
-		return []VisRowV1{}, errors.New("Unknown aggregate type")
-	}
-
-	joinText := ""
-	switch params.JoinType {
-	case 0:
-		joinText = ""
-	case 1:
-		joinText = "INNER JOIN"
-	case 2:
-		joinText = "LEFT OUTER JOIN"
-	case 3:
-		joinText = "CROSS JOIN"
-	default:
-		return []VisRowV1{}, errors.New("Unknown join type")
-	}
-
-	// * Construct the SQL query using sqlite.Mprintf() for safety *
-	var dbQuery string
-
-	// Check if we're joining tables
-	if xTable == yTable {
-		// Simple query, no join needed
-		if aggText != "" {
-			dbQuery = sqlite.Mprintf(`SELECT "%s",`, xAxis)
-			dbQuery += sqlite.Mprintf(` %s(`, aggText)
-			dbQuery += sqlite.Mprintf(`"%s")`, yAxis)
-			dbQuery += sqlite.Mprintf(` FROM "%s"`, xTable)
-			dbQuery += sqlite.Mprintf(` GROUP BY "%s"`, xAxis)
-		} else {
-			dbQuery = sqlite.Mprintf(`SELECT "%s",`, xAxis)
-			dbQuery += sqlite.Mprintf(` "%s"`, yAxis)
-			dbQuery += sqlite.Mprintf(` FROM "%s"`, xTable)
-		}
-	} else {
-		// We're joining tables
-		dbQuery = sqlite.Mprintf(`SELECT "%s"`, xTable)
-		dbQuery += sqlite.Mprintf(`."%s",`, xAxis)
-		dbQuery += sqlite.Mprintf(` "%s"`, yTable)
-		dbQuery += sqlite.Mprintf(`."%s"`, yAxis)
-		dbQuery += sqlite.Mprintf(` FROM "%s"`, xTable)
-		dbQuery += sqlite.Mprintf(` %s`, joinText)
-		dbQuery += sqlite.Mprintf(` "%s"`, yTable)
-		if params.JoinType == 1 || params.JoinType == 2 { // INNER JOIN and LEFT OUTER JOIN
-			dbQuery += sqlite.Mprintf(` ON "%s"`, xTable)
-			dbQuery += sqlite.Mprintf(`."%s"`, params.JoinXCol)
-			dbQuery += sqlite.Mprintf(` = "%s"`, yTable)
-			dbQuery += sqlite.Mprintf(`."%s"`, params.JoinYCol)
-		}
-	}
-	var visRows []VisRowV1
-	stmt, err := sdb.Prepare(dbQuery)
-	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\n", err)
-		return visRows, err
-	}
-
-	// Process each row
-	err = stmt.Select(func(s *sqlite.Stmt) error {
-		// Retrieve the data for each row
-		var name string
-		var val int
-		if err = s.Scan(&name, &val); err != nil {
-			_ = errors.New("Error when running the SQLite visualisation statement")
-		}
-		visRows = append(visRows, VisRowV1{Name: name, Value: val})
-		return nil
-	})
-	if err != nil {
-		log.Printf("Error when retrieving select data from database: %s\n", err)
-		return visRows, err
-	}
-	defer stmt.Finalize()
-
-	return visRows, nil
-}
-
-// Runs user provided SQL query for visualisation
-func RunUserVisQuery(sdb *sqlite.Conn, dbQuery string) (visRows []VisRowV1, err error) {
-	stmt, err := sdb.Prepare(dbQuery)
-	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\n", err)
-		return visRows, err
-	}
-	// Process each row
-	err = stmt.Select(func(s *sqlite.Stmt) error {
-		// Retrieve the data for each row
-		// TODO: This will very likely need something that checks the # of returned fields, type of values, etc.
-		var name string
-		var val int
-		if err = s.Scan(&name, &val); err != nil {
-			_ = errors.New("Error when running the SQLite visualisation statement")
-		}
-		visRows = append(visRows, VisRowV1{Name: name, Value: val})
-		return nil
-	})
-	if err != nil {
-		log.Printf("Error when retrieving select data from database: %s\n", err)
-		return visRows, err
-	}
-	defer stmt.Finalize()
-
-	return
-}
-
 // Performs basic sanity checks of an uploaded database.
 func SanityCheck(fileName string) (tables []string, err error) {
 	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
@@ -1021,11 +889,6 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 	}
 
 	return
-}
-
-// Returns the version number of the available SQLite library, in string format
-func SQLiteVersion() string {
-	return sqlite.Version()
 }
 
 // Returns the version number of the available SQLite library, in 300X00Y format
