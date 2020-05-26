@@ -1282,6 +1282,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// If a table name was supplied, validate it
 	dbTable := r.FormValue("table")
 	if dbTable != "" {
+		// TODO: Figure out a better validation approach than using our current PG one.  SQLite clearly has some way
+		//       of recognising "unicode characters usable in IDs", so the optimal approach is probably to better grok
+		//       tokenize.c and replicate that:
+		//         https://github.com/sqlite/sqlite/blob/f25f8d58349db52398168579a1d696fa4937dc1f/src/tokenize.c#L31
 		err = com.ValidatePGTable(dbTable)
 		if err != nil {
 			// Validation failed, so don't pass on the table name
