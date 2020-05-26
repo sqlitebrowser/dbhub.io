@@ -536,6 +536,18 @@ func visRunQuery(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbNa
 		sdb.Close()
 	}()
 
+	// Was a user agent part of the request?
+	var userAgent string
+	if ua, ok := r.Header["User-Agent"]; ok {
+		userAgent = ua[0]
+	}
+
+	// Log the SQL query (prior to executing it)
+	err = com.LogSQLiteQuery(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
+	if err != nil {
+		return com.SQLiteRecordSet{}, err
+	}
+
 	// Execute the SQLite select query (or queries)
 	var dataRows com.SQLiteRecordSet
 	dataRows, err = com.SQLiteRunQuery(sdb, query, true, true)
