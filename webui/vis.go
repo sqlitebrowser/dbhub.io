@@ -29,7 +29,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		ChartType   string
 		XAxisCol    string
 		YAxisCol    string
-		Records     []com.VisRowV1
 		SQL         string
 	}
 
@@ -244,7 +243,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO: Retrieve the cached SQLite table and column names from memcached.
+	// TODO: Cache/retrieve the cached SQLite table and column names from memcached.
 	//       Keyed to something like username+dbname+commitID+tablename
 	//       This can be done at a later point, if it turns out people are using the visualisation feature :)
 
@@ -295,17 +294,18 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		pageData.YAxisCol = params.YAXisColumn
 		pageData.SQL = params.SQL
 
-		//	// Retrieve the saved data for this visualisation too, if it's available
+		// Automatically run the saved query
+		var data com.SQLiteRecordSet
+		data, err = visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, params.SQL)
+		if len(data.Records) > 0 && err == nil {
+			// * If data was returned, automatically provide it to the page *
+			pageData.Data = data
+			pageData.DataGiven = true
+		}
+
+		//	TODO: Cache/retrieve the data for this visualisation too
 		//	hash := visHash(dbOwner, dbFolder, dbName, commitID, "default", params)
 		//	data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
-		//	if err != nil {
-		//		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		//		return
-		//	}
-		//	if ok {
-		//		pageData.Records = data
-		//		pageData.DataGiven = true
-		//	}
 	}
 
 	// Retrieve correctly capitalised username for the user
@@ -494,27 +494,10 @@ func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
-	sdb, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	// Run the query
+	dataRows, err := visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
-		// The return handled was already done in OpenSQLiteDatabaseDefensive()
-		return
-	}
-
-	// Automatically close the SQLite database when this function finishes
-	defer func() {
-		sdb.Close()
-	}()
-
-	// Execute the SQLite select query (or queries)
-	var dataRows com.SQLiteRecordSet
-	dataRows, err = com.SQLiteRunQuery(sdb, decodedStr, true, true)
-	if err != nil {
-		// Some kind of error when running the visualisation query
-		log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
-			dbFolder, dbName, commitID, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%s", err.Error())
+		// The return handling was already done in visRunQuery()
 		return
 	}
 
@@ -533,6 +516,34 @@ func visHash(dbOwner, dbFolder, dbName, commitID, visName string, params com.Vis
 		dbName, commitID, params.XAxisTable, params.XAXisColumn, params.YAxisTable, params.YAXisColumn, params.AggType,
 		params.JoinType, params.JoinXCol, params.JoinYCol, visName)))
 	return hex.EncodeToString(z[:])
+}
+
+// Runs a user provided SQLite query
+func visRunQuery(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID, loggedInUser, query string) (com.SQLiteRecordSet, error) {
+	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
+	sdb, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	if err != nil {
+		// The return handling was already done in OpenSQLiteDatabaseDefensive()
+		return com.SQLiteRecordSet{}, err
+	}
+
+	// Automatically close the SQLite database when this function finishes
+	defer func() {
+		sdb.Close()
+	}()
+
+	// Execute the SQLite select query (or queries)
+	var dataRows com.SQLiteRecordSet
+	dataRows, err = com.SQLiteRunQuery(sdb, query, true, true)
+	if err != nil {
+		// Some kind of error when running the visualisation query
+		log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
+			dbFolder, dbName, commitID, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
+		return com.SQLiteRecordSet{}, err
+	}
+	return dataRows, err
 }
 
 // This function handles requests to save the database visualisation parameters
@@ -633,18 +644,6 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
-	sdb, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
-	if err != nil {
-		// The return handling was already done in OpenSQLiteDatabaseDefensive()
-		return
-	}
-
-	// Automatically close the SQLite database when this function finishes
-	defer func() {
-		sdb.Close()
-	}()
-
 	// Retrieve the visualisation query result, so we can save that too
 	vParams := com.VisParamsV2{
 		ChartType:   chartType,
@@ -652,21 +651,20 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		YAXisColumn: yAxis,
 		SQL:         decodedStr,
 	}
-	//visData, err := com.RunSQLiteVisQuery(sdb, vParams)
-	//if err != nil {
-	//	// Some kind of error when running the visualisation query
-	//	log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
-	//		dbFolder, dbName, commitID, err.Error())
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	return
-	//}
-	//
-	//// If the # of rows returned from the query is 0, let the user know + don't save
-	//if len(visData) == 0 {
-	//	w.WriteHeader(http.StatusBadRequest)
-	//	fmt.Fprint(w, "Query returned no result")
-	//	return
-	//}
+
+	// Run the visualisation query, to make sure it returns valid data
+	visData, err := visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+	if err != nil {
+		// The return handling was already done in visRunQuery()
+		return
+	}
+
+	// If the # of rows returned from the query is 0, let the user know + don't save
+	if len(visData.Records) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Can't save query, it returns no data")
+		return
+	}
 
 	// Save the SQLite visualisation parameters
 	err = com.VisualisationSaveParams(dbOwner, dbFolder, dbName, visName, vParams)
@@ -677,7 +675,9 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//// Save the SQLite visualisation data
+	// TODO: Cache the SQLite visualisation data
+	//         * We'll probably need to update the SQLite authoriser code to catch SQLite functions which shouldn't be
+	//           cached - such as random() - and not cache those results
 	//hash := visHash(dbOwner, dbFolder, dbName, commitID, visName, vParams)
 	//err = com.VisualisationSaveData(dbOwner, dbFolder, dbName, commitID, hash, visData)
 	//if err != nil {

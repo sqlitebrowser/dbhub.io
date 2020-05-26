@@ -337,7 +337,6 @@ GROUP BY Category;
     let chartData = {
         XAxisLabel: "",
         YAxisLabel: "",
-        Records: [[ .Records ]],
     }
     let dataReceived = false;
 
@@ -420,21 +419,22 @@ GROUP BY Category;
         }
 
         // Pre-filled table row data
-        $scope.db = { Tablename: "",
-            Records: {},
-            ColNames: {},
-            RowCount: 0,
-            ColCount: 0,
-            SortCol:  0,
-            SortDir:  0,
-            Offset:   0,
-        }
+        $scope.db = [[ .Data ]];
+        // $scope.db = { Tablename: "",
+        //     Records: {},
+        //     ColNames: {},
+        //     RowCount: 0,
+        //     ColCount: 0,
+        //     SortCol:  0,
+        //     SortDir:  0,
+        //     Offset:   0,
+        // }
 
         // Various chart settings
         $scope.radioXAxisShowLabels = true;
         $scope.radioYAxisShowLabels = true;
-        $scope.XAxisName = "";
-        $scope.YAxisName = "";
+        $scope.XAxisName = "[[ .XAxisCol ]]";
+        $scope.YAxisName = "[[ .YAxisCol ]]";
 
         // Set the displayed public/private value
         if ("[[ .DB.Info.Public ]]" === "true") {
@@ -518,11 +518,10 @@ GROUP BY Category;
             Plotly.react("vis", plotData, plotLayout, plotConfig);
         };
 
-        // Start out with the visualisation disabled, unless saved parameters were passed through
+        // Initialise things with safe defaults (these are potentially filled out further down the page)
         $scope.showVis = false;
         $scope.XColumnNames = [];
         $scope.XAxisColumn = "";
-        $scope.YColumnNames = [];
         $scope.YColumnNameOptions = [];
         $scope.YAxisColumn = "";
 
@@ -713,6 +712,8 @@ GROUP BY Category;
         if ("[[ .ParamsGiven ]]" === "true") {
             $scope.XAxisColumn = "[[ .XAxisCol ]]";
             chartData.XAxisLabel = $scope.XAxisColumn;
+            $scope.XColumnNames = [[ .Data.ColNames ]];
+            $scope.updateYAxisColumnList();
             $scope.YAxisColumn = "[[ .YAxisCol ]]";
             chartData.YAxisLabel = $scope.YAxisColumn;
         }
