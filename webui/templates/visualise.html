@@ -258,7 +258,7 @@ GROUP BY Category;
                                 </div>
                             </td>
                         </tr>
-                        <tr>
+                        <tr ng-if="ChartType !== 'Pie chart'">
                             <th width="35%">Show X Axis</th>
                             <td>
                                 <div class="btn-group" ng-click="doChart(false)">
@@ -267,7 +267,7 @@ GROUP BY Category;
                                 </div>
                             </td>
                         </tr>
-                        <tr>
+                        <tr ng-if="ChartType !== 'Pie chart'">
                             <th width="35%">Show Y Axis</th>
                             <td>
                                 <div class="btn-group" ng-click="doChart(false)">
