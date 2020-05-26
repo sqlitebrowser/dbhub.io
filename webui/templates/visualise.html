@@ -287,9 +287,7 @@ GROUP BY Category;
     </div>
     <div style="text-align: center; margin-top: 1%">
         <input type="submit" class="btn btn-success" value="Run SQL" ng-click="execSQL()">
-        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
         <input type="submit" class="btn btn-primary" value="Save as default" ng-click="saveAs('default')">
-        [[ end ]]
     </div>
     <div class="row">
         <div class="col-md-2">&nbsp;</div>
@@ -632,6 +630,13 @@ GROUP BY Category;
         $scope.statusMessage = "";
         $scope.statusMessageColour = "red";
         $scope.saveAs = function(visName) {
+            // Check if the user is logged in
+            if ($scope.meta.Loggedin !== "true") {
+                // User needs to be logged in
+                lock.show();
+                return;
+            }
+
             let userSQL = document.getElementById("usersql").value;
             let args = "xaxis=" + $scope.XAxisColumn;
             args += "&yaxis=" + $scope.YAxisColumn;
