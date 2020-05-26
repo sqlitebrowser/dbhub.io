@@ -397,10 +397,6 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		return nil, err
 	}
 
-	// TODO: We should double check that all of the special characters SQLite accepts are caught by the unicode
-	//       "control characters" check.
-	//         * https://github.com/sqlite/sqlite/blob/f25f8d58349db52398168579a1d696fa4937dc1f/src/tokenize.c#L29-L57
-
 	// TODO: Set up a progress handler and timer (or something) to abort statements which run too long
 	//       https://www.sqlite.org/c3ref/interrupt.html
 	//         * Not sure if it's really needed though, as we've already reduced the resources SQLite can allocate

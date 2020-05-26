@@ -6,30 +6,31 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	com "github.com/sqlitebrowser/dbhub.io/common"
-	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"log"
 	"net/http"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	com "github.com/sqlitebrowser/dbhub.io/common"
+	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 )
 
 func visualisePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Auth0         com.Auth0Set
-		Data          com.SQLiteRecordSet
-		DB            com.SQLiteDBinfo
-		Meta          com.MetaInfo
-		MyStar        bool
-		MyWatch       bool
-		ParamsGiven   bool
-		DataGiven     bool
-		ChartType     string
-		XAxisCol      string
-		YAxisCol      string
-		Records       []com.VisRowV1
-		SQL           string
+		Auth0       com.Auth0Set
+		Data        com.SQLiteRecordSet
+		DB          com.SQLiteDBinfo
+		Meta        com.MetaInfo
+		MyStar      bool
+		MyWatch     bool
+		ParamsGiven bool
+		DataGiven   bool
+		ChartType   string
+		XAxisCol    string
+		YAxisCol    string
+		Records     []com.VisRowV1
+		SQL         string
 	}
 
 	// Retrieve the database owner & name
@@ -294,17 +295,17 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		pageData.YAxisCol = params.YAXisColumn
 		pageData.SQL = params.SQL
 
-	//	// Retrieve the saved data for this visualisation too, if it's available
-	//	hash := visHash(dbOwner, dbFolder, dbName, commitID, "default", params)
-	//	data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
-	//	if err != nil {
-	//		errorPage(w, r, http.StatusInternalServerError, err.Error())
-	//		return
-	//	}
-	//	if ok {
-	//		pageData.Records = data
-	//		pageData.DataGiven = true
-	//	}
+		//	// Retrieve the saved data for this visualisation too, if it's available
+		//	hash := visHash(dbOwner, dbFolder, dbName, commitID, "default", params)
+		//	data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
+		//	if err != nil {
+		//		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		//		return
+		//	}
+		//	if ok {
+		//		pageData.Records = data
+		//		pageData.DataGiven = true
+		//	}
 	}
 
 	// Retrieve correctly capitalised username for the user
@@ -439,9 +440,6 @@ func visCheckUnicode(rawInput string) (str string, err error) {
 		err = fmt.Errorf("SQL string contains invalid characters: '%v'", err)
 		return
 	}
-
-	// TODO: Double check that none of the characters SQLite treats specially are missed
-	//         * https://github.com/sqlite/sqlite/blob/91960aa53ff5b08f28b9edb627d8a1b62231e125/src/tokenize.c#L29-L57
 
 	// No errors, so return the string
 	return decodedStr, nil
@@ -652,7 +650,7 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		ChartType:   chartType,
 		XAXisColumn: xAxis,
 		YAXisColumn: yAxis,
-		SQL: decodedStr,
+		SQL:         decodedStr,
 	}
 	//visData, err := com.RunSQLiteVisQuery(sdb, vParams)
 	//if err != nil {
