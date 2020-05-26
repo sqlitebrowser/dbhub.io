@@ -192,12 +192,6 @@ GROUP BY Category;
                             </tr>
                         </table>
                     </div>
-                    <div style="text-align: center; margin-top: 1%">
-                        <input type="submit" class="btn btn-success" value="Run SQL" ng-click="execSQL()">
-                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                        <input type="submit" class="btn btn-primary" value="Save as default" ng-click="saveAs('default')">
-                        [[ end ]]
-                    </div>
                 </uib-tab>
 
                 <!-- Chart settings tab -->
@@ -290,6 +284,12 @@ GROUP BY Category;
             </uib-tabset>
         </div>
         <div class="col-md-2">&nbsp;</div>
+    </div>
+    <div style="text-align: center; margin-top: 1%">
+        <input type="submit" class="btn btn-success" value="Run SQL" ng-click="execSQL()">
+        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+        <input type="submit" class="btn btn-primary" value="Save as default" ng-click="saveAs('default')">
+        [[ end ]]
     </div>
     <div class="row">
         <div class="col-md-2">&nbsp;</div>
