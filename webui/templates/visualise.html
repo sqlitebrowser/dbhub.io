@@ -418,21 +418,10 @@ GROUP BY Category;
 
         // Pre-filled table row data
         $scope.db = [[ .Data ]];
-        // $scope.db = { Tablename: "",
-        //     Records: {},
-        //     ColNames: {},
-        //     RowCount: 0,
-        //     ColCount: 0,
-        //     SortCol:  0,
-        //     SortDir:  0,
-        //     Offset:   0,
-        // }
 
         // Various chart settings
         $scope.radioXAxisShowLabels = true;
         $scope.radioYAxisShowLabels = true;
-        $scope.XAxisName = "[[ .XAxisCol ]]";
-        $scope.YAxisName = "[[ .YAxisCol ]]";
 
         // Set the displayed public/private value
         if ("[[ .DB.Info.Public ]]" === "true") {
@@ -518,10 +507,10 @@ GROUP BY Category;
 
         // Initialise things with safe defaults (these are potentially filled out further down the page)
         $scope.showVis = false;
-        $scope.XColumnNames = [];
-        $scope.XAxisColumn = "";
-        $scope.YColumnNameOptions = [];
-        $scope.YAxisColumn = "";
+        $scope.XColumnNames = ["None available yet"];
+        $scope.XAxisColumn = "None available yet";
+        $scope.YColumnNameOptions = ["None available yet"];
+        $scope.YAxisColumn = "None available yet";
 
         // Functions for toggling on/off the axis label display
         $scope.toggleXLabel = function(newVal) {
