@@ -421,7 +421,13 @@ GROUP BY Category;
 
         // Various chart settings
         $scope.radioXAxisShowLabels = true;
+        if (![[ .ShowXLabel ]]) {
+            $scope.radioXAxisShowLabels = false;
+        }
         $scope.radioYAxisShowLabels = true;
+        if (![[ .ShowYLabel ]]) {
+            $scope.radioYAxisShowLabels = false;
+        }
 
         // Set the displayed public/private value
         if ("[[ .DB.Info.Public ]]" === "true") {
@@ -630,7 +636,7 @@ GROUP BY Category;
             let args = "xaxis=" + $scope.XAxisColumn;
             args += "&yaxis=" + $scope.YAxisColumn;
             args += "&visname=" + visName;
-            args += "&sql=" + window.btoa(userSQL); // Base64 encode the whole string, so even line breaks are preserved;
+            args += "&sql=" + window.btoa(userSQL); // Base64 encode the whole string, so even line breaks are preserved
             switch ($scope.ChartType) {
                 case "Horizontal bar chart":
                     args += "&charttype=hbc";
@@ -644,6 +650,10 @@ GROUP BY Category;
                 case "Pie chart":
                     args += "&charttype=pie";
                     break;
+            }
+            if ($scope.ChartType !== "Pie chart") {
+                args += "&showxlabel=" + $scope.radioXAxisShowLabels;
+                args += "&showylabel=" + $scope.radioYAxisShowLabels;
             }
             $http.get("/x/vissave/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function success(response) {

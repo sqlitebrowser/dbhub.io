@@ -29,6 +29,8 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		ChartType   string
 		XAxisCol    string
 		YAxisCol    string
+		ShowXLabel  bool
+		ShowYLabel  bool
 		SQL         string
 	}
 
@@ -290,9 +292,11 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		default:
 			pageData.ChartType = "Vertical bar chart"
 		}
+		pageData.ShowXLabel = params.ShowXLabel
+		pageData.ShowYLabel = params.ShowYLabel
+		pageData.SQL = params.SQL
 		pageData.XAxisCol = params.XAXisColumn
 		pageData.YAxisCol = params.YAXisColumn
-		pageData.SQL = params.SQL
 
 		// Automatically run the saved query
 		var data com.SQLiteRecordSet
@@ -562,7 +566,8 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	yAxis := r.FormValue("yaxis")
 	visName := r.FormValue("visname")
 	sqlStr := r.FormValue("sql")
-	// TODO: The remaining chart settings (eg "Show X Axis"), colours, etc should be added here
+	showXStr := r.FormValue("showxlabel")
+	showYStr := r.FormValue("showylabel")
 
 	// Ensure minimum viable parameters are present
 	if chartType == "" || xAxis == "" || yAxis == "" || visName == "" || sqlStr == "" {
@@ -591,6 +596,15 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Validation failed on requested Y axis field name '%v': %v\n", yAxis, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	// Validate the X and Y axis label booleans
+	var showX, showY bool
+	if showXStr == "true" {
+		showX = true
+	}
+	if showYStr == "true" {
+		showY = true
 	}
 
 	// Initial sanity check of the visualisation name
@@ -647,9 +661,11 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the visualisation query result, so we can save that too
 	vParams := com.VisParamsV2{
 		ChartType:   chartType,
+		ShowXLabel:  showX,
+		ShowYLabel:  showY,
+		SQL:         decodedStr,
 		XAXisColumn: xAxis,
 		YAXisColumn: yAxis,
-		SQL:         decodedStr,
 	}
 
 	// Run the visualisation query, to make sure it returns valid data

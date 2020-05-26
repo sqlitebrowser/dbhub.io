@@ -503,9 +503,11 @@ type VisParamsV1 struct {
 
 type VisParamsV2 struct {
 	ChartType   string
-	YAXisColumn string
-	XAXisColumn string
+	ShowXLabel  bool
+	ShowYLabel  bool
 	SQL         string
+	XAXisColumn string
+	YAXisColumn string
 }
 
 type VisRowV1 struct {
