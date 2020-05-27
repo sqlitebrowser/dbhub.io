@@ -186,6 +186,13 @@ var SQLiteFunctions = []function{
 	fnJsonTree,
 }
 
+// Enable the collection of memory allocation statistics
+func init() {
+	if err := sqlite.ConfigMemStatus(true); err != nil {
+		log.Fatalf("Cannot enable memory allocation statistics: '%s'\n", err)
+	}
+}
+
 // A SQLite authorizer callback which only allows SELECT queries and their needed sub-operations to run
 func AuthorizerSelect(d interface{}, action sqlite.Action, tableName, funcName, dbName, triggerName string) sqlite.Auth {
 	// We make sure the "action" code is either SELECT, READ (needed for reading data), or one of the in-built/allowed
@@ -255,7 +262,7 @@ func OpenSQLiteDatabase(bucket, id string) (*sqlite.Conn, error) {
 }
 
 // Similar to OpenSQLiteDatabase(), but opens the database Read Only and implements recommended defensive precautions
-// for potentially malicious user provided SQL queries
+// for potentially malicious user provided SQL queries: https://www.sqlite.org/security.html
 func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID, loggedInUser string) (sdb *sqlite.Conn, err error) {
 	// Check if the user has access to the requested database
 	var bucket, id string
@@ -281,7 +288,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		return nil, err
 	}
 
-	// Open the SQLite database super carefully: https://www.sqlite.org/security.html
+	// Open the SQLite database in read only mode
 	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
 	if err != nil {
 		log.Printf("Couldn't open database: %s", err)
@@ -401,10 +408,10 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	//       https://www.sqlite.org/c3ref/interrupt.html
 	//         * Not sure if it's really needed though, as we've already reduced the resources SQLite can allocate
 
-	// TODO: Limit the maximum amount of memory SQLite will allocate (sqlite3_hard_heap_limit64())
+	// TODO: Potentially limit the maximum amount of memory SQLite will allocate (sqlite3_hard_heap_limit64())
 	//       https://www.sqlite.org/c3ref/hard_heap_limit64.html
-	//       This may need adding to gwenn/gosqlite.  It'd probably also be useful to measure the usage on DBHub.io
-	//       too, to get an idea of a reasonable starting value. eg: https://www.sqlite.org/c3ref/memory_highwater.html
+	//         * We're now measuring the amount of memory each user supplied SQLite query uses, so we may
+	//           have the needed info for this
 
 	// TODO: Should we add some of the commonly used extra functions?
 	//       eg: https://github.com/sqlitebrowser/sqlitebrowser/blob/master/src/extensions/extension-functions.c
@@ -517,7 +524,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 	}
 
 	// Execute the query and retrieve the data
-	dataRows, err = SQLiteRunQuery(sdb, dbQuery, ignoreBinary, ignoreNull)
+	_, _, dataRows, err = SQLiteRunQuery(sdb, dbQuery, ignoreBinary, ignoreNull)
 	if err != nil {
 		return dataRows, err
 	}
@@ -786,13 +793,13 @@ func SanityCheck(fileName string) (tables []string, err error) {
 	return
 }
 
-func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull bool) (dataRows SQLiteRecordSet, err error) {
+func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull bool) (memUsed, memHighWater int64, dataRows SQLiteRecordSet, err error) {
 	// Use the sort column as needed
 	var stmt *sqlite.Stmt
 	stmt, err = sdb.Prepare(dbQuery)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\n", err)
-		return dataRows, err
+		return 0, 0, dataRows, err
 	}
 	defer stmt.Finalize()
 
@@ -881,9 +888,12 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 	})
 	if err != nil {
 		log.Printf("Error when retrieving select data from database: %s\n", err)
-		return dataRows, errors.New("Error when reading data from the SQLite database")
+		return 0, 0, dataRows, errors.New("Error when reading data from the SQLite database")
 	}
 
+	// Gather memory usage stats for the execution run: https://www.sqlite.org/c3ref/memory_highwater.html
+	memUsed = sqlite.MemoryUsed()
+	memHighWater = sqlite.MemoryHighwater(false)
 	return
 }
 

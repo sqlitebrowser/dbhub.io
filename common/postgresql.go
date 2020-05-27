@@ -2295,8 +2295,26 @@ func LogDownload(dbOwner string, dbFolder string, dbName string, loggedInUser st
 	return nil
 }
 
-// Log the details of a user supplied SQLite query
-func LogSQLiteQuery(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, userAgent, query string) error {
+// Add memory allocation stats for the execution run of a user supplied SQLite query
+func LogSQLiteQueryAfter(insertID, memUsed, memHighWater int64) (err error) {
+	dbQuery := `
+		UPDATE vis_query_runs
+		SET memory_used = $2, memory_high_water = $3
+		WHERE query_run_id = $1`
+	commandTag, err := pdb.Exec(dbQuery, insertID, memUsed, memHighWater)
+	if err != nil {
+		log.Printf("Adding memory stats for SQLite query run '%d' failed: %v\n", insertID, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected while adding memory stats for SQLite query run '%d'\n",
+			numRows, insertID)
+	}
+	return nil
+}
+
+// Log the basic info for a user supplied SQLite query
+func LogSQLiteQueryBefore(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, userAgent, query string) (int64, error) {
 	// If the user isn't logged in, use a NULL value for that column
 	var queryUser pgx.NullString
 	if loggedInUser != "" {
@@ -2321,18 +2339,16 @@ func LogSQLiteQuery(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, userAgent, 
 				AND db.db_name = $3
 		)
 		INSERT INTO vis_query_runs (db_id, user_id, ip_addr, user_agent, query_string)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, queryUser, ipAddr, userAgent, encodedQuery)
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7
+		RETURNING query_run_id`
+	var insertID int64
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, queryUser, ipAddr, userAgent, encodedQuery).Scan(&insertID)
 	if err != nil {
 		log.Printf("Storing record of user SQLite query '%v' on '%s%s%s' failed: %v\n", encodedQuery, dbOwner,
 			dbFolder, dbName, err)
-		return err
+		return 0, err
 	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while storing record of SQLite query on '%s%s%s'\n",
-			numRows, dbOwner, dbFolder, dbName)
-	}
-	return nil
+	return insertID, nil
 }
 
 // Create an upload log entry

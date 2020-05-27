@@ -466,7 +466,9 @@ CREATE TABLE public.vis_query_runs (
     ip_addr text,
     user_agent text,
     query_string text,
-    query_date timestamp with time zone DEFAULT now()
+    query_date timestamp with time zone DEFAULT now(),
+    memory_used bigint,
+    memory_high_water bigint
 );
 
 

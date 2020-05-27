@@ -301,7 +301,11 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		// Automatically run the saved query
 		var data com.SQLiteRecordSet
 		data, err = visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, params.SQL)
-		if len(data.Records) > 0 && err == nil {
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if len(data.Records) > 0 {
 			// * If data was returned, automatically provide it to the page *
 			pageData.Data = data
 			pageData.DataGiven = true
@@ -501,7 +505,8 @@ func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 	// Run the query
 	dataRows, err := visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
-		// The return handling was already done in visRunQuery()
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 
@@ -543,20 +548,23 @@ func visRunQuery(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbNa
 	}
 
 	// Log the SQL query (prior to executing it)
-	err = com.LogSQLiteQuery(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
+	var logID int64
+	logID, err = com.LogSQLiteQueryBefore(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
 	if err != nil {
 		return com.SQLiteRecordSet{}, err
 	}
 
 	// Execute the SQLite select query (or queries)
 	var dataRows com.SQLiteRecordSet
-	dataRows, err = com.SQLiteRunQuery(sdb, query, true, true)
+	var memUsed, memHighWater int64
+	memUsed, memHighWater, dataRows, err = com.SQLiteRunQuery(sdb, query, true, true)
 	if err != nil {
-		// Some kind of error when running the visualisation query
-		log.Printf("Error occurred when running visualisation query '%s%s%s', commit '%s': %s\n", dbOwner,
-			dbFolder, dbName, commitID, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%s", err.Error())
+		return com.SQLiteRecordSet{}, err
+	}
+
+	// Add the SQLite execution stats to the log record
+	err = com.LogSQLiteQueryAfter(logID, memUsed, memHighWater)
+	if err != nil {
 		return com.SQLiteRecordSet{}, err
 	}
 	return dataRows, err
@@ -683,7 +691,8 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// Run the visualisation query, to make sure it returns valid data
 	visData, err := visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
-		// The return handling was already done in visRunQuery()
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 
