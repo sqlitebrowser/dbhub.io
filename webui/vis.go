@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	sqlite "github.com/gwenn/gosqlite"
 	com "github.com/sqlitebrowser/dbhub.io/common"
@@ -616,6 +618,87 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
+}
+
+// Executes a custom SQLite SELECT query.
+func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Add proper auth (etc) checking
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	var u interface{}
+	validSession := false
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = "default"
+	}
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
+		return
+	}
+
+	// Extract and validate the form variables
+	dbOwner, dbFolder, dbName, err := com.GetUFD(r, false)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing or incorrect data supplied")
+		return
+	}
+
+	// Parse the incoming SQLite query
+	rawInput := r.FormValue("sql")
+	decoded, err := base64.StdEncoding.DecodeString(rawInput)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Error when decoding query: '%s'", err)
+		return
+	}
+
+	fmt.Printf("\nDecoded input: '%s'\n\n", decoded)
+
+	// Ensure the decoded string is valid UTF-8
+	if !utf8.ValidString(string(decoded)) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "SQL string contains invalid UTF: '%s'", err)
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if !exists {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		return
+	}
+
+	// TODO: Does the user have permission to access the requested database?
+
+	// TODO: Grab the database from Minio
+
+	// TODO: Open the database in defensive mode: https://www.sqlite.org/security.html
+
+	// TODO: Execute the SQLite select query (or queries)
+	com.RunUserVisQuery()
+
+	// TODO: Return the results
 }
 
 // This function handles requests for database visualisation data

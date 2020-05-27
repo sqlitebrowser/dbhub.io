@@ -594,6 +594,13 @@ func RunSQLiteVisQuery(sdb *sqlite.Conn, params VisParamsV1) ([]VisRowV1, error)
 	return visRows, nil
 }
 
+// Runs user provided SQL query for visualisation
+func RunUserVisQuery(loggedInUser string, userQuery string) (visRows []VisRowV1, err error) {
+	// TODO: ...
+
+	return
+}
+
 // Returns the list of tables and view in the SQLite database.
 func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 	// TODO: It might be useful to cache this info in PG or memcached

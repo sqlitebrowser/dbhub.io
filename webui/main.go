@@ -3319,6 +3319,7 @@ func main() {
 	http.Handle("/x/download/", gz.GzipHandler(logReq(downloadHandler)))
 	http.Handle("/x/downloadcsv/", gz.GzipHandler(logReq(downloadCSVHandler)))
 	http.Handle("/x/downloadredashjson/", gz.GzipHandler(logReq(downloadRedashJSONHandler)))
+	http.Handle("/x/execsql/", gz.GzipHandler(logReq(visExecuteSQLHandler)))
 	http.Handle("/x/forkdb/", gz.GzipHandler(logReq(forkDBHandler)))
 	http.Handle("/x/gencert", gz.GzipHandler(logReq(generateCertHandler)))
 	http.Handle("/x/markdownpreview/", gz.GzipHandler(logReq(markdownPreview)))

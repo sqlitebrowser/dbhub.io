@@ -487,7 +487,7 @@
                 </div>
             </div>
             <div style="text-align: center;">
-                <input type="submit" class="btn btn-success" value="Display" ng-click="doVis()">
+                <input type="submit" class="btn btn-success" value="Update" ng-click="doVis()">
                 [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                 <input type="submit" class="btn btn-primary" value="Save as default" ng-click="saveAs('default')">
                 [[ end ]]
@@ -800,7 +800,43 @@
 
         // Retrieve the data for visualisation
         $scope.doVis = async function() {
-            let args = "xtable=" + $scope.XTablename;
+            let args = "";
+            let customSQL = document.getElementById("expertsql").value;
+
+            // If custom SQL has been given in the Expert tab, execute that and ignore the Simple+Advanced tabs
+            if (customSQL !== "") {
+                args = "sql=" + window.btoa(customSQL); // Base64 encode the whole string, so even line breaks are preserved
+                $http.get("/x/execsql/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
+                    function success(response) {
+                        // Clear any existing error message
+                        $scope.statusMessage = "";
+
+                        // Update table data
+                        chartData.Records = response.data;
+                        chartData.XTablename = $scope.XTablename;
+                        chartData.YTablename = $scope.YTablename;
+                        chartData.XAxisLabel = $scope.XAxisColumn;
+                        chartData.YAxisLabel = $scope.YAxisColumn;
+
+                        // Display the visualisation
+                        $scope.showVis = true;
+                        dataReceived = true;
+                        $scope.doChart(true);
+
+                        // Clear any existing status message
+                        $scope.statusMessage = "";
+                    }, function failure(response) {
+                        // Retrieving data failed, so display the returned error message and hide the graph
+                        $scope.statusMessageColour = "red";
+                        $scope.statusMessage = "Retrieving data failed: " + response.data;
+                        $scope.showVis = false;
+                    }
+                )
+                return;
+            }
+
+            // Use the contents of the Simple and Advanced tabs
+            args = "xtable=" + $scope.XTablename;
             args += "&ytable=" + $scope.YTablename;
             args += "&xaxis=" + $scope.XAxisColumn;
             args += "&yaxis=" + $scope.YAxisColumn;
