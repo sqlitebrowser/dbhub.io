@@ -506,7 +506,6 @@ func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 	dataRows, err := visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
 
