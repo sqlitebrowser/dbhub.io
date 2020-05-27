@@ -286,6 +286,7 @@ GROUP BY Category;
         <div class="col-md-2">&nbsp;</div>
     </div>
     <div style="text-align: center; margin-top: 1%">
+        <input type="submit" class="btn" value="Format SQL" ng-click="formatSQL()">
         <input type="submit" class="btn btn-success" value="Run SQL" ng-click="execSQL()">
         <input type="submit" class="btn btn-primary" value="Save as default" ng-click="saveAs('default')">
     </div>
@@ -381,7 +382,7 @@ GROUP BY Category;
         }
     }]);
 
-    app.controller('visualiseView', function($scope, $http) {
+    app.controller('visualiseView', function($scope, $http, $httpParamSerializerJQLike) {
         // Pre-filled database metadata
         $scope.meta = {
             Branch:       "[[ .DB.Info.Branch ]]",
@@ -620,6 +621,36 @@ GROUP BY Category;
                 }
             )
         };
+
+        // Quick and dirty formatting of the user provided SQL
+        // Uses the external sqlformat.org API for now.  If this turns out to be used a lot, we should switch to
+        // doing this via our own server.
+        $scope.formatSQL = function() {
+            let sqlElement = document.getElementById("usersql");
+            let userSQL = sqlElement.value;
+
+            // Send the string for formatting
+            $http({
+                method: "POST",
+                url: "https://sqlformat.org/api/v1/format",
+                data: $httpParamSerializerJQLike({
+                    "sql": userSQL,
+                    "reindent": 1,
+                    "keyword_case": "upper"
+                }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function success(response) {
+                // Clear any existing status message
+                $scope.statusMessage = "";
+
+                // Update the SQL textarea with the newly formatted version
+                sqlElement.value = decodeURIComponent(response.data.result);
+            }, function failure(response) {
+                // The formatting failed, so display the returned error message
+                $scope.statusMessageColour = "red";
+                $scope.statusMessage = "Formatting failed: " + response.data;
+            });
+        }
 
         // Save the visualisation for easy later retrieval
         $scope.statusMessage = "";
