@@ -294,7 +294,7 @@ func authorizer(d interface{}, action Action, arg1, arg2, dbName, triggerName st
 }
 */
 func trace(d interface{}, sql string) {
-	fmt.Fprintf(os.Stderr, "%s: %s\n", d, sql)
+	_, _ = fmt.Fprintf(os.Stderr, "%s: %s\n", d, sql)
 }
 
 // BusyTimeout sets a busy timeout and clears any previously set handler.
@@ -347,7 +347,7 @@ func (c *Conn) Exec(cmd string, args ...interface{}) error {
 		}
 		err = s.Exec(subargs...)
 		if err != nil {
-			s.finalize()
+			_ = s.finalize()
 			return err
 		}
 		if err = s.finalize(); err != nil {
@@ -519,7 +519,7 @@ func (c *Conn) Commit() error {
 	// the ROLLBACK will do nothing but return an error that can be safely ignored.
 	err := c.FastExec("COMMIT")
 	if err != nil && !c.GetAutocommit() {
-		c.Rollback()
+		_ = c.Rollback()
 	}
 	return err
 }
@@ -552,7 +552,7 @@ func (c *Conn) Transaction(t TransactionType, f func(c *Conn) error) error {
 		if err != nil {
 			_, ko := err.(*ConnError)
 			if c.nTransaction == 0 || ko {
-				c.Rollback()
+				_ = c.Rollback()
 			} else {
 				if rerr := c.RollbackSavepoint(strconv.Itoa(int(c.nTransaction))); rerr != nil {
 					Log(-1, rerr.Error())
@@ -567,7 +567,7 @@ func (c *Conn) Transaction(t TransactionType, f func(c *Conn) error) error {
 				err = c.ReleaseSavepoint(strconv.Itoa(int(c.nTransaction)))
 			}
 			if err != nil {
-				c.Rollback()
+				_ = c.Rollback()
 			}
 		}
 	}()

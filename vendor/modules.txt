@@ -1,46 +1,77 @@
 # github.com/BurntSushi/toml v0.3.1
+## explicit
 github.com/BurntSushi/toml
+# github.com/Freeaqingme/dkim v0.0.0-20160606200812-57418d2fbdcd
+## explicit
+github.com/Freeaqingme/dkim
 # github.com/NYTimes/gziphandler v1.1.1
+## explicit
 github.com/NYTimes/gziphandler
-# github.com/Sirupsen/logrus v1.4.0 => github.com/sirupsen/logrus v1.0.6
-github.com/Sirupsen/logrus
-# github.com/bradfitz/gomemcache v0.0.0-20190329173943-551aad21a668
+# github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
+## explicit
 github.com/bradfitz/gomemcache/memcache
 # github.com/bradleypeabody/gorilla-sessions-memcache v0.0.0-20181103040241-659414f458e1
+## explicit
 github.com/bradleypeabody/gorilla-sessions-memcache
-# github.com/go-ini/ini v1.46.0
+# github.com/go-ini/ini v1.56.0
+## explicit
 github.com/go-ini/ini
-# github.com/go-playground/locales v0.12.1
+# github.com/go-playground/locales v0.13.0
 github.com/go-playground/locales
 github.com/go-playground/locales/currency
-# github.com/go-playground/universal-translator v0.16.0
+# github.com/go-playground/universal-translator v0.17.0
+## explicit
 github.com/go-playground/universal-translator
-# github.com/golang/protobuf v1.2.0
+# github.com/go-stack/stack v1.8.0
+## explicit
+# github.com/golang/protobuf v1.4.2
+## explicit
 github.com/golang/protobuf/proto
-# github.com/google/uuid v1.0.0
+# github.com/google/uuid v1.1.1
+## explicit
 github.com/google/uuid
 # github.com/gorilla/securecookie v1.1.1
 github.com/gorilla/securecookie
 # github.com/gorilla/sessions v1.2.0
+## explicit
 github.com/gorilla/sessions
-# github.com/gwenn/gosqlite v0.0.0-20190222165041-a2186711fe00
+# github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237
+## explicit
 github.com/gwenn/gosqlite
-# github.com/gwenn/yacr v0.0.0-20190406104508-cfb564bd6947
+# github.com/gwenn/yacr v0.0.0-20200112083327-bbe82c1f4d60
+## explicit
 github.com/gwenn/yacr
+# github.com/hectane/go-attest v0.1.2
+## explicit
 # github.com/hectane/go-nonblockingchan v0.1.0
+## explicit
 github.com/hectane/go-nonblockingchan
-# github.com/hectane/hectane v0.3.1
+# github.com/hectane/hectane v0.3.2
+## explicit
 github.com/hectane/hectane/email
 github.com/hectane/hectane/queue
+# github.com/jackc/fake v0.0.0-20150926172116-812a484cc733
+## explicit
 # github.com/jackc/pgx v2.11.0+incompatible
+## explicit
 github.com/jackc/pgx
 # github.com/kennygrant/sanitize v1.2.4
+## explicit
 github.com/kennygrant/sanitize
-# github.com/leodido/go-urn v1.1.0
+# github.com/konsorten/go-windows-terminal-sequences v1.0.3
+github.com/konsorten/go-windows-terminal-sequences
+# github.com/leodido/go-urn v1.2.0
+## explicit
 github.com/leodido/go-urn
+# github.com/mattn/go-colorable v0.1.6
+## explicit
+# github.com/memcachier/mc v2.0.1+incompatible
+## explicit
 # github.com/microcosm-cc/bluemonday v1.0.2
+## explicit
 github.com/microcosm-cc/bluemonday
 # github.com/minio/minio-go v6.0.14+incompatible
+## explicit
 github.com/minio/minio-go
 github.com/minio/minio-go/pkg/credentials
 github.com/minio/minio-go/pkg/encrypt
@@ -48,38 +79,64 @@ github.com/minio/minio-go/pkg/s3signer
 github.com/minio/minio-go/pkg/s3utils
 github.com/minio/minio-go/pkg/set
 # github.com/mitchellh/go-homedir v1.1.0
+## explicit
 github.com/mitchellh/go-homedir
 # github.com/pborman/uuid v1.2.0
+## explicit
 github.com/pborman/uuid
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
+## explicit
 github.com/pkg/errors
-# github.com/sergi/go-diff v1.0.0
+# github.com/russross/blackfriday v2.0.0+incompatible
+## explicit
+# github.com/sergi/go-diff v1.1.0
+## explicit
 github.com/sergi/go-diff/diffmatchpatch
+# github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24
+## explicit
+# github.com/shurcooL/github_flavored_markdown v0.0.0-20181002035957-2122de532470
+## explicit
+# github.com/shurcooL/go v0.0.0-20190704215121-7189cc372560
+## explicit
+# github.com/shurcooL/go-goon v0.0.0-20170922171312-37c2f522c041
+## explicit
 # github.com/shurcooL/highlight_diff v0.0.0-20181222201841-111da2e7d480
+## explicit
 github.com/shurcooL/highlight_diff
-# github.com/shurcooL/highlight_go v0.0.0-20181215221002-9d8641ddf2e1
+# github.com/shurcooL/highlight_go v0.0.0-20191220051317-782971ddf21b
+## explicit
 github.com/shurcooL/highlight_go
-github.com/shurcooL/highlight_go/internal/go/scanner
-github.com/shurcooL/highlight_go/internal/go/token
-# github.com/shurcooL/octicon v0.0.0-20181222203144-9ff1a4cf27f4
+# github.com/shurcooL/octicon v0.0.0-20191102190552-cbb32d6a785c
+## explicit
 github.com/shurcooL/octicon
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
+## explicit
 github.com/shurcooL/sanitized_anchor_name
+# github.com/sirupsen/logrus v1.6.0
+## explicit
+github.com/sirupsen/logrus
+# github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337
+## explicit
 # github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d
+## explicit
 github.com/sourcegraph/annotate
 # github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e
+## explicit
 github.com/sourcegraph/syntaxhighlight
 # github.com/sqlitebrowser/blackfriday v9.0.0+incompatible
+## explicit
 github.com/sqlitebrowser/blackfriday
 # github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47
+## explicit
 github.com/sqlitebrowser/github_flavored_markdown
-# golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+# golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
+## explicit
 golang.org/x/crypto/argon2
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
-golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
+# golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
+## explicit
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -87,19 +144,22 @@ golang.org/x/net/html/atom
 golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/publicsuffix
-# golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+# golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a
+# golang.org/x/sys v0.0.0-20200519105757-fe76b779f299
+## explicit
 golang.org/x/sys/cpu
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-golang.org/x/sys/windows
-# golang.org/x/text v0.3.0
+# golang.org/x/text v0.3.2
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/appengine v1.4.0
+# google.golang.org/appengine v1.6.6
+## explicit
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
@@ -107,5 +167,43 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# gopkg.in/go-playground/validator.v9 v9.29.1
+# google.golang.org/protobuf v1.23.0
+google.golang.org/protobuf/encoding/prototext
+google.golang.org/protobuf/encoding/protowire
+google.golang.org/protobuf/internal/descfmt
+google.golang.org/protobuf/internal/descopts
+google.golang.org/protobuf/internal/detrand
+google.golang.org/protobuf/internal/encoding/defval
+google.golang.org/protobuf/internal/encoding/messageset
+google.golang.org/protobuf/internal/encoding/tag
+google.golang.org/protobuf/internal/encoding/text
+google.golang.org/protobuf/internal/errors
+google.golang.org/protobuf/internal/fieldnum
+google.golang.org/protobuf/internal/fieldsort
+google.golang.org/protobuf/internal/filedesc
+google.golang.org/protobuf/internal/filetype
+google.golang.org/protobuf/internal/flags
+google.golang.org/protobuf/internal/genname
+google.golang.org/protobuf/internal/impl
+google.golang.org/protobuf/internal/mapsort
+google.golang.org/protobuf/internal/pragma
+google.golang.org/protobuf/internal/set
+google.golang.org/protobuf/internal/strs
+google.golang.org/protobuf/internal/version
+google.golang.org/protobuf/proto
+google.golang.org/protobuf/reflect/protoreflect
+google.golang.org/protobuf/reflect/protoregistry
+google.golang.org/protobuf/runtime/protoiface
+google.golang.org/protobuf/runtime/protoimpl
+# gopkg.in/go-playground/assert.v1 v1.2.1
+## explicit
+# gopkg.in/go-playground/validator.v9 v9.31.0
+## explicit
 gopkg.in/go-playground/validator.v9
+# gopkg.in/inconshreveable/log15.v2 v2.0.0-20200109203555-b30bc20e4fd1
+## explicit
+# gopkg.in/ini.v1 v1.46.0
+## explicit
+# github.com/Sirupsen/logrus v1.0.5 => github.com/sirupsen/logrus v1.0.5
+# github.com/Sirupsen/logrus v1.3.0 => github.com/sirupsen/logrus v1.3.0
+# github.com/Sirupsen/logrus v1.4.0 => github.com/sirupsen/logrus v1.4.0

@@ -8,18 +8,24 @@ package sqlite
 #include <sqlite3.h>
 #include <stdlib.h>
 
-void goSqlite3Trace(sqlite3 *db, void *udp);
-void goSqlite3Profile(sqlite3 *db, void *udp);
-int goSqlite3SetAuthorizer(sqlite3 *db, void *udp);
-int goSqlite3BusyHandler(sqlite3 *db, void *udp);
-void goSqlite3ProgressHandler(sqlite3 *db, int numOps, void *udp);
+extern void goXTrace(void *udp, char *sql);
+extern void goXProfile(void *udp, char *sql, sqlite3_uint64 nanoseconds);
+extern int goXAuth(void *udp, int action, char *arg1, char *arg2, char *dbName, char *triggerName);
+extern int goXBusy(void *udp, int count);
+extern int goXProgress(void *udp);
 
 // cgo doesn't support varargs
 static inline void my_log(int iErrCode, char *msg) {
 	sqlite3_log(iErrCode, msg);
 }
-
-int goSqlite3ConfigLog(void *udp);
+extern void goXLog(void *udp, int err, char *msg);
+static inline int goSqlite3ConfigLog(void *udp) {
+	if (udp) {
+		return sqlite3_config(SQLITE_CONFIG_LOG, goXLog, udp);
+	} else {
+		return sqlite3_config(SQLITE_CONFIG_LOG, 0, 0);
+	}
+}
 */
 import "C"
 
@@ -60,7 +66,7 @@ func (c *Conn) Trace(f Tracer, udp interface{}) {
 	}
 	// To make sure it is not gced, keep a reference in the connection.
 	c.trace = &sqliteTrace{f, udp}
-	C.goSqlite3Trace(c.db, unsafe.Pointer(c.trace))
+	C.sqlite3_trace(c.db, (*[0]byte)(C.goXTrace), unsafe.Pointer(c.trace))
 }
 
 // Profiler is the signature of a profile function.
@@ -93,7 +99,7 @@ func (c *Conn) Profile(f Profiler, udp interface{}) {
 	}
 	// To make sure it is not gced, keep a reference in the connection.
 	c.profile = &sqliteProfile{f, udp}
-	C.goSqlite3Profile(c.db, unsafe.Pointer(c.profile))
+	C.sqlite3_profile(c.db, (*[0]byte)(C.goXProfile), unsafe.Pointer(c.profile))
 }
 
 // Auth enumerates Authorizer return codes
@@ -228,7 +234,7 @@ type sqliteAuthorizer struct {
 }
 
 //export goXAuth
-func goXAuth(udp unsafe.Pointer, action int, arg1, arg2, dbName, triggerName *C.char) C.int {
+func goXAuth(udp unsafe.Pointer, action C.int, arg1, arg2, dbName, triggerName *C.char) C.int {
 	arg := (*sqliteAuthorizer)(udp)
 	result := arg.f(arg.udp, Action(action), C.GoString(arg1), C.GoString(arg2), C.GoString(dbName), C.GoString(triggerName))
 	return C.int(result)
@@ -244,7 +250,7 @@ func (c *Conn) SetAuthorizer(f Authorizer, udp interface{}) error {
 	}
 	// To make sure it is not gced, keep a reference in the connection.
 	c.authorizer = &sqliteAuthorizer{f, udp}
-	return c.error(C.goSqlite3SetAuthorizer(c.db, unsafe.Pointer(c.authorizer)), "Conn.SetAuthorizer")
+	return c.error(C.sqlite3_set_authorizer(c.db, (*[0]byte)(C.goXAuth), unsafe.Pointer(c.authorizer)), "Conn.SetAuthorizer")
 }
 
 // BusyHandler is the signature of callback to handle SQLITE_BUSY errors.
@@ -258,9 +264,9 @@ type sqliteBusyHandler struct {
 }
 
 //export goXBusy
-func goXBusy(udp unsafe.Pointer, count int) C.int {
+func goXBusy(udp unsafe.Pointer, count C.int) C.int {
 	arg := (*sqliteBusyHandler)(udp)
-	result := arg.f(arg.udp, count)
+	result := arg.f(arg.udp, int(count))
 	return btocint(result)
 }
 
@@ -277,7 +283,7 @@ func (c *Conn) BusyHandler(f BusyHandler, udp interface{}) error {
 	}
 	// To make sure it is not gced, keep a reference in the connection.
 	c.busyHandler = &sqliteBusyHandler{f, udp}
-	return c.error(C.goSqlite3BusyHandler(c.db, unsafe.Pointer(c.busyHandler)), "Conn.BusyHandler")
+	return c.error(C.sqlite3_busy_handler(c.db, (*[0]byte)(C.goXBusy), unsafe.Pointer(c.busyHandler)), "Conn.BusyHandler")
 }
 
 // ProgressHandler is the signature of query progress callback.
@@ -313,7 +319,7 @@ func (c *Conn) ProgressHandler(f ProgressHandler, numOps int32, udp interface{})
 	}
 	// To make sure it is not gced, keep a reference in the connection.
 	c.progressHandler = &sqliteProgressHandler{f, udp}
-	C.goSqlite3ProgressHandler(c.db, C.int(numOps), unsafe.Pointer(c.progressHandler))
+	C.sqlite3_progress_handler(c.db, C.int(numOps), (*[0]byte)(C.goXProgress), unsafe.Pointer(c.progressHandler))
 }
 
 // StmtStatus enumerates status parameters for prepared statements
@@ -390,7 +396,7 @@ type sqliteLogger struct {
 }
 
 //export goXLog
-func goXLog(udp unsafe.Pointer, err int, msg *C.char) {
+func goXLog(udp unsafe.Pointer, err C.int, msg *C.char) {
 	arg := (*sqliteLogger)(udp)
 	arg.f(arg.udp, Errno(err), C.GoString(msg))
 	return
@@ -440,7 +446,7 @@ func (s *Stmt) ExplainQueryPlan(w io.Writer) error {
 		if err := s.Scan(&selectid, &order, &from, &detail); err != nil {
 			return err
 		}
-		fmt.Fprintf(w, "%d\t%d\t%d\t%s\n", selectid, order, from, detail)
+		_, _ = fmt.Fprintf(w, "%d\t%d\t%d\t%s\n", selectid, order, from, detail)
 		return nil
 	})
 	return err

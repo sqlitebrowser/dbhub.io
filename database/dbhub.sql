@@ -456,6 +456,42 @@ CREATE TABLE public.vis_params (
 
 
 --
+-- Name: vis_query_runs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.vis_query_runs (
+    query_run_id bigint NOT NULL,
+    db_id bigint,
+    user_id bigint,
+    ip_addr text,
+    user_agent text,
+    query_string text,
+    query_date timestamp with time zone DEFAULT now(),
+    memory_used bigint,
+    memory_high_water bigint
+);
+
+
+--
+-- Name: vis_query_runs_query_run_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.vis_query_runs_query_run_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: vis_query_runs_query_run_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.vis_query_runs_query_run_id_seq OWNED BY public.vis_query_runs.query_run_id;
+
+
+--
 -- Name: vis_result_cache; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -547,6 +583,13 @@ ALTER TABLE ONLY public.sqlite_databases ALTER COLUMN db_id SET DEFAULT nextval(
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN user_id SET DEFAULT nextval('public.users_user_id_seq'::regclass);
+
+
+--
+-- Name: vis_query_runs query_run_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.vis_query_runs ALTER COLUMN query_run_id SET DEFAULT nextval('public.vis_query_runs_query_run_id_seq'::regclass);
 
 
 --
@@ -678,6 +721,14 @@ ALTER TABLE ONLY public.vis_params
 
 
 --
+-- Name: vis_query_runs vis_query_runs_pk; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.vis_query_runs
+    ADD CONSTRAINT vis_query_runs_pk PRIMARY KEY (query_run_id);
+
+
+--
 -- Name: vis_result_cache vis_result_cache_pk; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -803,6 +854,13 @@ CREATE INDEX users_user_id_idx ON public.users USING btree (user_id);
 --
 
 CREATE INDEX users_user_name_idx ON public.users USING btree (user_name);
+
+
+--
+-- Name: vis_query_runs_query_date_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX vis_query_runs_query_date_index ON public.vis_query_runs USING btree (query_date);
 
 
 --
@@ -946,6 +1004,14 @@ ALTER TABLE ONLY public.vis_params
 
 ALTER TABLE ONLY public.vis_params
     ADD CONSTRAINT vis_params_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: vis_query_runs vis_query_runs_sqlite_databases_db_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.vis_query_runs
+    ADD CONSTRAINT vis_query_runs_sqlite_databases_db_id_fk FOREIGN KEY (db_id) REFERENCES public.sqlite_databases(db_id);
 
 
 --

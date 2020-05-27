@@ -3,6 +3,7 @@ package common
 import (
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -2192,7 +2193,7 @@ func GetVisualisationData(dbOwner string, dbFolder string, dbName string, commit
 }
 
 // Retrieves a saved set of visualisation parameters
-func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visName string) (params VisParamsV1, ok bool, err error) {
+func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visName string) (params VisParamsV2, ok bool, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -2334,6 +2335,62 @@ func LogDownload(dbOwner string, dbFolder string, dbName string, loggedInUser st
 	return nil
 }
 
+// Add memory allocation stats for the execution run of a user supplied SQLite query
+func LogSQLiteQueryAfter(insertID, memUsed, memHighWater int64) (err error) {
+	dbQuery := `
+		UPDATE vis_query_runs
+		SET memory_used = $2, memory_high_water = $3
+		WHERE query_run_id = $1`
+	commandTag, err := pdb.Exec(dbQuery, insertID, memUsed, memHighWater)
+	if err != nil {
+		log.Printf("Adding memory stats for SQLite query run '%d' failed: %v\n", insertID, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected while adding memory stats for SQLite query run '%d'\n",
+			numRows, insertID)
+	}
+	return nil
+}
+
+// Log the basic info for a user supplied SQLite query
+func LogSQLiteQueryBefore(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, userAgent, query string) (int64, error) {
+	// If the user isn't logged in, use a NULL value for that column
+	var queryUser pgx.NullString
+	if loggedInUser != "" {
+		queryUser.String = loggedInUser
+		queryUser.Valid = true
+	}
+
+	// Base64 encode the SQLite query string, just to be as safe as possible
+	encodedQuery := base64.StdEncoding.EncodeToString([]byte(query))
+
+	// Store the query details
+	dbQuery := `
+		WITH d AS (
+			SELECT db.db_id, db.folder, db.db_name
+			FROM sqlite_databases AS db
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE lower(user_name) = lower($1)
+				)
+				AND db.folder = $2
+				AND db.db_name = $3
+		)
+		INSERT INTO vis_query_runs (db_id, user_id, ip_addr, user_agent, query_string)
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7
+		RETURNING query_run_id`
+	var insertID int64
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, queryUser, ipAddr, userAgent, encodedQuery).Scan(&insertID)
+	if err != nil {
+		log.Printf("Storing record of user SQLite query '%v' on '%s%s%s' failed: %v\n", encodedQuery, dbOwner,
+			dbFolder, dbName, err)
+		return 0, err
+	}
+	return insertID, nil
+}
+
 // Create an upload log entry
 func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser string, ipAddr string, serverSw string,
 	userAgent string, uploadDate time.Time, sha string) error {
@@ -2374,7 +2431,7 @@ func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser stri
 }
 
 // Return the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from owner/folder/database URL
-// fragment, // loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
+// fragment, loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
 // string ("") as the loggedInUser parameter if the true value isn't set or known.
 // If the requested database doesn't exist, or the loggedInUser doesn't have access to it, then an error will be
 // returned.
@@ -4496,7 +4553,7 @@ func VisualisationSaveData(dbOwner string, dbFolder string, dbName string, commi
 }
 
 // Saves a set of visualisation parameters for later retrieval
-func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, visName string, visParams VisParamsV1) (err error) {
+func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, visName string, visParams VisParamsV2) (err error) {
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (

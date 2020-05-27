@@ -1,7 +1,7 @@
 package queue
 
 import (
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/hectane/go-nonblockingchan"
 
 	"crypto/tls"
@@ -140,6 +140,10 @@ func (h *Host) deliverToMailServer(c *smtp.Client, m *Message) error {
 		return err
 	}
 	defer r.Close()
+	r, err = dkimSigned(m.From, r, h.config)
+	if err != nil {
+		return err
+	}
 	if err := c.Mail(m.From); err != nil {
 		return err
 	}

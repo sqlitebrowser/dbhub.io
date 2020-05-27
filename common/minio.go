@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 
-	sqlite "github.com/gwenn/gosqlite"
 	"github.com/minio/minio-go"
 )
 
@@ -52,24 +51,23 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 	return
 }
 
-// Retrieves a SQLite database from Minio, opens it, returns the connection handle.
-// Also returns the name of the temp file created, which the caller needs to delete (os.Remove()) when finished with it
-func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
-
+// Retrieves a SQLite database file from Minio.  If there's a locally cached version already available though, use that
+func RetrieveDatabaseFile(bucket string, id string) (newDB string, err error) {
 	// Check if the database file already exists
-	newDB := filepath.Join(Conf.DiskCache.Directory, bucket, id)
-	if _, err := os.Stat(newDB); os.IsNotExist(err) {
+	newDB = filepath.Join(Conf.DiskCache.Directory, bucket, id)
+	if _, err = os.Stat(newDB); os.IsNotExist(err) {
 		// * The database doesn't yet exist locally, so fetch it from Minio
 
 		// Check if a the database file is already being fetched from Minio by a different caller
 		//  eg check if there is a "<filename>.new" file already in the disk cache
-		if _, err := os.Stat(newDB + ".new"); os.IsNotExist(err) {
+		if _, err = os.Stat(newDB + ".new"); os.IsNotExist(err) {
 			// * The database isn't already being fetched, so we're ok to proceed
 
 			// Get a handle from Minio for the database object
-			userDB, err := MinioHandle(bucket, id)
+			var userDB *minio.Object
+			userDB, err = MinioHandle(bucket, id)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 
 			// Close the object handle when this function finishes
@@ -82,19 +80,20 @@ func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 
 			// Save the database locally to the local disk cache, with ".new" on the end (will be renamed after file is
 			// finished writing)
-			f, err := os.OpenFile(newDB+".new", os.O_CREATE|os.O_WRONLY, 0750)
+			var f *os.File
+			f, err = os.OpenFile(newDB+".new", os.O_CREATE|os.O_WRONLY, 0750)
 			if err != nil {
 				log.Printf("Error creating new database file in the disk cache: %v\n", err)
-				return nil, errors.New("Internal server error")
+				return "", errors.New("Internal server error")
 			}
 			bytesWritten, err := io.Copy(f, userDB)
 			if err != nil {
 				log.Printf("Error writing to new database file in the disk cache : %v\n", err)
-				return nil, errors.New("Internal server error")
+				return "", errors.New("Internal server error")
 			}
 			if bytesWritten == 0 {
 				log.Printf("0 bytes written to the new SQLite database file: %s\n", newDB+".new")
-				return nil, errors.New("Internal server error")
+				return "", errors.New("Internal server error")
 			}
 			f.Close()
 
@@ -102,7 +101,7 @@ func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 			err = os.Rename(newDB+".new", newDB)
 			if err != nil {
 				log.Printf("Error when renaming .new database file to final form in the disk cache: %s\n", err.Error())
-				return nil, errors.New("Internal server error")
+				return "", errors.New("Internal server error")
 			}
 		} else {
 			// TODO: This is not a great approach, but should be ok for initial "get it working" code.
@@ -112,23 +111,10 @@ func OpenMinioObject(bucket string, id string) (*sqlite.Conn, error) {
 			// TODO  current system time, to detect and handle the case where the "<filename>.new" file is a stale one
 			// TODO  left over from some other (interrupted) process.  In which case nuke that and proceed to recreate
 			// TODO  it.
-			return nil, errors.New("Database retrieval in progress, try again in a few seconds")
+			return "", errors.New("Database retrieval in progress, try again in a few seconds")
 		}
 	}
-
-	// Open database
-	// NOTE - OpenFullMutex seems like the right thing for ensuring multiple connections to a database file don't
-	// screw things up, but it wouldn't be a bad idea to keep it in mind if weirdness shows up
-	sdb, err := sqlite.Open(newDB, sqlite.OpenReadWrite|sqlite.OpenFullMutex)
-	if err != nil {
-		log.Printf("Couldn't open database: %s", err)
-		return nil, errors.New("Internal server error")
-	}
-	err = sdb.EnableExtendedResultCodes(true)
-	if err != nil {
-		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
-	}
-	return sdb, nil
+	return
 }
 
 // Store a database file in Minio.

@@ -2049,7 +2049,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Get a handle from Minio for the SQLite database object
-		sdb, err := com.OpenMinioObject(bkt, id)
+		sdb, err := com.OpenSQLiteDatabase(bkt, id)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -2762,7 +2762,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(bucket, id)
+	sdb, err := com.OpenSQLiteDatabase(bucket, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -2953,7 +2953,7 @@ func downloadRedashJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(bucket, id)
+	sdb, err := com.OpenSQLiteDatabase(bucket, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -3210,6 +3210,7 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 
 func main() {
 	// Read server configuration
+	// TODO: It might be sensible to add a config option pointing to the SQLite 3 library path for LD_LIBRARY_PATH purposes
 	var err error
 	if err = com.ReadConfig(); err != nil {
 		log.Fatalf("Configuration file problem\n\n%v", err)
@@ -3219,6 +3220,11 @@ func main() {
 	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
 	if err != nil {
 		log.Fatalf("Setting temp directory environment variable failed: '%s'\n", err.Error())
+	}
+
+	// Ensure the SQLite library is recent enough
+	if com.SQLiteVersionNumber() < 3031000 {
+		log.Fatalf("Aborting.  SQLite version is too old: %v, needs to be at least SQLite 3.31.0.\n ", sqlite.Version())
 	}
 
 	// Open the request log for writing
@@ -3320,6 +3326,7 @@ func main() {
 	http.Handle("/x/download/", gz.GzipHandler(logReq(downloadHandler)))
 	http.Handle("/x/downloadcsv/", gz.GzipHandler(logReq(downloadCSVHandler)))
 	http.Handle("/x/downloadredashjson/", gz.GzipHandler(logReq(downloadRedashJSONHandler)))
+	http.Handle("/x/execsql/", gz.GzipHandler(logReq(visExecuteSQLHandler)))
 	http.Handle("/x/forkdb/", gz.GzipHandler(logReq(forkDBHandler)))
 	http.Handle("/x/gencert", gz.GzipHandler(logReq(generateCertHandler)))
 	http.Handle("/x/markdownpreview/", gz.GzipHandler(logReq(markdownPreview)))
@@ -3335,7 +3342,6 @@ func main() {
 	http.Handle("/x/updaterelease/", gz.GzipHandler(logReq(updateReleaseHandler)))
 	http.Handle("/x/updatetag/", gz.GzipHandler(logReq(updateTagHandler)))
 	http.Handle("/x/uploaddata/", gz.GzipHandler(logReq(uploadDataHandler)))
-	http.Handle("/x/vis/", gz.GzipHandler(logReq(visRequestHandler)))
 	http.Handle("/x/vissave/", gz.GzipHandler(logReq(visSaveRequestHandler)))
 	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
@@ -4112,7 +4118,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(bkt, id)
+	sdb, err := com.OpenSQLiteDatabase(bkt, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -4554,7 +4560,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a handle from Minio for the SQLite database object
-	sdb, err := com.OpenMinioObject(bkt, id)
+	sdb, err := com.OpenSQLiteDatabase(bkt, id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4748,7 +4754,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		// * Data wasn't in cache, so we gather it from the SQLite database *
 
 		// Open the Minio database
-		sdb, err := com.OpenMinioObject(bucket, id)
+		sdb, err := com.OpenSQLiteDatabase(bucket, id)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -4837,7 +4843,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Read the data from the database
-		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, maxRows, sortCol, sortDir, rowOffset)
+		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, sortCol, sortDir, maxRows, rowOffset)
 		if err != nil {
 			// Some kind of error when reading the database data
 			log.Printf("Error occurred when reading table data for '%s%s%s', commit '%s': %s\n", dbOwner,

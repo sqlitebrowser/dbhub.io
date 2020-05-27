@@ -1282,6 +1282,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// If a table name was supplied, validate it
 	dbTable := r.FormValue("table")
 	if dbTable != "" {
+		// TODO: Figure out a better validation approach than using our current PG one.  SQLite clearly has some way
+		//       of recognising "unicode characters usable in IDs", so the optimal approach is probably to better grok
+		//       tokenize.c and replicate that:
+		//         https://github.com/sqlite/sqlite/blob/f25f8d58349db52398168579a1d696fa4937dc1f/src/tokenize.c#L31
 		err = com.ValidatePGTable(dbTable)
 		if err != nil {
 			// Validation failed, so don't pass on the table name
@@ -1637,7 +1641,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Get a handle from Minio for the database object
-	sdb, err := com.OpenMinioObject(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
+	sdb, err := com.OpenSQLiteDatabase(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
 		pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:])
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -1838,7 +1842,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// If the row data wasn't in cache, read it from the database
 	if !ok {
-		pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, pageData.DB.MaxRows, sortCol, sortDir, rowOffset)
+		pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, sortCol, sortDir, pageData.DB.MaxRows, rowOffset)
 		if err != nil {
 			// Some kind of error when reading the database data
 			errorPage(w, r, http.StatusBadRequest, err.Error())
@@ -3100,7 +3104,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	// Get a handle from Minio for the database object
 	bkt := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
 	id := pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:]
-	sdb, err := com.OpenMinioObject(bkt, id)
+	sdb, err := com.OpenSQLiteDatabase(bkt, id)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

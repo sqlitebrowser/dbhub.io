@@ -15,7 +15,8 @@ type Limit int32
 
 // Run-time limit categories
 const (
-	LimitLength            Limit = C.SQLITE_LIMIT_LENGTH // The maximum size of any string or BLOB or table row, in bytes.
+	LimitLength            Limit = C.SQLITE_LIMIT_LENGTH     // The maximum size of any string or BLOB or table row, in bytes.
+	LimitSQLLength         Limit = C.SQLITE_LIMIT_SQL_LENGTH // The maximum length of a SQL statement, in bytes.
 	LimitColumn            Limit = C.SQLITE_LIMIT_COLUMN
 	LimitExprDepth         Limit = C.SQLITE_LIMIT_EXPR_DEPTH
 	LimitCompoundSelect    Limit = C.SQLITE_LIMIT_COMPOUND_SELECT

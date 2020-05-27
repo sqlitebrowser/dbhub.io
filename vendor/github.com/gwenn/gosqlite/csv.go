@@ -236,7 +236,7 @@ func (vc *csvTabCursor) Filter() error {
 	v := vc.vTab
 	/* seek back to start of first zRow */
 	v.eof = false
-	if _, err := vc.f.Seek(v.offsetFirstRow, os.SEEK_SET); err != nil {
+	if _, err := vc.f.Seek(v.offsetFirstRow, io.SeekStart); err != nil {
 		return err
 	}
 	vc.rowNumber = 0
@@ -301,14 +301,14 @@ func LoadCsvModule(db *Conn) error {
 // ExportTableToCSV exports table or view content to CSV.
 // 'headers' flag turns output of headers on or off.
 // NULL values are output as specified by 'nullvalue' parameter.
-func (db *Conn) ExportTableToCSV(dbName, table string, nullvalue string, headers bool, w *yacr.Writer) error {
+func (c *Conn) ExportTableToCSV(dbName, table string, nullvalue string, headers bool, w *yacr.Writer) error {
 	var sql string
 	if len(dbName) == 0 {
 		sql = fmt.Sprintf(`SELECT * FROM "%s"`, escapeQuote(table))
 	} else {
 		sql = fmt.Sprintf(`SELECT * FROM %s."%s"`, doubleQuote(dbName), escapeQuote(table))
 	}
-	s, err := db.prepare(sql)
+	s, err := c.prepare(sql)
 	if err != nil {
 		return err
 	}
@@ -376,8 +376,8 @@ func (ic ImportConfig) getType(i int) string {
 
 // ImportCSV imports CSV data into the specified table (which may not exist yet).
 // Code is adapted from .import command implementation in SQLite3 shell sources.
-func (db *Conn) ImportCSV(in io.Reader, ic ImportConfig, dbName, table string) error {
-	columns, err := db.Columns(dbName, table)
+func (c *Conn) ImportCSV(in io.Reader, ic ImportConfig, dbName, table string) error {
+	columns, err := c.Columns(dbName, table)
 	if err != nil {
 		return err
 	}
@@ -413,7 +413,7 @@ func (db *Conn) ImportCSV(in io.Reader, ic ImportConfig, dbName, table string) e
 			return errors.New("empty file/input")
 		}
 		sql += "\n)"
-		if err = db.FastExec(sql); err != nil {
+		if err = c.FastExec(sql); err != nil {
 			return err
 		}
 	} else if ic.Headers { // skip headers line
@@ -433,20 +433,20 @@ func (db *Conn) ImportCSV(in io.Reader, ic ImportConfig, dbName, table string) e
 	} else {
 		sql = fmt.Sprintf(`INSERT INTO %s."%s" VALUES (?%s)`, doubleQuote(dbName), escapeQuote(table), strings.Repeat(", ?", nCol-1))
 	}
-	s, err := db.prepare(sql)
+	s, err := c.prepare(sql)
 	if err != nil {
 		return err
 	}
 	defer s.Finalize()
-	ac := db.GetAutocommit()
+	ac := c.GetAutocommit()
 	if ac {
-		if err = db.Begin(); err != nil {
+		if err = c.Begin(); err != nil {
 			return err
 		}
 	}
 	defer func() {
 		if err != nil && ac {
-			_ = db.Rollback()
+			_ = c.Rollback()
 		}
 	}()
 	startLine := r.LineNumber()
@@ -464,7 +464,7 @@ func (db *Conn) ImportCSV(in io.Reader, ic ImportConfig, dbName, table string) e
 		if r.EndOfRecord() {
 			if i < nCol {
 				if ic.Log != nil {
-					fmt.Fprintf(ic.Log, "%s:%d: expected %d columns but found %d - filling the rest with NULL\n", ic.Name, startLine, nCol, i)
+					_, _ = fmt.Fprintf(ic.Log, "%s:%d: expected %d columns but found %d - filling the rest with NULL\n", ic.Name, startLine, nCol, i)
 				}
 				for ; i <= nCol; i++ {
 					if err = s.BindByIndex(i, nil); err != nil {
@@ -472,7 +472,7 @@ func (db *Conn) ImportCSV(in io.Reader, ic ImportConfig, dbName, table string) e
 					}
 				}
 			} else if i > nCol && ic.Log != nil {
-				fmt.Fprintf(ic.Log, "%s:%d: expected %d columns but found %d - extras ignored\n", ic.Name, startLine, nCol, i)
+				_, _ = fmt.Fprintf(ic.Log, "%s:%d: expected %d columns but found %d - extras ignored\n", ic.Name, startLine, nCol, i)
 			}
 			if _, err = s.Next(); err != nil {
 				return err
@@ -485,7 +485,7 @@ func (db *Conn) ImportCSV(in io.Reader, ic ImportConfig, dbName, table string) e
 		return err
 	}
 	if ac {
-		if err = db.Commit(); err != nil {
+		if err = c.Commit(); err != nil {
 			return err
 		}
 	}
