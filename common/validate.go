@@ -86,11 +86,11 @@ func checkDisplayName(fl valid.FieldLevel) bool {
 		}
 
 		switch j {
-		// Check for any of the characters which have special meaning in SQLite.  One exception (') is fairly common
-		// in names so should be allowed:
+		// Check for any of the characters which have special meaning in SQLite.  Two exceptions are (') and (,) which
+		// seem to be reasonably common in names so we'll allow:
 		// https://github.com/sqlite/sqlite/blob/d31fcd4751745b1fe2e263cd31792debb2e21b52/src/tokenize.c
-		case '$', '@', '#', ':', '?', '"', '`', '[', ']', '|', '<', '>', '=', '!', '/', '(', ')', ';', '+', '%', ',',
-			'&', '~', '.':
+		case '$', '@', '#', ':', '?', '"', '`', '[', ']', '|', '<', '>', '=', '!', '/', '(', ')', ';', '+', '%', '&',
+			'~', '.':
 			invalidChar = true
 
 		// Other characters that make no sense in names
