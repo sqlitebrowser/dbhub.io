@@ -60,7 +60,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -466,7 +466,7 @@ func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -656,7 +656,7 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)

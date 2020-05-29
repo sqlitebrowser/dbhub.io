@@ -30,7 +30,7 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -98,7 +98,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -245,7 +245,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -466,7 +466,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -707,7 +707,7 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -816,7 +816,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -963,7 +963,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -1064,7 +1064,7 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -1161,7 +1161,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -1265,7 +1265,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -1888,7 +1888,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2090,7 +2090,7 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2157,7 +2157,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2242,7 +2242,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2322,7 +2322,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2836,7 +2836,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3048,7 +3048,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3238,7 +3238,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3342,7 +3342,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3494,7 +3494,7 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3574,7 +3574,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3664,7 +3664,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3759,7 +3759,7 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)

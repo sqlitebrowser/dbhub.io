@@ -241,7 +241,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -328,7 +328,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -459,7 +459,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -582,7 +582,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -687,7 +687,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -996,7 +996,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -1410,7 +1410,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -1816,7 +1816,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -1933,7 +1933,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2156,7 +2156,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2248,7 +2248,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2349,7 +2349,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2447,7 +2447,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2735,7 +2735,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2825,7 +2825,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2925,7 +2925,7 @@ func downloadRedashJSONHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3018,7 +3018,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3107,7 +3107,7 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3676,7 +3676,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3869,7 +3869,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -3975,7 +3975,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -4322,7 +4322,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -4428,7 +4428,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -4481,7 +4481,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -4709,7 +4709,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -4894,7 +4894,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -5048,7 +5048,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -5164,7 +5164,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -5289,7 +5289,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -5423,7 +5423,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -5562,7 +5562,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -5732,7 +5732,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = "default"
+		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)

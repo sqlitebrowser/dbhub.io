@@ -108,7 +108,8 @@ type DiskCacheInfo struct {
 
 // Environment info
 type EnvInfo struct {
-	Environment string
+	Environment  string
+	UserOverride string `toml:"user_override"`
 }
 
 // Event processing loop
