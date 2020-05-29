@@ -422,13 +422,11 @@ func visCheckUnicode(rawInput string) (str string, err error) {
 	var decoded []byte
 	decoded, err = base64.StdEncoding.DecodeString(rawInput)
 	if err != nil {
-		//fmt.Errorf("Error when decoding query: '%s'", err)
 		return
 	}
 
 	// Ensure the decoded string is valid UTF-8
 	if !utf8.Valid(decoded) {
-		//w.WriteHeader(http.StatusBadRequest)
 		err = fmt.Errorf("SQL string contains invalid characters: '%v'", err)
 		return
 	}
@@ -444,7 +442,6 @@ func visCheckUnicode(rawInput string) (str string, err error) {
 		}
 	}
 	if invalidChar {
-		//w.WriteHeader(http.StatusBadRequest)
 		err = fmt.Errorf("SQL string contains invalid characters: '%v'", err)
 		return
 	}
