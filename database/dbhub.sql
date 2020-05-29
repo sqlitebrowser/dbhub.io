@@ -991,35 +991,11 @@ ALTER TABLE ONLY public.sqlite_databases
 
 
 --
--- Name: vis_params vis_params_sqlite_databases_db_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vis_params
-    ADD CONSTRAINT vis_params_sqlite_databases_db_id_fk FOREIGN KEY (db_id) REFERENCES public.sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
 -- Name: vis_params vis_params_users_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.vis_params
     ADD CONSTRAINT vis_params_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: vis_query_runs vis_query_runs_sqlite_databases_db_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vis_query_runs
-    ADD CONSTRAINT vis_query_runs_sqlite_databases_db_id_fk FOREIGN KEY (db_id) REFERENCES public.sqlite_databases(db_id);
-
-
---
--- Name: vis_result_cache vis_result_cache_sqlite_databases_db_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vis_result_cache
-    ADD CONSTRAINT vis_result_cache_sqlite_databases_db_id_fk FOREIGN KEY (db_id) REFERENCES public.sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
