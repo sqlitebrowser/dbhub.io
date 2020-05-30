@@ -2438,8 +2438,6 @@ func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser stri
 func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (minioBucket string,
 	minioID string, lastModified time.Time, err error) {
 
-	// TODO: This will likely need updating to query the "database_files" table to retrieve the Minio server name
-
 	// If no commit was provided, we grab the default one
 	if commitID == "" {
 		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
@@ -2472,7 +2470,8 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 	var sha, mod string
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&sha, &mod)
 	if err != nil {
-		log.Printf("Error retrieving MinioID for %s/%s version %v: %v\n", dbOwner, dbName, commitID, err)
+		log.Printf("Error retrieving MinioID for '%s/%s' version '%v' by logged in user '%v': %v\n", dbOwner,
+			dbName, commitID, loggedInUser, err)
 		return // Bucket and ID are still the initial default empty string
 	}
 
