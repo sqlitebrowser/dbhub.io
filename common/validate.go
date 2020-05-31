@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	valid "gopkg.in/go-playground/validator.v9"
+	valid "github.com/go-playground/validator/v10"
 )
 
 var (
@@ -25,6 +25,10 @@ var (
 	Validate *valid.Validate
 )
 
+type VisGetFields struct {
+	VisName string `validate:"required,visname,min=1,max=63"` // 63 char limit seems reasonable
+}
+
 func init() {
 	// Load validation code
 	Validate = valid.New()
@@ -39,6 +43,9 @@ func init() {
 	Validate.RegisterValidation("markdownsource", checkMarkDownSource)
 	Validate.RegisterValidation("pgtable", checkPGTableName)
 	Validate.RegisterValidation("username", checkUsername)
+
+	// Custom validation functions
+	Validate.RegisterValidation("visname", checkVisName)
 }
 
 // Custom validation function for branch and tag names.
@@ -65,7 +72,6 @@ func checkDBName(fl valid.FieldLevel) bool {
 
 // Custom validation function for discussion titles.
 // At the moment it just allows alpha and "^.-_/()'!@#&$+:;? " chars
-
 func checkDiscussTitle(fl valid.FieldLevel) bool {
 	// TODO: Replace this regex with something that allow for all valid unicode characters, minus:
 	//         * the Unicode control ones
@@ -93,15 +99,12 @@ func checkDisplayName(fl valid.FieldLevel) bool {
 			'~', '.':
 			invalidChar = true
 
-		// Other characters that make no sense in names
+		// Other characters that probably don't belong in display names
 		case '*', '^', '_', '\\', '{', '}':
 			invalidChar = true
 		}
 	}
-	if invalidChar {
-		return false
-	}
-	return true
+	return !invalidChar
 }
 
 // Custom validation function for SQLite field names
@@ -165,6 +168,32 @@ func checkUsername(fl valid.FieldLevel) bool {
 	//         * the ascii control ones
 	//         * special characters recognised by either SQLite or PostgreSQL
 	return regexUsername.MatchString(fl.Field().String())
+}
+
+// Custom validation function for Visualisation names.
+func checkVisName(fl valid.FieldLevel) bool {
+	input := fl.Field().String()
+
+	// Check for the presence of unicode control characters and similar in the decoded string
+	invalidChar := false
+	for _, j := range input {
+		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
+			invalidChar = true
+		}
+
+		switch j {
+		// Check for any of the characters which have special meaning in SQLite
+		// https://github.com/sqlite/sqlite/blob/d31fcd4751745b1fe2e263cd31792debb2e21b52/src/tokenize.c
+		case '$', '@', '#', ':', '?', '"', '`', '[', ']', '|', '<', '>', '=', '!', '/', '(', ')', ';', '+', '%', '&',
+			'~', '.', '\'', ',':
+			invalidChar = true
+
+		// Other characters that probably don't belong in visualisation names
+		case '*', '^', '\\', '{', '}':
+			invalidChar = true
+		}
+	}
+	return !invalidChar
 }
 
 // Checks a username against the list of reserved ones.

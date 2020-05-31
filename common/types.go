@@ -488,28 +488,13 @@ type UserInfo struct {
 	Username     string
 }
 
-// No longer used
-type VisParamsV1 struct {
-	ChartType   string
-	XAxisTable  string
-	XAXisColumn string
-	YAxisTable  string
-	YAXisColumn string
-	AggType     int
-	JoinType    int
-	JoinXCol    string
-	JoinYCol    string
-	OrderBy     int // No longer used
-	OrderDir    int // No longer used
-}
-
 type VisParamsV2 struct {
-	ChartType   string
-	ShowXLabel  bool
-	ShowYLabel  bool
-	SQL         string
-	XAXisColumn string
-	YAXisColumn string
+	ChartType   string `json:"chart_type"`
+	ShowXLabel  bool   `json:"show_x_label"`
+	ShowYLabel  bool   `json:"show_y_label"`
+	SQL         string `json:"sql"`
+	XAXisColumn string `json:"x_axis_label"`
+	YAXisColumn string `json:"y_axis_label"`
 }
 
 type VisRowV1 struct {

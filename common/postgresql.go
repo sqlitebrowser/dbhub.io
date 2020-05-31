@@ -2229,6 +2229,51 @@ func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visN
 	return
 }
 
+// Returns the list of saved visualisations for a given database
+func GetVisualisations(dbOwner, dbFolder, dbName string) (visNames []string, err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND folder = $2
+				AND db_name = $3
+		)
+		SELECT name
+		FROM vis_params as vis, u, d
+		WHERE vis.db_id = d.db_id
+			AND vis.user_id = u.user_id
+		ORDER BY name`
+	rows, e := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	if e != nil {
+		if e == pgx.ErrNoRows {
+			// There weren't any saved visualisations for this database
+			return
+		}
+
+		// A real database error occurred
+		err = e
+		log.Printf("Retrieving visualisation list for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, e)
+		return
+	}
+	defer rows.Close()
+
+	var s string
+	for rows.Next() {
+		err = rows.Scan(&s)
+		if err != nil {
+			log.Printf("Error retrieving visualisation list: %v", err.Error())
+			return
+		}
+		visNames = append(visNames, s)
+	}
+	return
+}
+
 // Increments the download count for a database
 func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) error {
 	dbQuery := `
@@ -4516,6 +4561,33 @@ func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, e
 	if err != nil {
 		log.Printf("Retrieving view count for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
 		return 0, err
+	}
+	return
+}
+
+// Deletes a set of visualisation parameters
+func VisualisationDeleteParams(dbOwner string, dbFolder string, dbName string, visName string) (err error) {
+	var commandTag pgx.CommandTag
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND folder = $2
+				AND db_name = $3
+		)
+		DELETE FROM vis_params WHERE user_id = (SELECT user_id FROM u) AND db_id = (SELECT db_id FROM d) AND name = $4`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, visName)
+	if err != nil {
+		log.Printf("Deleting visualisation '%s' for database '%s%s%s' failed: %v\n", visName, dbOwner, dbFolder, dbName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected while deleting visualisation '%s' for database '%s%s%s'\n", numRows, visName, dbOwner, dbFolder, dbName)
 	}
 	return
 }

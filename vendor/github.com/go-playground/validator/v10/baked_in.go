@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/url"
@@ -119,6 +120,8 @@ var (
 		"excludesrune":         excludesRune,
 		"startswith":           startsWith,
 		"endswith":             endsWith,
+		"startsnotwith":        startsNotWith,
+		"endsnotwith":          endsNotWith,
 		"isbn":                 isISBN,
 		"isbn10":               isISBN10,
 		"isbn13":               isISBN13,
@@ -166,6 +169,11 @@ var (
 		"html_encoded":         isHTMLEncoded,
 		"url_encoded":          isURLEncoded,
 		"dir":                  isDir,
+		"json":                 isJSON,
+		"hostname_port":        isHostnamePort,
+		"lowercase":            isLowercase,
+		"uppercase":            isUppercase,
+		"datetime":             isDatetime,
 	}
 )
 
@@ -178,7 +186,10 @@ func parseOneOfParam2(s string) []string {
 	oneofValsCacheRWLock.RUnlock()
 	if !ok {
 		oneofValsCacheRWLock.Lock()
-		vals = strings.Fields(s)
+		vals = splitParamsRegex.FindAllString(s, -1)
+		for i := 0; i < len(vals); i++ {
+			vals[i] = strings.Replace(vals[i], "'", "", -1)
+		}
 		oneofValsCache[s] = vals
 		oneofValsCacheRWLock.Unlock()
 	}
@@ -681,6 +692,16 @@ func endsWith(fl FieldLevel) bool {
 	return strings.HasSuffix(fl.Field().String(), fl.Param())
 }
 
+// StartsNotWith is the validation function for validating that the field's value does not start with the text specified within the param.
+func startsNotWith(fl FieldLevel) bool {
+	return !startsWith(fl)
+}
+
+// EndsNotWith is the validation function for validating that the field's value does not end with the text specified within the param.
+func endsNotWith(fl FieldLevel) bool {
+	return !endsWith(fl)
+}
+
 // FieldContains is the validation function for validating if the current field's value contains the field specified by the param's value.
 func fieldContains(fl FieldLevel) bool {
 	field := fl.Field()
@@ -1121,6 +1142,11 @@ func isEq(fl FieldLevel) bool {
 		p := asFloat(param)
 
 		return field.Float() == p
+
+	case reflect.Bool:
+		p := asBool(param)
+
+		return field.Bool() == p
 	}
 
 	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
@@ -1193,7 +1219,7 @@ func isURL(fl FieldLevel) bool {
 			return false
 		}
 
-		return err == nil
+		return true
 	}
 
 	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
@@ -1976,12 +2002,7 @@ func isFQDN(fl FieldLevel) bool {
 		return false
 	}
 
-	if val[len(val)-1] == '.' {
-		val = val[0 : len(val)-1]
-	}
-
-	return strings.ContainsAny(val, ".") &&
-		hostnameRegexRFC952.MatchString(val)
+	return fqdnRegexRFC1123.MatchString(val)
 }
 
 // IsDir is the validation function for validating if the current field's value is a valid directory.
@@ -1995,6 +2016,82 @@ func isDir(fl FieldLevel) bool {
 		}
 
 		return fileInfo.IsDir()
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isJSON is the validation function for validating if the current field's value is a valid json string.
+func isJSON(fl FieldLevel) bool {
+	field := fl.Field()
+
+	if field.Kind() == reflect.String {
+		val := field.String()
+		return json.Valid([]byte(val))
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isHostnamePort validates a <dns>:<port> combination for fields typically used for socket address.
+func isHostnamePort(fl FieldLevel) bool {
+	val := fl.Field().String()
+	host, port, err := net.SplitHostPort(val)
+	if err != nil {
+		return false
+	}
+	// Port must be a iny <= 65535.
+	if portNum, err := strconv.ParseInt(port, 10, 32); err != nil || portNum > 65535 || portNum < 1 {
+		return false
+	}
+
+	// If host is specified, it should match a DNS name
+	if host != "" {
+		return hostnameRegexRFC1123.MatchString(host)
+	}
+	return true
+}
+
+// isLowercase is the validation function for validating if the current field's value is a lowercase string.
+func isLowercase(fl FieldLevel) bool {
+	field := fl.Field()
+
+	if field.Kind() == reflect.String {
+		if field.String() == "" {
+			return false
+		}
+		return field.String() == strings.ToLower(field.String())
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isUppercase is the validation function for validating if the current field's value is an uppercase string.
+func isUppercase(fl FieldLevel) bool {
+	field := fl.Field()
+
+	if field.Kind() == reflect.String {
+		if field.String() == "" {
+			return false
+		}
+		return field.String() == strings.ToUpper(field.String())
+	}
+
+	panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+}
+
+// isDatetime is the validation function for validating if the current field's value is a valid datetime string.
+func isDatetime(fl FieldLevel) bool {
+	field := fl.Field()
+	param := fl.Param()
+
+	if field.Kind() == reflect.String {
+		_, err := time.Parse(param, field.String())
+		if err != nil {
+			return false
+		}
+
+		return true
 	}
 
 	panic(fmt.Sprintf("Bad field type %T", field.Interface()))

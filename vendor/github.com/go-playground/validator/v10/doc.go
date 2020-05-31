@@ -5,7 +5,7 @@ based on tags.
 It can also handle Cross-Field and Cross-Struct validation for nested structs
 and has the ability to dive into arrays and maps of any type.
 
-see more examples https://github.com/go-playground/validator/tree/v9/_examples
+see more examples https://github.com/go-playground/validator/tree/master/_examples
 
 Validation Functions Return Type error
 
@@ -158,7 +158,7 @@ handy in ignoring embedded structs from being validated. (Usage: -)
 Or Operator
 
 This is the 'or' operator allowing multiple validators to be used and
-accepted. (Usage: rbg|rgba) <-- this would allow either rgb or rgba
+accepted. (Usage: rgb|rgba) <-- this would allow either rgb or rgba
 colors to be accepted. This can also be combined with 'and' for example
 ( Usage: omitempty,rgb|rgba)
 
@@ -361,10 +361,12 @@ One Of
 
 For strings, ints, and uints, oneof will ensure that the value
 is one of the values in the parameter.  The parameter should be
-a list of values separated by whitespace.  Values may be
-strings or numbers.
+a list of values separated by whitespace. Values may be
+strings or numbers. To match strings with spaces in them, include
+the target string between single quotes.
 
     Usage: oneof=red green
+           oneof='red green' 'blue yellow'
            oneof=5 7 9
 
 Greater Than
@@ -618,6 +620,13 @@ This validates that a string value contains unicode alphanumeric characters only
 
 	Usage: alphanumunicode
 
+Number
+
+This validates that a string value contains number values only.
+For integers or float it returns true.
+
+	Usage: number
+
 Numeric
 
 This validates that a string value contains a basic numeric value.
@@ -638,6 +647,18 @@ This validates that a string value contains a valid hex color including
 hashtag (#)
 
 		Usage: hexcolor
+
+Lowercase String
+
+This validates that a string value contains only lowercase characters. An empty string is not a valid lowercase string.
+
+	Usage: lowercase
+
+Uppercase String
+
+This validates that a string value contains only uppercase characters. An empty string is not a valid uppercase string.
+
+	Usage: uppercase
 
 RGB String
 
@@ -670,6 +691,12 @@ This may not conform to all possibilities of any rfc standard, but neither
 does any email provider accept all possibilities.
 
 	Usage: email
+
+JSON String
+
+This validates that a string value is valid JSON
+
+	Usage: json
 
 File path
 
@@ -793,6 +820,18 @@ Ends With
 This validates that a string value ends with the supplied string value
 
 	Usage: endswith=goodbye
+
+Does Not Start With
+
+This validates that a string value does not start with the supplied string value
+
+	Usage: startsnotwith=hello
+
+Does Not End With
+
+This validates that a string value does not end with the supplied string value
+
+	Usage: endsnotwith=goodbye
 
 International Standard Book Number
 
@@ -1034,6 +1073,20 @@ it exists on the machine.
 This is done using os.Stat, which is a platform independent function.
 
 	Usage: dir
+
+HostPort
+
+This validates that a string value contains a valid DNS hostname and port that
+can be used to valiate fields typically passed to sockets and connections.
+
+	Usage: hostname_port
+
+Datetime
+
+This validates that a string value is a valid datetime based on the supplied datetime format.
+Supplied format must match the official Go time format layout as documented in https://golang.org/pkg/time/
+
+	Usage: datetime=2006-01-02
 
 Alias Validators and Tags
 

@@ -3326,7 +3326,7 @@ func main() {
 	http.Handle("/x/download/", gz.GzipHandler(logReq(downloadHandler)))
 	http.Handle("/x/downloadcsv/", gz.GzipHandler(logReq(downloadCSVHandler)))
 	http.Handle("/x/downloadredashjson/", gz.GzipHandler(logReq(downloadRedashJSONHandler)))
-	http.Handle("/x/execsql/", gz.GzipHandler(logReq(visExecuteSQLHandler)))
+	http.Handle("/x/execsql/", gz.GzipHandler(logReq(visExecuteSQL)))
 	http.Handle("/x/forkdb/", gz.GzipHandler(logReq(forkDBHandler)))
 	http.Handle("/x/gencert", gz.GzipHandler(logReq(generateCertHandler)))
 	http.Handle("/x/markdownpreview/", gz.GzipHandler(logReq(markdownPreview)))
@@ -3342,7 +3342,10 @@ func main() {
 	http.Handle("/x/updaterelease/", gz.GzipHandler(logReq(updateReleaseHandler)))
 	http.Handle("/x/updatetag/", gz.GzipHandler(logReq(updateTagHandler)))
 	http.Handle("/x/uploaddata/", gz.GzipHandler(logReq(uploadDataHandler)))
-	http.Handle("/x/vissave/", gz.GzipHandler(logReq(visSaveRequestHandler)))
+	http.Handle("/x/visdel/", gz.GzipHandler(logReq(visDel)))
+	http.Handle("/x/visdlresults/", gz.GzipHandler(logReq(visDownloadResults)))
+	http.Handle("/x/visget/", gz.GzipHandler(logReq(visGet)))
+	http.Handle("/x/vissave/", gz.GzipHandler(logReq(visSave)))
 	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
 	// CSS

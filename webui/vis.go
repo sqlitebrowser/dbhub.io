@@ -1,9 +1,8 @@
 package main
 
 import (
-	"crypto/md5"
 	"encoding/base64"
-	"encoding/hex"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/gorilla/sessions"
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
@@ -32,6 +33,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		ShowXLabel  bool
 		ShowYLabel  bool
 		SQL         string
+		VisNames    []string
 	}
 
 	// Retrieve the database owner & name
@@ -270,50 +272,73 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.DB.Info.Tables = tables
 
-	// Retrieve the default visualisation parameters for this database, if they've been set
-	params, ok, err := com.GetVisualisationParams(dbOwner, dbFolder, dbName, "default")
+	// Get a list of all saved visualisations for this database
+	pageData.VisNames, err = com.GetVisualisations(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// If saved parameters were found, pass them through to the web page
-	if ok {
-		pageData.ParamsGiven = true
-		switch params.ChartType {
-		case "hbc":
-			pageData.ChartType = "Horizontal bar chart"
-		case "vbc":
-			pageData.ChartType = "Vertical bar chart"
-		case "lc":
-			pageData.ChartType = "Line chart"
-		case "pie":
-			pageData.ChartType = "Pie chart"
-		default:
-			pageData.ChartType = "Vertical bar chart"
+	// Handle any saved visualisations for this database
+	if len(pageData.VisNames) > 0 {
+		// If there's a saved vis called "default", use that for the default vis settings
+		visName := "default"
+		var defaultFound bool
+		for _, j := range pageData.VisNames {
+			if j == "default" {
+				defaultFound = true
+			}
 		}
-		pageData.ShowXLabel = params.ShowXLabel
-		pageData.ShowYLabel = params.ShowYLabel
-		pageData.SQL = params.SQL
-		pageData.XAxisCol = params.XAXisColumn
-		pageData.YAxisCol = params.YAXisColumn
+		if !defaultFound {
+			// No default was found, but there are saved visualisations so we just use the first one
+			visName = pageData.VisNames[0]
+		}
 
-		// Automatically run the saved query
-		var data com.SQLiteRecordSet
-		data, err = visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, params.SQL)
+		// Retrieve a set of visualisation parameters for this database
+		params, ok, err := com.GetVisualisationParams(dbOwner, dbFolder, dbName, visName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		if len(data.Records) > 0 {
-			// * If data was returned, automatically provide it to the page *
-			pageData.Data = data
-			pageData.DataGiven = true
-		}
 
-		//	TODO: Cache/retrieve the data for this visualisation too
-		//	hash := visHash(dbOwner, dbFolder, dbName, commitID, "default", params)
-		//	data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
+		// If saved parameters were found, pass them through to the web page
+		if ok {
+			pageData.ParamsGiven = true
+			switch params.ChartType {
+			case "hbc":
+				pageData.ChartType = "Horizontal bar chart"
+			case "vbc":
+				pageData.ChartType = "Vertical bar chart"
+			case "lc":
+				pageData.ChartType = "Line chart"
+			case "pie":
+				pageData.ChartType = "Pie chart"
+			default:
+				pageData.ChartType = "Vertical bar chart"
+			}
+			pageData.ShowXLabel = params.ShowXLabel
+			pageData.ShowYLabel = params.ShowYLabel
+			pageData.SQL = params.SQL
+			pageData.XAxisCol = params.XAXisColumn
+			pageData.YAxisCol = params.YAXisColumn
+
+			// Automatically run the saved query
+			var data com.SQLiteRecordSet
+			data, err = visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, params.SQL)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if len(data.Records) > 0 {
+				// * If data was returned, automatically provide it to the page *
+				pageData.Data = data
+				pageData.DataGiven = true
+			}
+
+			//	TODO: Cache/retrieve the data for this visualisation too
+			//	hash := visHash(dbOwner, dbFolder, dbName, commitID, "default", params)
+			//	data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
+		}
 	}
 
 	// Retrieve correctly capitalised username for the user
@@ -450,8 +475,218 @@ func visCheckUnicode(rawInput string) (str string, err error) {
 	return decodedStr, nil
 }
 
+// This function handles requests to delete a saved database visualisation
+func visDel(w http.ResponseWriter, r *http.Request) {
+	// Retrieve user, database
+	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/visdel/" at the start of the URL
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Required information is missing")
+		return
+	}
+	dbFolder := "/"
+
+	// Validate input
+	input := com.VisGetFields{
+		VisName: r.FormValue("visname"),
+	}
+	err = com.Validate.Struct(input)
+	if err != nil {
+		log.Printf("Input validation error for visGet(): %s", err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Error when validating input: %s", err)
+		return
+	}
+	visName := input.VisName
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	var u interface{}
+	validSession := false
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = com.Conf.Environment.UserOverride
+	}
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
+		return
+	}
+
+	// Ensure this request is from the database owner
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "Not authorised to delete visualisations for this database")
+		return
+	}
+
+	// Delete the saved visualisation for this database
+	err = com.VisualisationDeleteParams(dbOwner, dbFolder, dbName, visName)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	// Deletion succeeded
+	w.WriteHeader(http.StatusOK)
+}
+
+// Sends the visualisation query results back to the user as a CSV delimited file
+func visDownloadResults(w http.ResponseWriter, r *http.Request) {
+	// Validate user input, fetch results
+	data, err := visExecuteSQLShared(w, r)
+	if err != nil {
+		// Error handling is already done in visExecuteSQLShared()
+		return
+	}
+
+	// Turn the query results into a form which csv.WriteAll() can process
+	var newData [][]string
+	for _, j := range data.Records {
+		var oneRow []string
+		for _, k := range j {
+			oneRow = append(oneRow, fmt.Sprintf("%s", k.Value))
+		}
+		newData = append(newData, oneRow)
+	}
+
+	// If the request came from a Windows based device, give it CRLF line endings
+	var userAgent string
+	if ua, ok := r.Header["User-Agent"]; ok {
+		userAgent = strings.ToLower(ua[0])
+	}
+	win := strings.Contains(userAgent, "windows")
+
+	// Return the results as CSV
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="results.csv"`))
+	w.Header().Set("Content-Type", "text/csv")
+	output := csv.NewWriter(w)
+	output.UseCRLF = win
+	err = output.WriteAll(newData)
+	if err != nil {
+		log.Printf("Error when generating CSV: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err)
+		return
+	}
+}
+
 // Executes a custom SQLite SELECT query.
-func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
+func visExecuteSQL(w http.ResponseWriter, r *http.Request) {
+	// Validate user input, fetch results
+	data, err := visExecuteSQLShared(w, r)
+	if err != nil {
+		// Error handling is already done in visExecuteSQLShared()
+		return
+	}
+
+	// Return the results as JSON
+	jsonResponse, err := json.Marshal(data)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Fprintf(w, "%s", jsonResponse)
+}
+
+// Shared code used by various functions for executing visualisation SQL.
+func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLiteRecordSet, err error) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		var sess *sessions.Session
+		sess, err = store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = com.Conf.Environment.UserOverride
+	}
+	if u != nil {
+		loggedInUser = u.(string)
+	}
+
+	// Retrieve user, database, and commit ID
+	dbOwner, dbName, commitID, err := com.GetODC(2, r) // 2 = Ignore "/x/execsql/" at the start of the URL
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	dbFolder := "/"
+
+	// Grab the incoming SQLite query
+	rawInput := r.FormValue("sql")
+	decodedStr, err := visCheckUnicode(rawInput)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err)
+		return
+	}
+	if !exists {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		return
+	}
+
+	// Run the query
+	data, err = visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err)
+		return
+	}
+	return
+}
+
+// This function handles requests to retrieve database visualisation parameters
+func visGet(w http.ResponseWriter, r *http.Request) {
+	// Retrieve user, database
+	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/visget/" at the start of the URL
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Required information is missing")
+		return
+	}
+	dbFolder := "/"
+
+	// Validate input
+	input := com.VisGetFields{
+		VisName: r.FormValue("visname"),
+	}
+	err = com.Validate.Struct(input)
+	if err != nil {
+		log.Printf("Input validation error for visGet(): %s", err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Error when validating input: %s", err)
+		return
+	}
+	visName := input.VisName
+
 	// Retrieve session data (if any)
 	var loggedInUser string
 	var u interface{}
@@ -469,58 +704,45 @@ func visExecuteSQLHandler(w http.ResponseWriter, r *http.Request) {
 		loggedInUser = u.(string)
 	}
 
-	// Retrieve user, database, and commit ID
-	dbOwner, dbName, commitID, err := com.GetODC(2, r) // 1 = Ignore "/x/vis/" at the start of the URL
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	dbFolder := "/"
-
-	// Grab the incoming SQLite query
-	rawInput := r.FormValue("sql")
-	decodedStr, err := visCheckUnicode(rawInput)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-
-	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	if !exists {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
-		return
+	// If this request is from anyone other than the database owner, check that this is a public database
+	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
+		// Check if the database exists and the user has access to it
+		exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err)
+			return
+		}
+		if !exists {
+			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprint(w, "No authorisation to retrieve visualisations for this database")
+			return
+		}
 	}
 
-	// Run the query
-	dataRows, err := visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// Return the results
-	jsonResponse, err := json.Marshal(dataRows)
+	// Retrieve a set of visualisation parameters for this database
+	params, ok, err := com.GetVisualisationParams(dbOwner, dbFolder, dbName, visName)
 	if err != nil {
 		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err)
 		return
 	}
-	fmt.Fprintf(w, "%s", jsonResponse)
-}
+	if ok {
+		// Return the results
+		jsonResponse, err := json.Marshal(params)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err)
+			return
+		}
+		fmt.Fprintf(w, "%s", jsonResponse)
+		return
+	}
 
-// Calculate the hash string for saving or retrieving any visualisation data
-func visHash(dbOwner, dbFolder, dbName, commitID, visName string, params com.VisParamsV1) string {
-	z := md5.Sum([]byte(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s/%s/%d/%d/%s/%s/%s", strings.ToLower(dbOwner), dbFolder,
-		dbName, commitID, params.XAxisTable, params.XAXisColumn, params.YAxisTable, params.YAXisColumn, params.AggType,
-		params.JoinType, params.JoinXCol, params.JoinYCol, visName)))
-	return hex.EncodeToString(z[:])
+	// No saved visualisations were found
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Runs a user provided SQLite query
@@ -567,9 +789,9 @@ func visRunQuery(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbNa
 }
 
 // This function handles requests to save the database visualisation parameters
-func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
-	// Retrieve user, database, table, and commit ID
-	dbOwner, dbName, commitID, err := com.GetODC(2, r) // 1 = Ignore "/x/vis/" at the start of the URL
+func visSave(w http.ResponseWriter, r *http.Request) {
+	// Retrieve user, database, and commit ID
+	dbOwner, dbName, commitID, err := com.GetODC(2, r) // 2 = Ignore "/x/vissave/" at the start of the URL
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -580,10 +802,23 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	chartType := r.FormValue("charttype")
 	xAxis := r.FormValue("xaxis")
 	yAxis := r.FormValue("yaxis")
-	visName := r.FormValue("visname")
 	sqlStr := r.FormValue("sql")
 	showXStr := r.FormValue("showxlabel")
 	showYStr := r.FormValue("showylabel")
+
+	// Initial sanity check of the visualisation name
+	// TODO: Expand this approach out to the other fields
+	input := com.VisGetFields{ // TODO: Create a new com.VisSaveFields{} type
+		VisName: r.FormValue("visname"),
+	}
+	err = com.Validate.Struct(input)
+	if err != nil {
+		log.Printf("Input validation error for visGet(): %s", err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Error when validating input: %s", err)
+		return
+	}
+	visName := input.VisName
 
 	// Ensure minimum viable parameters are present
 	if chartType == "" || xAxis == "" || yAxis == "" || visName == "" || sqlStr == "" {
@@ -591,7 +826,7 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Ensure only valid chart types are accepted
+	// Ensure only valid chart types are accepted
 	if chartType != "hbc" && chartType != "vbc" && chartType != "lc" && chartType != "pie" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Unknown chart type")
@@ -621,16 +856,6 @@ func visSaveRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if showYStr == "true" {
 		showY = true
-	}
-
-	// Initial sanity check of the visualisation name
-	// TODO: We'll probably need to figure out a better validation character set than the fieldname one
-	//         * The unicode parsing code in sqlite.go OpenSQLiteDatabaseDefensive() may be reusable for this
-	err = com.ValidateFieldName(visName)
-	if err != nil {
-		log.Printf("Validation failed on requested visualisation name '%v': %v\n", visName, err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
 	}
 
 	// Make sure the incoming SQLite query is "safe"
