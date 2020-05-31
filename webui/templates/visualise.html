@@ -184,18 +184,22 @@
                 <uib-tab index="0">
                     <uib-tab-heading><span style="color: #555;">SQL</span></uib-tab-heading>
                     <textarea id="usersql" rows="8" ng-attr-placeholder="Your SQL statement here...">[[ .SQL ]]</textarea>
-                    <div style="max-width: 100%; overflow: auto; border: 1px solid #DDD; border-radius: 7px 7px 0 0;">
-                        <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0; padding-bottom: 0;">
-                            <thead>
-                            <tr>
-                                <th ng-repeat="col in db.ColNames" style="padding: 7px 0 6px 6px;">{{ col }}</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr ng-repeat="row in db.Records">
-                                <td ng-repeat="val in row" dir="auto"><pre style="background-color: transparent; border: none; padding: 0px; margin: 0px;" ng-bind-html="val.Value | fixSpaces"></pre></td>
-                            </tr>
-                        </table>
+
+                    <button type="button" class="btn btn-default" ng-click="toggleResultTable()">{{ toggleLabel }}</button>
+                    <div uib-collapse="isCollapsed">
+                        <div style="max-width: 100%; overflow: auto; border: 1px solid #DDD; border-radius: 7px 7px 0 0;">
+                            <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0; padding-bottom: 0;">
+                                <thead>
+                                <tr>
+                                    <th ng-repeat="col in db.ColNames" style="padding: 7px 0 6px 6px;">{{ col }}</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="row in db.Records">
+                                    <td ng-repeat="val in row" dir="auto"><pre style="background-color: transparent; border: none; padding: 0px; margin: 0px;" ng-bind-html="val.Value | fixSpaces"></pre></td>
+                                </tr>
+                            </table>
+                        </div>
                     </div>
                 </uib-tab>
 
@@ -528,8 +532,21 @@
         $scope.YAxisColumn = "None available yet";
         $scope.visName = "default";
         $scope.visNames = [[ .VisNames ]];
+        $scope.toggleLabel = "Show result table"
+        $scope.isCollapsed = true;
 
-        // Functions for toggling on/off the axis label display
+        // Functions for toggling on/off various display elements
+        $scope.toggleResultTable = function() {
+            $scope.isCollapsed = !$scope.isCollapsed;
+            if ($scope.isCollapsed) {
+                $scope.toggleLabel = "Show result table"
+            } else {
+                $scope.toggleLabel = "Hide result table"
+            }
+
+            // Clear any existing status message
+            $scope.statusMessage = "";
+        }
         $scope.toggleXLabel = function(newVal) {
             $scope.radioXAxisShowLabels = newVal;
 
