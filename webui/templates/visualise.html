@@ -587,6 +587,7 @@
                             $scope.ChartType = "Pie chart";
                             plotData[0].type = "pie";
                     }
+                    $scope.visName = newVis;
 
                     // Execute the SQL and display the results
                     $scope.execSQL();
@@ -655,20 +656,20 @@
             }
 
             // Make sure the visualisation is in the front end's "known" list
-            let visName = document.getElementById("savename").value;
-            let arrIdx = $scope.visNames.indexOf(visName);
+            let name = document.getElementById("savename").value;
+            let arrIdx = $scope.visNames.indexOf(name);
             if (arrIdx > -1) {
-                $http.get("/x/visdel/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?visname="+visName).then(
+                $http.get("/x/visdel/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?visname="+name).then(
                     function success(response) {
                         $scope.statusMessageColour = "green";
-                        $scope.statusMessage = "Visualisation '" + visName + "' deleted";
+                        $scope.statusMessage = "Visualisation '" + name + "' deleted";
 
                         // Remove the visualisation from the drop down list
                         $scope.visNames.splice(arrIdx, 1);
                     }, function failure(response) {
                         // The deletion failed, so display the returned error message
                         $scope.statusMessageColour = "red";
-                        $scope.statusMessage = "Deleting '" + visName + "' failed: " + response.data;
+                        $scope.statusMessage = "Deleting '" + name + "' failed: " + response.data;
                     }
                 )
             } else {
@@ -792,11 +793,11 @@
                 return;
             }
 
-            let visName = document.getElementById("savename").value;
+            let name = document.getElementById("savename").value;
             let userSQL = document.getElementById("usersql").value;
             let args = "xaxis=" + $scope.XAxisColumn;
             args += "&yaxis=" + $scope.YAxisColumn;
-            args += "&visname=" + visName;
+            args += "&visname=" + name;
             args += "&sql=" + window.btoa(userSQL); // Base64 encode the whole string, so even line breaks are preserved
             switch ($scope.ChartType) {
                 case "Horizontal bar chart":
@@ -819,11 +820,11 @@
             $http.get("/x/vissave/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
-                    $scope.statusMessage = "Visualisation '" + visName + "' saved";
+                    $scope.statusMessage = "Visualisation '" + name + "' saved";
 
                     // Append the new visualisation to the drop down list, if it's not already present
-                    if ($scope.visNames.indexOf(visName) === -1) {
-                        $scope.visNames.push(visName);
+                    if ($scope.visNames.indexOf(name) === -1) {
+                        $scope.visNames.push(name);
                     }
                 }, function failure(response) {
                     // The save failed, so display the returned error message
