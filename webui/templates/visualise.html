@@ -559,38 +559,81 @@
                     // Clear any existing status message
                     $scope.statusMessage = "";
 
-                    // Apply the retrieved information to the settings and SQL text area
+                    // Apply the retrieved information
                     document.getElementById("savename").value = newVis;
-                    let sqlElement = document.getElementById("usersql");
-                    sqlElement.value = response.data["sql"];
-                    $scope.XAxisColumn = response.data["x_axis_label"];
-                    $scope.YAxisColumn = response.data["y_axis_label"];
-                    $scope.radioXAxisShowLabels = response.data["show_x_label"];
-                    $scope.radioYAxisShowLabels = response.data["show_y_label"];
-                    switch (response.data["chart_type"]) {
-                        case "hbc":
-                            $scope.ChartType = "Horizontal bar chart";
-                            plotData[0].type = "bar";
-                            plotData[0].orientation = "h";
-                            break;
-                        case "vbc":
-                            $scope.ChartType = "Vertical bar chart";
-                            plotData[0].type = "bar";
-                            plotData[0].orientation = "v";
-                            break;
-                        case "lc":
-                            $scope.ChartType = "Line chart";
-                            plotData[0].type = "scatter";
-                            plotData[0].orientation = "v";
-                            break;
-                        case "pie":
-                            $scope.ChartType = "Pie chart";
-                            plotData[0].type = "pie";
-                    }
                     $scope.visName = newVis;
+                    document.getElementById("usersql").value = response.data["sql"];
+                    let xLabel = response.data["x_axis_label"];
+                    let yLabel = response.data["y_axis_label"];
+                    let showX = response.data["show_x_label"];
+                    let showY = response.data["show_y_label"];
+                    let chartType = response.data["chart_type"];
 
-                    // Execute the SQL and display the results
-                    $scope.execSQL();
+                    // Execute the retrieved SQL
+                    let args = "sql=" + window.btoa(response.data["sql"]); // Base64 encode the whole string, so even line breaks are preserved
+                    $http.get("/x/execsql/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
+                        function success(response) {
+                            // Clear any existing status message
+                            $scope.statusMessage = "";
+
+                            // Update table data
+                            $scope.db = response.data;
+
+                            // Update the list of available X column names
+                            $scope.XColumnNames = $scope.db.ColNames;
+
+                            // Update X axis label
+                            $scope.XAxisColumn = xLabel;
+                            chartData.XAxisLabel = xLabel;
+
+                            // Update the list of available Y column names
+                            $scope.updateYAxisColumnList();
+
+                            // Update Y axis label
+                            $scope.YAxisColumn = yLabel;
+                            chartData.YAxisLabel = yLabel;
+
+                            // Update remaining chart info
+                            $scope.radioXAxisShowLabels = showX;
+                            $scope.radioYAxisShowLabels = showY;
+                            switch (chartType) {
+                                case "hbc":
+                                    $scope.ChartType = "Horizontal bar chart";
+                                    plotData[0].type = "bar";
+                                    plotData[0].orientation = "h";
+                                    break;
+                                case "vbc":
+                                    $scope.ChartType = "Vertical bar chart";
+                                    plotData[0].type = "bar";
+                                    plotData[0].orientation = "v";
+                                    break;
+                                case "lc":
+                                    $scope.ChartType = "Line chart";
+                                    plotData[0].type = "scatter";
+                                    plotData[0].orientation = "v";
+                                    break;
+                                case "pie":
+                                    $scope.ChartType = "Pie chart";
+                                    plotData[0].type = "pie";
+                            }
+
+                            // Try displaying the chart
+                            dataReceived = true;
+                            if ($scope.db.ColNames.length > 1) {
+                                $scope.showVis = true;
+                                $scope.doChart(true);
+                            }
+                        }, function failure(response) {
+                            // Retrieving data failed, so display the returned error message and hide the graph
+                            $scope.statusMessageColour = "red";
+                            $scope.statusMessage = "Retrieving data failed: " + response.data;
+                            $scope.showVis = false;
+
+                            // Clear out any existing table data too
+                            $scope.db.ColNames = {};
+                            $scope.db.Records = {};
+                        }
+                    )
                 }, function failure(response) {
                     // Retrieving visualisation text failed, so display the returned error message
                     $scope.statusMessageColour = "red";
@@ -676,7 +719,7 @@
                 $scope.statusMessageColour = "red";
                 $scope.statusMessage = "Unknown visualisation";
             }
-        }
+        };
 
         // Downloads the results of the SQL query, as a CSV file
         // TODO: Consider if downloading the results as a SQLite file would be useful, and/or creating a new database
@@ -709,10 +752,11 @@
                     $scope.statusMessage = "Retrieving results failed: " + response.data;
                 }
             )
-        }
+        };
 
         // Retrieve the data for visualisation
         $scope.execSQL = function() {
+            // Retrieve the data
             let userSQL = document.getElementById("usersql").value;
             let args = "sql=" + window.btoa(userSQL); // Base64 encode the whole string, so even line breaks are preserved
             $http.get("/x/execsql/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
@@ -725,6 +769,8 @@
 
                     // Update the list of available X column names
                     $scope.XColumnNames = $scope.db.ColNames;
+
+                    // Pick the first X column axis
                     $scope.XAxisColumn = $scope.XColumnNames[0];
 
                     // Update chart X axis label
@@ -780,7 +826,7 @@
                 $scope.statusMessageColour = "red";
                 $scope.statusMessage = "Formatting failed: " + response.data;
             });
-        }
+        };
 
         // Save the visualisation for easy later retrieval
         $scope.statusMessage = "";
@@ -870,7 +916,7 @@
                 $scope.YAxisColumn = $scope.YColumnNameOptions[0];
                 chartData.YAxisLabel = $scope.YAxisColumn;
             }
-        }
+        };
 
         // Change the Y Axis Column
         $scope.changeYAxisColumn = function(newcol) {
