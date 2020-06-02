@@ -1282,11 +1282,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// If a table name was supplied, validate it
 	dbTable := r.FormValue("table")
 	if dbTable != "" {
-		// TODO: Figure out a better validation approach than using our current PG one.  SQLite clearly has some way
-		//       of recognising "unicode characters usable in IDs", so the optimal approach is probably to better grok
-		//       tokenize.c and replicate that:
-		//         https://github.com/sqlite/sqlite/blob/f25f8d58349db52398168579a1d696fa4937dc1f/src/tokenize.c#L31
-		err = com.ValidatePGTable(dbTable)
+		// FIXME: Update to use our new validation function for SQLite table names
+		err = com.ValidateTableName(dbTable)
 		if err != nil {
 			// Validation failed, so don't pass on the table name
 			log.Printf("%s: Validation failed for table name: %s", pageName, err)
@@ -1501,7 +1498,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		// table name and somehow because selected as the default
 		a := pageData.DB.Info.DefaultTable
 		if a != "" {
-			err = com.ValidatePGTable(a)
+			// FIXME: Update to use our new validation function for SQLite table names
+			err = com.ValidateTableName(a)
 			if err == nil {
 				// The database table name is acceptable, so use it
 				dbTable = pageData.DB.Info.DefaultTable
@@ -1673,7 +1671,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		if tablePresent == false {
 			// The requested table doesn't exist in the database, so pick one of the tables that is
 			for _, t := range tables {
-				err = com.ValidatePGTable(t)
+				// FIXME: Update to use our new validation function for SQLite table names
+				err = com.ValidateTableName(t)
 				if err == nil {
 					// Validation passed, so use this table
 					dbTable = t
@@ -1688,7 +1687,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	if dbTable == "" {
 		for _, i := range pageData.DB.Info.Tables {
 			if i != "" {
-				err = com.ValidatePGTable(i)
+				// FIXME: Update to use our new validation function for SQLite table names
+				err = com.ValidateTableName(i)
 				if err == nil {
 					// The database table name is acceptable, so use it
 					dbTable = i
@@ -1721,7 +1721,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// Validate the table name, just to be careful
 	if dbTable != "" {
-		err = com.ValidatePGTable(dbTable)
+		// FIXME: Update to use our new validation function for SQLite table names
+		err = com.ValidateTableName(dbTable)
 		if err != nil {
 			// Validation failed, so don't pass on the table name
 

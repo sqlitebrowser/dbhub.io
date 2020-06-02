@@ -1,24 +1,22 @@
 package common
 
 import (
+	"encoding/base64"
 	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	valid "github.com/go-playground/validator/v10"
 )
 
 var (
-	regexBraTagName      = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\:,\&,\ )]+$`)
 	regexDBName          = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\+,\ ]+$`)
-	regexDiscussTitle    = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\',\!,\@,\#,\&,\$,\+,\:,\;,\?,\ )]+$`)
-	regexFieldName       = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
 	regexFolder          = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
 	regexLicence         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexLicenceFullName = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexMarkDownSource  = regexp.MustCompile(`^[a-z,A-Z,0-9` + ",`," + `‘,’,“,”,\.,\-,\_,\/,\(,\),\[,\],\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
-	regexPGTable         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexUsername        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
 	// For input validation
@@ -29,34 +27,36 @@ type VisGetFields struct {
 	VisName string `validate:"required,visname,min=1,max=63"` // 63 char limit seems reasonable
 }
 
+type VisSaveFields struct {
+	ChartType      string `validate:"required,charttype"`
+	ShowXAxisLabel string `validate:"bool"`
+	ShowYAxisLabel string `validate:"bool"`
+	SQL            string `validate:"required,base64sql"`
+	VisName        string `validate:"required,visname,min=1,max=63"` // 63 char limit seems reasonable
+	XAxis          string `validate:"required,axisname,min=1,max=63"`
+	YAxis          string `validate:"required,axisname,min=1,max=63"`
+}
+
 func init() {
 	// Load validation code
 	Validate = valid.New()
-	Validate.RegisterValidation("branchortagname", checkBranchOrTagName)
+	Validate.RegisterValidation("branchortagname", checkGenericTitle)
 	Validate.RegisterValidation("dbname", checkDBName)
-	Validate.RegisterValidation("discussiontitle", checkDiscussTitle)
+	Validate.RegisterValidation("discussiontitle", checkGenericTitle)
 	Validate.RegisterValidation("displayname", checkDisplayName)
-	Validate.RegisterValidation("fieldname", checkFieldName)
+	Validate.RegisterValidation("fieldname", checkVisName) // visName is our most restrictive unicode aware checker (atm), which is probably the correct choice as we have to do potentially unsafe string smashing with this value
 	Validate.RegisterValidation("folder", checkFolder)
 	Validate.RegisterValidation("licence", checkLicence)
 	Validate.RegisterValidation("licencefullname", checkLicenceFullName)
 	Validate.RegisterValidation("markdownsource", checkMarkDownSource)
-	Validate.RegisterValidation("pgtable", checkPGTableName)
+	Validate.RegisterValidation("table", checkVisName) // visName is our most restrictive unicode aware checker (atm), which is probably the correct choice as we have to do potentially unsafe string smashing with this value
 	Validate.RegisterValidation("username", checkUsername)
 
 	// Custom validation functions
+	Validate.RegisterValidation("axisname", checkVisAxisName)
+	Validate.RegisterValidation("base64sql", checkVisBase64SQL)
+	Validate.RegisterValidation("charttype", checkVisChartType)
 	Validate.RegisterValidation("visname", checkVisName)
-}
-
-// Custom validation function for branch and tag names.
-// At the moment it just allows alphanumeric and "^.-_/():& " chars, though it should probably be extended to cover any
-// valid file name
-func checkBranchOrTagName(fl valid.FieldLevel) bool {
-	// TODO: Replace this regex with something that allow for all valid unicode characters, minus:
-	//         * the Unicode control ones
-	//         * the ascii control ones
-	//         * special characters recognised by either SQLite or PostgreSQL
-	return regexBraTagName.MatchString(fl.Field().String())
 }
 
 // Custom validation function for SQLite database names.
@@ -70,14 +70,25 @@ func checkDBName(fl valid.FieldLevel) bool {
 	return regexDBName.MatchString(fl.Field().String())
 }
 
-// Custom validation function for discussion titles.
-// At the moment it just allows alpha and "^.-_/()'!@#&$+:;? " chars
-func checkDiscussTitle(fl valid.FieldLevel) bool {
-	// TODO: Replace this regex with something that allow for all valid unicode characters, minus:
-	//         * the Unicode control ones
-	//         * the ascii control ones
-	//         * special characters recognised by either SQLite or PostgreSQL
-	return regexDiscussTitle.MatchString(fl.Field().String())
+// Custom validation function for generic titles.
+func checkGenericTitle(fl valid.FieldLevel) bool {
+	input := fl.Field().String()
+
+	// Check for the presence of unicode control characters and similar in the decoded string
+	invalidChar := false
+	for _, j := range input {
+		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
+			invalidChar = true
+		}
+
+		switch j {
+		// Check for any of the characters which might (potentially) be dangerous:
+		// https://github.com/sqlite/sqlite/blob/d31fcd4751745b1fe2e263cd31792debb2e21b52/src/tokenize.c
+		case '#', '"', '`', '[', ']', '|', '<', '>', '=', '%', '~', '*', '\\', '{', '}':
+			invalidChar = true
+		}
+	}
+	return !invalidChar
 }
 
 // Custom validation function for display names.
@@ -105,17 +116,6 @@ func checkDisplayName(fl valid.FieldLevel) bool {
 		}
 	}
 	return !invalidChar
-}
-
-// Custom validation function for SQLite field names
-// At the moment it just allows alphanumeric and "^.-_/() " chars, though it should probably be extended to cover all
-// valid SQLite field name characters
-func checkFieldName(fl valid.FieldLevel) bool {
-	// TODO: Replace this regex with something that allow for all valid unicode characters, minus:
-	//         * the Unicode control ones
-	//         * the ascii control ones
-	//         * special characters recognised by either SQLite or PostgreSQL
-	return regexFieldName.MatchString(fl.Field().String())
 }
 
 // Custom validation function for folder names.
@@ -150,16 +150,6 @@ func checkMarkDownSource(fl valid.FieldLevel) bool {
 	return regexMarkDownSource.MatchString(fl.Field().String())
 }
 
-// Custom validation function for PostgreSQL table names.
-// At the moment it just allows alphanumeric and ".-_ " chars (may need to be expanded out at some point).
-func checkPGTableName(fl valid.FieldLevel) bool {
-	// TODO: Replace this regex with something that allow for all valid unicode characters, minus:
-	//         * the Unicode control ones
-	//         * the ascii control ones
-	//         * special characters recognised by PostgreSQL
-	return regexPGTable.MatchString(fl.Field().String())
-}
-
 // Custom validation function for Usernames.
 // At the moment it just allows alphanumeric and ".-_" chars (may need to be expanded out at some point).
 func checkUsername(fl valid.FieldLevel) bool {
@@ -168,6 +158,71 @@ func checkUsername(fl valid.FieldLevel) bool {
 	//         * the ascii control ones
 	//         * special characters recognised by either SQLite or PostgreSQL
 	return regexUsername.MatchString(fl.Field().String())
+}
+
+// Custom validation function for Visualisation axis names.
+func checkVisAxisName(fl valid.FieldLevel) bool {
+	input := fl.Field().String()
+
+	// Check for the presence of unicode control characters and similar in the decoded string
+	invalidChar := false
+	for _, j := range input {
+		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
+			invalidChar = true
+		}
+
+		switch j {
+		// Check for characters which have special meaning in SQLite and probably don't belong in axis names
+		// https://github.com/sqlite/sqlite/blob/d31fcd4751745b1fe2e263cd31792debb2e21b52/src/tokenize.c
+		case '$', '@', '#', '?', '"', '`', '[', ']', '|', '<', '>', '=', '!', '/', ';', '+', '%', '&', '~', '\'', ',':
+			invalidChar = true
+
+		// Other characters that probably don't belong in axis names
+		case '*', '^', '\\', '{', '}':
+			invalidChar = true
+		}
+	}
+	return !invalidChar
+}
+
+// Custom validation function for Base64 encoded SQL queries.
+func checkVisBase64SQL(fl valid.FieldLevel) bool {
+	d, err := base64.StdEncoding.DecodeString(fl.Field().String())
+	if err != nil {
+		return false
+	}
+	decoded := string(d)
+
+	// Ensure the decoded string is valid UTF-8
+	if !utf8.ValidString(decoded) {
+		return false
+	}
+
+	// Check for the presence of unicode control characters and similar in the decoded string
+	invalidChar := false
+	for _, j := range decoded {
+		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
+			if j != 10 { // 10 == new line, which is safe to allow.  Everything else should (probably) raise an error
+				// TODO: Check if this works with Windows based browsers, as they may be sending through CR or similar as well
+				invalidChar = true
+			}
+		}
+	}
+	if invalidChar {
+		return false
+	}
+
+	// No errors
+	return true
+}
+
+// Custom validation function for Visualisation chart types.
+func checkVisChartType(fl valid.FieldLevel) bool {
+	input := fl.Field().String()
+	if input != "hbc" && input != "vbc" && input != "lc" && input != "pie" {
+		return false
+	}
+	return true
 }
 
 // Custom validation function for Visualisation names.
@@ -234,6 +289,16 @@ func ValidateCommitID(fieldName string) error {
 // Validate the database name.
 func ValidateDB(dbName string) error {
 	err := Validate.Var(dbName, "required,dbname,min=1,max=256") // 256 char limit seems reasonable
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Validate the provided discussion or merge request title.
+func ValidateDiscussionTitle(fieldName string) error {
+	err := Validate.Var(fieldName, "discussiontitle,max=120") // 120 seems a reasonable first guess.
 	if err != nil {
 		return err
 	}
@@ -311,25 +376,16 @@ func ValidateMarkdown(fieldName string) error {
 	return nil
 }
 
-// Validate the provided PostgreSQL table name.
-func ValidatePGTable(table string) error {
-	// TODO: Improve this to work with all valid SQLite identifiers
-	// TODO  Not seeing a definitive reference page for SQLite yet, so using the PostgreSQL one is
-	// TODO  probably ok as a fallback:
-	// TODO      https://www.postgresql.org/docs/current/static/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
-	// TODO: Should we exclude SQLite internal tables too? (eg "sqlite_*" https://sqlite.org/lang_createtable.html)
-	err := Validate.Var(table, "required,pgtable,max=63")
+// Validate the provided SQLite table name.
+func ValidateTableName(table string) error {
+	err := Validate.Var(table, "required,table,max=63")
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-// Validate the provided discussion or merge request title.
-func ValidateDiscussionTitle(fieldName string) error {
-	err := Validate.Var(fieldName, "discussiontitle,max=120") // 120 seems a reasonable first guess.
-	if err != nil {
+	// Exclude SQLite internal tables too (eg "sqlite_*" https://sqlite.org/lang_createtable.html)
+	// TODO: Would it be potentially useful to allow these?
+	if strings.HasPrefix(table, "sqlite_") {
 		return err
 	}
 
@@ -354,36 +410,6 @@ func ValidateUserDB(user string, db string) error {
 	}
 
 	err = ValidateDB(db)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Validate the provided user, database, and table name.
-func ValidateUserDBTable(user string, db string, table string) error {
-	err := ValidateUserDB(user, db)
-	if err != nil {
-		return err
-	}
-
-	err = ValidatePGTable(table)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Validate the provided username and email address.
-func ValidateUserEmail(user string, email string) error {
-	err := ValidateUser(user)
-	if err != nil {
-		return err
-	}
-
-	err = ValidateEmail(email)
 	if err != nil {
 		return err
 	}

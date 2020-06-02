@@ -4093,7 +4093,8 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the name of the default table
-	err = com.ValidatePGTable(defTable)
+	// FIXME: Update to use our new validation function for SQLite table names
+	err = com.ValidateTableName(defTable)
 	if err != nil {
 		// Validation failed
 		log.Printf("Validation failed for name of default table '%s': %s", defTable, err)
@@ -4588,7 +4589,8 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 		Tables []string `json:"tables"`
 	}
 	for _, t := range sTbls {
-		err = com.ValidatePGTable(t)
+		// FIXME: Update to use our new validation function for SQLite table names
+		err = com.ValidateTableName(t)
 		if err == nil {
 			// Validation passed, so add the table to the list
 			d.Tables = append(d.Tables, t)

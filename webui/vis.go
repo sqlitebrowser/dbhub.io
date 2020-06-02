@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -443,23 +442,16 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 }
 
 // Checks if a given string is unicode, and safe for using in SQLite queries (eg no SQLite control characters)
-func visCheckUnicode(rawInput string) (str string, err error) {
-	var decoded []byte
-	decoded, err = base64.StdEncoding.DecodeString(rawInput)
-	if err != nil {
-		return
-	}
-
+func visCheckUnicode(input string) (str string, err error) {
 	// Ensure the decoded string is valid UTF-8
-	if !utf8.Valid(decoded) {
+	if !utf8.ValidString(input) {
 		err = fmt.Errorf("SQL string contains invalid characters: '%v'", err)
 		return
 	}
 
 	// Check for the presence of unicode control characters and similar in the decoded string
 	invalidChar := false
-	decodedStr := string(decoded)
-	for _, j := range decodedStr {
+	for _, j := range input {
 		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
 			if j != 10 { // 10 == new line, which is safe to allow.  Everything else should (probably) raise an error
 				invalidChar = true
@@ -472,7 +464,7 @@ func visCheckUnicode(rawInput string) (str string, err error) {
 	}
 
 	// No errors, so return the string
-	return decodedStr, nil
+	return input, nil
 }
 
 // This function handles requests to delete a saved database visualisation
@@ -798,18 +790,15 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	}
 	dbFolder := "/"
 
-	// Extract X axis, Y axis, and aggregate type variables if present
-	chartType := r.FormValue("charttype")
-	xAxis := r.FormValue("xaxis")
-	yAxis := r.FormValue("yaxis")
-	sqlStr := r.FormValue("sql")
-	showXStr := r.FormValue("showxlabel")
-	showYStr := r.FormValue("showylabel")
-
-	// Initial sanity check of the visualisation name
-	// TODO: Expand this approach out to the other fields
-	input := com.VisGetFields{ // TODO: Create a new com.VisSaveFields{} type
+	// Initial sanity check of the input fields
+	input := com.VisSaveFields{
 		VisName: r.FormValue("visname"),
+		ChartType: r.FormValue("charttype"),
+		XAxis : r.FormValue("xaxis"),
+		YAxis : r.FormValue("yaxis"),
+		SQL : r.FormValue("sql"),
+		ShowXAxisLabel : r.FormValue("showxlabel"),
+		ShowYAxisLabel : r.FormValue("showylabel"),
 	}
 	err = com.Validate.Struct(input)
 	if err != nil {
@@ -819,51 +808,22 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	visName := input.VisName
+	chartType := input.ChartType
+	xAxis := input.XAxis
+	yAxis := input.YAxis
+	sqlStr := input.SQL
+	showXStr := input.ShowXAxisLabel
+	showYStr := input.ShowYAxisLabel
 
-	// Ensure minimum viable parameters are present
-	if chartType == "" || xAxis == "" || yAxis == "" || visName == "" || sqlStr == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	// * To get here, at least the minimum viable parameters are present and validated *
 
-	// Ensure only valid chart types are accepted
-	if chartType != "hbc" && chartType != "vbc" && chartType != "lc" && chartType != "pie" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Unknown chart type")
-		return
-	}
-
-	// Validate the X axis field name
-	err = com.ValidateFieldName(xAxis)
-	if err != nil {
-		log.Printf("Validation failed on requested X axis field name '%v': %v\n", xAxis, err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// Validate the Y axis field name
-	err = com.ValidateFieldName(yAxis)
-	if err != nil {
-		log.Printf("Validation failed on requested Y axis field name '%v': %v\n", yAxis, err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// Validate the X and Y axis label booleans
+	// Determine the X and Y axis label boolean values
 	var showX, showY bool
 	if showXStr == "true" {
 		showX = true
 	}
 	if showYStr == "true" {
 		showY = true
-	}
-
-	// Make sure the incoming SQLite query is "safe"
-	decodedStr, err := visCheckUnicode(sqlStr)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err.Error())
-		return
 	}
 
 	// Retrieve session data (if any)
@@ -904,13 +864,13 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 		ChartType:   chartType,
 		ShowXLabel:  showX,
 		ShowYLabel:  showY,
-		SQL:         decodedStr,
+		SQL:         sqlStr,
 		XAXisColumn: xAxis,
 		YAXisColumn: yAxis,
 	}
 
 	// Run the visualisation query, to make sure it returns valid data
-	visData, err := visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+	visData, err := visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, sqlStr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())

@@ -308,9 +308,9 @@ func GetTable(r *http.Request) (string, error) {
 	requestedTable = r.FormValue("table")
 
 	// If a table name was supplied, validate it
-	// FIXME: We should probably create a validation function for SQLite table names, not use our one for PG
+	// FIXME: Update to use our new validation function for SQLite table names
 	if requestedTable != "" {
-		err := ValidatePGTable(requestedTable)
+		err := ValidateTableName(requestedTable)
 		if err != nil {
 			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a
 			// search bot picking up the AngularJS string then doing a request with it
