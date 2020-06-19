@@ -66,11 +66,10 @@
     <div class="row" style="padding: 10px;">
         <div class="col-md-6 vtop" style="text-align: center;">
             <h3>Visualise your data</h3>
-            <h5>Chart it using <a href="https://redash.io">Redash</a>.</h5>
-            <a href="#" ng-click="openLightboxModal(5)"><img class="iborder" src="/images/redash1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(6)"><img class="iborder" src="/images/redash2-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(7)"><img class="iborder" src="/images/redash3-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(8)"><img class="iborder" src="/images/redash4-50px.png" height="50px" /></a> &nbsp;
+            <h5>Chart it using Plotly.js. (<a href="https://dbhub.io/vis/justinclift/Marine%20Litter%20Survey%20%28Keep%20Northern%20Ireland%20Beautiful%29.sqlite" target="_blank">example</a>)</h5>
+            <a href="#" ng-click="openLightboxModal(5)"><img class="iborder" src="/images/plotly1-50px.png" height="50px" /></a> &nbsp;
+            <a href="#" ng-click="openLightboxModal(6)"><img class="iborder" src="/images/plotly2-50px.png" height="50px" /></a> &nbsp;
+            <a href="#" ng-click="openLightboxModal(7)"><img class="iborder" src="/images/plotly3-50px.png" height="50px" /></a> &nbsp;
         </div><div class="col-md-6 vtop" style="text-align: center;">
             <h3>A powerful <a href="https://github.com/sqlitebrowser/dio" target="_blank">command line interface</a></h3>
             <h5 style="padding-bottom: 5px;">Push (upload), pull (download), create tags, releases, and<br />
@@ -86,30 +85,30 @@
             <h3>Automatic alerts on data changes</h3>
             <h5>You can easily "watch" any public database,<br />
                 to alert you by email any time its changed.</h5>
-            <a href="#" ng-click="openLightboxModal(9)"><img class="iborder" src="/images/watch1-46px.png"/></a> &nbsp;
+            <a href="#" ng-click="openLightboxModal(8)"><img class="iborder" src="/images/watch1-46px.png"/></a> &nbsp;
         </div><div class="col-md-6 vtop" style="text-align: center;">
             <h3>Open discussions, or report problems in data</h3>
             <h5>Every database has a <i>discussion</i> area, useful for asking questions,<br />
                 making suggestions, and pointing out potential problems.</h5>
-            <a href="#" ng-click="openLightboxModal(10)"><img class="iborder" src="/images/discussions1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(11)"><img class="iborder" src="/images/discussions2-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(12)"><img class="iborder" src="/images/discussions3-50px.png" height="50px" /></a>
+            <a href="#" ng-click="openLightboxModal(9)"><img class="iborder" src="/images/discussions1-50px.png" height="50px" /></a> &nbsp;
+            <a href="#" ng-click="openLightboxModal(10)"><img class="iborder" src="/images/discussions2-50px.png" height="50px" /></a> &nbsp;
+            <a href="#" ng-click="openLightboxModal(11)"><img class="iborder" src="/images/discussions3-50px.png" height="50px" /></a>
         </div>
     </div>
     <div class="row" style="padding: 10px;">
         <div class="col-md-6 vtop" style="text-align: center;">
             <h3>Collaborative development</h3>
             <h5>Submit changes to public databases, for collaborative development.</h5>
-            <a href="#" ng-click="openLightboxModal(13)"><img class="iborder" src="/images/merge1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(14)"><img class="iborder" src="/images/merge2-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(15)"><img class="iborder" src="/images/merge3-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(16)"><img class="iborder" src="/images/merge4-50px.png" height="50px" /></a>
+            <a href="#" ng-click="openLightboxModal(12)"><img class="iborder" src="/images/merge1-50px.png" height="50px" /></a> &nbsp;
+            <a href="#" ng-click="openLightboxModal(13)"><img class="iborder" src="/images/merge2-50px.png" height="50px" /></a> &nbsp;
+            <a href="#" ng-click="openLightboxModal(14)"><img class="iborder" src="/images/merge3-50px.png" height="50px" /></a> &nbsp;
+            <a href="#" ng-click="openLightboxModal(15)"><img class="iborder" src="/images/merge4-50px.png" height="50px" /></a>
         </div><div class="col-md-6 vtop" style="text-align: center;">
             <h3>Full version control history, for traceability</h3>
             <h5>All data changes are recorded and<br />
                 checksummed, for full traceability.</h5>
-            <a href="#" ng-click="openLightboxModal(17)"><img class="iborder" src="/images/version_control_history1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(18)"><img class="iborder" src="/images/version_control_history2-50px.png" height="50px" /></a>
+            <a href="#" ng-click="openLightboxModal(16)"><img class="iborder" src="/images/version_control_history1-50px.png" height="50px" /></a> &nbsp;
+            <a href="#" ng-click="openLightboxModal(17)"><img class="iborder" src="/images/version_control_history2-50px.png" height="50px" /></a>
         </div>
     </div>
     <div class="row" style="padding: 10px;">
@@ -151,20 +150,16 @@
                 'caption': 'DB Browser for SQLite can download databases from DBHub.io, and upload your changes'
             },
             {
-                'url': '/images/redash1.png', 'thumbUrl': '/images/redash1-50px.png',
-                'caption': 'Tables can be exported as JSON, for visualising with Redash'
+                'url': '/images/plotly1.png', 'thumbUrl': '/images/plotly1-50px.png',
+                'caption': 'You can run SQL queries on your data, and visualise the results with Plotly.js charts'
             },
             {
-                'url': '/images/redash2.png', 'thumbUrl': '/images/redash2-50px.png',
-                'caption': 'Redash offers many useful visualisation capabilities for your data'
+                'url': '/images/plotly2.png', 'thumbUrl': '/images/plotly2-50px.png',
+                'caption': 'Plotly.js offers many useful visualisation capabilities for your data'
             },
             {
-                'url': '/images/redash3.png', 'thumbUrl': '/images/redash3-50px.png',
-                'caption': 'From simple counters...'
-            },
-            {
-                'url': '/images/redash4.png', 'thumbUrl': '/images/redash4-50px.png',
-                'caption': '... to more complex interactive displays'
+                'url': '/images/plotly3.png', 'thumbUrl': '/images/plotly3-50px.png',
+                'caption': 'With further chart types being added over time...'
             },
             {
                 'url': '/images/watch1.png', 'thumbUrl': '/images/watch1-46px.png',

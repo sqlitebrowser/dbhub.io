@@ -183,7 +183,6 @@
                         [[ if (le .DB.Info.DBEntry.Size 100000000) ]]
                             <!-- Don't display the CSV export options for large databases, as the current node setup doesn't have sufficient ram + swap for it. -->
                             <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as CSV</a></li>
-                            <li><a href="/x/downloadredashjson/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}">Selected table as Redash JSON</a></li>
                         [[ end ]]
                     </ul>
                 </div>

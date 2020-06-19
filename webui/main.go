@@ -2895,101 +2895,6 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s: '%s/%s' downloaded. %d bytes", pageName, dbOwner, dbName, bytesWritten)
 }
 
-func downloadRedashJSONHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Download Redash JSON"
-
-	// Extract the username, database, table, and commit ID requested
-	// NOTE - The commit ID is optional.  Without it, we just pick the latest commit from the (for now) default branch
-	// TODO: Add support for passing in a specific branch, to get the latest commit for that instead
-	dbOwner, dbName, dbTable, commitID, err := com.GetODTC(2, r) // 2 = Ignore "/x/download/" at the start of the URL
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Abort if the table name was missing
-	if dbTable == "" {
-		log.Printf("%s: Missing table name\n", pageName)
-		errorPage(w, r, http.StatusBadRequest, "Missing table name")
-		return
-	}
-
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-	}
-
-	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
-	bucket, id, _, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Ensure the database being requested isn't overly large
-	var tmp com.SQLiteDBinfo
-	err = com.DBDetails(&tmp, loggedInUser, dbOwner, "/", dbName, commitID)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	size := tmp.Info.DBEntry.Size
-	if size >= 100000000 {
-		errorPage(w, r, http.StatusBadRequest, "Redash JSON export not allowed for this database due to size "+
-			"restrictions.")
-		return
-	}
-
-	// Get a handle from Minio for the database object
-	sdb, err := com.OpenSQLiteDatabase(bucket, id)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
-		return
-	}
-
-	// Automatically close the SQLite database when this function finishes
-	defer func() {
-		sdb.Close()
-	}()
-
-	// Read the table data from the database object
-	resultSet, err := com.ReadSQLiteDBRedash(sdb, dbTable)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Error reading table data from the database")
-		return
-	}
-
-	// Convert the sqlite table data to JSON
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.json"`, dbTable))
-	w.Header().Set("Content-Type", "application/json")
-	j, err := json.MarshalIndent(resultSet, "", " ")
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Send the JSON to the user
-	w.WriteHeader(http.StatusOK)
-	_, err = fmt.Fprint(w, string(j))
-	if err != nil {
-		log.Printf("%s: Error when generating JSON: %v\n", pageName, err)
-		errorPage(w, r, http.StatusInternalServerError, "Error when generating JSON")
-		return
-	}
-}
-
 // Forks a database for the logged in user.
 func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve username, database name, and commit ID
@@ -3325,7 +3230,6 @@ func main() {
 	http.Handle("/x/diffcommitlist/", gz.GzipHandler(logReq(diffCommitListHandler)))
 	http.Handle("/x/download/", gz.GzipHandler(logReq(downloadHandler)))
 	http.Handle("/x/downloadcsv/", gz.GzipHandler(logReq(downloadCSVHandler)))
-	http.Handle("/x/downloadredashjson/", gz.GzipHandler(logReq(downloadRedashJSONHandler)))
 	http.Handle("/x/execsql/", gz.GzipHandler(logReq(visExecuteSQL)))
 	http.Handle("/x/forkdb/", gz.GzipHandler(logReq(forkDBHandler)))
 	http.Handle("/x/gencert", gz.GzipHandler(logReq(generateCertHandler)))
@@ -3530,29 +3434,23 @@ func main() {
 	http.Handle("/images/merge4-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge4-50px.png"))
 	})))
-	http.Handle("/images/redash1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash1.png"))
+	http.Handle("/images/plotly1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly1.png"))
 	})))
-	http.Handle("/images/redash1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash1-50px.png"))
+	http.Handle("/images/plotly1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly1-50px.png"))
 	})))
-	http.Handle("/images/redash2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash2.png"))
+	http.Handle("/images/plotly2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly2.png"))
 	})))
-	http.Handle("/images/redash2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash2-50px.png"))
+	http.Handle("/images/plotly2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly2-50px.png"))
 	})))
-	http.Handle("/images/redash3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash3.png"))
+	http.Handle("/images/plotly3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly3.png"))
 	})))
-	http.Handle("/images/redash3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash3-50px.png"))
-	})))
-	http.Handle("/images/redash4.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash4.png"))
-	})))
-	http.Handle("/images/redash4-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "redash4-50px.png"))
+	http.Handle("/images/plotly3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly3-50px.png"))
 	})))
 	http.Handle("/images/dbhub-vis-720.mp4", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "dbhub-vis-720.mp4"))
