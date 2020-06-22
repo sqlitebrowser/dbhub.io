@@ -53,4 +53,20 @@
     fathom('trackPageview');
 </script>
 <!-- / Fathom -->
+<!-- Chatwoot start -->
+<script>
+    (function(d,t) {
+        let BASE_URL = "https://app.chatwoot.com";
+        let g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+        g.src= BASE_URL + "/packs/js/sdk.js";
+        s.parentNode.insertBefore(g,s);
+        g.onload=function(){
+            window.chatwootSDK.run({
+                websiteToken: 'Gujen34nkfCAiu4sPfovyZbV',
+                baseUrl: BASE_URL
+            })
+        }
+    })(document,"script");
+</script>
+<!-- Chatwoot end -->
 [[ end ]]
