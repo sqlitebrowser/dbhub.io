@@ -3333,6 +3333,9 @@ func main() {
 	http.Handle("/images/auth0.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "auth0.svg"))
 	})))
+	http.Handle("/images/digitalocean.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "digitalocean.svg"))
+	})))
 	http.Handle("/images/sqlitebrowser.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "sqlitebrowser.svg"))
 	})))
