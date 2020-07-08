@@ -16,8 +16,8 @@ delay = 2
 email_queue_processing_delay = 5
 email_queue_dir = "/home/dbhub/.dbhub/email_queue"
 
-[license]
-license_dir = "/go/src/github.com/sqlitebrowser/dbhub.io/default_licences"
+[licence]
+licence_dir = "/go/src/github.com/sqlitebrowser/dbhub.io/default_licences"
 
 [memcache]
 default_cache_time = 2592000
