@@ -10,6 +10,7 @@ directory = "/home/dbhub/.dbhub/disk_cache"
 
 [environment]
 environment = "docker"
+user_override = "your_username_here"
 
 [event]
 delay = 2
