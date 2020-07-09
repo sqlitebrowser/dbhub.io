@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	gz "github.com/NYTimes/gziphandler"
 	"github.com/pkg/errors"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
@@ -125,7 +126,7 @@ func main() {
 	}
 	newServer := &http.Server{
 		Addr:         ":" + fmt.Sprint(com.Conf.DB4S.Port),
-		Handler:      mux,
+		Handler:      gz.GzipHandler(mux),
 		TLSConfig:    newTLSConfig,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
