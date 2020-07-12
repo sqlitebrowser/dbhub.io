@@ -111,10 +111,10 @@ func logReq(r *http.Request, loggedInUser string) {
 
 // Run a SQL query on the database
 // This can be run from the command line using curl, like this:
-//   curl -kD headers.out -F apikey="YOUR_API_KEY_HERE" -F username="justinclift" -F dbname="Join Testing.sqlite" \
+//   curl -kD headers.out -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" \
 //     -F sql="U0VMRUNUIHRhYmxlMS5OYW1lLCB0YWJsZTIudmFsdWUKRlJPTSB0YWJsZTEgSk9JTiB0YWJsZTIKVVNJTkcgKGlkKQpPUkRFUiBCWSB0YWJsZTEuaWQ7" \
 //     https://api.dbhub.io/v1/query
-//   * "username" is the owner of the database being queried
+//   * "dbowner" is the owner of the database being queried
 //   * "dbname" is the name of the database being queried
 //   * "sql" is the SQL query to run, base64 encoded
 func queryHandler(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +140,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	logReq(r, loggedInUser)
 
 	// Extract the database owner name, database name, and (optional) commit ID for the database from the request
-	dbOwner, dbName, commitID, err := com.GetFormUDC(r)
+	dbOwner, dbName, commitID, err := com.GetFormODC(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

@@ -152,19 +152,56 @@ func GetFormLicence(r *http.Request) (licenceName string, err error) {
 	return licenceName, nil
 }
 
-// Returns the source URL (if any) present in the form data
-func GetFormSourceURL(r *http.Request) (sourceURL string, err error) {
-	// Validate the source URL
-	su := r.PostFormValue("sourceurl")
-	if su != "" {
-		err = Validate.Var(su, "url,min=5,max=255") // 255 seems like a reasonable first guess
-		if err != nil {
-			return sourceURL, errors.New("Validation failed for source URL field")
-		}
-		sourceURL = su
+// Return the database owner, database name, and commit (if any) present in the form data.
+func GetFormODC(r *http.Request) (string, string, string, error) {
+	// Extract the database owner name
+	userName, err := GetFormOwner(r, false)
+	if err != nil {
+		return "", "", "", err
 	}
 
-	return sourceURL, err
+	// Extract the database name
+	dbName, err := GetDatabase(r, false)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Extract the commit string
+	commitID, err := GetFormCommit(r)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return userName, dbName, commitID, nil
+}
+
+// Return the database owner present in the GET or POST/PUT data.
+func GetFormOwner(r *http.Request, allowGet bool) (string, error) {
+	// Retrieve the variable from the GET or POST/PUT data
+	var o, dbOwner string
+	if allowGet {
+		o = r.FormValue("dbowner")
+	} else {
+		o = r.PostFormValue("dbowner")
+	}
+
+	// If no database owner given, return
+	if o == "" {
+		return "", nil
+	}
+
+	// Unescape, then validate the owner name
+	dbOwner, err := url.QueryUnescape(o)
+	if err != nil {
+		return "", err
+	}
+	err = ValidateUser(dbOwner)
+	if err != nil {
+		log.Printf("Validation failed for database owner name: %s", err)
+		return "", err
+	}
+
+	return dbOwner, nil
 }
 
 // Return the requested release name, from get or post data.
@@ -185,6 +222,21 @@ func GetFormRelease(r *http.Request) (release string, err error) {
 		return "", errors.New(fmt.Sprintf("Invalid release name: '%v'", c))
 	}
 	return c, nil
+}
+
+// Returns the source URL (if any) present in the form data
+func GetFormSourceURL(r *http.Request) (sourceURL string, err error) {
+	// Validate the source URL
+	su := r.PostFormValue("sourceurl")
+	if su != "" {
+		err = Validate.Var(su, "url,min=5,max=255") // 255 seems like a reasonable first guess
+		if err != nil {
+			return sourceURL, errors.New("Validation failed for source URL field")
+		}
+		sourceURL = su
+	}
+
+	return sourceURL, err
 }
 
 // Return the requested tag name, from get or post data.
