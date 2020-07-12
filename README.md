@@ -21,6 +21,7 @@ or run it locally for your own users.
 
 ### Subdirectories
 
+* [api](api/) - A very simple API server, used for querying databases remotely.
 * [common](common/) - Library of functions used by the DBHub.io components.
 * [database](database/) - PostgreSQL database schema.
 * [default_licences](default_licences/) - Useful Open Source licences suitable for databases.

@@ -2649,16 +2649,17 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Renders the user Preferences page.
+// Renders the user Settings page.
 func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	var pageData struct {
+		APIKeys     []com.APIKey
 		Auth0       com.Auth0Set
 		DisplayName string
 		Email       string
 		MaxRows     int
 		Meta        com.MetaInfo
 	}
-	pageData.Meta.Title = "Preferences"
+	pageData.Meta.Title = "Settings"
 	pageData.Meta.LoggedInUser = loggedInUser
 
 	// Grab the display name and email address for the user
@@ -2693,6 +2694,13 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
 	}
 	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve the list of API keys for the user
+	pageData.APIKeys, err = com.GetAPIKeys(loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

@@ -10,7 +10,7 @@
             &nbsp;
         </div>
         <div class="col-md-6">
-            <h2 style="text-align: center;">Preferences</h2>
+            <h2 style="text-align: center;">Settings</h2>
             <h3 style="text-align: center;">Used when uploading databases</h3>
             <form action="/pref" method="post">
                 <table class="table table-striped table-responsive settingsTable">
@@ -28,7 +28,7 @@
                 <h3 style="text-align: center;">Display options</h3>
                 <table class="table table-striped table-responsive settingsTable" style="margin-bottom: 20px;">
                     <tr>
-                        <th>Maximum number of rows to display</th>
+                        <th>Maximum number of database rows to display</th>
                         <td><input type="number" name="maxrows" value="[[ .MaxRows ]]" min="1" max="500"></td>
                     </tr>
                     <tr>
@@ -40,6 +40,35 @@
                     </tr>
                 </table>
             </form>
+
+            <h3 style="text-align: center;">API keys</h3>
+            <table class="table table-striped table-responsive settingsTable" style="margin-bottom: 20px;">
+                <tr>
+                    <th>Key</th>
+                    <th>Generation date</th>
+                </tr>
+                <tr ng-repeat="row in apiKeys">
+                    <td>{{ row.key }}</td>
+                    <td>{{ row.date_created | date : 'medium' }}</td>
+                </tr>
+                <tr ng-if="apiKeys === null">
+                    <td colspan="2" style="text-align: center;">You don't have any API keys yet</td>
+                </tr>
+                <tr>
+                    <td style="border-left: none;" colspan="2">
+                        <div>
+                            <div class="row" ng-if="statusMessage != ''">
+                                <div style="text-align: center; padding-bottom: 8px;">
+                                    <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: center;">
+                            <input type="submit" class="btn btn-primary" value="Generate new API key" ng-click="apiKeyGen()">
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
         <div class="col-md-3">
             &nbsp;
@@ -49,7 +78,9 @@
 [[ template "footer" . ]]
 <script>
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('prefView', function($scope) {
+    app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
+        // API Keys
+        $scope.apiKeys = [[ .APIKeys ]];
 
         // If the supplied display name is blank, we set a placeholder value instead
         $scope.FullName = "";
@@ -70,12 +101,38 @@
         }
 
         // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        let lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
 
         $scope.showLock = function() {
             lock.show();
+        };
+
+        // Generate a new API key
+        $scope.statusMessage = "";
+        $scope.statusMessageColour = "red";
+        $scope.apiKeyGen = function() {
+            // Call the server to generate a new API key
+            $http.get("/x/apikeygen").then(
+                function success(response) {
+                    $scope.statusMessageColour = "green";
+                    $scope.statusMessage = "New API key '" + response.data["key"] + "' created";
+
+                    // Append the new key to the displayed list
+                    let newKey = {"key": response.data["key"], "date_created": response.data["date_created"]};
+                    if ($scope.apiKeys !== null) {
+                        $scope.apiKeys.push(newKey);
+                    } else {
+                        $scope.apiKeys = [newKey];
+                    }
+
+                }, function failure(response) {
+                    // Key creation failed, so display the returned error message
+                    $scope.statusMessageColour = "red";
+                    $scope.statusMessage = "Creating new API key failed: " + response.data;
+                }
+            )
         };
     });
 </script>

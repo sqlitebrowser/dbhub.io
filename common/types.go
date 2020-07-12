@@ -62,7 +62,7 @@ const MinioFolderChars = 6
 
 // Configuration file
 type TomlConfig struct {
-	Admin       AdminInfo
+	Api         ApiInfo
 	Auth0       Auth0Info
 	DB4S        DB4SInfo
 	Environment EnvInfo
@@ -76,12 +76,14 @@ type TomlConfig struct {
 	Web         WebInfo
 }
 
-// Config info for the admin server
-type AdminInfo struct {
-	Certificate    string
+// Config info for the API server
+type ApiInfo struct {
+	BaseDir        string `toml:"base_dir"`
+	BindAddress    string `toml:"bind_address"`
+	Certificate    string `toml:"certificate"`
 	CertificateKey string `toml:"certificate_key"`
-	HTTPS          bool
-	Server         string
+	RequestLog     string `toml:"request_log"`
+	ServerName     string `toml:"server_name"`
 }
 
 // Auth0 connection parameters
@@ -183,6 +185,11 @@ type ActivityStats struct {
 	Starred   []ActivityRow
 	Uploads   []UploadRow
 	Viewed    []ActivityRow
+}
+
+type APIKey struct {
+	Key         string    `json:"key"`
+	DateCreated time.Time `json:"date_created"`
 }
 
 type Auth0Set struct {

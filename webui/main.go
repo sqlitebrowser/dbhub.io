@@ -21,6 +21,7 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	sqlite "github.com/gwenn/gosqlite"
+	"github.com/segmentio/ksuid"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"golang.org/x/oauth2"
@@ -36,6 +37,62 @@ var (
 	// Session cookie storage
 	store *gsm.MemcacheStore
 )
+
+// apiKeyGenHandler generates a new API key, stores it in the PG database, and returns the details to the caller
+func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	var u interface{}
+	validSession := false
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = com.Conf.Environment.UserOverride
+	}
+	if u != nil {
+		loggedInUser = u.(string)
+		validSession = true
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Generate new API key
+	creationTime := time.Now()
+	keyRaw, err := ksuid.NewRandom()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	key := keyRaw.String()
+
+	// Save the API key in PG database
+	err = com.APIKeySave(key, loggedInUser, creationTime)
+
+	// Log the key creation
+	log.Printf("New API key created for user '%s', key: '%s'\n", loggedInUser, key)
+
+	// Return the API key to the caller
+	d := com.APIKey{
+		Key:         key,
+		DateCreated: creationTime,
+	}
+	data, err := json.Marshal(d)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+}
 
 // auth0CallbackHandler is called at the end of the Auth0 authentication process, whether successful or not.
 // If the authentication process was successful:
@@ -3213,6 +3270,7 @@ func main() {
 	http.Handle("/upload/", gz.GzipHandler(logReq(uploadPage)))
 	http.Handle("/vis/", gz.GzipHandler(logReq(visualisePage)))
 	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))
+	http.Handle("/x/apikeygen", gz.GzipHandler(logReq(apiKeyGenHandler)))
 	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))
 	http.Handle("/x/callback", gz.GzipHandler(logReq(auth0CallbackHandler)))
 	http.Handle("/x/checkname", gz.GzipHandler(logReq(checkNameHandler)))
@@ -3463,7 +3521,7 @@ func main() {
 	})))
 
 	// Start webUI server
-	log.Printf("DBHub server starting on https://%s\n", com.Conf.Web.ServerName)
+	log.Printf("WebUI server starting on https://%s\n", com.Conf.Web.ServerName)
 	srv := &http.Server{
 		Addr: com.Conf.Web.BindAddress,
 		TLSConfig: &tls.Config{

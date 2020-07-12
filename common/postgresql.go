@@ -93,6 +93,41 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 	return nil
 }
 
+// Saves a new API key to the PostgreSQL database.
+func APIKeySave(key string, loggedInUser string, dateCreated time.Time) error {
+	// Make sure the API key isn't already in the database
+	dbQuery := `
+		SELECT count(key)
+		FROM api_keys
+		WHERE key = $1`
+	var keyCount int
+	err := pdb.QueryRow(dbQuery, key).Scan(&keyCount)
+	if err != nil {
+		log.Printf("Checking if an API key exists failed: %v\n", err)
+		return err
+	}
+	if keyCount != 0 {
+		// API key is already in our system
+		log.Printf("Duplicate API key (%s) generated for user '%s'\n", key, loggedInUser)
+		return fmt.Errorf("API generator created duplicate key.  Try again, just in case...")
+	}
+
+	// Add the new API key to the database
+	dbQuery = `
+		INSERT INTO api_keys (user_id, key, date_created)
+		SELECT (SELECT user_id FROM users WHERE lower(user_name) = lower($1)), $2, $3`
+	commandTag, err := pdb.Exec(dbQuery, loggedInUser, key, dateCreated)
+	if err != nil {
+		log.Printf("Adding API key to database failed: %v\n", err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%d) affected when adding API key: %v, username: %v\n", numRows, key,
+			loggedInUser)
+	}
+	return nil
+}
+
 // Check if a database exists
 // If an error occurred, the true/false value should be ignored, as only the error value is valid.
 func CheckDBExists(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
@@ -1791,6 +1826,51 @@ func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[s
 		return nil, err
 	}
 	return branches, nil
+}
+
+// Returns the list of API keys for a user.
+func GetAPIKeys(user string) ([]APIKey, error) {
+	dbQuery := `
+		SELECT key, date_created
+		FROM api_keys
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)`
+	rows, err := pdb.Query(dbQuery, user)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return nil, err
+	}
+	defer rows.Close()
+	var keys []APIKey
+	for rows.Next() {
+		var key string
+		var dateCreated time.Time
+		err = rows.Scan(&key, &dateCreated)
+		if err != nil {
+			log.Printf("Error retrieving API key list: %v\n", err)
+			return nil, err
+		}
+		keys = append(keys, APIKey{Key: key, DateCreated: dateCreated})
+	}
+	return keys, nil
+}
+
+// Returns the owner of a given API key.  Returns an empty string if the key has no known owner.
+func GetAPIKeyUser(key string) (user string, err error) {
+	dbQuery := `
+		SELECT user_name
+		FROM api_keys AS api, users
+		WHERE api.key = $1
+			AND api.user_id = users.user_id`
+	err = pdb.QueryRow(dbQuery, key).Scan(&user)
+	if err != nil {
+		log.Printf("Looking up owner for API key '%s' failed: %v\n", key, err)
+		return
+	}
+	return
 }
 
 // Retrieves the full commit list for a database.

@@ -897,6 +897,49 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 	return
 }
 
+// Runs a user provided SQLite query
+func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID, loggedInUser, query string) (SQLiteRecordSet, error) {
+	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
+	sdb, err := OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	if err != nil {
+		// The return handling was already done in OpenSQLiteDatabaseDefensive()
+		return SQLiteRecordSet{}, err
+	}
+
+	// Automatically close the SQLite database when this function finishes
+	defer func() {
+		sdb.Close()
+	}()
+
+	// Was a user agent part of the request?
+	var userAgent string
+	if ua, ok := r.Header["User-Agent"]; ok {
+		userAgent = ua[0]
+	}
+
+	// Log the SQL query (prior to executing it)
+	var logID int64
+	logID, err = LogSQLiteQueryBefore(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
+	if err != nil {
+		return SQLiteRecordSet{}, err
+	}
+
+	// Execute the SQLite select query (or queries)
+	var dataRows SQLiteRecordSet
+	var memUsed, memHighWater int64
+	memUsed, memHighWater, dataRows, err = SQLiteRunQuery(sdb, query, true, true)
+	if err != nil {
+		return SQLiteRecordSet{}, err
+	}
+
+	// Add the SQLite execution stats to the log record
+	err = LogSQLiteQueryAfter(logID, memUsed, memHighWater)
+	if err != nil {
+		return SQLiteRecordSet{}, err
+	}
+	return dataRows, err
+}
+
 // Returns the version number of the available SQLite library, in 300X00Y format
 func SQLiteVersionNumber() int32 {
 	return sqlite.VersionNumber()

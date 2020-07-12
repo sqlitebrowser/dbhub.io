@@ -90,6 +90,9 @@ github.com/pborman/uuid
 github.com/pkg/errors
 # github.com/russross/blackfriday v2.0.0+incompatible
 ## explicit
+# github.com/segmentio/ksuid v1.0.3
+## explicit
+github.com/segmentio/ksuid
 # github.com/sergi/go-diff v1.1.0
 ## explicit
 github.com/sergi/go-diff/diffmatchpatch

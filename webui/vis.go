@@ -1,15 +1,12 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/gorilla/sessions"
 
@@ -324,7 +321,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 			// Automatically run the saved query
 			var data com.SQLiteRecordSet
-			data, err = visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, params.SQL)
+			data, err = com.SQLiteRunQueryDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, params.SQL)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -440,39 +437,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
-}
-
-// Checks if a given string is unicode, and safe for using in SQLite queries (eg no SQLite control characters)
-func visCheckUnicode(rawInput string) (str string, err error) {
-	var decoded []byte
-	decoded, err = base64.StdEncoding.DecodeString(rawInput)
-	if err != nil {
-		return
-	}
-
-	// Ensure the decoded string is valid UTF-8
-	if !utf8.Valid(decoded) {
-		err = fmt.Errorf("SQL string contains invalid characters: '%v'", err)
-		return
-	}
-
-	// Check for the presence of unicode control characters and similar in the decoded string
-	invalidChar := false
-	decodedStr := string(decoded)
-	for _, j := range decodedStr {
-		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
-			if j != 10 { // 10 == new line, which is safe to allow.  Everything else should (probably) raise an error
-				invalidChar = true
-			}
-		}
-	}
-	if invalidChar {
-		err = fmt.Errorf("SQL string contains invalid characters: '%v'", err)
-		return
-	}
-
-	// No errors, so return the string
-	return decodedStr, nil
 }
 
 // This function handles requests to delete a saved database visualisation
@@ -633,7 +597,7 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
-	decodedStr, err := visCheckUnicode(rawInput)
+	decodedStr, err := com.CheckUnicode(rawInput)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err)
@@ -654,7 +618,7 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 	}
 
 	// Run the query
-	data, err = visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+	data, err = com.SQLiteRunQueryDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -745,49 +709,6 @@ func visGet(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Runs a user provided SQLite query
-func visRunQuery(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID, loggedInUser, query string) (com.SQLiteRecordSet, error) {
-	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
-	sdb, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
-	if err != nil {
-		// The return handling was already done in OpenSQLiteDatabaseDefensive()
-		return com.SQLiteRecordSet{}, err
-	}
-
-	// Automatically close the SQLite database when this function finishes
-	defer func() {
-		sdb.Close()
-	}()
-
-	// Was a user agent part of the request?
-	var userAgent string
-	if ua, ok := r.Header["User-Agent"]; ok {
-		userAgent = ua[0]
-	}
-
-	// Log the SQL query (prior to executing it)
-	var logID int64
-	logID, err = com.LogSQLiteQueryBefore(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
-	if err != nil {
-		return com.SQLiteRecordSet{}, err
-	}
-
-	// Execute the SQLite select query (or queries)
-	var dataRows com.SQLiteRecordSet
-	var memUsed, memHighWater int64
-	memUsed, memHighWater, dataRows, err = com.SQLiteRunQuery(sdb, query, true, true)
-	if err != nil {
-		return com.SQLiteRecordSet{}, err
-	}
-
-	// Add the SQLite execution stats to the log record
-	err = com.LogSQLiteQueryAfter(logID, memUsed, memHighWater)
-	if err != nil {
-		return com.SQLiteRecordSet{}, err
-	}
-	return dataRows, err
-}
-
 // This function handles requests to save the database visualisation parameters
 func visSave(w http.ResponseWriter, r *http.Request) {
 	// Retrieve user, database, and commit ID
@@ -859,7 +780,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the incoming SQLite query is "safe"
-	decodedStr, err := visCheckUnicode(sqlStr)
+	decodedStr, err := com.CheckUnicode(sqlStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
@@ -910,7 +831,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Run the visualisation query, to make sure it returns valid data
-	visData, err := visRunQuery(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+	visData, err := com.SQLiteRunQueryDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())

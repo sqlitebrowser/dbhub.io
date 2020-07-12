@@ -35,6 +35,37 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
+-- Name: api_keys; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.api_keys (
+    key_id bigint NOT NULL,
+    user_id bigint,
+    key text NOT NULL,
+    date_created timestamp with time zone
+);
+
+
+--
+-- Name: api_keys_key_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.api_keys_key_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: api_keys_key_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.api_keys_key_id_seq OWNED BY public.api_keys.key_id;
+
+
+--
 -- Name: database_downloads; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -516,6 +547,13 @@ CREATE TABLE public.watchers (
 
 
 --
+-- Name: api_keys key_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_keys ALTER COLUMN key_id SET DEFAULT nextval('public.api_keys_key_id_seq'::regclass);
+
+
+--
 -- Name: database_downloads dl_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -590,6 +628,14 @@ ALTER TABLE ONLY public.users ALTER COLUMN user_id SET DEFAULT nextval('public.u
 --
 
 ALTER TABLE ONLY public.vis_query_runs ALTER COLUMN query_run_id SET DEFAULT nextval('public.vis_query_runs_query_run_id_seq'::regclass);
+
+
+--
+-- Name: api_keys api_keys_pk; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT api_keys_pk PRIMARY KEY (key);
 
 
 --
@@ -745,6 +791,13 @@ ALTER TABLE ONLY public.watchers
 
 
 --
+-- Name: api_keys_key_uindex; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX api_keys_key_uindex ON public.api_keys USING btree (key);
+
+
+--
 -- Name: database_licences_lic_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -868,6 +921,14 @@ CREATE INDEX vis_query_runs_query_date_index ON public.vis_query_runs USING btre
 --
 
 CREATE INDEX watchers_db_id_idx ON public.watchers USING btree (db_id);
+
+
+--
+-- Name: api_keys api_keys_users_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT api_keys_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
