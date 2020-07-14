@@ -927,7 +927,7 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, source, dbO
 	// Execute the SQLite select query (or queries)
 	var dataRows SQLiteRecordSet
 	var memUsed, memHighWater int64
-	memUsed, memHighWater, dataRows, err = SQLiteRunQuery(sdb, query, true, false)
+	memUsed, memHighWater, dataRows, err = SQLiteRunQuery(sdb, query, false, false)
 	if err != nil {
 		return SQLiteRecordSet{}, err
 	}
