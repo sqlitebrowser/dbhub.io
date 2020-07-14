@@ -898,7 +898,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 }
 
 // Runs a user provided SQLite query
-func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID, loggedInUser, query string) (SQLiteRecordSet, error) {
+func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, source, dbOwner, dbFolder, dbName, commitID, loggedInUser, query string) (SQLiteRecordSet, error) {
 	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
 	sdb, err := OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
@@ -919,7 +919,7 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, dbOwner, db
 
 	// Log the SQL query (prior to executing it)
 	var logID int64
-	logID, err = LogSQLiteQueryBefore(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
+	logID, err = LogSQLiteQueryBefore(source, dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
 	if err != nil {
 		return SQLiteRecordSet{}, err
 	}

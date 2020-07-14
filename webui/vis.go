@@ -321,7 +321,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 			// Automatically run the saved query
 			var data com.SQLiteRecordSet
-			data, err = com.SQLiteRunQueryDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, params.SQL)
+			data, err = com.SQLiteRunQueryDefensive(w, r, "vis", dbOwner, dbFolder, dbName, commitID, loggedInUser, params.SQL)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -618,7 +618,7 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 	}
 
 	// Run the query
-	data, err = com.SQLiteRunQueryDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+	data, err = com.SQLiteRunQueryDefensive(w, r, "vis", dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -831,7 +831,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Run the visualisation query, to make sure it returns valid data
-	visData, err := com.SQLiteRunQueryDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+	visData, err := com.SQLiteRunQueryDefensive(w, r, "vis", dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())

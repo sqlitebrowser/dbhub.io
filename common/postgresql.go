@@ -2479,7 +2479,7 @@ func LogSQLiteQueryAfter(insertID, memUsed, memHighWater int64) (err error) {
 }
 
 // Log the basic info for a user supplied SQLite query
-func LogSQLiteQueryBefore(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, userAgent, query string) (int64, error) {
+func LogSQLiteQueryBefore(source, dbOwner, dbFolder, dbName, loggedInUser, ipAddr, userAgent, query string) (int64, error) {
 	// If the user isn't logged in, use a NULL value for that column
 	var queryUser pgx.NullString
 	if loggedInUser != "" {
@@ -2503,11 +2503,11 @@ func LogSQLiteQueryBefore(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, userA
 				AND db.folder = $2
 				AND db.db_name = $3
 		)
-		INSERT INTO vis_query_runs (db_id, user_id, ip_addr, user_agent, query_string)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7
+		INSERT INTO vis_query_runs (db_id, user_id, ip_addr, user_agent, query_string, source)
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7, $8
 		RETURNING query_run_id`
 	var insertID int64
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, queryUser, ipAddr, userAgent, encodedQuery).Scan(&insertID)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, queryUser, ipAddr, userAgent, encodedQuery, source).Scan(&insertID)
 	if err != nil {
 		log.Printf("Storing record of user SQLite query '%v' on '%s%s%s' failed: %v\n", encodedQuery, dbOwner,
 			dbFolder, dbName, err)

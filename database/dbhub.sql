@@ -499,7 +499,8 @@ CREATE TABLE public.vis_query_runs (
     query_string text,
     query_date timestamp with time zone DEFAULT now(),
     memory_used bigint,
-    memory_high_water bigint
+    memory_high_water bigint,
+    source text
 );
 
 

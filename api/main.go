@@ -171,7 +171,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Run the query
 	var data com.SQLiteRecordSet
-	data, err = com.SQLiteRunQueryDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+	data, err = com.SQLiteRunQueryDefensive(w, r, "api", dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
