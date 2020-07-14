@@ -872,8 +872,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 			}
 			if isNull && !ignoreNull {
 				// NULLS can be ignored (via flag to this function) for situations like the vis data
-				row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Null,
-					Value: "<i>NULL</i>"})
+				row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Null})
 			}
 			if isNull && ignoreNull {
 				addRow = false
