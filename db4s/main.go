@@ -269,7 +269,7 @@ func generateDefaultList(pageName string, userAcc string) (defaultList []byte, e
 			Type:         "folder",
 			Name:         j.Username,
 			URL:          server + "/" + j.Username,
-			LastModified: j.LastModified.Format(time.RFC822)}
+			LastModified: j.LastModified.Format(time.RFC3339)}
 		linkRows = append(linkRows, newLink)
 		rowCount++
 	}
@@ -1427,8 +1427,8 @@ func userDatabaseList(pageName string, userAcc string, user string) (dbList []by
 		tempRow.OneLineDesc = j.OneLineDesc
 		tempRow.Size = j.Size
 		tempRow.SHA256 = j.SHA256
-		tempRow.LastModified = j.LastModified.Format(time.RFC822)
-		tempRow.RepoModified = j.RepoModified.Format(time.RFC822)
+		tempRow.LastModified = j.LastModified.Format(time.RFC3339)
+		tempRow.RepoModified = j.RepoModified.Format(time.RFC3339)
 		tempRow.Public = j.Public
 		rowList = append(rowList, tempRow)
 		rowCount += 1
