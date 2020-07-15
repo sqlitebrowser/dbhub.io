@@ -1134,8 +1134,8 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		createBranch = true
 	} else {
 		if commit == "" {
-			http.Error(w, "No commit ID was provided.  You probably need to upgrade your client before trying this "+
-				"again.", http.StatusUpgradeRequired)
+			http.Error(w, "A database with that name already exists.  Please choose a different name or clone the "+
+				"existing database first.", http.StatusForbidden)
 			return
 		}
 
