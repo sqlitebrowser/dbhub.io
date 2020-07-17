@@ -176,6 +176,15 @@
                 <!-- <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button> -->
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                     <button type="button" class="btn btn-success" uib-dropdown-toggle>
+                        Clone database in DB4S <span class="caret"></span>
+                    </button>
+                    <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
+                        <li><input type="text" value="https://[[ .Config.DB4S.Server ]]:[[ .Config.DB4S.Port ]]/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&branch=[[ .DB.Info.Branch ]]" id="db4sCloneLink" /></li>
+                        <li><a href="#" onclick="copyToClipboard('db4sCloneLink');return false;">Copy link <span class="glyphicon glyphicon-link"></span></a></li>
+                    </ul>
+                </div>
+                <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <button type="button" class="btn btn-success" uib-dropdown-toggle>
                         Download database <span class="caret"></span>
                     </button>
                     <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
@@ -250,6 +259,13 @@
 </div>
 [[ template "footer" . ]]
 <script>
+    function copyToClipboard(element_id) {
+        var e = document.getElementById(element_id);
+        e.select();
+        e.setSelectionRange(0, 99999);
+        document.execCommand("copy");
+    };
+
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
 
     // Simple filter to ensure '&nbsp;' is shown as a non-breaking space

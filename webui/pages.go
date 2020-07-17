@@ -1252,7 +1252,11 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		Meta    com.MetaInfo
 		MyStar  bool
 		MyWatch bool
+		Config  com.TomlConfig
 	}
+
+	// Store settings
+	pageData.Config = com.Conf
 
 	// Retrieve session data (if any)
 	var loggedInUser string
