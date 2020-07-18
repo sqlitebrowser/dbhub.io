@@ -15,7 +15,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -32,21 +31,6 @@ var (
 	// Address of our server, formatted for display
 	server string
 )
-
-// For sorting a UserInfo list by Last Modified date descending
-type UserInfoSlice []com.UserInfo
-
-func (u UserInfoSlice) Len() int {
-	return len(u)
-}
-
-func (u UserInfoSlice) Less(i, j int) bool {
-	return u[i].LastModified.After(u[j].LastModified) // Swap to Before() for an ascending list
-}
-
-func (u UserInfoSlice) Swap(i, j int) {
-	u[i], u[j] = u[j], u[i]
-}
 
 func main() {
 	// Read server configuration
@@ -241,19 +225,12 @@ func generateDefaultList(pageName string, userAcc string) (defaultList []byte, e
 	pageName += ":generateDefaultList()"
 
 	// Retrieve the list of most recently modified (available) databases
-	var unsorted map[string]com.UserInfo
-	unsorted, err = com.DB4SDefaultList(userAcc)
+	var userList com.UserInfoSlice
+	userList, err = com.DB4SDefaultList(userAcc)
 	if err != nil {
 		// Return an empty set
 		return []byte{'{', '}'}, err
 	}
-
-	// Sort the list by last_modified order, from most recent to oldest
-	userList := make(UserInfoSlice, 0, len(unsorted))
-	for _, j := range unsorted {
-		userList = append(userList, j)
-	}
-	sort.Sort(userList)
 
 	// Ready the data for JSON Marshalling
 	type linkRow struct {

@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -399,7 +400,7 @@ func databaseID(dbOwner string, dbFolder string, dbName string) (dbID int, err e
 
 // Return a list of 1) users with public databases, 2) along with the logged in users' most recently modified database
 // (including their private one(s)).
-func DB4SDefaultList(loggedInUser string) (map[string]UserInfo, error) {
+func DB4SDefaultList(loggedInUser string) (UserInfoSlice, error) {
 	// Retrieve the list of all users with public databases
 	dbQuery := `
 		WITH public_dbs AS (
@@ -417,14 +418,15 @@ func DB4SDefaultList(loggedInUser string) (map[string]UserInfo, error) {
 		SELECT user_name, last_modified
 		FROM public_users AS pu, users
 		WHERE users.user_id = pu.user_id
+			AND users.user_name != $1
 		ORDER BY last_modified DESC`
-	rows, err := pdb.Query(dbQuery)
+	rows, err := pdb.Query(dbQuery, loggedInUser)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
 	}
 	defer rows.Close()
-	list := make(map[string]UserInfo)
+	unsorted := make(map[string]UserInfo)
 	for rows.Next() {
 		var oneRow UserInfo
 		err = rows.Scan(&oneRow.Username, &oneRow.LastModified)
@@ -432,8 +434,15 @@ func DB4SDefaultList(loggedInUser string) (map[string]UserInfo, error) {
 			log.Printf("Error list of users with public databases: %v\n", err)
 			return nil, err
 		}
-		list[oneRow.Username] = oneRow
+		unsorted[oneRow.Username] = oneRow
 	}
+
+	// Sort the list by last_modified order, from most recent to oldest
+	publicList := make(UserInfoSlice, 0, len(unsorted))
+	for _, j := range unsorted {
+		publicList = append(publicList, j)
+	}
+	sort.Sort(publicList)
 
 	// Retrieve the last modified timestamp for the most recent database of the logged in user (if they have any)
 	dbQuery = `
@@ -454,23 +463,33 @@ func DB4SDefaultList(loggedInUser string) (map[string]UserInfo, error) {
 		)
 		SELECT last_modified
 		FROM most_recent_user_db`
+	userRow := UserInfo{Username: loggedInUser}
 	rows, err = pdb.Query(dbQuery, loggedInUser)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
 	}
 	defer rows.Close()
+	userHasDB := false
 	for rows.Next() {
-		oneRow := UserInfo{Username: loggedInUser}
-		err = rows.Scan(&oneRow.LastModified)
+		userHasDB = true
+		err = rows.Scan(&userRow.LastModified)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v\n", err)
 			return nil, err
 		}
-		list[oneRow.Username] = oneRow
 	}
 
-	return list, nil
+	// If the user doesn't have any databases, just return the list of users with public databases
+	if !userHasDB {
+		return publicList, nil
+	}
+
+	// The user does have at least one database, so include them at the top of the list
+	completeList := make(UserInfoSlice, 0, len(unsorted)+1)
+	completeList = append(completeList, userRow)
+	completeList = append(completeList, publicList...)
+	return completeList, nil
 }
 
 // Retrieve the details for a specific database

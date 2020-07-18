@@ -477,6 +477,21 @@ type UploadRow struct {
 	UploadDate time.Time `json:"upload_date"`
 }
 
+// For sorting a UserInfo list by Last Modified date descending
+type UserInfoSlice []UserInfo
+
+func (u UserInfoSlice) Len() int {
+	return len(u)
+}
+
+func (u UserInfoSlice) Less(i, j int) bool {
+	return u[i].LastModified.After(u[j].LastModified) // Swap to Before() for an ascending list
+}
+
+func (u UserInfoSlice) Swap(i, j int) {
+	u[i], u[j] = u[j], u[i]
+}
+
 type UserDetails struct {
 	AvatarURL   string
 	ClientCert  []byte
