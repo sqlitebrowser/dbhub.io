@@ -4,9 +4,11 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	gz "github.com/NYTimes/gziphandler"
@@ -19,6 +21,9 @@ var (
 
 	// Address of our server, formatted for display
 	server string
+
+	// Our parsed HTML templates
+	tmpl *template.Template
 )
 
 func main() {
@@ -35,6 +40,10 @@ func main() {
 	}
 	defer reqLog.Close()
 	log.Printf("Request log opened: %s\n", com.Conf.Api.RequestLog)
+
+	// Parse our template files
+	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
+		filepath.Join(com.Conf.Web.BaseDir, "api", "templates", "*.html")))
 
 	// Connect to Minio server
 	err = com.ConnectMinio()
@@ -60,13 +69,14 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	// Add the default licences to PostgreSQL
+	// Add the default licences to the system
 	err = com.AddDefaultLicences()
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 
 	// Our pages
+	http.Handle("/", gz.GzipHandler(handleWrapper(rootHandler)))
 	http.Handle("/v1/query", gz.GzipHandler(handleWrapper(queryHandler)))
 
 	// Generate the formatted server string
@@ -112,6 +122,7 @@ func logReq(r *http.Request, loggedInUser string) {
 //   curl -kD headers.out -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" \
 //     -F sql="U0VMRUNUIHRhYmxlMS5OYW1lLCB0YWJsZTIudmFsdWUKRlJPTSB0YWJsZTEgSk9JTiB0YWJsZTIKVVNJTkcgKGlkKQpPUkRFUiBCWSB0YWJsZTEuaWQ7" \
 //     https://api.dbhub.io/v1/query
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
 //   * "dbowner" is the owner of the database being queried
 //   * "dbname" is the name of the database being queried
 //   * "sql" is the SQL query to run, base64 encoded
@@ -125,11 +136,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Look up the owner of the API key
 	loggedInUser, err := com.GetAPIKeyUser(apiKey)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if loggedInUser == "" {
+	if err != nil || loggedInUser == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -185,4 +192,27 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, string(jsonData))
+}
+
+// Handles requests for "/" and all unknown paths
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		ServerName string
+	}
+
+	// If the incoming request is for anything other than the index page, return a 404
+	if r.URL.Path != "/" {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	// Pass through some variables, useful for the generated docs
+	pageData.ServerName = com.Conf.Web.ServerName
+
+	// Display our API documentation
+	t := tmpl.Lookup("docs")
+	err := t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
 }

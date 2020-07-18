@@ -1,0 +1,79 @@
+[[ define "docs" ]]
+<!doctype html>
+<html>
+[[ template "head" . ]]
+<body>
+<style>
+    .dochead {
+        text-align: left;
+    }
+    .pad {
+        padding-top: 10px;
+    }
+    .paramname {
+        font-style: italic;
+    }
+</style>
+<h1>DBHub API (development)</h1>
+<table>
+    <tr class="dochead">
+        <th>URL</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td><a href="/v1/query">/v1/query</a></td>
+        <td>Run a SQLite query on a database</td>
+    </tr>
+    <tr>
+        <th class="dochead pad">Parameters (POST)</th>
+        <th>&nbsp;</th>
+    </tr>
+    <tr>
+        <td class="paramname">apikey</td>
+        <td>Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</td>
+    </tr>
+    <tr>
+        <td class="paramname">dbowner</td>
+        <td>The owner of the database to query</td>
+    </tr>
+    <tr>
+        <td class="paramname">dbname</td>
+        <td>The name of the database</td>
+    </tr>
+    <tr>
+        <td class="paramname">sql</td>
+        <td>The SQL query, base64 encoded</td>
+    </tr>
+    <tr>
+        <th class="dochead pad" colspan="2">Example</th>
+    </tr>
+    <tr>
+        <td class="pad" colspan="2">
+            For example, to run this query against <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>:
+            <pre>
+SELECT table1.Name, table2.value
+FROM table1 JOIN table2
+USING (id)
+ORDER BY table1.id;
+            </pre>
+
+            Using <a href="https://curl.haxx.se">curl</a>, it would be:
+            <pre>
+$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" \
+    -F sql="U0VMRUNUIHRhYmxlMS5OYW1lLCB0YWJsZTIudmFsdWUKRlJPTSB0YWJsZTEgSk9JTiB0YWJsZTIKVVNJTkcgKGlkKQpPUkRFUiBCWSB0YWJsZTEuaWQ7" \
+    https://api.dbhub.io/v1/query
+            </pre>
+
+            The returned data, will be in JSON:
+            <pre>
+[["[["]]{"Name":"Name","Type":3,"Value":"Foo"} ... (shortened for clarity)
+            </pre>
+
+            Note the returned JSON format is likely to be changeable via further parameters in the near future, as the
+            current output format is very verbose.
+        </td>
+    </tr>
+</table>
+</body>
+</html>
+[[ end ]]
