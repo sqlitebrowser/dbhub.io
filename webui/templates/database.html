@@ -179,7 +179,7 @@
                         Clone database in DB4S <span class="caret"></span>
                     </button>
                     <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
-                        <li><input type="text" value="https://[[ .Config.DB4S.Server ]]:[[ .Config.DB4S.Port ]]/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&branch=[[ .DB.Info.Branch ]]" id="db4sCloneLink" /></li>
+                        <li><input type="text" value="https://[[ .Config.DB4S.Server ]][[ if (ne .Config.DB4S.Port 443) ]]:[[ .Config.DB4S.Port ]][[ end ]]/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&branch=[[ .DB.Info.Branch ]]" id="db4sCloneLink" /></li>
                         <li><a href="#" onclick="copyToClipboard('db4sCloneLink');return false;">Copy link <span class="glyphicon glyphicon-link"></span></a></li>
                     </ul>
                 </div>
