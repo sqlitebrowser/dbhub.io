@@ -57,6 +57,15 @@ const MaxLicenceSize = 1
 //        -> Minio filename: "5a737156147fbd0a44323a895d18ade79d4db521564d1b0dbb8764cbbc"
 const MinioFolderChars = 6
 
+type QuerySource int
+
+const (
+	WebUI QuerySource = iota
+	DB4S
+	Visualisation
+	API
+)
+
 // ************************
 // Configuration file types
 

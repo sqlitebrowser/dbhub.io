@@ -524,7 +524,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 	}
 
 	// Execute the query and retrieve the data
-	_, _, dataRows, err = SQLiteRunQuery(sdb, dbQuery, ignoreBinary, ignoreNull)
+	_, _, dataRows, err = SQLiteRunQuery(sdb, WebUI, dbQuery, ignoreBinary, ignoreNull)
 	if err != nil {
 		return dataRows, err
 	}
@@ -793,7 +793,7 @@ func SanityCheck(fileName string) (tables []string, err error) {
 	return
 }
 
-func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull bool) (memUsed, memHighWater int64, dataRows SQLiteRecordSet, err error) {
+func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, ignoreBinary, ignoreNull bool) (memUsed, memHighWater int64, dataRows SQLiteRecordSet, err error) {
 	// Use the sort column as needed
 	var stmt *sqlite.Stmt
 	stmt, err = sdb.Prepare(dbQuery)
@@ -834,8 +834,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 				}
 				if !isNull {
 					stringVal := fmt.Sprintf("%d", val)
-					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Integer,
-						Value: stringVal})
+					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Integer, Value: stringVal})
 				}
 			case sqlite.Float:
 				var val float64
@@ -846,23 +845,28 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 				}
 				if !isNull {
 					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
-					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Float,
-						Value: stringVal})
+					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Float, Value: stringVal})
 				}
 			case sqlite.Text:
 				var val string
 				val, isNull = s.ScanText(i)
 				if !isNull {
-					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Text,
-						Value: val})
+					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Text, Value: val})
 				}
 			case sqlite.Blob:
 				// BLOBs can be ignored (via flag to this function) for situations like the vis data
 				if !ignoreBinary {
-					_, isNull = s.ScanBlob(i)
+					var b []byte
+					b, isNull = s.ScanBlob(i)
 					if !isNull {
-						row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Binary,
-							Value: "<i>BINARY DATA</i>"})
+						switch querySource {
+						case API:
+							row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Binary,
+								Value: base64.StdEncoding.EncodeToString(b)})
+						default:
+							row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Binary,
+								Value: "<i>BINARY DATA</i>"})
+						}
 					}
 				} else {
 					addRow = false
@@ -870,9 +874,16 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 			case sqlite.Null:
 				isNull = true
 			}
+
+			// NULLS can be ignored (via flag to this function) for situations like the vis data
 			if isNull && !ignoreNull {
-				// NULLS can be ignored (via flag to this function) for situations like the vis data
-				row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Null})
+				// Different sources of the query have different requirements for the output
+				switch querySource {
+				case API:
+					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Null})
+				default:
+					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Null, Value: "<i>NULL</i>"})
+				}
 			}
 			if isNull && ignoreNull {
 				addRow = false
@@ -897,7 +908,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, dbQuery string, ignoreBinary, ignoreNull b
 }
 
 // Runs a user provided SQLite query
-func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, source, dbOwner, dbFolder, dbName, commitID, loggedInUser, query string) (SQLiteRecordSet, error) {
+func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource QuerySource, dbOwner, dbFolder, dbName, commitID, loggedInUser, query string) (SQLiteRecordSet, error) {
 	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
 	sdb, err := OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
@@ -918,6 +929,15 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, source, dbO
 
 	// Log the SQL query (prior to executing it)
 	var logID int64
+	var source string
+	switch querySource {
+	case API:
+		source = "api"
+	case Visualisation:
+		source = "vis"
+	default:
+		return SQLiteRecordSet{}, fmt.Errorf("Unknown source in SQLiteRunQueryDefensive()")
+	}
 	logID, err = LogSQLiteQueryBefore(source, dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
 	if err != nil {
 		return SQLiteRecordSet{}, err
@@ -926,7 +946,7 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, source, dbO
 	// Execute the SQLite select query (or queries)
 	var dataRows SQLiteRecordSet
 	var memUsed, memHighWater int64
-	memUsed, memHighWater, dataRows, err = SQLiteRunQuery(sdb, query, false, false)
+	memUsed, memHighWater, dataRows, err = SQLiteRunQuery(sdb, querySource, query, false, false)
 	if err != nil {
 		return SQLiteRecordSet{}, err
 	}
