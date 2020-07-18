@@ -200,6 +200,9 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 		ServerName string
 	}
 
+	// Log the incoming request
+	logReq(r, "-")
+
 	// If the incoming request is for anything other than the index page, return a 404
 	if r.URL.Path != "/" {
 		http.Error(w, "Not found", http.StatusNotFound)
