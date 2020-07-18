@@ -64,12 +64,10 @@ func main() {
 	}
 
 	// Add the default user to the system
-	// Note - we don't check for an error here on purpose.  If we were to fail on an error, then subsequent runs after
-	// the first would barf with PG errors about trying to insert multiple "default" users violating unique
-	// constraints.  It would be solvable by creating a special purpose PL/pgSQL function just for this one use case...
-	// or we could just ignore failures here. ;)
-	// TODO: We might be able to use an "ON CONFLICT" PG clause instead, to (eg) "DO NOTHING"
-	com.AddDefaultUser()
+	err = com.AddDefaultUser()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 
 	// Add the default licences to PostgreSQL
 	err = com.AddDefaultLicences()
