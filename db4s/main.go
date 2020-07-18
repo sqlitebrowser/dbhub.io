@@ -785,6 +785,9 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate the link to the web page of this database in the webUI module
+	webPage := "https://" + com.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName
+
 	// Return the list as JSON
 	info := struct {
 		Branches  map[string]com.BranchEntry  `json:"branches"`
@@ -792,12 +795,14 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 		DefBranch string                      `json:"default_branch"`
 		Releases  map[string]com.ReleaseEntry `json:"releases"`
 		Tags      map[string]com.TagEntry     `json:"tags"`
+		WebPage   string                      `json:"web_page"`
 	}{
 		Branches:  branchList,
 		Commits:   commitList,
 		DefBranch: defBranch,
 		Releases:  relList,
 		Tags:      tagList,
+		WebPage:   webPage,
 	}
 	jsonList, err := json.MarshalIndent(info, "", "  ")
 	if err != nil {
