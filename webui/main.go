@@ -2113,13 +2113,10 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Automatically close the SQLite database when this function finishes
-		defer func() {
-			sdb.Close()
-		}()
+		defer sdb.Close()
 
 		// Retrieve the list of tables in the database
 		sTbls, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
-		defer sdb.Close()
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -2826,9 +2823,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Automatically close the SQLite database when this function finishes
-	defer func() {
-		sdb.Close()
-	}()
+	defer sdb.Close()
 
 	// Read the table data from the database object
 	resultSet, err := com.ReadSQLiteDBCSV(sdb, dbTable)
@@ -4086,15 +4081,12 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Automatically close the SQLite database when this function finishes
-	defer func() {
-		sdb.Close()
-	}()
+	defer sdb.Close()
 
 	// Retrieve the list of tables in the database
 	// TODO: Update this to handle having a default table "per branch".  Even though it would mean looping here, it
 	// TODO  seems like the only way to be flexible and accurate enough for our purposes
 	tables, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
-	defer sdb.Close()
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -4528,13 +4520,10 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Automatically close the SQLite database when this function finishes
-	defer func() {
-		sdb.Close()
-	}()
+	defer sdb.Close()
 
 	// Retrieve the list of tables in the database
 	sTbls, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
-	defer sdb.Close()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4722,9 +4711,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Automatically close the SQLite database when this function finishes
-		defer func() {
-			sdb.Close()
-		}()
+		defer sdb.Close()
 
 		// Retrieve the list of tables in the database
 		tables, err := sdb.Tables("")

@@ -1653,9 +1653,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Close the SQLite database and delete the temp file
-	defer func() {
-		sdb.Close()
-	}()
+	defer sdb.Close()
 
 	// Retrieve the list of tables and views in the database
 	tables, err := com.Tables(sdb, dbName)
@@ -3123,13 +3121,10 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Automatically close the SQLite database when this function finishes
-	defer func() {
-		sdb.Close()
-	}()
+	defer sdb.Close()
 
 	// Retrieve the list of tables in the database
 	pageData.DB.Info.Tables, err = com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
-	defer sdb.Close()
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

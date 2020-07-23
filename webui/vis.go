@@ -257,9 +257,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Close the SQLite database and delete the temp file
-	defer func() {
-		sdb.Close()
-	}()
+	defer sdb.Close()
 
 	// Retrieve the list of tables and views in the database
 	tables, err := com.Tables(sdb, dbName)
