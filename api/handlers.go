@@ -31,17 +31,6 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	dbFolder := "/"
 
-	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !exists {
-		jsonErr(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName), http.StatusNotFound)
-		return
-	}
-
 	// Check if the user has access to the requested database
 	var bucket, id string
 	bucket, id, _, err = com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
