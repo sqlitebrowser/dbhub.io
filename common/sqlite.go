@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	sqlite "github.com/gwenn/gosqlite"
@@ -186,14 +185,15 @@ var SQLiteFunctions = []function{
 	fnJsonTree,
 }
 
-// Enable the collection of memory allocation statistics
 func init() {
+	// Enable the collection of memory allocation statistics
 	if err := sqlite.ConfigMemStatus(true); err != nil {
 		log.Fatalf("Cannot enable memory allocation statistics: '%s'\n", err)
 	}
 }
 
-// A SQLite authorizer callback which only allows SELECT queries and their needed sub-operations to run
+// AuthorizerSelect is a SQLite authorizer callback which only allows SELECT queries and their needed
+// sub-operations to run.
 func AuthorizerSelect(d interface{}, action sqlite.Action, tableName, funcName, dbName, triggerName string) sqlite.Auth {
 	// We make sure the "action" code is either SELECT, READ (needed for reading data), or one of the in-built/allowed
 	// functions
@@ -225,7 +225,7 @@ func AuthorizerSelect(d interface{}, action sqlite.Action, tableName, funcName, 
 	return sqlite.AuthDeny
 }
 
-// Returns the number of rows in a SQLite table.
+// GetSQLiteRowCount returns the number of rows in a SQLite table.
 func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 	dbQuery := `SELECT count(*) FROM "` + dbTable + `"`
 	var rowCount int
@@ -237,7 +237,7 @@ func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 	return rowCount, nil
 }
 
-// Retrieves a SQLite database from Minio, opens it, then returns the connection handle.
+// OpenSQLiteDatabase retrieves a SQLite database from Minio, opens it, then returns the connection handle.
 func OpenSQLiteDatabase(bucket, id string) (*sqlite.Conn, error) {
 	// Retrieve database file from Minio, using cached version if it's already there
 	newDB, err := RetrieveDatabaseFile(bucket, id)
@@ -261,8 +261,9 @@ func OpenSQLiteDatabase(bucket, id string) (*sqlite.Conn, error) {
 	return sdb, nil
 }
 
-// Similar to OpenSQLiteDatabase(), but opens the database Read Only and implements recommended defensive precautions
-// for potentially malicious user provided SQL queries: https://www.sqlite.org/security.html
+// OpenSQLiteDatabaseDefensive is similar to OpenSQLiteDatabase(), but opens the database Read Only and implements
+// the recommended defensive precautions for potentially malicious user provided SQL
+// queries: https://www.sqlite.org/security.html
 func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID, loggedInUser string) (sdb *sqlite.Conn, err error) {
 	// Check if the user has access to the requested database
 	var bucket, id string
@@ -422,12 +423,13 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	return sdb, nil
 }
 
-// Reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then read all rows.
+// ReadSQLiteDB reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then
+// read all rows.
 func ReadSQLiteDB(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, maxRows, rowOffset int) (SQLiteRecordSet, error) {
 	return ReadSQLiteDBCols(sdb, dbTable, sortCol, sortDir, false, false, maxRows, rowOffset)
 }
 
-// Reads up to maxRows # of rows from a SQLite database.  Only returns the requested columns.
+// ReadSQLiteDBCols reads up to maxRows # of rows from a SQLite database.  Only returns the requested columns.
 func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignoreBinary, ignoreNull bool, maxRows, rowOffset int) (SQLiteRecordSet, error) {
 	// Ugh, have to use string smashing for this, even though the SQL spec doesn't seem to say table names
 	// shouldn't be parametrised.  Limitation from SQLite's implementation? :(
@@ -544,8 +546,8 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 	return dataRows, nil
 }
 
-// This is a specialised variation of the ReadSQLiteDB() function, just for our CSV exporting code. It'll probably
-// need to be merged with the above function at some point.
+// ReadSQLiteDBCSV is a specialised variation of the ReadSQLiteDB() function, just for our CSV exporting code.  It may
+// be merged with that in future.
 func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 	// Retrieve all of the data from the selected database table
 	stmt, err := sdb.Prepare(`SELECT * FROM "` + dbTable + `"`)
@@ -626,112 +628,7 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 	return resultSet, nil
 }
 
-// This is a specialised variation of the ReadSQLiteDB() function, just for our Redash JSON exporting code. It'll probably
-// need to be merged with the above function at some point.
-func ReadSQLiteDBRedash(sdb *sqlite.Conn, dbTable string) (dash RedashTableData, err error) {
-	// Retrieve all of the data from the selected database table
-	stmt, err := sdb.Prepare(`SELECT * FROM "` + dbTable + `"`)
-	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\n", err)
-		return RedashTableData{}, err
-	}
-
-	// Process each row
-	fieldCount := -1
-	err = stmt.Select(func(s *sqlite.Stmt) error {
-
-		// Get the number of fields in the result
-		if fieldCount == -1 {
-			fieldCount = stmt.DataCount()
-		}
-
-		// Retrieve the (table level) type declaration for the result fields
-		if dash.Columns == nil {
-			for i := 0; i < fieldCount; i++ {
-				var c RedashColumnMeta
-				c.Name = stmt.ColumnName(i)
-				c.FriendlyName = stmt.ColumnName(i)
-
-				// Map common SQLite data types to Redash JSON acceptable equivalent
-				t := strings.ToLower(stmt.ColumnDeclaredType(i))
-				switch t {
-				case "numeric":
-					c.Type = "float"
-				case "real":
-					c.Type = "float"
-				case "text":
-					c.Type = "string"
-				default:
-					c.Type = t
-				}
-
-				dash.Columns = append(dash.Columns, c)
-			}
-		}
-
-		// Retrieve the data for each row
-		row := make(map[string]interface{})
-		for i := 0; i < fieldCount; i++ {
-
-			// Retrieve the name of the field
-			fieldName := stmt.ColumnName(i)
-
-			// Retrieve the data type for the field
-			fieldType := stmt.ColumnType(i)
-
-			isNull := false
-			switch fieldType {
-			case sqlite.Integer:
-				var val int
-				val, isNull, err = s.ScanInt(i)
-				if err != nil {
-					log.Printf("Something went wrong with ScanInt(): %v\n", err)
-					break
-				}
-				if !isNull {
-					row[fieldName] = val
-				}
-			case sqlite.Float:
-				var val float64
-				val, isNull, err = s.ScanDouble(i)
-				if err != nil {
-					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
-					break
-				}
-				if !isNull {
-					row[fieldName] = val
-				}
-			case sqlite.Text:
-				var val string
-				val, isNull = s.ScanText(i)
-				if !isNull {
-					row[fieldName] = val
-				}
-			case sqlite.Blob:
-				var val []byte
-				val, isNull = s.ScanBlob(i)
-				if !isNull {
-					// Base64 encode the value
-					row[fieldName] = base64.StdEncoding.EncodeToString(val)
-				}
-			case sqlite.Null:
-				isNull = true
-			}
-		}
-		dash.Rows = append(dash.Rows, row)
-		return nil
-	})
-	if err != nil {
-		log.Printf("Error when reading data from database: %s\n", err)
-		return RedashTableData{}, err
-	}
-	defer stmt.Finalize()
-
-	// Return the results
-	return dash, nil
-}
-
-// Performs basic sanity checks of an uploaded database.
+// SanityCheck performs basic sanity checks of an uploaded database.
 func SanityCheck(fileName string) (tables []string, err error) {
 	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
 	sqliteDB, err := sqlite.Open(fileName, sqlite.OpenReadOnly)
@@ -793,6 +690,8 @@ func SanityCheck(fileName string) (tables []string, err error) {
 	return
 }
 
+// SQLiteRunQuery runs a SQLite query.  DO NOT use this for user provided SQL queries.  For those,
+// use SQLiteRunQueryDefensive().
 func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, ignoreBinary, ignoreNull bool) (memUsed, memHighWater int64, dataRows SQLiteRecordSet, err error) {
 	// Use the sort column as needed
 	var stmt *sqlite.Stmt
@@ -907,7 +806,8 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 	return
 }
 
-// Runs a user provided SQLite query
+// SQLiteRunQueryDefensive runs a user provided SQLite query, using our "defensive" mode.  eg with limits placed on
+// what it's allowed to do.
 func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource QuerySource, dbOwner, dbFolder, dbName, commitID, loggedInUser, query string) (SQLiteRecordSet, error) {
 	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
 	sdb, err := OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
@@ -959,12 +859,12 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	return dataRows, err
 }
 
-// Returns the version number of the available SQLite library, in 300X00Y format
+// SQLiteVersionNumber returns the version number of the available SQLite library, in 300X00Y format.
 func SQLiteVersionNumber() int32 {
 	return sqlite.VersionNumber()
 }
 
-// Returns the list of tables and view in the SQLite database.
+// Tables returns the list of tables and views in the SQLite database.
 func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 	// TODO: It might be useful to cache this info in PG or memcached
 	// Retrieve the list of tables in the database
