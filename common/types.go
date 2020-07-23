@@ -383,6 +383,10 @@ type ForkEntry struct {
 	Deleted    bool       `json:"deleted"`
 }
 
+type JsonError struct {
+	Error string `json:"error"`
+}
+
 type LicenceEntry struct {
 	FileFormat string `json:"file_format"`
 	FullName   string `json:"full_name"`
