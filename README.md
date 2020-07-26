@@ -5,7 +5,7 @@
 An early stage (in development) "Cloud" for SQLite databases, with special
 integration for [DB Browser for SQLite](http://sqlitebrowser.org).
 
-You can try out our live server at [https://dbhub.io](https://db4s.dbhub.io/justinclift/DB4S%20download%20stats.sqlite),
+You can try out our live server at [https://dbhub.io](https://dbhub.io/justinclift/DB4S%20download%20stats.sqlite),
 or run it locally for your own users.
 
 ### Screenshot
