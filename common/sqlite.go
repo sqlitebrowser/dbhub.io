@@ -104,6 +104,9 @@ const (
 	fnJsonGroupObject function = "json_group_object"
 	fnJsonEach        function = "json_each"
 	fnJsonTree        function = "json_tree"
+
+	// Other functions we should allow
+	fnVersion function = "sqlite_version"
 )
 
 var SQLiteFunctions = []function{
@@ -183,6 +186,7 @@ var SQLiteFunctions = []function{
 	fnJsonGroupObject,
 	fnJsonEach,
 	fnJsonTree,
+	fnVersion,
 }
 
 func init() {
