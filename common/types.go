@@ -64,6 +64,7 @@ const (
 	DB4S
 	Visualisation
 	API
+	Internal
 )
 
 // ************************
