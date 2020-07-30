@@ -941,3 +941,7 @@ func Views(sdb *sqlite.Conn) (vw []string, err error) {
 	}
 	return
 }
+
+func EscapeId(id string) string {
+	return sqlite.Mprintf("\"%w\"", id)
+}
