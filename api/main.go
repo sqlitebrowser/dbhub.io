@@ -78,7 +78,8 @@ func main() {
 	// Our pages
 	http.Handle("/", gz.GzipHandler(handleWrapper(rootHandler)))
 	http.Handle("/v1/query", gz.GzipHandler(handleWrapper(queryHandler)))
-	http.Handle("/v1/get_tables", gz.GzipHandler(handleWrapper(getTablesHandler)))
+	http.Handle("/v1/tables", gz.GzipHandler(handleWrapper(tablesHandler)))
+	http.Handle("/v1/views", gz.GzipHandler(handleWrapper(viewsHandler)))
 
 	// Generate the formatted server string
 	server = fmt.Sprintf("https://%s", com.Conf.Api.ServerName)
