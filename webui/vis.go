@@ -260,7 +260,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	defer sdb.Close()
 
 	// Retrieve the list of tables and views in the database
-	tables, err := com.Tables(sdb, dbName)
+	tables, err := com.TablesAndViews(sdb, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

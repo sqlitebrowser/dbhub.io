@@ -1656,7 +1656,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	defer sdb.Close()
 
 	// Retrieve the list of tables and views in the database
-	tables, err := com.Tables(sdb, dbName)
+	tables, err := com.TablesAndViews(sdb, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3124,7 +3124,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	defer sdb.Close()
 
 	// Retrieve the list of tables in the database
-	pageData.DB.Info.Tables, err = com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+	pageData.DB.Info.Tables, err = com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

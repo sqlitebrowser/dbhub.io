@@ -868,11 +868,10 @@ func SQLiteVersionNumber() int32 {
 	return sqlite.VersionNumber()
 }
 
-// Tables returns the list of tables and views in the SQLite database.
-func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
-	// TODO: It might be useful to cache this info in PG or memcached
+// Tables returns the list of tables in the SQLite database.
+func Tables(sdb *sqlite.Conn) (tbl []string, err error) {
 	// Retrieve the list of tables in the database
-	tables, err := sdb.Tables("")
+	tbl, err = sdb.Tables("")
 	if err != nil {
 		// An error occurred, so get the extended error code
 		if cerr, ok := err.(sqlite.ConnError); ok {
@@ -881,28 +880,53 @@ func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 			if extCode == 5 { // Magic number which (in this case) means "database is locked"
 				// Wait 3 seconds then try again
 				time.Sleep(3 * time.Second)
-				tables, err = sdb.Tables("")
+				tbl, err = sdb.Tables("")
 				if err != nil {
 					log.Printf("Error retrieving table names: %s", err)
-					return nil, err
+					return
 				}
 			} else {
 				log.Printf("Error retrieving table names: %s", err)
-				return nil, err
+				return
 			}
 		} else {
 			log.Printf("Error retrieving table names: %s", err)
-			return nil, err
+			return
 		}
 	}
-	if len(tables) == 0 {
+	return
+}
+
+// TablesAndViews returns the list of tables and views in the SQLite database.
+func TablesAndViews(sdb *sqlite.Conn, dbName string) (list []string, err error) {
+	// TODO: It might be useful to cache this info in PG or memcached
+	// Retrieve the list of tables in the database
+	list, err = Tables(sdb)
+	if err != nil {
+		return
+	}
+	if len(list) == 0 {
 		// No table names were returned, so abort
 		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
-		return nil, err
+		return
 	}
 
 	// Retrieve the list of views in the database
-	vw, err := sdb.Views("")
+	var vw []string
+	vw, err = Views(sdb)
+	if err != nil {
+		return
+	}
+
+	// Merge the table and view lists
+	list = append(list, vw...)
+	return
+}
+
+// Views returns the list of views in the SQLite database.
+func Views(sdb *sqlite.Conn) (vw []string, err error) {
+	// Retrieve the list of views in the database
+	vw, err = sdb.Views("")
 	if err != nil {
 		log.Printf("Error retrieving view names: %v\n", err)
 		if cerr, ok := err.(sqlite.ConnError); ok {
@@ -913,10 +937,7 @@ func Tables(sdb *sqlite.Conn, dbName string) ([]string, error) {
 		} else {
 			log.Printf("Expected a connection error, but got a '%v'\n", reflect.TypeOf(cerr))
 		}
-		return nil, err
+		return
 	}
-
-	// Merge the table and view arrays
-	tables = append(tables, vw...)
-	return tables, nil
+	return
 }

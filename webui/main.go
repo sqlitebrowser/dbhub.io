@@ -2116,7 +2116,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		defer sdb.Close()
 
 		// Retrieve the list of tables in the database
-		sTbls, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+		sTbls, err := com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -4086,7 +4086,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the list of tables in the database
 	// TODO: Update this to handle having a default table "per branch".  Even though it would mean looping here, it
 	// TODO  seems like the only way to be flexible and accurate enough for our purposes
-	tables, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+	tables, err := com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -4523,7 +4523,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	defer sdb.Close()
 
 	// Retrieve the list of tables in the database
-	sTbls, err := com.Tables(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+	sTbls, err := com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
