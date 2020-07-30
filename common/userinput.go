@@ -33,7 +33,7 @@ func CheckUnicode(rawInput string) (str string, err error) {
 	decodedStr := string(decoded)
 	for _, j := range decodedStr {
 		if unicode.IsControl(j) || unicode.Is(unicode.C, j) {
-			if j != 10 { // 10 == new line, which is safe to allow.  Everything else should (probably) raise an error
+			if j != 9 && j != 10 { // 9 == tab, 10 == new line, which are safe to allow.  Everything else should (probably) raise an error
 				invalidChar = true
 			}
 		}
