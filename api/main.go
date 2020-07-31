@@ -77,6 +77,7 @@ func main() {
 
 	// Our pages
 	http.Handle("/", gz.GzipHandler(handleWrapper(rootHandler)))
+	http.Handle("/v1/indexes", gz.GzipHandler(handleWrapper(indexesHandler)))
 	http.Handle("/v1/query", gz.GzipHandler(handleWrapper(queryHandler)))
 	http.Handle("/v1/tables", gz.GzipHandler(handleWrapper(tablesHandler)))
 	http.Handle("/v1/views", gz.GzipHandler(handleWrapper(viewsHandler)))
@@ -135,12 +136,12 @@ func handleWrapper(fn http.HandlerFunc) http.HandlerFunc {
 
 // jsonErr returns an error message wrapped in JSON, for (potentially) easier processing by an API caller
 func jsonErr(w http.ResponseWriter, msg string, statusCode int) {
-	errmsg := com.JsonError{
+	je := com.JsonError{
 		Error: msg,
 	}
-	jsonData, err := json.Marshal(errmsg)
+	jsonData, err := json.Marshal(je)
 	if err != nil {
-		errMsg := fmt.Sprintf("A futher error occurred when JSON marshalling an error structure: %v\n", err)
+		errMsg := fmt.Sprintf("A 2nd error occurred when JSON marshalling an error structure: %v\n", err)
 		log.Print(errMsg)
 		http.Error(w, errMsg, http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"error":"An error occured when marshalling JSON inside jsonErr()"}`)

@@ -11,10 +11,13 @@ import (
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
-// collectInfo is an internal function which checks the authentication of incoming requests, extracts
-// the database owner, name, & commitID, then fetches the Minio bucket and ID for the database file.
+// collectInfo is an internal function which:
+//   1. Authenticates incoming requests
+//   2. Extracts the database owner, name, & commitID from the request
+//   3. Fetches the database from Minio (with appropriate permission checks)
+//   4. Opens the database, returning the connection handle
 // This function exists purely because this code is commonly to most of the handlers
-func collectInfo(w http.ResponseWriter, r *http.Request) (bucket, id string, err error, httpStatus int) {
+func collectInfo(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, err error, httpStatus int) {
 	var loggedInUser string
 	loggedInUser, err = checkAuth(w, r)
 	if err != nil {
@@ -32,6 +35,7 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (bucket, id string, err
 	dbFolder := "/"
 
 	// Check if the user has access to the requested database
+	var bucket, id string
 	bucket, id, _, err = com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
@@ -46,7 +50,59 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (bucket, id string, err
 		httpStatus = http.StatusNotFound
 		return
 	}
+
+	// Retrieve database file from Minio, using locally cached version if it's already there
+	newDB, err := com.RetrieveDatabaseFile(bucket, id)
+	if err != nil {
+		httpStatus = http.StatusNotFound
+		return
+	}
+
+	// Open the SQLite database in read only mode
+	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
+	if err != nil {
+		log.Printf("Couldn't open database in viewsHandler(): %s", err)
+		httpStatus = http.StatusInternalServerError
+		return
+	}
+	if err = sdb.EnableExtendedResultCodes(true); err != nil {
+		log.Printf("Couldn't enable extended result codes in viewsHandler(): %v\n", err.Error())
+		httpStatus = http.StatusInternalServerError
+		return
+	}
 	return
+}
+
+// indexesHandler returns the list of indexes present in a SQLite database
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/indexes
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database being queried
+//   * "dbname" is the name of the database being queried
+func indexesHandler(w http.ResponseWriter, r *http.Request) {
+	// Do auth check, grab request info, open the database
+	sdb, err, httpStatus := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+	defer sdb.Close()
+
+	// Retrieve the list of indexes
+	idx, err := sdb.Indexes("")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the results
+	jsonData, err := json.Marshal(idx)
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in indexesHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
 }
 
 // queryHandler executes a SQL query on a SQLite database, returning the results to the caller
@@ -61,14 +117,14 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (bucket, id string, err
 func queryHandler(w http.ResponseWriter, r *http.Request) {
 	loggedInUser, err := checkAuth(w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	// Extract the database owner name, database name, and (optional) commit ID for the database from the request
 	dbOwner, dbName, commitID, err := com.GetFormODC(r)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	dbFolder := "/"
@@ -77,21 +133,19 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	rawInput := r.FormValue("sql")
 	decodedStr, err := com.CheckUnicode(rawInput)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err)
+		jsonErr(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Check if the requested database exists
 	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if !exists {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		jsonErr(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName),
+			http.StatusNotFound)
 		return
 	}
 
@@ -99,17 +153,15 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	var data com.SQLiteRecordSet
 	data, err = com.SQLiteRunQueryDefensive(w, r, com.API, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Return the results
 	jsonData, err := json.Marshal(data.Records)
 	if err != nil {
-		errMsg := fmt.Sprintf("Error when JSON marshalling the returned data: %v\n", err)
-		log.Print(errMsg)
-		http.Error(w, errMsg, http.StatusBadRequest)
+		jsonErr(w, fmt.Sprintf("Error when JSON marshalling the returned data: %v\n", err),
+			http.StatusBadRequest)
 		return
 	}
 	fmt.Fprintf(w, string(jsonData))
@@ -148,46 +200,23 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbowner" is the owner of the database being queried
 //   * "dbname" is the name of the database being queried
 func tablesHandler(w http.ResponseWriter, r *http.Request) {
-	// Do auth check, database existence check, and grab it's Minio bucket and ID
-	bucket, id, err, httpStatus := collectInfo(w, r)
+	// Do auth check, grab request info, open the database
+	sdb, err, httpStatus := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-
-	// Retrieve database file from Minio, using locally cached version if it's already there
-	newDB, err := com.RetrieveDatabaseFile(bucket, id)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	// Open the SQLite database in read only mode
-	var sdb *sqlite.Conn
-	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
-	if err != nil {
-		log.Printf("Couldn't open database in tablesHandler(): %s", err)
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes in tablesHandler(): %v\n", err.Error())
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	defer sdb.Close()
 
 	// Retrieve the list of tables
-	var returnData struct {
-		Tables []string `json:"tables"`
-	}
-	returnData.Tables, err = com.Tables(sdb)
+	tables, err := com.Tables(sdb)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Return the results
-	jsonData, err := json.Marshal(returnData.Tables)
+	jsonData, err := json.Marshal(tables)
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in tablesHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -203,46 +232,23 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbowner" is the owner of the database being queried
 //   * "dbname" is the name of the database being queried
 func viewsHandler(w http.ResponseWriter, r *http.Request) {
-	// Do auth check, database existence check, and grab it's Minio bucket and ID
-	bucket, id, err, httpStatus := collectInfo(w, r)
+	// Do auth check, grab request info, open the database
+	sdb, err, httpStatus := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-
-	// Retrieve database file from Minio, using locally cached version if it's already there
-	newDB, err := com.RetrieveDatabaseFile(bucket, id)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	// Open the SQLite database in read only mode
-	var sdb *sqlite.Conn
-	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
-	if err != nil {
-		log.Printf("Couldn't open database in viewsHandler(): %s", err)
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes in viewsHandler(): %v\n", err.Error())
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	defer sdb.Close()
 
 	// Retrieve the list of views
-	var returnData struct {
-		Views []string `json:"views"`
-	}
-	returnData.Views, err = com.Views(sdb)
+	views, err := com.Views(sdb)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Return the results
-	jsonData, err := json.Marshal(returnData.Views)
+	jsonData, err := json.Marshal(views)
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in viewsHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
