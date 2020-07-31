@@ -230,23 +230,28 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string) (b
 }
 
 func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName string, action DiffType, includeSql bool) (diff []DataDiff, err error) {
-	// Retrieve a list of all primary key columns in this table
-	pk, err := GetPrimaryKeyColumns(sdb, schemaName, tableName)
+	// Retrieve a list of all primary key columns and other columns in this table
+	pk, implicit_pk, other_columns, err := GetPrimaryKeyAndOtherColumns(sdb, schemaName, tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Escape all the column names
-	var pk_escaped []string
+	var pk_escaped, other_escaped []string
 	for _, v := range pk {
 		pk_escaped = append(pk_escaped, EscapeId(v))
+	}
+	for _, v := range other_columns {
+		other_escaped = append(other_escaped, EscapeId(v))
 	}
 
 	// Prepare query for the primary keys of all rows in this table. Only include the rest of the data
 	// in the rows if required
 	query := "SELECT " + strings.Join(pk_escaped, ",")
 	if includeSql && action == ACTION_ADD {
-		query += ", *"
+		if len(other_escaped) > 0 {
+			query += "," + strings.Join(other_escaped, ",")
+		}
 	}
 	query += " FROM " + EscapeId(schemaName) + "." + EscapeId(tableName)
 
@@ -265,7 +270,14 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 			if action == ACTION_DELETE {
 				d.Sql = "DELETE FROM " + EscapeId(tableName) + " WHERE "
 			} else if action == ACTION_ADD {
-				d.Sql = "INSERT INTO " + EscapeId(tableName) + " VALUES("
+				var insert_columns []string
+				// Don't include rowid column, only regular PK
+				if !implicit_pk {
+					insert_columns = append(insert_columns, pk_escaped...)
+				}
+				insert_columns = append(insert_columns, other_escaped...)
+
+				d.Sql = "INSERT INTO " + EscapeId(tableName) + "(" + strings.Join(insert_columns, ",") + ") VALUES("
 			}
 		}
 

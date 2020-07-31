@@ -962,25 +962,36 @@ func EscapeValue(val DataValue) string {
 	}
 }
 
-// Figure out the primary key columns of a table.
+// Figure out the primary key columns and the other columns of a table.
 // The schema and table parameters specify the schema and table names to use.
-func GetPrimaryKeyColumns(sdb *sqlite.Conn, schema string, table string) (pks []string, err error) {
+// This function returns two arrays: One containing the list of primary key columns in the same order as they
+// are used in the primary key. The other array contains a list of all the other, non-primary key columns.
+// Generated columns are ignored completely. If the primary key exists only implicitly, i.e. it's the rowid
+// column, the implicit_pk flag is set to true.
+func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema string, table string) (pks []string, implicit_pk bool, other []string, err error) {
 	// Prepare query
 	var stmt *sqlite.Stmt
 	stmt, err = sdb.Prepare("PRAGMA " + EscapeId(schema) + ".table_info(" + EscapeId(table) + ")")
 	if err != nil {
-		log.Printf("Error when preparing statement in GetPrimaryKey(): %s\n", err)
-		return nil, err
+		log.Printf("Error when preparing statement in GetPrimaryKeyAndOtherColumns(): %s\n", err)
+		return nil, false, nil, err
 	}
 	defer stmt.Finalize()
 
-	// Execute query and retrieve all primary key columns
+	// Execute query and retrieve all columns
 	primaryKeyColumns := make(map[int]string)
 	var hasColumnRowid, hasColumn_Rowid_, hasColumnOid bool
 	err = stmt.Select(func(s *sqlite.Stmt) error {
+		// Get name and primary key order
 		columnName, _ := s.ScanText(1)
 		pkOrder, _, _ := s.ScanInt(5)
-		if pkOrder > 0 {
+
+		// Is this column part of the primary key?
+		if pkOrder == 0 {
+			// It's not
+			other = append(other, columnName)
+		} else {
+			// It is
 			primaryKeyColumns[pkOrder] = columnName
 		}
 
@@ -995,14 +1006,16 @@ func GetPrimaryKeyColumns(sdb *sqlite.Conn, schema string, table string) (pks []
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error when retrieving rows in GetPrimaryKey(): %s\n", err)
-		return nil, err
+		log.Printf("Error when retrieving rows in GetPrimaryKeyAndOtherColumns(): %s\n", err)
+		return nil, false, nil, err
 	}
 
 	// Did we get any primary key columns? If not, this table has only an implicit primary key which
 	// is accessible by the name rowid, _rowid_, or oid
 	if len(primaryKeyColumns) > 0 {
 		// Explicit primary key
+
+		implicit_pk = false
 
 		// Sort the columns by their order in the PK
 		keys := make([]int, 0, len(primaryKeyColumns))
@@ -1017,6 +1030,9 @@ func GetPrimaryKeyColumns(sdb *sqlite.Conn, schema string, table string) (pks []
 		}
 	} else {
 		// Implicit primary key
+
+		implicit_pk = true
+
 		if !hasColumnRowid {
 			pks = append(pks, "rowid")
 		} else if !hasColumn_Rowid_ {
@@ -1025,8 +1041,9 @@ func GetPrimaryKeyColumns(sdb *sqlite.Conn, schema string, table string) (pks []
 			pks = append(pks, "oid")
 		} else {
 			log.Printf("Unreachable rowid column in GetPrimaryKey()\n")
-			return nil, errors.New("Unreachable rowid column")
+			return nil, false, nil, errors.New("Unreachable rowid column")
 		}
 	}
-	return pks, nil
+
+	return pks, implicit_pk, other, nil
 }
