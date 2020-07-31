@@ -10,6 +10,67 @@ import (
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
+// columnsHandler returns the list of columns present in a table or view
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/columns
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
+//   * "table" is the name of the table or view
+func columnsHandler(w http.ResponseWriter, r *http.Request) {
+	// Do auth check, grab request info, open the database
+	sdb, err, httpStatus := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+	defer sdb.Close()
+
+	// Extract the table name
+	table, err := com.GetFormTable(r, false)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure a table name was provided
+	if table == "" {
+		jsonErr(w, "Missing table name", http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve the list of columns for the table
+	cols, err := sdb.Columns("", table)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Transfer the column info into our own structure, for better json formatting
+	var jsonCols []com.APIJSONColumn
+	for _, j := range cols {
+		jsonCols = append(jsonCols, com.APIJSONColumn{
+			Cid:       j.Cid,
+			Name:      j.Name,
+			DataType:  j.DataType,
+			NotNull:   j.NotNull,
+			DfltValue: j.DfltValue,
+			Pk:        j.Pk,
+			Autoinc:   j.Autoinc,
+			CollSeq:   j.CollSeq,
+		})
+	}
+
+	// Return the results
+	jsonData, err := json.Marshal(jsonCols)
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in columnsHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
+}
+
 // diffHandler generates a diff between two databases or two versions of a database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner_a="justinclift" -F dbname_a="Join Testing.sqlite" -F commit_a="ea12..." -F commit_b="5a7c..." https://api.dbhub.io/v1/diff

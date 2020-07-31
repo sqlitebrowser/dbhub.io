@@ -78,11 +78,12 @@ func main() {
 
 	// Our pages
 	http.Handle("/", gz.GzipHandler(handleWrapper(rootHandler)))
+	http.Handle("/v1/columns", gz.GzipHandler(handleWrapper(columnsHandler)))
+	http.Handle("/v1/diff", gz.GzipHandler(handleWrapper(diffHandler)))
 	http.Handle("/v1/indexes", gz.GzipHandler(handleWrapper(indexesHandler)))
 	http.Handle("/v1/query", gz.GzipHandler(handleWrapper(queryHandler)))
 	http.Handle("/v1/tables", gz.GzipHandler(handleWrapper(tablesHandler)))
 	http.Handle("/v1/views", gz.GzipHandler(handleWrapper(viewsHandler)))
-	http.Handle("/v1/diff", gz.GzipHandler(handleWrapper(diffHandler)))
 
 	// Generate the formatted server string
 	server = fmt.Sprintf("https://%s", com.Conf.Api.ServerName)
@@ -131,7 +132,7 @@ func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err
 //   2. Extracts the database owner, name, & commitID from the request
 //   3. Fetches the database from Minio (with appropriate permission checks)
 //   4. Opens the database, returning the connection handle
-// This function exists purely because this code is commonly to most of the handlers
+// This function exists purely because this code is common to most of the handlers
 func collectInfo(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, err error, httpStatus int) {
 	var loggedInUser string
 	loggedInUser, err = checkAuth(w, r)
@@ -167,7 +168,8 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, err 
 	}
 
 	// Retrieve database file from Minio, using locally cached version if it's already there
-	newDB, err := com.RetrieveDatabaseFile(bucket, id)
+	var newDB string
+	newDB, err = com.RetrieveDatabaseFile(bucket, id)
 	if err != nil {
 		httpStatus = http.StatusNotFound
 		return

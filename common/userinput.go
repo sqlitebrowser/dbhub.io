@@ -259,6 +259,34 @@ func GetFormTag(r *http.Request) (tag string, err error) {
 	return c, nil
 }
 
+// Return the table name present in the GET or POST/PUT data.
+func GetFormTable(r *http.Request, allowGet bool) (string, error) {
+	// Retrieve the variable from the GET or POST/PUT data
+	var t, table string
+	if allowGet {
+		t = r.FormValue("table")
+	} else {
+		t = r.PostFormValue("table")
+	}
+
+	// If no table name given, return
+	if t == "" {
+		return "", nil
+	}
+
+	// Unescape, then validate the owner name
+	table, err := url.QueryUnescape(t)
+	if err != nil {
+		return "", err
+	}
+	err = ValidatePGTable(table)
+	if err != nil {
+		log.Printf("Validation failed for table name: %s", err)
+		return "", err
+	}
+	return table, nil
+}
+
 // Return the username, database, and commit (if any) present in the form data.
 func GetFormUDC(r *http.Request) (string, string, string, error) {
 	// Extract the username

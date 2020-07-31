@@ -197,6 +197,18 @@ type ActivityStats struct {
 	Viewed    []ActivityRow
 }
 
+// APIJSONColumn is a copy of the Column type from github.com/gwenn/gosqlite, but including JSON field name info
+type APIJSONColumn struct {
+	Cid       int    `json:"column_id"`
+	Name      string `json:"name"`
+	DataType  string `json:"data_type"`
+	NotNull   bool   `json:"not_null"`
+	DfltValue string `json:"default_value"`
+	Pk        int    `json:"primary_key"`
+	Autoinc   bool   `json:"autoinc"`
+	CollSeq   string `json:"collation_seq"`
+}
+
 type APIKey struct {
 	Key         string    `json:"key"`
 	DateCreated time.Time `json:"date_created"`
