@@ -12,6 +12,7 @@ import (
 	"time"
 
 	gz "github.com/NYTimes/gziphandler"
+	sqlite "github.com/gwenn/gosqlite"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
@@ -122,6 +123,68 @@ func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err
 
 	// Log the incoming request
 	logReq(r, loggedInUser)
+	return
+}
+
+// collectInfo is an internal function which:
+//   1. Authenticates incoming requests
+//   2. Extracts the database owner, name, & commitID from the request
+//   3. Fetches the database from Minio (with appropriate permission checks)
+//   4. Opens the database, returning the connection handle
+// This function exists purely because this code is commonly to most of the handlers
+func collectInfo(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, err error, httpStatus int) {
+	var loggedInUser string
+	loggedInUser, err = checkAuth(w, r)
+	if err != nil {
+		httpStatus = http.StatusUnauthorized
+		return
+	}
+
+	// Extract the database owner name, database name, and (optional) commit ID for the database from the request
+	var dbOwner, dbName, commitID string
+	dbOwner, dbName, commitID, err = com.GetFormODC(r)
+	if err != nil {
+		httpStatus = http.StatusInternalServerError
+		return
+	}
+	dbFolder := "/"
+
+	// Check if the user has access to the requested database
+	var bucket, id string
+	bucket, id, _, err = com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	if err != nil {
+		httpStatus = http.StatusInternalServerError
+		return
+	}
+
+	// Sanity check
+	if id == "" {
+		// The requested database wasn't found, or the user doesn't have permission to access it
+		err = fmt.Errorf("Requested database not found")
+		log.Printf("Requested database not found. Owner: '%s%s%s'", dbOwner, dbFolder, dbName)
+		httpStatus = http.StatusNotFound
+		return
+	}
+
+	// Retrieve database file from Minio, using locally cached version if it's already there
+	newDB, err := com.RetrieveDatabaseFile(bucket, id)
+	if err != nil {
+		httpStatus = http.StatusNotFound
+		return
+	}
+
+	// Open the SQLite database in read only mode
+	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
+	if err != nil {
+		log.Printf("Couldn't open database in viewsHandler(): %s", err)
+		httpStatus = http.StatusInternalServerError
+		return
+	}
+	if err = sdb.EnableExtendedResultCodes(true); err != nil {
+		log.Printf("Couldn't enable extended result codes in viewsHandler(): %v\n", err.Error())
+		httpStatus = http.StatusInternalServerError
+		return
+	}
 	return
 }
 

@@ -7,70 +7,113 @@ import (
 	"net/http"
 	"net/url"
 
-	sqlite "github.com/gwenn/gosqlite"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
-// collectInfo is an internal function which:
-//   1. Authenticates incoming requests
-//   2. Extracts the database owner, name, & commitID from the request
-//   3. Fetches the database from Minio (with appropriate permission checks)
-//   4. Opens the database, returning the connection handle
-// This function exists purely because this code is commonly to most of the handlers
-func collectInfo(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, err error, httpStatus int) {
-	var loggedInUser string
-	loggedInUser, err = checkAuth(w, r)
+// diffHandler generates a diff between two databases or two versions of a database
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner_a="justinclift" -F dbname_a="Join Testing.sqlite" -F commit_a="ea12..." -F commit_b="5a7c..." https://api.dbhub.io/v1/diff
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner_a" is the owner of the first database being diffed
+//   * "dbname_a" is the name of the first database being diffed
+//   * "dbowner_b" is the owner of the second database being diffed (optional, if not provided same as first owner)
+//   * "dbname_b" is the name of the second database being diffed (optional, if not provided same as first name)
+//   * "commit_a" is the first commit for diffing
+//   * "commit_b" is the second commit for diffing
+func diffHandler(w http.ResponseWriter, r *http.Request) {
+	loggedInUser, err := checkAuth(w, r)
 	if err != nil {
-		httpStatus = http.StatusUnauthorized
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	// Extract the database owner name, database name, and (optional) commit ID for the database from the request
-	var dbOwner, dbName, commitID string
-	dbOwner, dbName, commitID, err = com.GetFormODC(r)
-	if err != nil {
-		httpStatus = http.StatusInternalServerError
-		return
-	}
-	dbFolder := "/"
+	// Retrieve owner, name, and commit ids
+	oa := r.PostFormValue("dbowner_a")
+	na := r.PostFormValue("dbname_a")
+	ca := r.PostFormValue("commit_a")
+	ob := r.PostFormValue("dbowner_a")
+	nb := r.PostFormValue("dbname_b")
+	cb := r.PostFormValue("commit_b")
 
-	// Check if the user has access to the requested database
-	var bucket, id string
-	bucket, id, _, err = com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
-	if err != nil {
-		httpStatus = http.StatusInternalServerError
+	// If no primary database owner and name are given or if no commit ids are given, return
+	if oa == "" || na == "" || ca == "" || cb == "" {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Sanity check
-	if id == "" {
-		// The requested database wasn't found, or the user doesn't have permission to access it
-		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found. Owner: '%s%s%s'", dbOwner, dbFolder, dbName)
-		httpStatus = http.StatusNotFound
+	// If no secondary database owner and name are provided, use the ones of the first database
+	if ob == "" || nb == "" {
+		ob = oa
+		nb = na
+	}
+
+	// Unescape, then validate the owner and database names and commit ids
+	dbOwnerA, err := url.QueryUnescape(oa)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	dbOwnerB, err := url.QueryUnescape(ob)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	dbNameA, err := url.QueryUnescape(na)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	dbNameB, err := url.QueryUnescape(nb)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = com.ValidateUser(dbOwnerA)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = com.ValidateUser(dbOwnerB)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = com.ValidateDB(dbNameA)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = com.ValidateDB(dbNameB)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = com.ValidateCommitID(ca)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = com.ValidateCommitID(cb)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Retrieve database file from Minio, using locally cached version if it's already there
-	newDB, err := com.RetrieveDatabaseFile(bucket, id)
+	// Perform diff
+	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser)
 	if err != nil {
-		httpStatus = http.StatusNotFound
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Open the SQLite database in read only mode
-	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
+	// Return the results
+	jsonData, err := json.Marshal(diffs)
 	if err != nil {
-		log.Printf("Couldn't open database in viewsHandler(): %s", err)
-		httpStatus = http.StatusInternalServerError
+		log.Printf("Error when JSON marshalling returned data in diffHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes in viewsHandler(): %v\n", err.Error())
-		httpStatus = http.StatusInternalServerError
-		return
-	}
-	return
+	fmt.Fprintf(w, string(jsonData))
 }
 
 // indexesHandler returns the list of indexes present in a SQLite database
@@ -251,112 +294,6 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	jsonData, err := json.Marshal(views)
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in viewsHandler(): %v\n", err)
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprintf(w, string(jsonData))
-}
-
-// diffHandler generates a diff between two databases or two versions of a database
-// This can be run from the command line using curl, like this:
-//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner_a="justinclift" -F dbname_a="Join Testing.sqlite" -F commit_a="ea12..." -F commit_b="5a7c..." https://api.dbhub.io/v1/diff
-//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
-//   * "dbowner_a" is the owner of the first database being diffed
-//   * "dbname_a" is the name of the first database being diffed
-//   * "dbowner_b" is the owner of the second database being diffed (optional, if not provided same as first owner)
-//   * "dbname_b" is the name of the second database being diffed (optional, if not provided same as first name)
-//   * "commit_a" is the first commit for diffing
-//   * "commit_b" is the second commit for diffing
-func diffHandler(w http.ResponseWriter, r *http.Request) {
-	loggedInUser, err := checkAuth(w, r)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	// Retrieve owner, name, and commit ids
-	oa := r.PostFormValue("dbowner_a")
-	na := r.PostFormValue("dbname_a")
-	ca := r.PostFormValue("commit_a")
-	ob := r.PostFormValue("dbowner_a")
-	nb := r.PostFormValue("dbname_b")
-	cb := r.PostFormValue("commit_b")
-
-	// If no primary database owner and name are given or if no commit ids are given, return
-	if oa == "" || na == "" || ca == "" || cb == "" {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// If no secondary database owner and name are provided, use the ones of the first database
-	if ob == "" || nb == "" {
-		ob = oa
-		nb = na
-	}
-
-	// Unescape, then validate the owner and database names and commit ids
-	dbOwnerA, err := url.QueryUnescape(oa)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	dbOwnerB, err := url.QueryUnescape(ob)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	dbNameA, err := url.QueryUnescape(na)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	dbNameB, err := url.QueryUnescape(nb)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = com.ValidateUser(dbOwnerA)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = com.ValidateUser(dbOwnerB)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = com.ValidateDB(dbNameA)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = com.ValidateDB(dbNameB)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = com.ValidateCommitID(ca)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = com.ValidateCommitID(cb)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Perform diff
-	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Return the results
-	jsonData, err := json.Marshal(diffs)
-	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in diffHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
