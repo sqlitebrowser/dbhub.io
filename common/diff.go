@@ -29,14 +29,14 @@ type DataDiff struct {
 }
 
 type DiffObjectChangeset struct {
-	ObjectName string         `json:"object_name"`
-	ObjectType string         `json:"object_type"`
-	Schema  SchemaDiff        `json:"schema"`
-	Data    []DataDiff        `json:"data"`
+	ObjectName string     `json:"object_name"`
+	ObjectType string     `json:"object_type"`
+	Schema     SchemaDiff `json:"schema"`
+	Data       []DataDiff `json:"data"`
 }
 
 type Diffs struct {
-	Diff []DiffObjectChangeset  `json:"diff"`
+	Diff []DiffObjectChangeset `json:"diff"`
 	// TODO Add PRAGMAs here
 }
 
@@ -111,9 +111,9 @@ func dbDiff(dbA string, dbB string) (Diffs, error) {
 	// Get list of all objects in both databases, excluding virtual tables because they tend to be unpredictable
 	var stmt *sqlite.Stmt
 	stmt, err = sdb.Prepare("SELECT name, type FROM main.sqlite_master WHERE name NOT LIKE 'sqlite_%' AND (type != 'table' OR (type = 'table' AND sql NOT LIKE 'CREATE VIRTUAL%%'))\n" +
-				" UNION\n" +
-				"SELECT name, type FROM aux.sqlite_master WHERE name NOT LIKE 'sqlite_%' AND (type != 'table' OR (type = 'table' AND sql NOT LIKE 'CREATE VIRTUAL%%'))\n" +
-				" ORDER BY name")
+		" UNION\n" +
+		"SELECT name, type FROM aux.sqlite_master WHERE name NOT LIKE 'sqlite_%' AND (type != 'table' OR (type = 'table' AND sql NOT LIKE 'CREATE VIRTUAL%%'))\n" +
+		" ORDER BY name")
 	if err != nil {
 		log.Printf("Error when preparing statement for object list in dbDiff(): %s\n", err)
 		return Diffs{}, err
@@ -153,18 +153,18 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string) (b
 	// Check for object's existence in both databases
 	var sqlInMain, sqlInAux string
 	err := sdb.OneValue("SELECT sql FROM main.sqlite_master WHERE name = ? AND type = ?", &sqlInMain, objectName, objectType)
-	if err != nil && err != io.EOF {	// io.EOF is okay. It is returned when the object does not exist in the main database
+	if err != nil && err != io.EOF { // io.EOF is okay. It is returned when the object does not exist in the main database
 		return false, DiffObjectChangeset{}, err
 	}
 	err = sdb.OneValue("SELECT sql FROM aux.sqlite_master WHERE name = ? AND type = ?", &sqlInAux, objectName, objectType)
-	if err != nil && err != io.EOF {	// io.EOF is okay. It is returned when the object does not exist in the aux database
+	if err != nil && err != io.EOF { // io.EOF is okay. It is returned when the object does not exist in the aux database
 		return false, DiffObjectChangeset{}, err
 	}
 
 	// Check for dropped object
 	if sqlInMain != "" && sqlInAux == "" {
 		diff.Schema.ActionType = ACTION_DELETE
-		diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " "  + EscapeId(objectName) + ";"
+		diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";"
 
 		// If this is a table, also add all the deleted data to the diff
 		if objectType == "table" {
@@ -176,7 +176,7 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string) (b
 		}
 
 		// No further changes for dropped objects. So we can return here
-		return true, diff, nil 
+		return true, diff, nil
 	}
 
 	// Check for added object
@@ -199,7 +199,7 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string) (b
 	// Check for modified object
 	if sqlInMain != "" && sqlInAux != "" && sqlInMain != sqlInAux {
 		diff.Schema.ActionType = ACTION_MODIFY
-		diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " "  + EscapeId(objectName) + ";" + sqlInAux + ";"
+		diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";" + sqlInAux + ";"
 
 		// TODO If this is a table, be more clever and try to get away with ALTER TABLE instead of DROP and CREATE
 
@@ -279,7 +279,7 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 			// If we want to include a SQL statement for deleting data and this is still
 			// part of the primary key, add this to the prepared DELETE statement
 			if includeSql && action == ACTION_DELETE && i < len(pk) {
-				d.Sql += pk_escaped[i];
+				d.Sql += pk_escaped[i]
 				if row[i].Type == Null {
 					d.Sql += " IS NULL"
 				} else {
