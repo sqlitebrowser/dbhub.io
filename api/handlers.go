@@ -12,7 +12,10 @@ import (
 
 // columnsHandler returns the list of columns present in a table or view
 // This can be run from the command line using curl, like this:
-//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/columns
+//   $ curl -F apikey="YOUR_API_KEY_HERE" \
+//       -F dbowner="justinclift" \
+//       -F dbname="Join Testing.sqlite" \
+//       -F table="tablename" https://api.dbhub.io/v1/columns
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
 //   * "dbowner" is the owner of the database
 //   * "dbname" is the name of the database
