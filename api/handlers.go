@@ -84,10 +84,23 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname_b" is the name of the second database being diffed (optional, if not provided same as first name)
 //   * "commit_a" is the first commit for diffing
 //   * "commit_b" is the second commit for diffing
+//   * "merge" specifies the merge strategy (possible values: "none", "preserve_pk", "new_pk"; optional, defaults to "none")
 func diffHandler(w http.ResponseWriter, r *http.Request) {
 	loggedInUser, err := checkAuth(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Get merge strategy and parse value. Default to "none"
+	merge := r.PostFormValue("merge")
+	merge_strategy := com.NoMerge
+	if merge == "preserve_pk" {
+		merge_strategy = com.PreservePkMerge
+	} else if merge == "new_pk" {
+		merge_strategy = com.NewPkMerge
+	} else if merge != "" && merge != "none" {
+		jsonErr(w, "Invalid merge strategy", http.StatusBadRequest)
 		return
 	}
 
@@ -164,7 +177,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Perform diff
-	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser)
+	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser, merge_strategy)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return

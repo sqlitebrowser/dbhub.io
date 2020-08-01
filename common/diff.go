@@ -17,6 +17,14 @@ const (
 	ACTION_MODIFY          = "modify"
 )
 
+type MergeStrategy int
+
+const (
+	NoMerge         MergeStrategy = iota
+	PreservePkMerge
+	NewPkMerge
+)
+
 type SchemaDiff struct {
 	ActionType DiffType `json:"action_type"`
 	Sql        string   `json:"sql"`
@@ -41,7 +49,7 @@ type Diffs struct {
 }
 
 // Diff generates the differences between the two commits commitA and commitB of the two databases specified in the other parameters
-func Diff(ownerA string, folderA string, nameA string, commitA string, ownerB string, folderB string, nameB string, commitB string, loggedInUser string) (Diffs, error) {
+func Diff(ownerA string, folderA string, nameA string, commitA string, ownerB string, folderB string, nameB string, commitB string, loggedInUser string, merge MergeStrategy) (Diffs, error) {
 	// Check if the user has access to the requested databases
 	bucketA, idA, _, err := MinioLocation(ownerA, folderA, nameA, commitA, loggedInUser)
 	if err != nil {
@@ -77,11 +85,11 @@ func Diff(ownerA string, folderA string, nameA string, commitA string, ownerB st
 	}
 
 	// Call dbDiff which does the actual diffing of the database files
-	return dbDiff(dbA, dbB)
+	return dbDiff(dbA, dbB, merge)
 }
 
 // dbDiff generates the differences between the two database files in dbA and dbD
-func dbDiff(dbA string, dbB string) (Diffs, error) {
+func dbDiff(dbA string, dbB string, merge MergeStrategy) (Diffs, error) {
 	var diff Diffs
 
 	// Check if this is the same database and exit early
@@ -122,7 +130,7 @@ func dbDiff(dbA string, dbB string) (Diffs, error) {
 	err = stmt.Select(func(s *sqlite.Stmt) error {
 		objectName, _ := s.ScanText(0)
 		objectType, _ := s.ScanText(1)
-		changed, objectDiff, err := diffSingleObject(sdb, objectName, objectType)
+		changed, objectDiff, err := diffSingleObject(sdb, objectName, objectType, merge)
 		if err != nil {
 			return err
 		}
@@ -144,7 +152,7 @@ func dbDiff(dbA string, dbB string) (Diffs, error) {
 
 // diffSingleObject compares the object with name objectName and of type objectType in the main and aux schemata of the connection sdb
 // and returns three values: a boolean to indicate whether there are differences, a DiffObjectChangeset object containing all the differences, and an optional error object
-func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string) (bool, DiffObjectChangeset, error) {
+func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, merge MergeStrategy) (bool, DiffObjectChangeset, error) {
 	// Prepare diff object to return
 	var diff DiffObjectChangeset
 	diff.ObjectName = objectName
@@ -164,7 +172,9 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string) (b
 	// Check for dropped object
 	if sqlInMain != "" && sqlInAux == "" {
 		diff.Schema.ActionType = ACTION_DELETE
-		diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";"
+		if merge != NoMerge {
+			diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";"
+		}
 
 		// If this is a table, also add all the deleted data to the diff
 		if objectType == "table" {
@@ -182,11 +192,13 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string) (b
 	// Check for added object
 	if sqlInMain == "" && sqlInAux != "" {
 		diff.Schema.ActionType = ACTION_ADD
-		diff.Schema.Sql = sqlInAux + ";"
+		if merge != NoMerge {
+			diff.Schema.Sql = sqlInAux + ";"
+		}
 
 		// If this is a table, also add all the added data to the diff
 		if objectType == "table" {
-			diff.Data, err = dataDiffForAllTableRows(sdb, "aux", objectName, ACTION_ADD, true)
+			diff.Data, err = dataDiffForAllTableRows(sdb, "aux", objectName, ACTION_ADD, merge != NoMerge)
 			if err != nil {
 				return false, DiffObjectChangeset{}, err
 			}
@@ -199,7 +211,9 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string) (b
 	// Check for modified object
 	if sqlInMain != "" && sqlInAux != "" && sqlInMain != sqlInAux {
 		diff.Schema.ActionType = ACTION_MODIFY
-		diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";" + sqlInAux + ";"
+		if merge != NoMerge {
+			diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";" + sqlInAux + ";"
+		}
 
 		// TODO If this is a table, be more clever and try to get away with ALTER TABLE instead of DROP and CREATE
 
@@ -209,7 +223,7 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string) (b
 			if err != nil {
 				return false, DiffObjectChangeset{}, err
 			}
-			add_data, err := dataDiffForAllTableRows(sdb, "aux", objectName, ACTION_ADD, true)
+			add_data, err := dataDiffForAllTableRows(sdb, "aux", objectName, ACTION_ADD, merge != NoMerge)
 			if err != nil {
 				return false, DiffObjectChangeset{}, err
 			}
