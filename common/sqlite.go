@@ -768,8 +768,13 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 							row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Binary,
 								Value: base64.StdEncoding.EncodeToString(b)})
 						case Internal:
+							stringVal := "x'"
+							for _, c := range b {
+								stringVal += fmt.Sprintf("%02x", c)
+							}
+							stringVal += "'"
 							row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Binary,
-								Value: b})
+								Value: stringVal})
 						default:
 							row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Binary,
 								Value: "<i>BINARY DATA</i>"})
@@ -957,8 +962,10 @@ func EscapeValue(val DataValue) string {
 		return "NULL"
 	} else if val.Type == Integer || val.Type == Float {
 		return val.Value.(string)
-	} else {
+	} else if val.Type == Text {
 		return sqlite.Mprintf("%Q", val.Value.(string))
+	} else { // BLOB and similar
+		return val.Value.(string)
 	}
 }
 
