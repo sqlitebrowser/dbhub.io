@@ -730,10 +730,10 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 			isNull := false
 			switch fieldType {
 			case sqlite.Integer:
-				var val int
-				val, isNull, err = s.ScanInt(i)
+				var val int64
+				val, isNull, err = s.ScanInt64(i)
 				if err != nil {
-					log.Printf("Something went wrong with ScanInt(): %v\n", err)
+					log.Printf("Something went wrong with ScanInt64(): %v\n", err)
 					break
 				}
 				if !isNull {
@@ -748,7 +748,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 					break
 				}
 				if !isNull {
-					stringVal := strconv.FormatFloat(val, 'f', 4, 64)
+					stringVal := strconv.FormatFloat(val, 'f', -1, 64)
 					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Float, Value: stringVal})
 				}
 			case sqlite.Text:
