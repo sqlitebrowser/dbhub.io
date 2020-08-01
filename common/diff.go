@@ -354,19 +354,24 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 // schemas match.
 func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge MergeStrategy) (diff []DataDiff, err error) {
 	// Retrieve a list of all primary key columns and other columns in this table
-	pk, _, other_columns, err := GetPrimaryKeyAndOtherColumns(sdb, "aux", tableName)
+	pk, implicitPk, other_columns, err := GetPrimaryKeyAndOtherColumns(sdb, "aux", tableName)
 	if err != nil {
 		return nil, err
 	}
 
+	// If we need to produce merge statements using the NewPkMerge strategy we need to know if we can rely on SQLite
+	// to generate new primary keys or if we must generate them on our own.
+	var incrementingPk bool
+	if merge == NewPkMerge {
+		incrementingPk, err = hasIncrementingIntPk(sdb, "aux", tableName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Escape all column names
-	var pk_escaped, other_escaped []string
-	for _, v := range pk {
-		pk_escaped = append(pk_escaped, EscapeId(v))
-	}
-	for _, v := range other_columns {
-		other_escaped = append(other_escaped, EscapeId(v))
-	}
+	pkEscaped := EscapeIds(pk)
+	otherEscaped := EscapeIds(other_columns)
 
 	// Build query for getting differences. This is based on the query produced by the sqldiff utility for SQLite.
 	// The resulting query returns n+1+m*2 number of rows where n is the number of columns in the primary key and
@@ -381,22 +386,22 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 	// There can only be updated rows in tables with more columns than the primary key columns
 	if len(other_columns) > 0 {
 		query = "SELECT "
-		for _, c := range pk_escaped { // Primary key columns first
+		for _, c := range pkEscaped { // Primary key columns first
 			query += "B." + c + ","
 		}
 		query += "'" + string(ACTION_MODIFY) + "'" // Updated row
-		for _, c := range other_escaped {          // Other columns last
+		for _, c := range otherEscaped {           // Other columns last
 			query += ",A." + c + " IS NOT B." + c + ",B." + c
 		}
 
 		query += " FROM main." + EscapeId(tableName) + " A, aux." + EscapeId(tableName) + " B WHERE "
 
-		for _, c := range pk_escaped { // Where all primary key columns equal
+		for _, c := range pkEscaped { // Where all primary key columns equal
 			query += "A." + c + "=B." + c + " AND "
 		}
 
 		query += "(" // And at least one of the other columns differs
-		for _, c := range other_escaped {
+		for _, c := range otherEscaped {
 			query += "A." + c + " IS NOT B." + c + " OR "
 		}
 		query = strings.TrimSuffix(query, " OR ") + ")"
@@ -406,34 +411,34 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 
 	// Deleted rows
 	query += "SELECT "
-	for _, c := range pk_escaped { // Primary key columns first. This needs to be from the first table for deleted rows
+	for _, c := range pkEscaped { // Primary key columns first. This needs to be from the first table for deleted rows
 		query += "A." + c + ","
 	}
-	query += "'" + string(ACTION_DELETE) + "'"             // Deleted row
-	query += strings.Repeat(",NULL", len(other_escaped)*2) // Just NULL for all the other columns. They don't matter for deleted rows
+	query += "'" + string(ACTION_DELETE) + "'"            // Deleted row
+	query += strings.Repeat(",NULL", len(otherEscaped)*2) // Just NULL for all the other columns. They don't matter for deleted rows
 
 	query += " FROM main." + EscapeId(tableName) + " A WHERE "
 
 	query += "NOT EXISTS(SELECT 1 FROM aux." + EscapeId(tableName) + " B WHERE " // Where a row with the same primary key doesn't exist in the second table
-	for _, c := range pk_escaped {
+	for _, c := range pkEscaped {
 		query += "A." + c + " IS B." + c + " AND "
 	}
 	query = strings.TrimSuffix(query, " AND ") + ") UNION ALL "
 
 	// Inserted rows
 	query += "SELECT "
-	for _, c := range pk_escaped { // Primary key columns first. This needs to be from the second table for inserted rows
+	for _, c := range pkEscaped { // Primary key columns first. This needs to be from the second table for inserted rows
 		query += "B." + c + ","
 	}
 	query += "'" + string(ACTION_ADD) + "'" // Inserted row
-	for _, c := range other_escaped {       // Other columns last. Always set the modified flag for inserted rows
+	for _, c := range otherEscaped {        // Other columns last. Always set the modified flag for inserted rows
 		query += ",1,B." + c
 	}
 
 	query += " FROM aux." + EscapeId(tableName) + " B WHERE "
 
 	query += "NOT EXISTS(SELECT 1 FROM main." + EscapeId(tableName) + " A WHERE " // Where a row with the same primary key doesn't exist in the first table
-	for _, c := range pk_escaped {
+	for _, c := range pkEscaped {
 		query += "A." + c + " IS B." + c + " AND "
 	}
 	query = strings.TrimSuffix(query, " AND ") + ")"
@@ -446,7 +451,8 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 	// update, insert or delete. While the primary key bit of the DataDiff object we create for each row can
 	// be taken directly from the first couple of columns and the action type of the DataDiff object can be
 	// deduced from the type column in a straightforward way, the generated SQL statements for merging highly
-	// depend on the diff type.
+	// depend on the diff type. Additionally, we need to respect the merge strategy when producing the SQL in
+	// the DataDiff object.
 
 	// Retrieve data and generate a new DataDiff object for each row
 	_, _, data, err := SQLiteRunQuery(sdb, Internal, query, false, false)
@@ -465,8 +471,186 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 			d.Pk = append(d.Pk, row[i])
 		}
 
+		// Produce the SQL statement for merging
+		if merge != NoMerge {
+			if d.ActionType == ACTION_MODIFY || d.ActionType == ACTION_DELETE {
+				// For updated and deleted rows the merge strategy doesn't matter
+
+				// The first part of the UPDATE and DELETE statements is different
+				if d.ActionType == ACTION_MODIFY {
+					d.Sql = "UPDATE " + EscapeId(tableName) + " SET "
+
+					// For figuring out which values to set, start with the first column after the diff type column.
+					// It specifies whether the value of the first data column has changed. If it has, we set that
+					// column to the new value which is stored in the following column of the row. Because each
+					// comparison takes two fields (one for marking differences and one for the new value), we move
+					// forward in steps of two columns.
+					for i := len(pk) + 1; i < len(row); i += 2 {
+						// Only include field when it was updated
+						if row[i].Value == "1" {
+							// From the column number in the results of the difference query we calculate the
+							// corresponding array index in the array of non-primary key columns. The new
+							// value is stored in the next column of the result set.
+							d.Sql += otherEscaped[(i-len(pk)-1)/2] + "=" + EscapeValue(row[i+1]) + ","
+						}
+					}
+					d.Sql = strings.TrimSuffix(d.Sql, ",")
+				} else {
+					d.Sql = "DELETE FROM " + EscapeId(tableName)
+				}
+
+				d.Sql += " WHERE "
+
+				// The last part of the UPDATE and DELETE statements is the same
+				for _, p := range d.Pk {
+					if p.Type == Null {
+						d.Sql += EscapeId(p.Name) + " IS NULL"
+					} else {
+						d.Sql += EscapeId(p.Name) + "=" + EscapeValue(p)
+					}
+					d.Sql += " AND "
+				}
+				d.Sql = strings.TrimSuffix(d.Sql, " AND ") + ";"
+			} else if d.ActionType == ACTION_ADD {
+				// For inserted rows the merge strategy actually does matter. The PreservePkMerge strategy is simple:
+				// We just include all columns, no matter whether primary key or not, in the INSERT statement as-is.
+				// For tables which don't have a primary key the same applies even when using the NewPkMerge strategy.
+				// Finally for tables with an incrementing primary key we must omit the primary key columns too to make
+				// SQLite generate a new value for us.
+
+				d.Sql = "INSERT INTO " + EscapeId(tableName) + "("
+
+				if merge == PreservePkMerge || implicitPk {
+					// Include all data we have in the INSERT statement but don't include the rowid column, the
+					// implicit primary key
+
+					// Add the explicit primary key columns first if any, then the other fields
+					if !implicitPk {
+						d.Sql += strings.Join(pkEscaped, ",") + ","
+					}
+					d.Sql += strings.Join(otherEscaped, ",") + ") VALUES ("
+
+					// If there is an explicit primary key, add the values of that first
+					if !implicitPk {
+						for i := 0; i < len(pk); i++ {
+							d.Sql += EscapeValue(row[i]) + ","
+						}
+					}
+
+					// For the other columns start at the first data column after the diff type column and the first
+					// modified flag column and skip to the next data columns.
+					for i := len(pk) + 2; i < len(row); i += 2 {
+						d.Sql += EscapeValue(row[i]) + ","
+					}
+				} else {
+					// For the NewPkMerge strategy for tables with an explicit primary key the generated INSERT
+					// statement depends on whether we can rely on SQLite to generate a new primary key value
+					// or whether we must generate a new value on our own.
+
+					if incrementingPk {
+						// SQLite can generate a new key for us if we omit the primary key columns from the
+						// INSERT statement.
+
+						d.Sql += strings.Join(otherEscaped, ",") + ") VALUES ("
+
+						// For the other columns start at the first data column after the diff type column and the first
+						// modified flag column and skip to the next data columns.
+						for i := len(pk) + 2; i < len(row); i += 2 {
+							d.Sql += EscapeValue(row[i]) + ","
+						}
+					} else {
+						// We need to generate a new key by ourselves by including the primary key columns in
+						// the INSERT statement and producing a new value.
+
+						// Add the (explicit) primary key columns first, then the other fields
+						d.Sql += strings.Join(pkEscaped, ",") + ","
+						d.Sql += strings.Join(otherEscaped, ",") + ") VALUES ("
+
+						// Add the (explicit) primary key values first using a SELECT statement which generates a
+						// new value for the first key column
+						d.Sql += "(SELECT max(" + pkEscaped[0] + ")+1 FROM " + EscapeId(tableName) + "),"
+						for i := 1; i < len(pk); i++ {
+							d.Sql += EscapeValue(row[i]) + ","
+						}
+
+						// For the other columns start at the first data column after the diff type column and the first
+						// modified flag column and skip to the next data columns.
+						for i := len(pk) + 2; i < len(row); i += 2 {
+							d.Sql += EscapeValue(row[i]) + ","
+						}
+					}
+				}
+
+				d.Sql = strings.TrimSuffix(d.Sql, ",") + ");"
+			}
+		}
+
 		diff = append(diff, d)
 	}
 
 	return diff, nil
+}
+
+// hasIncrementingIntPk returns true if the table with name tableName has a primary key of integer type which increments
+// automatically. Note that in SQLite this does not require the AUTOINCREMENT specifier. It merely requires a column of
+// type INTEGER which is used as the primary key of the table. The only other constraint is that the table must not be a
+// WITHOUT ROWID table
+func hasIncrementingIntPk(sdb *sqlite.Conn, schemaName string, tableName string) (bool, error) {
+	// Get column list
+	columns, err := sdb.Columns(schemaName, tableName)
+	if err != nil {
+		return false, err
+	}
+
+	// Check if there is an INTEGER column used as primary key
+	var numIntPks int
+	var hasColumnRowid, hasColumn_Rowid_, hasColumnOid bool
+	for _, c := range columns {
+		if c.DataType == "INTEGER" && c.Pk > 0 {
+			// If the column has also the AUTOINCREMENT specifier set, we don't need any extra checks and
+			// can return early
+			if c.Autoinc {
+				return true, nil
+			}
+
+			numIntPks += 1
+		}
+
+		// While here check if there are any columns called rowid or similar in this table
+		if c.Name == "rowid" {
+			hasColumnRowid = true
+		} else if c.Name == "_rowid_" {
+			hasColumn_Rowid_ = true
+		} else if c.Name == "oid" {
+			hasColumnOid = true
+		}
+	}
+
+	// Only exactly one integer primary key column works
+	if numIntPks != 1 {
+		return false, nil
+	}
+
+	// Check if this is a WITHOUT ROWID table. We do this by selecting the rowid column. If this produces an error
+	// this probably means there is no rowid column
+	var rowid string
+	if !hasColumnRowid {
+		rowid = "rowid"
+	} else if !hasColumn_Rowid_ {
+		rowid = "_rowid_"
+	} else if !hasColumnOid {
+		rowid = "oid"
+	} else {
+		return false, nil
+	}
+	err = sdb.OneValue("SELECT "+rowid+" FROM "+EscapeId(schemaName)+"."+EscapeId(tableName)+" LIMIT 1;", nil)
+
+	// An error other than io.EOF (which just means there is no row in the table) means that there is no rowid column.
+	// So this would be a WITHOUT ROWID table which doesn't increment its primary key automatically. Otherwise this is
+	// a table with an incrementing primary key.
+	if err != nil && err != io.EOF {
+		return false, nil
+	} else {
+		return true, nil
+	}
 }

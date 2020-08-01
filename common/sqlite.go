@@ -951,12 +951,20 @@ func Views(sdb *sqlite.Conn) (vw []string, err error) {
 	return
 }
 
-// Escape an identifier for safe use in SQL queries
+// EscapeId puts an SQL identifier in quote characters and escapes any quote characters it contains, making it safe for use in SQL queries
 func EscapeId(id string) string {
 	return sqlite.Mprintf("\"%w\"", id)
 }
 
-// Format and escape a string value for use in SQL queries
+// EscapeIds does the same as EscapeId but for a slice of identifiers
+func EscapeIds(ids []string) (escaped []string) {
+	for _, i := range ids {
+		escaped = append(escaped, EscapeId(i))
+	}
+	return escaped
+}
+
+// EscapeValue formats, quotes and escapes a DataValue for use in SQL queries
 func EscapeValue(val DataValue) string {
 	if val.Type == Null {
 		return "NULL"
@@ -967,6 +975,14 @@ func EscapeValue(val DataValue) string {
 	} else { // BLOB and similar
 		return val.Value.(string)
 	}
+}
+
+// EscapeValues does the same as EscapeValue but for a slice of DataValues
+func EscapeValues(vals []DataValue) (escaped []string) {
+	for _, v := range vals {
+		escaped = append(escaped, EscapeValue(v))
+	}
+	return escaped
 }
 
 // Figure out the primary key columns and the other columns of a table.
