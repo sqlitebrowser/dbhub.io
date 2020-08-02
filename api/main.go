@@ -209,7 +209,7 @@ func jsonErr(w http.ResponseWriter, msg string, statusCode int) {
 		errMsg := fmt.Sprintf("A 2nd error occurred when JSON marshalling an error structure: %v\n", err)
 		log.Print(errMsg)
 		http.Error(w, errMsg, http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"error":"An error occured when marshalling JSON inside jsonErr()"}`)
+		fmt.Fprintf(w, `{"error":"An error occurred when marshalling JSON inside jsonErr()"}`)
 		return
 	}
 	w.WriteHeader(statusCode)
