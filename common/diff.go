@@ -14,7 +14,7 @@ type DiffType string
 
 const (
 	// ActionAdd is used for inserted rows and created objects
-	ActionAdd    DiffType = "add"
+	ActionAdd DiffType = "add"
 
 	// ActionDelete is used for deleted rows and dropped objects
 	ActionDelete DiffType = "delete"
@@ -406,7 +406,7 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 			query += "B." + c + ","
 		}
 		query += "'" + string(ActionModify) + "'" // Updated row
-		for _, c := range otherEscaped {           // Other columns last
+		for _, c := range otherEscaped {          // Other columns last
 			query += ",A." + c + " IS NOT B." + c + ",B." + c
 		}
 
@@ -430,7 +430,7 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 	for _, c := range pkEscaped { // Primary key columns first. This needs to be from the first table for deleted rows
 		query += "A." + c + ","
 	}
-	query += "'" + string(ActionDelete) + "'"            // Deleted row
+	query += "'" + string(ActionDelete) + "'"             // Deleted row
 	query += strings.Repeat(",NULL", len(otherEscaped)*2) // Just NULL for all the other columns. They don't matter for deleted rows
 
 	query += " FROM main." + EscapeId(tableName) + " A WHERE "
@@ -447,7 +447,7 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 		query += "B." + c + ","
 	}
 	query += "'" + string(ActionAdd) + "'" // Inserted row
-	for _, c := range otherEscaped {        // Other columns last. Always set the modified flag for inserted rows
+	for _, c := range otherEscaped {       // Other columns last. Always set the modified flag for inserted rows
 		query += ",1,B." + c
 	}
 
