@@ -128,7 +128,7 @@ func GetFormCommit(r *http.Request) (string, error) {
 	}
 	err := ValidateCommitID(c)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Invalid database commit: '%v'", c))
+		return "", fmt.Errorf("Invalid database commit: '%v'", c)
 	}
 	return c, nil
 }
@@ -219,7 +219,7 @@ func GetFormRelease(r *http.Request) (release string, err error) {
 	}
 	err = ValidateBranchName(c)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Invalid release name: '%v'", c))
+		return "", fmt.Errorf("Invalid release name: '%v'", c)
 	}
 	return c, nil
 }
@@ -254,7 +254,7 @@ func GetFormTag(r *http.Request) (tag string, err error) {
 	}
 	err = ValidateBranchName(c)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Invalid tag name: '%v'", c))
+		return "", fmt.Errorf("Invalid tag name: '%v'", c)
 	}
 	return c, nil
 }
@@ -311,17 +311,17 @@ func GetFormUDC(r *http.Request) (string, string, string, error) {
 }
 
 // Returns the requested database owner and database name.
-func GetOD(ignore_leading int, r *http.Request) (string, string, error) {
+func GetOD(ignoreLeading int, r *http.Request) (string, string, error) {
 	// Split the request URL into path components
 	pathStrings := strings.Split(r.URL.Path, "/")
 
 	// Check that at least an owner/database combination was requested
-	if len(pathStrings) < (3 + ignore_leading) {
+	if len(pathStrings) < (3 + ignoreLeading) {
 		log.Printf("Something wrong with the requested URL: %v\n", r.URL.Path)
 		return "", "", errors.New("Invalid URL")
 	}
-	dbOwner := pathStrings[1+ignore_leading]
-	dbName := pathStrings[2+ignore_leading]
+	dbOwner := pathStrings[1+ignoreLeading]
+	dbName := pathStrings[2+ignoreLeading]
 
 	// Validate the user supplied owner and database name
 	err := ValidateUserDB(dbOwner, dbName)
@@ -342,9 +342,9 @@ func GetOD(ignore_leading int, r *http.Request) (string, string, error) {
 }
 
 // Returns the requested database owner, database name, and commit revision.
-func GetODC(ignore_leading int, r *http.Request) (string, string, string, error) {
+func GetODC(ignoreLeading int, r *http.Request) (string, string, string, error) {
 	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignore_leading, r)
+	dbOwner, dbName, err := GetOD(ignoreLeading, r)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -360,9 +360,9 @@ func GetODC(ignore_leading int, r *http.Request) (string, string, string, error)
 }
 
 // Returns the requested database owner, database name, and table name.
-func GetODT(ignore_leading int, r *http.Request) (string, string, string, error) {
+func GetODT(ignoreLeading int, r *http.Request) (string, string, string, error) {
 	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignore_leading, r)
+	dbOwner, dbName, err := GetOD(ignoreLeading, r)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -378,9 +378,9 @@ func GetODT(ignore_leading int, r *http.Request) (string, string, string, error)
 }
 
 // Returns the requested database owner, database name, table name, and commit string.
-func GetODTC(ignore_leading int, r *http.Request) (string, string, string, string, error) {
+func GetODTC(ignoreLeading int, r *http.Request) (string, string, string, string, error) {
 	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignore_leading, r)
+	dbOwner, dbName, err := GetOD(ignoreLeading, r)
 	if err != nil {
 		return "", "", "", "", err
 	}

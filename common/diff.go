@@ -9,33 +9,53 @@ import (
 	sqlite "github.com/gwenn/gosqlite"
 )
 
+// DiffType specifies the type of change in a row or object
 type DiffType string
 
 const (
-	ACTION_ADD    DiffType = "add"
-	ACTION_DELETE DiffType = "delete"
-	ACTION_MODIFY DiffType = "modify"
+	// ActionAdd is used for inserted rows and created objects
+	ActionAdd    DiffType = "add"
+
+	// ActionDelete is used for deleted rows and dropped objects
+	ActionDelete DiffType = "delete"
+
+	// ActionModify is used for updated rows and altered objects
+	ActionModify DiffType = "modify"
 )
 
+// MergeStrategy specifies the type of SQL statements included in the diff results.
+// The SQL statements can be used for merging databases and depending on whether and
+// how you want to merge you should choose your merge strategy.
 type MergeStrategy int
 
 const (
+	// NoMerge removes any SQL statements for merging from the diff results
 	NoMerge MergeStrategy = iota
+
+	// PreservePkMerge produces SQL statements which preserve the values of the primary key columns.
+	// Executing these statements on the first database produces a database similar to the second.
 	PreservePkMerge
+
+	// NewPkMerge produces SQL statements which generate new values for the primary key columns when
+	// executed. This avoids a couple of possible conflicts and allows merging more distant databases.
 	NewPkMerge
 )
 
+// SchemaDiff describes the changes to the schema of a database object, i.e. a created, dropped or altered object
 type SchemaDiff struct {
 	ActionType DiffType `json:"action_type"`
 	Sql        string   `json:"sql"`
 }
 
+// DataDiff stores a single change in the data of a table, i.e. a single new, deleted, or changed row
 type DataDiff struct {
 	ActionType DiffType    `json:"action_type"`
 	Sql        string      `json:"sql"`
 	Pk         []DataValue `json:"pk"`
 }
 
+// DiffObjectChangeset stores all the differences between two objects in a database, for example two tables.
+// Both Schema and Data are optional and can be nil if there are no respective changes in this object.
 type DiffObjectChangeset struct {
 	ObjectName string      `json:"object_name"`
 	ObjectType string      `json:"object_type"`
@@ -43,6 +63,7 @@ type DiffObjectChangeset struct {
 	Data       []DataDiff  `json:"data"`
 }
 
+// Diffs is able to store all the differences between two databases.
 type Diffs struct {
 	Diff []DiffObjectChangeset `json:"diff"`
 	// TODO Add PRAGMAs here
@@ -171,7 +192,7 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, me
 
 	// Check for dropped object
 	if sqlInMain != "" && sqlInAux == "" {
-		diff.Schema = &SchemaDiff{ActionType: ACTION_DELETE}
+		diff.Schema = &SchemaDiff{ActionType: ActionDelete}
 		if merge != NoMerge {
 			diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";"
 		}
@@ -179,7 +200,7 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, me
 		// If this is a table, also add all the deleted data to the diff
 		if objectType == "table" {
 			// We never include the SQL statements because there is no need to delete all the rows when we DROP the table anyway
-			diff.Data, err = dataDiffForAllTableRows(sdb, "main", objectName, ACTION_DELETE, false)
+			diff.Data, err = dataDiffForAllTableRows(sdb, "main", objectName, ActionDelete, false)
 			if err != nil {
 				return false, DiffObjectChangeset{}, err
 			}
@@ -191,14 +212,14 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, me
 
 	// Check for added object
 	if sqlInMain == "" && sqlInAux != "" {
-		diff.Schema = &SchemaDiff{ActionType: ACTION_ADD}
+		diff.Schema = &SchemaDiff{ActionType: ActionAdd}
 		if merge != NoMerge {
 			diff.Schema.Sql = sqlInAux + ";"
 		}
 
 		// If this is a table, also add all the added data to the diff
 		if objectType == "table" {
-			diff.Data, err = dataDiffForAllTableRows(sdb, "aux", objectName, ACTION_ADD, merge != NoMerge)
+			diff.Data, err = dataDiffForAllTableRows(sdb, "aux", objectName, ActionAdd, merge != NoMerge)
 			if err != nil {
 				return false, DiffObjectChangeset{}, err
 			}
@@ -210,7 +231,7 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, me
 
 	// Check for modified object
 	if sqlInMain != "" && sqlInAux != "" && sqlInMain != sqlInAux {
-		diff.Schema = &SchemaDiff{ActionType: ACTION_MODIFY}
+		diff.Schema = &SchemaDiff{ActionType: ActionModify}
 		if merge != NoMerge {
 			diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";" + sqlInAux + ";"
 		}
@@ -219,15 +240,15 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, me
 
 		// If this is a table, also add all the data to the diff
 		if objectType == "table" {
-			delete_data, err := dataDiffForAllTableRows(sdb, "main", objectName, ACTION_DELETE, false)
+			deleteData, err := dataDiffForAllTableRows(sdb, "main", objectName, ActionDelete, false)
 			if err != nil {
 				return false, DiffObjectChangeset{}, err
 			}
-			add_data, err := dataDiffForAllTableRows(sdb, "aux", objectName, ACTION_ADD, merge != NoMerge)
+			addData, err := dataDiffForAllTableRows(sdb, "aux", objectName, ActionAdd, merge != NoMerge)
 			if err != nil {
 				return false, DiffObjectChangeset{}, err
 			}
-			diff.Data = append(delete_data, add_data...)
+			diff.Data = append(deleteData, addData...)
 		}
 
 		// No further changes for modified objects. So we can return here
@@ -256,26 +277,21 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, me
 
 func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName string, action DiffType, includeSql bool) (diff []DataDiff, err error) {
 	// Retrieve a list of all primary key columns and other columns in this table
-	pk, implicit_pk, other_columns, err := GetPrimaryKeyAndOtherColumns(sdb, schemaName, tableName)
+	pk, implicitPk, otherColumns, err := GetPrimaryKeyAndOtherColumns(sdb, schemaName, tableName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Escape all the column names
-	var pk_escaped, other_escaped []string
-	for _, v := range pk {
-		pk_escaped = append(pk_escaped, EscapeId(v))
-	}
-	for _, v := range other_columns {
-		other_escaped = append(other_escaped, EscapeId(v))
-	}
+	pkEscaped := EscapeIds(pk)
+	otherEscaped := EscapeIds(otherColumns)
 
 	// Prepare query for the primary keys of all rows in this table. Only include the rest of the data
 	// in the rows if required
-	query := "SELECT " + strings.Join(pk_escaped, ",")
-	if includeSql && action == ACTION_ADD {
-		if len(other_escaped) > 0 {
-			query += "," + strings.Join(other_escaped, ",")
+	query := "SELECT " + strings.Join(pkEscaped, ",")
+	if includeSql && action == ActionAdd {
+		if len(otherEscaped) > 0 {
+			query += "," + strings.Join(otherEscaped, ",")
 		}
 	}
 	query += " FROM " + EscapeId(schemaName) + "." + EscapeId(tableName)
@@ -292,17 +308,17 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 
 		// Prepare SQL statement when needed
 		if includeSql {
-			if action == ACTION_DELETE {
+			if action == ActionDelete {
 				d.Sql = "DELETE FROM " + EscapeId(tableName) + " WHERE "
-			} else if action == ACTION_ADD {
-				var insert_columns []string
+			} else if action == ActionAdd {
+				var insertColumns []string
 				// Don't include rowid column, only regular PK
-				if !implicit_pk {
-					insert_columns = append(insert_columns, pk_escaped...)
+				if !implicitPk {
+					insertColumns = append(insertColumns, pkEscaped...)
 				}
-				insert_columns = append(insert_columns, other_escaped...)
+				insertColumns = append(insertColumns, otherEscaped...)
 
-				d.Sql = "INSERT INTO " + EscapeId(tableName) + "(" + strings.Join(insert_columns, ",") + ") VALUES("
+				d.Sql = "INSERT INTO " + EscapeId(tableName) + "(" + strings.Join(insertColumns, ",") + ") VALUES("
 			}
 		}
 
@@ -315,8 +331,8 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 
 			// If we want to include a SQL statement for deleting data and this is still
 			// part of the primary key, add this to the prepared DELETE statement
-			if includeSql && action == ACTION_DELETE && i < len(pk) {
-				d.Sql += pk_escaped[i]
+			if includeSql && action == ActionDelete && i < len(pk) {
+				d.Sql += pkEscaped[i]
 				if row[i].Type == Null {
 					d.Sql += " IS NULL"
 				} else {
@@ -327,7 +343,7 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 
 			// If we want to include a SQL statement for adding data and this is the regular
 			// data part, add this to the prepared INSERT statement
-			if includeSql && action == ACTION_ADD && i >= len(pk) {
+			if includeSql && action == ActionAdd && i >= len(pk) {
 				d.Sql += EscapeValue(row[i]) + ","
 			}
 		}
@@ -335,9 +351,9 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 		// Remove the last " AND " of the SQL query for DELETE statements and the last "," for INSERT statements
 		// and add a semicolon instead
 		if includeSql {
-			if action == ACTION_DELETE {
+			if action == ActionDelete {
 				d.Sql = strings.TrimSuffix(d.Sql, " AND ") + ";"
-			} else if action == ACTION_ADD {
+			} else if action == ActionAdd {
 				d.Sql = strings.TrimSuffix(d.Sql, ",") + ");"
 			}
 		}
@@ -354,7 +370,7 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 // schemas match.
 func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge MergeStrategy) (diff []DataDiff, err error) {
 	// Retrieve a list of all primary key columns and other columns in this table
-	pk, implicitPk, other_columns, err := GetPrimaryKeyAndOtherColumns(sdb, "aux", tableName)
+	pk, implicitPk, otherColumns, err := GetPrimaryKeyAndOtherColumns(sdb, "aux", tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +387,7 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 
 	// Escape all column names
 	pkEscaped := EscapeIds(pk)
-	otherEscaped := EscapeIds(other_columns)
+	otherEscaped := EscapeIds(otherColumns)
 
 	// Build query for getting differences. This is based on the query produced by the sqldiff utility for SQLite.
 	// The resulting query returns n+1+m*2 number of rows where n is the number of columns in the primary key and
@@ -384,12 +400,12 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 
 	// Updated rows
 	// There can only be updated rows in tables with more columns than the primary key columns
-	if len(other_columns) > 0 {
+	if len(otherColumns) > 0 {
 		query = "SELECT "
 		for _, c := range pkEscaped { // Primary key columns first
 			query += "B." + c + ","
 		}
-		query += "'" + string(ACTION_MODIFY) + "'" // Updated row
+		query += "'" + string(ActionModify) + "'" // Updated row
 		for _, c := range otherEscaped {           // Other columns last
 			query += ",A." + c + " IS NOT B." + c + ",B." + c
 		}
@@ -414,7 +430,7 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 	for _, c := range pkEscaped { // Primary key columns first. This needs to be from the first table for deleted rows
 		query += "A." + c + ","
 	}
-	query += "'" + string(ACTION_DELETE) + "'"            // Deleted row
+	query += "'" + string(ActionDelete) + "'"            // Deleted row
 	query += strings.Repeat(",NULL", len(otherEscaped)*2) // Just NULL for all the other columns. They don't matter for deleted rows
 
 	query += " FROM main." + EscapeId(tableName) + " A WHERE "
@@ -430,7 +446,7 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 	for _, c := range pkEscaped { // Primary key columns first. This needs to be from the second table for inserted rows
 		query += "B." + c + ","
 	}
-	query += "'" + string(ACTION_ADD) + "'" // Inserted row
+	query += "'" + string(ActionAdd) + "'" // Inserted row
 	for _, c := range otherEscaped {        // Other columns last. Always set the modified flag for inserted rows
 		query += ",1,B." + c
 	}
@@ -473,11 +489,11 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 
 		// Produce the SQL statement for merging
 		if merge != NoMerge {
-			if d.ActionType == ACTION_MODIFY || d.ActionType == ACTION_DELETE {
+			if d.ActionType == ActionModify || d.ActionType == ActionDelete {
 				// For updated and deleted rows the merge strategy doesn't matter
 
 				// The first part of the UPDATE and DELETE statements is different
-				if d.ActionType == ACTION_MODIFY {
+				if d.ActionType == ActionModify {
 					d.Sql = "UPDATE " + EscapeId(tableName) + " SET "
 
 					// For figuring out which values to set, start with the first column after the diff type column.
@@ -511,7 +527,7 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 					d.Sql += " AND "
 				}
 				d.Sql = strings.TrimSuffix(d.Sql, " AND ") + ";"
-			} else if d.ActionType == ACTION_ADD {
+			} else if d.ActionType == ActionAdd {
 				// For inserted rows the merge strategy actually does matter. The PreservePkMerge strategy is simple:
 				// We just include all columns, no matter whether primary key or not, in the INSERT statement as-is.
 				// For tables which don't have a primary key the same applies even when using the NewPkMerge strategy.
@@ -650,7 +666,6 @@ func hasIncrementingIntPk(sdb *sqlite.Conn, schemaName string, tableName string)
 	// a table with an incrementing primary key.
 	if err != nil && err != io.EOF {
 		return false, nil
-	} else {
-		return true, nil
 	}
+	return true, nil
 }

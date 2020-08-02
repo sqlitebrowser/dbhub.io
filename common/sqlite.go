@@ -990,8 +990,8 @@ func EscapeValues(vals []DataValue) (escaped []string) {
 // This function returns two arrays: One containing the list of primary key columns in the same order as they
 // are used in the primary key. The other array contains a list of all the other, non-primary key columns.
 // Generated columns are ignored completely. If the primary key exists only implicitly, i.e. it's the rowid
-// column, the implicit_pk flag is set to true.
-func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema string, table string) (pks []string, implicit_pk bool, other []string, err error) {
+// column, the implicitPk flag is set to true.
+func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema string, table string) (pks []string, implicitPk bool, other []string, err error) {
 	// Prepare query
 	var stmt *sqlite.Stmt
 	stmt, err = sdb.Prepare("PRAGMA " + EscapeId(schema) + ".table_info(" + EscapeId(table) + ")")
@@ -1038,7 +1038,7 @@ func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema string, table string)
 	if len(primaryKeyColumns) > 0 {
 		// Explicit primary key
 
-		implicit_pk = false
+		implicitPk = false
 
 		// Sort the columns by their order in the PK
 		keys := make([]int, 0, len(primaryKeyColumns))
@@ -1054,7 +1054,7 @@ func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema string, table string)
 	} else {
 		// Implicit primary key
 
-		implicit_pk = true
+		implicitPk = true
 
 		if !hasColumnRowid {
 			pks = append(pks, "rowid")
@@ -1068,5 +1068,5 @@ func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema string, table string)
 		}
 	}
 
-	return pks, implicit_pk, other, nil
+	return pks, implicitPk, other, nil
 }

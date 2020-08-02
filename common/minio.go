@@ -22,7 +22,7 @@ func ConnectMinio() (err error) {
 	// Connect to the Minio server
 	minioClient, err = minio.New(Conf.Minio.Server, Conf.Minio.AccessKey, Conf.Minio.Secret, Conf.Minio.HTTPS)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Problem with Minio server configuration: %v\n", err))
+		return fmt.Errorf("Problem with Minio server configuration: %v\n", err)
 	}
 
 	// Log Minio server end point

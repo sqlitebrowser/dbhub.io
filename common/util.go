@@ -1,4 +1,3 @@
-// Useful utility functions
 package common
 
 import (

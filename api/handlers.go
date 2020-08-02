@@ -22,7 +22,7 @@ import (
 //   * "table" is the name of the table or view
 func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, err, httpStatus := collectInfo(w, r)
+	sdb, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -94,11 +94,11 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get merge strategy and parse value. Default to "none"
 	merge := r.PostFormValue("merge")
-	merge_strategy := com.NoMerge
+	mergeStrategy := com.NoMerge
 	if merge == "preserve_pk" {
-		merge_strategy = com.PreservePkMerge
+		mergeStrategy = com.PreservePkMerge
 	} else if merge == "new_pk" {
-		merge_strategy = com.NewPkMerge
+		mergeStrategy = com.NewPkMerge
 	} else if merge != "" && merge != "none" {
 		jsonErr(w, "Invalid merge strategy", http.StatusBadRequest)
 		return
@@ -177,7 +177,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Perform diff
-	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser, merge_strategy)
+	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser, mergeStrategy)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -201,7 +201,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database being queried
 func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, err, httpStatus := collectInfo(w, r)
+	sdb, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -321,7 +321,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database being queried
 func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, err, httpStatus := collectInfo(w, r)
+	sdb, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -353,7 +353,7 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database being queried
 func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, err, httpStatus := collectInfo(w, r)
+	sdb, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return

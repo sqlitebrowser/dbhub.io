@@ -189,11 +189,10 @@ func CheckDBID(loggedInUser string, dbOwner string, dbID int64) (avail bool, dbF
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			avail = false
-			return
 		} else {
 			log.Printf("Checking if a database exists failed: %v\n", err)
-			return
 		}
+		return
 	}
 
 	// Database exists
@@ -370,7 +369,7 @@ func ConnectPostgreSQL() (err error) {
 	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, Conf.Pg.NumConnections, nil, 2 * time.Second}
 	pdb, err = pgx.NewConnPool(pgPoolConfig)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Couldn't connect to PostgreSQL server: %v\n", err))
+		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v\n", err)
 	}
 
 	// Log successful connection
@@ -1936,12 +1935,11 @@ func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (branc
 		if err != pgx.ErrNoRows {
 			log.Printf("Error when retrieving default branch name for database '%s%s%s': %v\n", dbOwner,
 				dbFolder, dbName, err)
-			return
 		} else {
 			log.Printf("No default branch name exists for database '%s%s%s'. This shouldn't happen\n", dbOwner,
 				dbFolder, dbName)
-			return
 		}
+		return
 	}
 	if b.Valid {
 		branchName = b.String
@@ -1998,12 +1996,11 @@ func GetDiscussionAndMRCount(dbOwner string, dbFolder string, dbName string) (di
 		if err != pgx.ErrNoRows {
 			log.Printf("Error when retrieving discussion and MR count for database '%s%s%s': %v\n", dbOwner,
 				dbFolder, dbName, err)
-			return
 		} else {
 			log.Printf("Database '%s%s%s' not found when attempting to retrieve discussion and MR count. This"+
 				"shouldn't happen\n", dbOwner, dbFolder, dbName)
-			return
 		}
+		return
 	}
 	return
 }

@@ -133,7 +133,7 @@ func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err
 //   3. Fetches the database from Minio (with appropriate permission checks)
 //   4. Opens the database, returning the connection handle
 // This function exists purely because this code is common to most of the handlers
-func collectInfo(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, err error, httpStatus int) {
+func collectInfo(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, httpStatus int, err error) {
 	var loggedInUser string
 	loggedInUser, err = checkAuth(w, r)
 	if err != nil {
