@@ -723,7 +723,7 @@ func DeleteBranchHistory(dbOwner string, dbFolder string, dbName string, branchN
 	}
 
 	// Rewind the branch history
-	b, ok := branchList[branchName]
+	b, _ := branchList[branchName]
 	b.Commit = commitID
 	b.CommitCount = commitCount
 	branchList[branchName] = b

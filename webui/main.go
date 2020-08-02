@@ -1230,14 +1230,13 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	validRegSession := false
 	va := sess.Values["registrationinprogress"]
 	if va == nil {
 		// This isn't a valid username selection session, so abort
 		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
 		return
 	}
-	validRegSession = va.(bool)
+	validRegSession := va.(bool)
 	if validRegSession != true {
 		// This isn't a valid username selection session, so abort
 		errorPage(w, r, http.StatusBadRequest, "Invalid user creation session")
