@@ -975,7 +975,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		SourceOwner:  srcOwner,
 	}
 	var ancestorID string
-	ancestorID, mrDetails.Commits, err, _ = com.GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch,
+	ancestorID, mrDetails.Commits, _, err = com.GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch,
 		destOwner, destFolder, destDBName, destBranch)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -2662,7 +2662,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the commit list diff
-	ancestorID, cList, err, errType := com.GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch, destOwner,
+	ancestorID, cList, errType, err := com.GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch, destOwner,
 		destFolder, destDBName, destBranch)
 	if err != nil && errType != http.StatusBadRequest {
 		w.WriteHeader(http.StatusInternalServerError)

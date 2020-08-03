@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/gob"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -49,7 +48,7 @@ func ConnectCache() error {
 	cacheTest := memcache.Item{Key: "connecttext", Value: []byte("1"), Expiration: 10}
 	err := memCache.Set(&cacheTest)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Couldn't connect to memcached server: %s", err))
+		return fmt.Errorf("Couldn't connect to memcached server: %s", err)
 	}
 
 	// Log successful connection message for Memcached

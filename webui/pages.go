@@ -598,7 +598,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 
 	// If the initially chosen source and destinations can be directly applied, fill out the initial commit list entries
 	// for display to the user
-	ancestorID, cList, err, errType := com.GetCommonAncestorCommits(dbOwner, dbFolder, dbName,
+	ancestorID, cList, errType, err := com.GetCommonAncestorCommits(dbOwner, dbFolder, dbName,
 		pageData.SourceDBDefaultBranch, pageData.DestOwner, pageData.DestFolder, pageData.DestDBName,
 		pageData.DestDBDefaultBranch)
 	if err != nil && errType != http.StatusBadRequest {
@@ -2537,7 +2537,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 			} else {
 				// Check if the source branch can still be applied to the destination, and also check for new/changed
 				// commits
-				ancestorID, newCommitList, err, _ := com.GetCommonAncestorCommits(mr.MRDetails.SourceOwner,
+				ancestorID, newCommitList, _, err := com.GetCommonAncestorCommits(mr.MRDetails.SourceOwner,
 					mr.MRDetails.SourceFolder, mr.MRDetails.SourceDBName, mr.MRDetails.SourceBranch, dbOwner, dbFolder,
 					dbName, mr.MRDetails.DestBranch)
 				if err != nil {

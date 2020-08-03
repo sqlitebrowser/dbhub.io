@@ -1,4 +1,3 @@
-// These functions extract (and validate) user provided form data.
 package common
 
 import (
@@ -114,7 +113,7 @@ func GetFormBranch(r *http.Request) (string, error) {
 	}
 	err = ValidateBranchName(b)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Invalid branch name: '%v'", b))
+		return "", fmt.Errorf("Invalid branch name: '%v'", b)
 	}
 	return b, nil
 }

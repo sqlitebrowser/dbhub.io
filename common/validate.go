@@ -21,10 +21,11 @@ var (
 	regexPGTable         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexUsername        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
 
-	// For input validation
+	// Validate is used for input validation
 	Validate *valid.Validate
 )
 
+// VisGetFields is used when validating input
 type VisGetFields struct {
 	VisName string `validate:"required,visname,min=1,max=63"` // 63 char limit seems reasonable
 }
