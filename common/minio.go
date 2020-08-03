@@ -30,7 +30,7 @@ func ConnectMinio() (err error) {
 	return nil
 }
 
-// MinioHandle get a handle from Minio for a SQLite database object
+// MinioHandle gets a handle from Minio for a SQLite database object
 func MinioHandle(bucket, id string) (*minio.Object, error) {
 	userDB, err := minioClient.GetObject(bucket, id, minio.GetObjectOptions{})
 	if err != nil {
