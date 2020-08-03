@@ -124,7 +124,7 @@ func main() {
 
 	// Start API server
 	log.Printf("API server starting on %s\n", server)
-	err = srv.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey)
+	err = srv.ListenAndServeTLS(com.Conf.Api.Certificate, com.Conf.Api.CertificateKey)
 
 	// Shut down nicely
 	com.DisconnectPostgreSQL()
@@ -250,10 +250,10 @@ func extractUserFromClientCert(w http.ResponseWriter, r *http.Request) (userAcc 
 	}
 
 	// Verify the running server matches the one in the certificate
-	runningServer := com.Conf.DB4S.Server
-	if certServer != runningServer {
-		err = fmt.Errorf("Server name in certificate '%s' doesn't match running server '%s'\n", certServer,
-			runningServer)
+	db4sServer := com.Conf.DB4S.Server
+	if certServer != db4sServer {
+		err = fmt.Errorf("Server name in certificate '%s' doesn't match DB4S server '%s'\n", certServer,
+			db4sServer)
 		return
 	}
 
