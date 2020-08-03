@@ -10,6 +10,57 @@ import (
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
+// branchesHandler returns the list of branches for a database
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" \
+//       -F dbowner="justinclift" \
+//       -F dbname="Join Testing.sqlite" \
+//       https://api.dbhub.io/v1/branches
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
+func branchesHandler(w http.ResponseWriter, r *http.Request) {
+	// Do auth check, grab request info
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+	dbFolder := "/"
+
+	// Retrieve the branch list for the database
+	brList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Retrieve the default branch for the database
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the list as JSON
+	info := struct {
+		Def     string                     `json:"default_branch"`
+		Entries map[string]com.BranchEntry `json:"branches"`
+	}{
+		defBranch,
+		brList,
+	}
+	jsonList, err := json.MarshalIndent(info, "", "  ")
+	if err != nil {
+		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
+		log.Print(errMsg)
+		http.Error(w, errMsg, http.StatusBadRequest)
+		return
+	}
+	fmt.Fprintf(w, string(jsonList))
+	return
+}
+
 // columnsHandler returns the list of columns present in a table or view
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" \
@@ -22,7 +73,7 @@ import (
 //   * "table" is the name of the table or view
 func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, httpStatus, err := collectInfo(w, r)
+	sdb, httpStatus, err := collectInfoAndOpen(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -201,7 +252,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database being queried
 func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, httpStatus, err := collectInfo(w, r)
+	sdb, httpStatus, err := collectInfoAndOpen(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -223,6 +274,86 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, string(jsonData))
+}
+
+// metadataHandler returns commit, branch, release, and tag information on a database
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/metadata
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database being queried
+//   * "dbname" is the name of the database being queried
+func metadataHandler(w http.ResponseWriter, r *http.Request) {
+	// Do auth check, grab request info
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+	dbFolder := "/"
+
+	// Get the branch heads list for the database
+	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get the default branch for the database
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get the complete commit list for the database
+	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get the releases for the database
+	relList, err := com.GetReleases(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get the tags for the database
+	tagList, err := com.GetTags(dbOwner, dbFolder, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Generate the link to the web page of this database in the webUI module
+	webPage := "https://" + com.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName
+
+	// Return the list as JSON
+	info := struct {
+		Branches  map[string]com.BranchEntry  `json:"branches"`
+		Commits   map[string]com.CommitEntry  `json:"commits"`
+		DefBranch string                      `json:"default_branch"`
+		Releases  map[string]com.ReleaseEntry `json:"releases"`
+		Tags      map[string]com.TagEntry     `json:"tags"`
+		WebPage   string                      `json:"web_page"`
+	}{
+		Branches:  branchList,
+		Commits:   commitList,
+		DefBranch: defBranch,
+		Releases:  relList,
+		Tags:      tagList,
+		WebPage:   webPage,
+	}
+	jsonList, err := json.MarshalIndent(info, "", "  ")
+	if err != nil {
+		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
+		log.Print(errMsg)
+		http.Error(w, errMsg, http.StatusBadRequest)
+		return
+	}
+	fmt.Fprintf(w, string(jsonList))
+	return
 }
 
 // queryHandler executes a SQL query on a SQLite database, returning the results to the caller
@@ -321,7 +452,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database being queried
 func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, httpStatus, err := collectInfo(w, r)
+	sdb, httpStatus, err := collectInfoAndOpen(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -353,7 +484,7 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database being queried
 func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, httpStatus, err := collectInfo(w, r)
+	sdb, httpStatus, err := collectInfoAndOpen(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
