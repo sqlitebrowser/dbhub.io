@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// GenerateClientCert generates a new DBHub.io client certificate for the given user
 func GenerateClientCert(userName string) (_ []byte, err error) {
 	pageName := "Add user:generateClientCert()"
 

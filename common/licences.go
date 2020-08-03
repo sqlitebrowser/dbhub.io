@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 )
 
-// Add the default licences
+// AddDefaultLicences adds the default licences to the PostgreSQL database.  Generally useful for populating a new
+// database, or adding new entries to an existing one
 func AddDefaultLicences() (err error) {
 	// The default licences to load into the system
 	type licenceInfo struct {

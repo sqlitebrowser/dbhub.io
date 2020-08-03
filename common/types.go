@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// AccessType is whether a database is private, or public, or both
 type AccessType int
 
 const (

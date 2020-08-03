@@ -14,14 +14,14 @@ import (
 )
 
 var (
-	// Our configuration info
+	// Conf holds our configuration info
 	Conf TomlConfig
 
 	// PostgreSQL configuration info
 	pgConfig = new(pgx.ConnConfig)
 )
 
-// Read the server configuration file.
+// ReadConfig reads the server configuration file.
 func ReadConfig() error {
 	// Override config file location via environment variables
 	var err error

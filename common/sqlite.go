@@ -110,6 +110,7 @@ const (
 	fnVersion function = "sqlite_version"
 )
 
+// SQLiteFunctions lists the function we allow SQL queries to run
 var SQLiteFunctions = []function{
 	fnAbs,
 	fnChanges,
@@ -985,13 +986,13 @@ func EscapeValues(vals []DataValue) (escaped []string) {
 	return escaped
 }
 
-// Figure out the primary key columns and the other columns of a table.
+// GetPrimaryKeyAndOtherColumns figures out the primary key columns and the other columns of a table.
 // The schema and table parameters specify the schema and table names to use.
 // This function returns two arrays: One containing the list of primary key columns in the same order as they
 // are used in the primary key. The other array contains a list of all the other, non-primary key columns.
 // Generated columns are ignored completely. If the primary key exists only implicitly, i.e. it's the rowid
 // column, the implicitPk flag is set to true.
-func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema string, table string) (pks []string, implicitPk bool, other []string, err error) {
+func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema, table string) (pks []string, implicitPk bool, other []string, err error) {
 	// Prepare query
 	var stmt *sqlite.Stmt
 	stmt, err = sdb.Prepare("PRAGMA " + EscapeId(schema) + ".table_info(" + EscapeId(table) + ")")

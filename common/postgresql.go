@@ -26,7 +26,7 @@ var (
 	pdb *pgx.ConnPool
 )
 
-// Add the default user to the system, used so the referential integrity of licence user_id 0 works.
+// AddDefaultUser adds the default user to the system, so the referential integrity of licence user_id 0 works
 func AddDefaultUser() error {
 	// Add the new user to the database
 	dbQuery := `
@@ -47,8 +47,8 @@ func AddDefaultUser() error {
 	return nil
 }
 
-// Add a user to the system.
-func AddUser(auth0ID string, userName string, password string, email string, displayName string, avatarURL string) error {
+// AddUser adds a user to the system
+func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) error {
 	// Hash the user's password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -96,8 +96,8 @@ func AddUser(auth0ID string, userName string, password string, email string, dis
 	return nil
 }
 
-// Saves a new API key to the PostgreSQL database.
-func APIKeySave(key string, loggedInUser string, dateCreated time.Time) error {
+// APIKeySave saves a new API key to the PostgreSQL database
+func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
 	// Make sure the API key isn't already in the database
 	dbQuery := `
 		SELECT count(key)
@@ -131,9 +131,9 @@ func APIKeySave(key string, loggedInUser string, dateCreated time.Time) error {
 	return nil
 }
 
-// Check if a database exists
-// If an error occurred, the true/false value should be ignored, as only the error value is valid.
-func CheckDBExists(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
+// CheckDBExists checks if a database exists
+// If an error occurred, the true/false value should be ignored, as only the error value is valid
+func CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM sqlite_databases
@@ -166,9 +166,9 @@ func CheckDBExists(loggedInUser string, dbOwner string, dbFolder string, dbName 
 	return true, nil
 }
 
-// Check if a given database ID is available, and return it's folder/name so the caller can determine if it has been
-// renamed.  If an error occurs, the true/false value should be ignored, as only the error value is valid.
-func CheckDBID(loggedInUser string, dbOwner string, dbID int64) (avail bool, dbFolder string, dbName string, err error) {
+// CheckDBID checks if a given database ID is available, and returns it's folder/name so the caller can determine if it
+// has been renamed.  If an error occurs, the true/false value should be ignored, as only the error value is valid
+func CheckDBID(loggedInUser, dbOwner string, dbID int64) (avail bool, dbFolder, dbName string, err error) {
 	dbQuery := `
 		SELECT folder, db_name
 		FROM sqlite_databases
@@ -200,8 +200,9 @@ func CheckDBID(loggedInUser string, dbOwner string, dbID int64) (avail bool, dbF
 	return
 }
 
-// Check if a database has been starred by a given user.  The boolean return value is only valid when err is nil.
-func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
+// CheckDBStarred check if a database has been starred by a given user.  The boolean return value is only valid when
+// err is nil
+func CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM database_stars
@@ -237,8 +238,9 @@ func CheckDBStarred(loggedInUser string, dbOwner string, dbFolder string, dbName
 	return true, nil
 }
 
-// Check if a database is being watched by a given user.  The boolean return value is only valid when err is nil.
-func CheckDBWatched(loggedInUser string, dbOwner string, dbFolder string, dbName string) (bool, error) {
+// CheckDBWatched checks if a database is being watched by a given user.  The boolean return value is only valid when
+// err is nil
+func CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM watchers
@@ -274,8 +276,9 @@ func CheckDBWatched(loggedInUser string, dbOwner string, dbFolder string, dbName
 	return true, nil
 }
 
-// Check if an email address already exists in our system. Returns true if the email is already in the system, false
-// if not.  If an error occurred, the true/false value should be ignored, as only the error value is valid.
+// CheckEmailExists checks if an email address already exists in our system. Returns true if the email is already in
+// the system, false if not.  If an error occurred, the true/false value should be ignored, as only the error value
+// is valid
 func CheckEmailExists(email string) (bool, error) {
 	// Check if the email address is already in our system
 	dbQuery := `
@@ -298,8 +301,8 @@ func CheckEmailExists(email string) (bool, error) {
 
 }
 
-// Checks if a licence exists in our system.
-func CheckLicenceExists(userName string, licenceName string) (exists bool, err error) {
+// CheckLicenceExists checks if a given licence exists in our system
+func CheckLicenceExists(userName, licenceName string) (exists bool, err error) {
 	dbQuery := `
 		SELECT count(*)
 		FROM database_licences
@@ -328,8 +331,8 @@ func CheckLicenceExists(userName string, licenceName string) (exists bool, err e
 	return true, nil
 }
 
-// Check if a username already exists in our system.  Returns true if the username is already taken, false if not.
-// If an error occurred, the true/false value should be ignored, and only the error return code used.
+// CheckUserExists checks if a username already exists in our system.  Returns true if the username is already taken,
+// false if not.  If an error occurred, the true/false value should be ignored, and only the error return code used
 func CheckUserExists(userName string) (bool, error) {
 	dbQuery := `
 		SELECT count(user_id)
@@ -349,22 +352,7 @@ func CheckUserExists(userName string) (bool, error) {
 	return true, nil
 }
 
-// Returns the certificate for a given user.
-func ClientCert(userName string) ([]byte, error) {
-	var cert []byte
-	err := pdb.QueryRow(`
-		SELECT client_cert
-		FROM users
-		WHERE lower(user_name) = lower($1)`, userName).Scan(&cert)
-	if err != nil {
-		log.Printf("Retrieving client cert for '%s' from database failed: %v\n", userName, err)
-		return nil, err
-	}
-
-	return cert, nil
-}
-
-// Creates a connection pool to the PostgreSQL server.
+// ConnectPostgreSQL creates a connection pool to the PostgreSQL server
 func ConnectPostgreSQL() (err error) {
 	pgPoolConfig := pgx.ConnPoolConfig{*pgConfig, Conf.Pg.NumConnections, nil, 2 * time.Second}
 	pdb, err = pgx.NewConnPool(pgPoolConfig)
@@ -378,8 +366,8 @@ func ConnectPostgreSQL() (err error) {
 	return nil
 }
 
-// Returns the ID number for a given user's database.
-func databaseID(dbOwner string, dbFolder string, dbName string) (dbID int, err error) {
+// databaseID returns the ID number for a given user's database
+func databaseID(dbOwner, dbFolder, dbName string) (dbID int, err error) {
 	// Retrieve the database id
 	dbQuery := `
 		SELECT db_id
@@ -399,8 +387,8 @@ func databaseID(dbOwner string, dbFolder string, dbName string) (dbID int, err e
 	return
 }
 
-// Return a list of 1) users with public databases, 2) along with the logged in users' most recently modified database
-// (including their private one(s)).
+// DB4SDefaultList returns a list of 1) users with public databases, 2) along with the logged in users' most recently
+// modified database (including their private one(s))
 func DB4SDefaultList(loggedInUser string) (UserInfoSlice, error) {
 	// Retrieve the list of all users with public databases
 	dbQuery := `
@@ -493,8 +481,8 @@ func DB4SDefaultList(loggedInUser string) (UserInfoSlice, error) {
 	return completeList, nil
 }
 
-// Retrieve the details for a specific database
-func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) error {
+// DBDetails returns the details for a specific database
+func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commitID string) error {
 	// If no commit ID was supplied, we retrieve the latest commit one from the default branch
 	var err error
 	if commitID == "" {
@@ -607,8 +595,8 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser string, dbOwner string, dbFolder s
 	return nil
 }
 
-// Returns the star count for a given database.
-func DBStars(dbOwner string, dbFolder string, dbName string) (starCount int, err error) {
+// DBStars returns the star count for a given database
+func DBStars(dbOwner, dbFolder, dbName string) (starCount int, err error) {
 	// Retrieve the updated star count
 	dbQuery := `
 		SELECT stars
@@ -629,8 +617,8 @@ func DBStars(dbOwner string, dbFolder string, dbName string) (starCount int, err
 	return starCount, nil
 }
 
-// Returns the watchers count for a given database.
-func DBWatchers(dbOwner string, dbFolder string, dbName string) (watcherCount int, err error) {
+// DBWatchers returns the watchers count for a given database
+func DBWatchers(dbOwner, dbFolder, dbName string) (watcherCount int, err error) {
 	// Retrieve the updated watchers count
 	dbQuery := `
 		SELECT watchers
@@ -652,8 +640,8 @@ func DBWatchers(dbOwner string, dbFolder string, dbName string) (watcherCount in
 	return watcherCount, nil
 }
 
-// Retrieve the default commit ID for a specific database
-func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, error) {
+// DefaultCommit returns the default commit ID for a specific database
+func DefaultCommit(dbOwner, dbFolder, dbName string) (string, error) {
 	// If no commit ID was supplied, we retrieve the latest commit ID from the default branch
 	dbQuery := `
 		SELECT branch_heads->default_branch->'commit' AS commit_id
@@ -675,8 +663,8 @@ func DefaultCommit(dbOwner string, dbFolder string, dbName string) (string, erro
 	return commitID, nil
 }
 
-// Delete a specific comment from a discussion
-func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, comID int) error {
+// DeleteComment deletes a specific comment from a discussion
+func DeleteComment(dbOwner, dbFolder, dbName string, discID, comID int) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -765,8 +753,8 @@ func DeleteComment(dbOwner string, dbFolder string, dbName string, discID int, c
 	return nil
 }
 
-// Deletes a database from PostgreSQL.
-func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
+// DeleteDatabase deletes a database from PostgreSQL
+func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 	// TODO: At some point we'll need to figure out a garbage collection approach to remove databases from Minio which
 	// TODO  are no longer pointed to by anything
 
@@ -969,8 +957,8 @@ func DeleteDatabase(dbOwner string, dbFolder string, dbName string) error {
 	return nil
 }
 
-// Removes a (user supplied) database licence from the system.
-func DeleteLicence(userName string, licenceName string) (err error) {
+// DeleteLicence removes a (user supplied) database licence from the system
+func DeleteLicence(userName, licenceName string) (err error) {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -1095,7 +1083,7 @@ func DeleteLicence(userName string, licenceName string) (err error) {
 	return nil
 }
 
-// Disconnects the PostgreSQL database connection.
+// DisconnectPostgreSQL disconnects the PostgreSQL database connection
 func DisconnectPostgreSQL() {
 	pdb.Close()
 
@@ -1103,14 +1091,14 @@ func DisconnectPostgreSQL() {
 	log.Printf("Disconnected from PostgreSQL server: %v:%v\n", Conf.Pg.Server, uint16(Conf.Pg.Port))
 }
 
-// Returns the list of discussions or MRs for a given database.
+// Discussions returns the list of discussions or MRs for a given database
 // If a non-0 discID value is passed, it will only return the details for that specific discussion/MR.  Otherwise it
 // will return a list of all discussions or MRs for a given database
 // Note - This returns a slice of DiscussionEntry, instead of a map.  We use a slice because it lets us use an ORDER
 //        BY clause in the SQL and preserve the returned order (maps don't preserve order).  If in future we no longer
 //        need to preserve the order, it might be useful to switch to using a map instead since they're often simpler
 //        to work with.
-func Discussions(dbOwner string, dbFolder string, dbName string, discType DiscussionType, discID int) (list []DiscussionEntry, err error) {
+func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, discID int) (list []DiscussionEntry, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -1207,13 +1195,13 @@ func Discussions(dbOwner string, dbFolder string, dbName string, discType Discus
 	return
 }
 
-// Returns the list of comments for a given discussion.
+// DiscussionComments returns the list of comments for a given discussion
 // If a non-0 comID value is passed, it will only return the details for that specific comment in the discussion.
 // Otherwise it will return a list of all comments for a given discussion
 // Note - This returns a slice instead of a map.  We use a slice because it lets us use an ORDER BY clause in the SQL
 //        and preserve the returned order (maps don't preserve order).  If in future we no longer need to preserve the
 //        order, it might be useful to switch to using a map instead since they're often simpler to work with.
-func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID int, comID int) (list []DiscussionCommentEntry, err error) {
+func DiscussionComments(dbOwner, dbFolder, dbName string, discID, comID int) (list []DiscussionCommentEntry, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -1275,7 +1263,7 @@ func DiscussionComments(dbOwner string, dbFolder string, dbName string, discID i
 	return
 }
 
-// Periodically flushes the database view count from memcache to PostgreSQL
+// FlushViewCount periodically flushes the database view count from Memcache to PostgreSQL
 func FlushViewCount() {
 	type dbEntry struct {
 		Owner  string
@@ -1362,8 +1350,8 @@ func FlushViewCount() {
 	return
 }
 
-// Fork the PostgreSQL entry for a SQLite database from one user to another
-func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner string) (newForkCount int, err error) {
+// ForkDatabase forks the PostgreSQL entry for a SQLite database from one user to another
+func ForkDatabase(srcOwner, dbFolder, dbName, dstOwner string) (newForkCount int, err error) {
 	// Copy the main database entry
 	dbQuery := `
 		WITH dst_u AS (
@@ -1426,9 +1414,9 @@ func ForkDatabase(srcOwner string, dbFolder string, dbName string, dstOwner stri
 	return newForkCount, nil
 }
 
-// Checks if the given database was forked from another, and if so returns that one's owner, folder and database name
-func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string, forkFol string, forkDB string,
-	forkDel bool, err error) {
+// ForkedFrom checks if the given database was forked from another, and if so returns that one's owner, folder and
+// database name
+func ForkedFrom(dbOwner, dbFolder, dbName string) (forkOwn, forkFol, forkDB string, forkDel bool, err error) {
 	// Check if the database was forked from another
 	var dbID, forkedFrom pgx.NullInt64
 	dbQuery := `
@@ -1471,10 +1459,9 @@ func ForkedFrom(dbOwner string, dbFolder string, dbName string) (forkOwn string,
 	return forkOwn, forkFol, forkDB, forkDel, nil
 }
 
-// Return the parent of a database, if there is one (and it's accessible to the logged in user).  If no parent was
-// found, the returned Owner/Folder/DBName values will be empty strings
-func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName string) (parentOwner string,
-	parentFolder string, parentDBName string, err error) {
+// ForkParent returns the parent of a database, if there is one (and it's accessible to the logged in user).  If no
+// parent was found, the returned Owner/Folder/DBName values will be empty strings
+func ForkParent(loggedInUser, dbOwner, dbFolder, dbName string) (parentOwner, parentFolder, parentDBName string, err error) {
 	dbQuery := `
 		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
 		FROM sqlite_databases AS db, users
@@ -1548,12 +1535,11 @@ func ForkParent(loggedInUser string, dbOwner string, dbFolder string, dbName str
 			break
 		}
 	}
-
 	return
 }
 
-// Return the complete fork tree for a given database
-func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName string) (outputList []ForkEntry, err error) {
+// ForkTree returns the complete fork tree for a given database
+func ForkTree(loggedInUser, dbOwner, dbFolder, dbName string) (outputList []ForkEntry, err error) {
 	dbQuery := `
 		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
 		FROM sqlite_databases AS db, users
@@ -1685,6 +1671,7 @@ func ForkTree(loggedInUser string, dbOwner string, dbFolder string, dbName strin
 	return outputList, nil
 }
 
+// GetActivityStats returns the latest activity stats
 func GetActivityStats() (stats ActivityStats, err error) {
 	// Retrieve a list of which databases are the most starred
 	dbQuery := `
@@ -1825,10 +1812,10 @@ func GetActivityStats() (stats ActivityStats, err error) {
 	return
 }
 
-// Load the branch heads for a database.
+// GetBranches load the branch heads for a database
 // TODO: It might be better to have the default branch name be returned as part of this list, by indicating in the list
 // TODO  which of the branches is the default.
-func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[string]BranchEntry, err error) {
+func GetBranches(dbOwner, dbFolder, dbName string) (branches map[string]BranchEntry, err error) {
 	dbQuery := `
 		SELECT db.branch_heads
 		FROM sqlite_databases AS db
@@ -1848,7 +1835,7 @@ func GetBranches(dbOwner string, dbFolder string, dbName string) (branches map[s
 	return branches, nil
 }
 
-// Returns the list of API keys for a user.
+// GetAPIKeys returns the list of API keys for a user
 func GetAPIKeys(user string) ([]APIKey, error) {
 	dbQuery := `
 		SELECT key, date_created
@@ -1878,7 +1865,7 @@ func GetAPIKeys(user string) ([]APIKey, error) {
 	return keys, nil
 }
 
-// Returns the owner of a given API key.  Returns an empty string if the key has no known owner.
+// GetAPIKeyUser returns the owner of a given API key.  Returns an empty string if the key has no known owner
 func GetAPIKeyUser(key string) (user string, err error) {
 	dbQuery := `
 		SELECT user_name
@@ -1893,8 +1880,8 @@ func GetAPIKeyUser(key string) (user string, err error) {
 	return
 }
 
-// Retrieves the full commit list for a database.
-func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]CommitEntry, error) {
+// GetCommitList returns the full commit list for a database
+func GetCommitList(dbOwner, dbFolder, dbName string) (map[string]CommitEntry, error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -1916,8 +1903,8 @@ func GetCommitList(dbOwner string, dbFolder string, dbName string) (map[string]C
 	return l, nil
 }
 
-// Returns the default branch name for a database.
-func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (branchName string, err error) {
+// GetDefaultBranchName returns the default branch name for a database
+func GetDefaultBranchName(dbOwner, dbFolder, dbName string) (branchName string, err error) {
 	dbQuery := `
 		SELECT db.default_branch
 		FROM sqlite_databases AS db
@@ -1947,8 +1934,8 @@ func GetDefaultBranchName(dbOwner string, dbFolder string, dbName string) (branc
 	return
 }
 
-// Returns the default table name for a database.
-func GetDefaultTableName(dbOwner string, dbFolder string, dbName string) (tableName string, err error) {
+// GetDefaultTableName returns the default table name for a database
+func GetDefaultTableName(dbOwner, dbFolder, dbName string) (tableName string, err error) {
 	dbQuery := `
 		SELECT db.default_table
 		FROM sqlite_databases AS db
@@ -1975,11 +1962,11 @@ func GetDefaultTableName(dbOwner string, dbFolder string, dbName string) (tableN
 	return
 }
 
-// Returns the discussion and merge request counts for a database
+// GetDiscussionAndMRCount returns the discussion and merge request counts for a database
 // TODO: The only reason this function exists atm, is because we're incorrectly caching the discussion and MR data in
 // TODO  a way that makes invalidating it correctly hard/impossible.  We should redo our memcached approach to solve the
 // TODO  issue properly
-func GetDiscussionAndMRCount(dbOwner string, dbFolder string, dbName string) (discCount int, mrCount int, err error) {
+func GetDiscussionAndMRCount(dbOwner, dbFolder, dbName string) (discCount, mrCount int, err error) {
 	dbQuery := `
 		SELECT db.discussions, db.merge_requests
 		FROM sqlite_databases AS db
@@ -2005,8 +1992,8 @@ func GetDiscussionAndMRCount(dbOwner string, dbFolder string, dbName string) (di
 	return
 }
 
-// Returns the text for a given licence.
-func GetLicence(userName string, licenceName string) (txt string, format string, err error) {
+// GetLicence returns the text for a given licence
+func GetLicence(userName, licenceName string) (txt, format string, err error) {
 	dbQuery := `
 		SELECT licence_text, file_format
 		FROM database_licences
@@ -2035,7 +2022,7 @@ func GetLicence(userName string, licenceName string) (txt string, format string,
 	return txt, format, nil
 }
 
-// Returns the list of licences available to a user.
+// GetLicences returns the list of licences available to a user
 func GetLicences(user string) (map[string]LicenceEntry, error) {
 	dbQuery := `
 		SELECT friendly_name, full_name, lic_sha256, licence_url, file_format, display_order
@@ -2070,10 +2057,10 @@ func GetLicences(user string) (map[string]LicenceEntry, error) {
 	return lics, nil
 }
 
-// Returns the friendly name + licence URL for the licence matching a given sha256.
+// GetLicenceInfoFromSha256 returns the friendly name + licence URL for the licence matching a given sha256
 // Note - When user defined licence has the same sha256 as a default one we return the user defined licences' friendly
-// name.
-func GetLicenceInfoFromSha256(userName string, sha256 string) (lName string, lURL string, err error) {
+// name
+func GetLicenceInfoFromSha256(userName, sha256 string) (lName, lURL string, err error) {
 	dbQuery := `
 		SELECT u.user_name, dl.friendly_name, dl.licence_url
 		FROM database_licences AS dl, users AS u
@@ -2147,8 +2134,8 @@ func GetLicenceInfoFromSha256(userName string, sha256 string) (lName string, lUR
 	return lName, lURL, nil
 }
 
-// Returns the sha256 for a given licence.
-func GetLicenceSha256FromName(userName string, licenceName string) (sha256 string, err error) {
+// GetLicenceSha256FromName returns the sha256 for a given licence
+func GetLicenceSha256FromName(userName, licenceName string) (sha256 string, err error) {
 	dbQuery := `
 		SELECT lic_sha256
 		FROM database_licences
@@ -2176,8 +2163,8 @@ func GetLicenceSha256FromName(userName string, licenceName string) (sha256 strin
 	return sha256, nil
 }
 
-// Retrieve the list of releases for a database.
-func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[string]ReleaseEntry, err error) {
+// GetReleases returns the list of releases for a database
+func GetReleases(dbOwner, dbFolder, dbName string) (releases map[string]ReleaseEntry, err error) {
 	dbQuery := `
 		SELECT release_list
 		FROM sqlite_databases
@@ -2200,8 +2187,8 @@ func GetReleases(dbOwner string, dbFolder string, dbName string) (releases map[s
 	return releases, nil
 }
 
-// Retrieve the tags for a database.
-func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]TagEntry, err error) {
+// GetTags returns the tags for a database
+func GetTags(dbOwner, dbFolder, dbName string) (tags map[string]TagEntry, err error) {
 	dbQuery := `
 		SELECT tag_list
 		FROM sqlite_databases
@@ -2224,8 +2211,8 @@ func GetTags(dbOwner string, dbFolder string, dbName string) (tags map[string]Ta
 	return tags, nil
 }
 
-// Returns the username associated with an email address.
-func GetUsernameFromEmail(email string) (userName string, avatarURL string, err error) {
+// GetUsernameFromEmail returns the username associated with an email address
+func GetUsernameFromEmail(email string) (userName, avatarURL string, err error) {
 	dbQuery := `
 		SELECT user_name, avatar_url
 		FROM users
@@ -2252,8 +2239,8 @@ func GetUsernameFromEmail(email string) (userName string, avatarURL string, err 
 	return
 }
 
-// Retrieves a saved set of visualisation query results
-func GetVisualisationData(dbOwner string, dbFolder string, dbName string, commitID string, hash string) (data []VisRowV1, ok bool, err error) {
+// GetVisualisationData returns a saved set of visualisation query results
+func GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash string) (data []VisRowV1, ok bool, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -2290,8 +2277,8 @@ func GetVisualisationData(dbOwner string, dbFolder string, dbName string, commit
 	return
 }
 
-// Retrieves a saved set of visualisation parameters
-func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visName string) (params VisParamsV2, ok bool, err error) {
+// GetVisualisationParams returns a saved set of visualisation parameters
+func GetVisualisationParams(dbOwner, dbFolder, dbName, visName string) (params VisParamsV2, ok bool, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -2327,7 +2314,7 @@ func GetVisualisationParams(dbOwner string, dbFolder string, dbName string, visN
 	return
 }
 
-// Returns the list of saved visualisations for a given database
+// GetVisualisations returns the list of saved visualisations for a given database
 func GetVisualisations(dbOwner, dbFolder, dbName string) (visNames []string, err error) {
 	dbQuery := `
 		WITH u AS (
@@ -2372,8 +2359,8 @@ func GetVisualisations(dbOwner, dbFolder, dbName string) (visNames []string, err
 	return
 }
 
-// Increments the download count for a database
-func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) error {
+// IncrementDownloadCount increments the download count for a database
+func IncrementDownloadCount(dbOwner, dbFolder, dbName string) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET download_count = download_count + 1
@@ -2399,8 +2386,8 @@ func IncrementDownloadCount(dbOwner string, dbFolder string, dbName string) erro
 	return nil
 }
 
-// Create a DB4S default browse list entry
-func LogDB4SConnect(userAcc string, ipAddr string, userAgent string, downloadDate time.Time) error {
+// LogDB4SConnect creates a DB4S default browse list entry
+func LogDB4SConnect(userAcc, ipAddr, userAgent string, downloadDate time.Time) error {
 	if Conf.DB4S.Debug {
 		log.Printf("User '%s' just connected with '%s' and generated the default browse list\n", userAcc, userAgent)
 	}
@@ -2439,9 +2426,8 @@ func LogDB4SConnect(userAcc string, ipAddr string, userAgent string, downloadDat
 	return nil
 }
 
-// Create a download log entry
-func LogDownload(dbOwner string, dbFolder string, dbName string, loggedInUser string, ipAddr string, serverSw string,
-	userAgent string, downloadDate time.Time, sha string) error {
+// LogDownload creates a download log entry
+func LogDownload(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, serverSw, userAgent string, downloadDate time.Time, sha string) error {
 	// If the downloader isn't a logged in user, use a NULL value for that column
 	var downloader pgx.NullString
 	if loggedInUser != "" {
@@ -2478,7 +2464,7 @@ func LogDownload(dbOwner string, dbFolder string, dbName string, loggedInUser st
 	return nil
 }
 
-// Add memory allocation stats for the execution run of a user supplied SQLite query
+// LogSQLiteQueryAfter adds memory allocation stats for the execution run of a user supplied SQLite query
 func LogSQLiteQueryAfter(insertID, memUsed, memHighWater int64) (err error) {
 	dbQuery := `
 		UPDATE vis_query_runs
@@ -2496,7 +2482,7 @@ func LogSQLiteQueryAfter(insertID, memUsed, memHighWater int64) (err error) {
 	return nil
 }
 
-// Log the basic info for a user supplied SQLite query
+// LogSQLiteQueryBefore logs the basic info for a user supplied SQLite query
 func LogSQLiteQueryBefore(source, dbOwner, dbFolder, dbName, loggedInUser, ipAddr, userAgent, query string) (int64, error) {
 	// If the user isn't logged in, use a NULL value for that column
 	var queryUser pgx.NullString
@@ -2534,9 +2520,8 @@ func LogSQLiteQueryBefore(source, dbOwner, dbFolder, dbName, loggedInUser, ipAdd
 	return insertID, nil
 }
 
-// Create an upload log entry
-func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser string, ipAddr string, serverSw string,
-	userAgent string, uploadDate time.Time, sha string) error {
+// LogUpload creates an upload log entry
+func LogUpload(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, serverSw, userAgent string, uploadDate time.Time, sha string) error {
 	// If the uploader isn't a logged in user, use a NULL value for that column
 	var uploader pgx.NullString
 	if loggedInUser != "" {
@@ -2573,14 +2558,12 @@ func LogUpload(dbOwner string, dbFolder string, dbName string, loggedInUser stri
 	return nil
 }
 
-// Return the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from owner/folder/database URL
-// fragment, loggedInUser is the name for the currently logged in user, for access permission check.  Use an empty
-// string ("") as the loggedInUser parameter if the true value isn't set or known.
+// MinioLocation returns the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from
+// owner/folder/database URL fragment, loggedInUser is the name for the currently logged in user, for access permission
+// check.  Use an empty string ("") as the loggedInUser parameter if the true value isn't set or known.
 // If the requested database doesn't exist, or the loggedInUser doesn't have access to it, then an error will be
-// returned.
-func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID string, loggedInUser string) (minioBucket string,
-	minioID string, lastModified time.Time, err error) {
-
+// returned
+func MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser string) (minioBucket, minioID string, lastModified time.Time, err error) {
 	// If no commit was provided, we grab the default one
 	if commitID == "" {
 		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
@@ -2634,7 +2617,7 @@ func MinioLocation(dbOwner string, dbFolder string, dbName string, commitID stri
 	return
 }
 
-// Adds an event entry to PostgreSQL
+// NewEvent adds an event entry to PostgreSQL
 func NewEvent(details EventDetails) (err error) {
 	dbQuery := `
 		WITH d AS (
@@ -2658,7 +2641,7 @@ func NewEvent(details EventDetails) (err error) {
 	return
 }
 
-// Return the user's preference for maximum number of SQLite rows to display.
+// PrefUserMaxRows returns the user's preference for maximum number of SQLite rows to display.
 func PrefUserMaxRows(loggedInUser string) int {
 	// Retrieve the user preference data
 	dbQuery := `
@@ -2674,12 +2657,11 @@ func PrefUserMaxRows(loggedInUser string) int {
 		log.Printf("Error retrieving user '%s' preference data: %v\n", loggedInUser, err)
 		return DefaultNumDisplayRows // Use the default value
 	}
-
 	return maxRows
 }
 
-// Rename a SQLite database.
-func RenameDatabase(userName string, dbFolder string, dbName string, newName string) error {
+// RenameDatabase renames a SQLite database
+func RenameDatabase(userName, dbFolder, dbName, newName string) error {
 	// Save the database settings
 	dbQuery := `
 		UPDATE sqlite_databases
@@ -2706,13 +2688,11 @@ func RenameDatabase(userName string, dbFolder string, dbName string, newName str
 	// Log the rename
 	log.Printf("Database renamed from '%s%s%s' to '%s%s%s'\n", userName, dbFolder, dbName, userName, dbFolder,
 		newName)
-
 	return nil
 }
 
-// Saves updated database settings to PostgreSQL.
-func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc string, fullDesc string,
-	defaultTable string, public bool, sourceURL string, defaultBranch string) error {
+// SaveDBSettings saves updated database settings to PostgreSQL
+func SaveDBSettings(userName, dbFolder, dbName, oneLineDesc, fullDesc, defaultTable string, public bool, sourceURL, defaultBranch string) error {
 	// Check for values which should be NULL
 	var nullable1LineDesc, nullableFullDesc, nullableSourceURL pgx.NullString
 	if oneLineDesc == "" {
@@ -2767,11 +2747,10 @@ func SaveDBSettings(userName string, dbFolder string, dbName string, oneLineDesc
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
 		return err
 	}
-
 	return nil
 }
 
-// Sends status update emails to people watching databases
+// SendEmails sends status update emails to people watching databases
 func SendEmails() {
 	// Create Hectane email queue
 	cfg := &queue.Config{
@@ -2854,7 +2833,7 @@ func SendEmails() {
 	}
 }
 
-// Stores a certificate for a given client.
+// SetClientCert stores a certificate for a given client
 func SetClientCert(newCert []byte, userName string) error {
 	SQLQuery := `
 		UPDATE users
@@ -2871,12 +2850,11 @@ func SetClientCert(newCert []byte, userName string) error {
 		log.Printf(errMsg)
 		return errors.New(errMsg)
 	}
-
 	return nil
 }
 
-// Sets the user's preference for maximum number of SQLite rows to display.
-func SetUserPreferences(userName string, maxRows int, displayName string, email string) error {
+// SetUserPreferences sets the user's preference for maximum number of SQLite rows to display
+func SetUserPreferences(userName string, maxRows int, displayName, email string) error {
 	dbQuery := `
 		UPDATE users
 		SET pref_max_rows = $2, display_name = $3, email = $4
@@ -2893,8 +2871,8 @@ func SetUserPreferences(userName string, maxRows int, displayName string, email 
 	return nil
 }
 
-// Retrieve the latest social stats for a given database.
-func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int, fo int, err error) {
+// SocialStats returns the latest social stats for a given database
+func SocialStats(dbOwner, dbFolder, dbName string) (wa, st, fo int, err error) {
 
 	// TODO: Implement caching of these stats
 
@@ -2939,7 +2917,7 @@ func SocialStats(dbOwner string, dbFolder string, dbName string) (wa int, st int
 	return 0, st, fo, nil
 }
 
-// Retrieve the list of outstanding status updates for a user
+// StatusUpdates returns the list of outstanding status updates for a user
 func StatusUpdates(loggedInUser string) (statusUpdates map[string][]StatusUpdateEntry, err error) {
 	dbQuery := `
 		SELECT status_updates
@@ -2953,7 +2931,7 @@ func StatusUpdates(loggedInUser string) (statusUpdates map[string][]StatusUpdate
 	return
 }
 
-// Periodically generates status updates (alert emails TBD) from the event queue
+// StatusUpdatesLoop periodically generates status updates (alert emails TBD) from the event queue
 func StatusUpdatesLoop() {
 	// Ensure a warning message is displayed on the console if the status update loop exits
 	defer func() {
@@ -3072,6 +3050,7 @@ func StatusUpdatesLoop() {
 						}
 					}
 				}
+
 				// Add the new entry
 				a.DiscID = ev.details.DiscID
 				a.Title = ev.details.Title
@@ -3183,8 +3162,8 @@ func StatusUpdatesLoop() {
 	return
 }
 
-// Updates the branches list for a database.
-func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry) error {
+// StoreBranches updates the branches list for a database
+func StoreBranches(dbOwner, dbFolder, dbName string, branches map[string]BranchEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET branch_heads = $4, branches = $5
@@ -3209,9 +3188,8 @@ func StoreBranches(dbOwner string, dbFolder string, dbName string, branches map[
 	return nil
 }
 
-// Adds a comment to a discussion.
-func StoreComment(dbOwner string, dbFolder string, dbName string, commenter string, discID int, comText string,
-	discClose bool, mrState MergeRequestState) error {
+// StoreComment adds a comment to a discussion
+func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comText string, discClose bool, mrState MergeRequestState) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -3478,12 +3456,11 @@ func StoreComment(dbOwner string, dbFolder string, dbName string, commenter stri
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// Updates the commit list for a database.
-func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map[string]CommitEntry) error {
+// StoreCommits updates the commit list for a database
+func StoreCommits(dbOwner, dbFolder, dbName string, commitList map[string]CommitEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET commit_list = $4, last_modified = now()
@@ -3507,10 +3484,9 @@ func StoreCommits(dbOwner string, dbFolder string, dbName string, commitList map
 	return nil
 }
 
-// Stores database details in PostgreSQL, and the database data itself in Minio.
-func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[string]BranchEntry, c CommitEntry,
-	pub bool, buf *os.File, sha string, dbSize int64, oneLineDesc string, fullDesc string, createDefBranch bool,
-	branchName string, sourceURL string) error {
+// StoreDatabase stores database details in PostgreSQL, and the database data itself in Minio
+func StoreDatabase(dbOwner, dbFolder, dbName string, branches map[string]BranchEntry, c CommitEntry, pub bool,
+	buf *os.File, sha string, dbSize int64, oneLineDesc, fullDesc string, createDefBranch bool, branchName, sourceURL string) error {
 	// Store the database file
 	err := StoreDatabaseFile(buf, sha, dbSize)
 	if err != nil {
@@ -3588,8 +3564,8 @@ func StoreDatabase(dbOwner string, dbFolder string, dbName string, branches map[
 	return nil
 }
 
-// Stores the default branch name for a database.
-func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branchName string) error {
+// StoreDefaultBranchName stores the default branch name for a database
+func StoreDefaultBranchName(dbOwner, folder, dbName, branchName string) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET default_branch = $4
@@ -3612,8 +3588,8 @@ func StoreDefaultBranchName(dbOwner string, folder string, dbName string, branch
 	return nil
 }
 
-// Stores the default table name for a database.
-func StoreDefaultTableName(dbOwner string, folder string, dbName string, tableName string) error {
+// StoreDefaultTableName stores the default table name for a database
+func StoreDefaultTableName(dbOwner, folder, dbName, tableName string) error {
 	var t pgx.NullString
 	if tableName != "" {
 		t.String = tableName
@@ -3641,9 +3617,9 @@ func StoreDefaultTableName(dbOwner string, folder string, dbName string, tableNa
 	return nil
 }
 
-// Stores a new discussion for a database.
-func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, title string, text string,
-	discType DiscussionType, mr MergeRequestEntry) (newID int, err error) {
+// StoreDiscussion stores a new discussion for a database
+func StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, title, text string, discType DiscussionType,
+	mr MergeRequestEntry) (newID int, err error) {
 
 	// Begin a transaction
 	tx, err := pdb.Begin()
@@ -3746,9 +3722,8 @@ func StoreDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUse
 	return
 }
 
-// Store a licence.
-func StoreLicence(userName string, licenceName string, txt []byte, url string, orderNum int, fullName string,
-	fileFormat string) error {
+// StoreLicence stores a licence
+func StoreLicence(userName, licenceName string, txt []byte, url string, orderNum int, fullName, fileFormat string) error {
 	// Store the licence in PostgreSQL
 	sha := sha256.Sum256(txt)
 	dbQuery := `
@@ -3782,8 +3757,8 @@ func StoreLicence(userName string, licenceName string, txt []byte, url string, o
 	return nil
 }
 
-// Store the releases for a database.
-func StoreReleases(dbOwner string, dbFolder string, dbName string, releases map[string]ReleaseEntry) error {
+// StoreReleases stores the releases for a database
+func StoreReleases(dbOwner, dbFolder, dbName string, releases map[string]ReleaseEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET release_list = $4, release_count = $5
@@ -3806,7 +3781,7 @@ func StoreReleases(dbOwner string, dbFolder string, dbName string, releases map[
 	return nil
 }
 
-// Store the status updates list for a user
+// StoreStatusUpdates stores the status updates list for a user
 func StoreStatusUpdates(userName string, statusUpdates map[string][]StatusUpdateEntry) error {
 	dbQuery := `
 		UPDATE users
@@ -3825,8 +3800,8 @@ func StoreStatusUpdates(userName string, statusUpdates map[string][]StatusUpdate
 	return nil
 }
 
-// Store the tags for a database.
-func StoreTags(dbOwner string, dbFolder string, dbName string, tags map[string]TagEntry) error {
+// StoreTags stores the tags for a database
+func StoreTags(dbOwner, dbFolder, dbName string, tags map[string]TagEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET tag_list = $4, tags = $5
@@ -3849,8 +3824,8 @@ func StoreTags(dbOwner string, dbFolder string, dbName string, tags map[string]T
 	return nil
 }
 
-// Toggle on or off the starring of a database by a user.
-func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName string) error {
+// ToggleDBStar toggles the starring of a database by a user
+func ToggleDBStar(loggedInUser, dbOwner, dbFolder, dbName string) error {
 	// Check if the database is already starred
 	starred, err := CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -3926,8 +3901,8 @@ func ToggleDBStar(loggedInUser string, dbOwner string, dbFolder string, dbName s
 	return nil
 }
 
-// Toggle on or off the watching of a database by a user.
-func ToggleDBWatch(loggedInUser string, dbOwner string, dbFolder string, dbName string) error {
+// ToggleDBWatch toggles the watch status of a database by a user
+func ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName string) error {
 	// Check if the database is already being watched
 	watched, err := CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -4032,8 +4007,8 @@ func ToggleDBWatch(loggedInUser string, dbOwner string, dbFolder string, dbName 
 	return nil
 }
 
-// Updates the Avatar URL for a user.
-func UpdateAvatarURL(userName string, avatarURL string) error {
+// UpdateAvatarURL updates the Avatar URL for a user
+func UpdateAvatarURL(userName, avatarURL string) error {
 	dbQuery := `
 		UPDATE users
 		SET avatar_url = $2
@@ -4050,8 +4025,8 @@ func UpdateAvatarURL(userName string, avatarURL string) error {
 	return nil
 }
 
-// Updates the contributors count for a database.
-func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
+// UpdateContributorsCount updates the contributors count for a database
+func UpdateContributorsCount(dbOwner, dbFolder, dbName string) error {
 	// Get the commit list for the database
 	commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -4089,8 +4064,8 @@ func UpdateContributorsCount(dbOwner string, dbFolder, dbName string) error {
 	return nil
 }
 
-// Updates the text for a comment
-func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser string, discID int, comID int, newText string) error {
+// UpdateComment updates the text for a comment
+func UpdateComment(dbOwner, dbFolder, dbName, loggedInUser string, discID, comID int, newText string) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -4179,8 +4154,8 @@ func UpdateComment(dbOwner string, dbFolder string, dbName string, loggedInUser 
 	return nil
 }
 
-// Updates the text for a discussion
-func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUser string, discID int, newTitle string, newText string) error {
+// UpdateDiscussion updates the text for a discussion
+func UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser string, discID int, newTitle, newText string) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -4256,8 +4231,8 @@ func UpdateDiscussion(dbOwner string, dbFolder string, dbName string, loggedInUs
 	return nil
 }
 
-// Updates the commit list for a Merge Request
-func UpdateMergeRequestCommits(dbOwner string, dbFolder string, dbName string, discID int, mrCommits []CommitEntry) (err error) {
+// UpdateMergeRequestCommits updates the commit list for a Merge Request
+func UpdateMergeRequestCommits(dbOwner, dbFolder, dbName string, discID int, mrCommits []CommitEntry) (err error) {
 	dbQuery := `
 		WITH d AS (
 			SELECT db.db_id
@@ -4288,7 +4263,7 @@ func UpdateMergeRequestCommits(dbOwner string, dbFolder string, dbName string, d
 	return nil
 }
 
-// Returns details for a user.
+// User returns details for a user
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
 		SELECT user_name, display_name, email, avatar_url, password_hash, date_joined, client_cert
@@ -4326,11 +4301,10 @@ func User(userName string) (user UserDetails, err error) {
 			user.AvatarURL = fmt.Sprintf("https://www.gravatar.com/avatar/%x?d=identicon", picHash)
 		}
 	}
-
 	return user, nil
 }
 
-// Returns the list of databases for a user.
+// UserDBs returns the list of databases for a user
 func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	// Construct SQL query for retrieving the requested database list
 	dbQuery := `
@@ -4436,11 +4410,10 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			return nil, err
 		}
 	}
-
 	return list, nil
 }
 
-// Returns the username for a given Auth0 ID.
+// UserNameFromAuth0ID returns the username for a given Auth0 ID
 func UserNameFromAuth0ID(auth0id string) (string, error) {
 	// Query the database for a username matching the given Auth0 ID
 	dbQuery := `
@@ -4463,7 +4436,7 @@ func UserNameFromAuth0ID(auth0id string) (string, error) {
 	return userName, nil
 }
 
-// Returns the list of databases starred by a user.
+// UserStarredDBs returns the list of databases starred by a user
 func UserStarredDBs(userName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH u AS (
@@ -4504,8 +4477,8 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 	return list, nil
 }
 
-// Returns the list of users who starred a database.
-func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEntry, err error) {
+// UsersStarredDB returns the list of users who starred a database
+func UsersStarredDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH star_users AS (
 			SELECT user_id, date_starred
@@ -4553,8 +4526,8 @@ func UsersStarredDB(dbOwner string, dbFolder string, dbName string) (list []DBEn
 	return list, nil
 }
 
-// Returns the list of users watching a database.
-func UsersWatchingDB(dbOwner string, dbFolder string, dbName string) (list []DBEntry, err error) {
+// UsersWatchingDB returns the list of users watching a database
+func UsersWatchingDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH lst AS (
 			SELECT user_id, date_watched
@@ -4602,7 +4575,7 @@ func UsersWatchingDB(dbOwner string, dbFolder string, dbName string) (list []DBE
 	return list, nil
 }
 
-// Returns the list of databases watched by a user.
+// UserWatchingDBs returns the list of databases watched by a user
 func UserWatchingDBs(userName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH u AS (
@@ -4643,8 +4616,8 @@ func UserWatchingDBs(userName string) (list []DBEntry, err error) {
 	return list, nil
 }
 
-// Returns the view counter for a specific database
-func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, err error) {
+// ViewCount returns the view counter for a specific database
+func ViewCount(dbOwner, dbFolder, dbName string) (viewCount int, err error) {
 	dbQuery := `
 		SELECT page_views
 		FROM sqlite_databases
@@ -4663,8 +4636,8 @@ func ViewCount(dbOwner string, dbFolder string, dbName string) (viewCount int, e
 	return
 }
 
-// Deletes a set of visualisation parameters
-func VisualisationDeleteParams(dbOwner string, dbFolder string, dbName string, visName string) (err error) {
+// VisualisationDeleteParams deletes a set of visualisation parameters
+func VisualisationDeleteParams(dbOwner, dbFolder, dbName, visName string) (err error) {
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (
@@ -4690,8 +4663,8 @@ func VisualisationDeleteParams(dbOwner string, dbFolder string, dbName string, v
 	return
 }
 
-// Saves visualisation result data for later retrieval
-func VisualisationSaveData(dbOwner string, dbFolder string, dbName string, commitID string, hash string, visData []VisRowV1) (err error) {
+// VisualisationSaveData saves visualisation result data for later retrieval
+func VisualisationSaveData(dbOwner, dbFolder, dbName, commitID, hash string, visData []VisRowV1) (err error) {
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (
@@ -4721,8 +4694,8 @@ func VisualisationSaveData(dbOwner string, dbFolder string, dbName string, commi
 	return
 }
 
-// Saves a set of visualisation parameters for later retrieval
-func VisualisationSaveParams(dbOwner string, dbFolder string, dbName string, visName string, visParams VisParamsV2) (err error) {
+// VisualisationSaveParams saves a set of visualisation parameters for later retrieval
+func VisualisationSaveParams(dbOwner, dbFolder, dbName, visName string, visParams VisParamsV2) (err error) {
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (

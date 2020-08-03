@@ -16,7 +16,7 @@ var (
 	minioClient *minio.Client
 )
 
-// Parse the Minio configuration, to ensure it seems workable.
+// ConnectMinio parses the Minio configuration, to ensure it seems workable
 // Note - this doesn't actually open a connection to the Minio server.
 func ConnectMinio() (err error) {
 	// Connect to the Minio server
@@ -27,22 +27,20 @@ func ConnectMinio() (err error) {
 
 	// Log Minio server end point
 	log.Printf("Minio server config ok. Address: %v\n", Conf.Minio.Server)
-
 	return nil
 }
 
-// Get a handle from Minio for a SQLite database object.
-func MinioHandle(bucket string, id string) (*minio.Object, error) {
+// MinioHandle get a handle from Minio for a SQLite database object
+func MinioHandle(bucket, id string) (*minio.Object, error) {
 	userDB, err := minioClient.GetObject(bucket, id, minio.GetObjectOptions{})
 	if err != nil {
 		log.Printf("Error retrieving DB from Minio: %v\n", err)
 		return nil, errors.New("Error retrieving database from internal storage")
 	}
-
 	return userDB, nil
 }
 
-// Close a Minio object handle.  Probably most useful for calling with defer().
+// MinioHandleClose closes a Minio object handle.  Probably most useful for calling with defer()
 func MinioHandleClose(userDB *minio.Object) (err error) {
 	err = userDB.Close()
 	if err != nil {
@@ -51,8 +49,9 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 	return
 }
 
-// Retrieves a SQLite database file from Minio.  If there's a locally cached version already available though, use that
-func RetrieveDatabaseFile(bucket string, id string) (newDB string, err error) {
+// RetrieveDatabaseFile retrieves a SQLite database file from Minio.  If there's a locally cached version already
+// available though, use that
+func RetrieveDatabaseFile(bucket, id string) (newDB string, err error) {
 	// Check if the database file already exists
 	newDB = filepath.Join(Conf.DiskCache.Directory, bucket, id)
 	if _, err = os.Stat(newDB); os.IsNotExist(err) {
@@ -117,7 +116,7 @@ func RetrieveDatabaseFile(bucket string, id string) (newDB string, err error) {
 	return
 }
 
-// Store a database file in Minio.
+// StoreDatabaseFile stores a database file in Minio
 func StoreDatabaseFile(db *os.File, sha string, dbSize int64) error {
 	bkt := sha[:MinioFolderChars]
 	id := sha[MinioFolderChars:]
