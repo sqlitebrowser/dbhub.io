@@ -114,7 +114,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If no primary database owner and name are given or if no commit ids are given, return
 	if oa == "" || na == "" || ca == "" || cb == "" {
-		jsonErr(w, err.Error(), http.StatusBadRequest)
+		jsonErr(w, "No database details provided", http.StatusBadRequest)
 		return
 	}
 
