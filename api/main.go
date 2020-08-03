@@ -2,13 +2,17 @@ package main
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	gz "github.com/NYTimes/gziphandler"
@@ -17,6 +21,9 @@ import (
 )
 
 var (
+	// Our self signed Certificate Authority chain
+	ourCAPool *x509.CertPool
+
 	// Log file for incoming HTTPS requests
 	reqLog *os.File
 
@@ -76,6 +83,19 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
+	// Load our self signed CA chain
+	ourCAPool = x509.NewCertPool()
+	certFile, err := ioutil.ReadFile(com.Conf.DB4S.CAChain)
+	if err != nil {
+		fmt.Printf("Error opening Certificate Authority chain file: %v\n", err)
+		return
+	}
+	ok := ourCAPool.AppendCertsFromPEM(certFile)
+	if !ok {
+		fmt.Println("Error appending certificate file")
+		return
+	}
+
 	// Our pages
 	http.Handle("/", gz.GzipHandler(handleWrapper(rootHandler)))
 	http.Handle("/v1/columns", gz.GzipHandler(handleWrapper(columnsHandler)))
@@ -85,18 +105,26 @@ func main() {
 	http.Handle("/v1/tables", gz.GzipHandler(handleWrapper(tablesHandler)))
 	http.Handle("/v1/views", gz.GzipHandler(handleWrapper(viewsHandler)))
 
+	// Load our self signed CA Cert chain, check client certificates if given, and set TLS1.2 as minimum
+	newTLSConfig := &tls.Config{
+		ClientAuth:               tls.VerifyClientCertIfGiven,
+		ClientCAs:                ourCAPool,
+		MinVersion:               tls.VersionTLS12,
+		PreferServerCipherSuites: true,
+		RootCAs:                  ourCAPool,
+	}
+	srv := &http.Server{
+		Addr:         com.Conf.Api.BindAddress,
+		TLSConfig:    newTLSConfig,
+		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
+	}
+
 	// Generate the formatted server string
 	server = fmt.Sprintf("https://%s", com.Conf.Api.ServerName)
 
-	// Start webUI server
+	// Start API server
 	log.Printf("API server starting on %s\n", server)
-	srv := &http.Server{
-		Addr: com.Conf.Api.BindAddress,
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12, // TLS 1.2 is now the lowest acceptable level
-		},
-	}
-	err = srv.ListenAndServeTLS(com.Conf.Api.Certificate, com.Conf.Api.CertificateKey)
+	err = srv.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey)
 
 	// Shut down nicely
 	com.DisconnectPostgreSQL()
@@ -110,15 +138,19 @@ func main() {
 func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err error) {
 	// Extract the API key from the request
 	apiKey := r.FormValue("apikey")
-	if apiKey == "" {
-		err = fmt.Errorf("Missing API key")
-		return
+
+	// Check if API key was provided
+	if apiKey != "" {
+		// Look up the owner of the API key
+		loggedInUser, err = com.GetAPIKeyUser(apiKey)
+	} else {
+		// No API key was provided. Check for a client certificate instead
+		loggedInUser, err = extractUserFromClientCert(w, r)
 	}
 
-	// Look up the owner of the API key
-	loggedInUser, err = com.GetAPIKeyUser(apiKey)
+	// Check for any errors
 	if err != nil || loggedInUser == "" {
-		err = fmt.Errorf("Incorrect or unknown API key")
+		err = fmt.Errorf("Incorrect or unknown API key and certificate")
 		return
 	}
 
@@ -187,6 +219,45 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, http
 		httpStatus = http.StatusInternalServerError
 		return
 	}
+	return
+}
+
+func extractUserFromClientCert(w http.ResponseWriter, r *http.Request) (userAcc string, err error) {
+	// Check if a client certificate was provided
+	if len(r.TLS.PeerCertificates) == 0 {
+		err = errors.New("No client certificate provided")
+		return
+	}
+
+	// Extract the account name and associated server from the validated client certificate
+	cn := r.TLS.PeerCertificates[0].Subject.CommonName
+	if cn == "" {
+		// Common name is empty
+		err = errors.New("Common name is blank in client certificate")
+		return
+	}
+	s := strings.Split(cn, "@")
+	if len(s) < 2 {
+		err = errors.New("Missing information in client certificate")
+		return
+	}
+	userAcc = s[0]
+	certServer := s[1]
+	if userAcc == "" || certServer == "" {
+		// Missing details in common name field
+		err = errors.New("Missing information in client certificate")
+		return
+	}
+
+	// Verify the running server matches the one in the certificate
+	runningServer := com.Conf.DB4S.Server
+	if certServer != runningServer {
+		err = fmt.Errorf("Server name in certificate '%s' doesn't match running server '%s'\n", certServer,
+			runningServer)
+		return
+	}
+
+	// Everything is ok, so return
 	return
 }
 
