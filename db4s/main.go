@@ -298,7 +298,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		}
 
 		// The request was for a user directory, so return that list
-		dbList, err := userDatabaseList(pageName, userAcc, pathStrings[1])
+		dbList, err := userDatabaseList(userAcc, pathStrings[1])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -311,7 +311,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// TODO: Refactor this and the above identical code.  Doing it this way is non-optimal
 	if pathStrings[2] == "" {
 		// The request was for a user directory, so return that list
-		dbList, err := userDatabaseList(pageName, userAcc, pathStrings[1])
+		dbList, err := userDatabaseList(userAcc, pathStrings[1])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1346,8 +1346,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 //
 //   $ curl -kE ~/my.cert.pem -D headers.out -G https://db4s.dbhub.io:5550/someuser
 //
-func userDatabaseList(pageName string, userAcc string, user string) (dbList []byte, err error) {
-	pageName += ":userDatabaseList()"
+func userDatabaseList(userAcc string, user string) (dbList []byte, err error) {
 
 	// Structure to hold the results, to apply JSON marshalling to
 	type linkRow struct {
