@@ -32,6 +32,7 @@ const (
 	END
 )
 
+// ValType indicates the type of data in a field returned from a SQLite query
 type ValType int
 
 const (
@@ -43,21 +44,22 @@ const (
 	Float
 )
 
-// Number of rows to display by default on the database page
+// DefaultNumDisplayRows is the number of rows to display by default on the database page
 const DefaultNumDisplayRows = 25
 
-// The maximum database size accepted for upload (in MB)
+// MaxDatabaseSize is the maximum database size accepted for upload (in MB)
 const MaxDatabaseSize = 512
 
-// The maximum licence size accepted for upload (in MB)
+// MaxLicenceSize is the maximum licence size accepted for upload (in MB)
 const MaxLicenceSize = 1
 
-// The number of leading characters of a files' sha256 used as the Minio folder name
+// MinioFolderChars is the number of leading characters of a files' sha256 used as the Minio folder name
 // eg: When set to 6, then "34f4255a737156147fbd0a44323a895d18ade79d4db521564d1b0dbb8764cbbc"
 //        -> Minio folder: "34f425"
 //        -> Minio filename: "5a737156147fbd0a44323a895d18ade79d4db521564d1b0dbb8764cbbc"
 const MinioFolderChars = 6
 
+// QuerySource is used internally to help choose the output format from a SQL query
 type QuerySource int
 
 const (
@@ -71,7 +73,7 @@ const (
 // ************************
 // Configuration file types
 
-// Configuration file
+// TomlConfig is a top level structure containing the server configuration info
 type TomlConfig struct {
 	Api         ApiInfo
 	Auth0       Auth0Info
@@ -87,7 +89,7 @@ type TomlConfig struct {
 	Web         WebInfo
 }
 
-// Config info for the API server
+// ApiInfo contains configuration info for the API daemon
 type ApiInfo struct {
 	BaseDir        string `toml:"base_dir"`
 	BindAddress    string `toml:"bind_address"`
@@ -97,14 +99,14 @@ type ApiInfo struct {
 	ServerName     string `toml:"server_name"`
 }
 
-// Auth0 connection parameters
+// Auth0Info contains the Auth0 connection info used authenticating webUI users
 type Auth0Info struct {
 	ClientID     string
 	ClientSecret string
 	Domain       string
 }
 
-// Configuration info for the DB4S end point
+// DB4SInfo contains configuration info for the DB4S end point daemon
 type DB4SInfo struct {
 	CAChain        string `toml:"ca_chain"`
 	Certificate    string
@@ -114,37 +116,38 @@ type DB4SInfo struct {
 	Server         string
 }
 
-// Disk cache info
+// DiskCacheInfo contains the path to the root of the local disk cache
 type DiskCacheInfo struct {
 	Directory string
 }
 
-// Environment info
+// EnvInfo holds information about the purpose of the running server.  eg "is this a production, docker,
+// or development" instance?
 type EnvInfo struct {
 	Environment  string
 	UserOverride string `toml:"user_override"`
 }
 
-// Event processing loop
+// EventProcessingInfo hold configuration for the event processing loop
 type EventProcessingInfo struct {
 	Delay                     time.Duration `toml:"delay"`
 	EmailQueueDir             string        `toml:"email_queue_dir"`
 	EmailQueueProcessingDelay time.Duration `toml:"email_queue_processing_delay"`
 }
 
-// Path to the licence files
+// LicenceDir holds the path to the licence files
 type LicenceInfo struct {
 	LicenceDir string `toml:"licence_dir"`
 }
 
-// Memcached connection parameters
+// MemcacheInfo contains the Memcached configuration parameters
 type MemcacheInfo struct {
 	DefaultCacheTime    int           `toml:"default_cache_time"`
 	Server              string        `toml:"server"`
 	ViewCountFlushDelay time.Duration `toml:"view_count_flush_delay"`
 }
 
-// Minio connection parameters
+// MinioInfo contains the Minio connection parameters
 type MinioInfo struct {
 	AccessKey string `toml:"access_key"`
 	HTTPS     bool
@@ -152,7 +155,7 @@ type MinioInfo struct {
 	Server    string
 }
 
-// PostgreSQL connection parameters
+// PGInfo contains the PostgreSQL connection parameters
 type PGInfo struct {
 	Database       string
 	NumConnections int `toml:"num_connections"`
@@ -163,7 +166,7 @@ type PGInfo struct {
 	Username       string
 }
 
-// Used for signing DB4S client certificates
+// SigningInfo contains the info used for signing DB4S client certificates
 type SigningInfo struct {
 	CertDaysValid    int    `toml:"cert_days_valid"`
 	Enabled          bool   `toml:"enabled"`
@@ -171,6 +174,7 @@ type SigningInfo struct {
 	IntermediateKey  string `toml:"intermediate_key"`
 }
 
+// WebInfo contains configuration info for the webUI daemon
 type WebInfo struct {
 	BaseDir              string `toml:"base_dir"`
 	BindAddress          string `toml:"bind_address"`
@@ -210,6 +214,7 @@ type APIJSONColumn struct {
 	CollSeq   string `json:"collation_seq"`
 }
 
+// APIKey is an internal structure used for passing around user API keys
 type APIKey struct {
 	Key         string    `json:"key"`
 	DateCreated time.Time `json:"date_created"`
@@ -443,19 +448,6 @@ type MetaInfo struct {
 	Title            string
 }
 
-// When SQLite data is prepared for sending to Redash (as JSON), the RedashColumnMeta and RedashTableData structures
-// are used to hold it
-type RedashColumnMeta struct {
-	Name         string `json:"name"`
-	Type         string `json:"type"`
-	FriendlyName string `json:"friendly_name"`
-}
-
-type RedashTableData struct {
-	Columns []RedashColumnMeta       `json:"columns"`
-	Rows    []map[string]interface{} `json:"rows"`
-}
-
 type ReleaseEntry struct {
 	Commit        string    `json:"commit"`
 	Date          time.Time `json:"date"`
@@ -504,7 +496,7 @@ type UploadRow struct {
 	UploadDate time.Time `json:"upload_date"`
 }
 
-// For sorting a UserInfo list by Last Modified date descending
+// UserInfoSlice is used for sorting a UserInfo list by Last Modified date descending
 type UserInfoSlice []UserInfo
 
 func (u UserInfoSlice) Len() int {
