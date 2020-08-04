@@ -31,14 +31,14 @@ func branchesHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the branch list for the database
 	brList, err := com.GetBranches(dbOwner, dbFolder, dbName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Retrieve the default branch for the database
 	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -54,7 +54,7 @@ func branchesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
 		log.Print(errMsg)
-		http.Error(w, errMsg, http.StatusBadRequest)
+		jsonErr(w, errMsg, http.StatusBadRequest)
 		return
 	}
 	fmt.Fprintf(w, string(jsonList))
@@ -294,35 +294,35 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the branch heads list for the database
 	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Get the default branch for the database
 	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Get the complete commit list for the database
 	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Get the releases for the database
 	relList, err := com.GetReleases(dbOwner, dbFolder, dbName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Get the tags for the database
 	tagList, err := com.GetTags(dbOwner, dbFolder, dbName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -349,7 +349,7 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
 		log.Print(errMsg)
-		http.Error(w, errMsg, http.StatusBadRequest)
+		jsonErr(w, errMsg, http.StatusBadRequest)
 		return
 	}
 	fmt.Fprintf(w, string(jsonList))
