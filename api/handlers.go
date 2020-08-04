@@ -246,7 +246,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Return the requested database to the user
-	_, err = com.DownloadDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	_, err = com.DownloadDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, "api")
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return

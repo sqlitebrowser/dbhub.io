@@ -2883,7 +2883,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Return the requested database to the user
 	var bytesWritten int64
-	bytesWritten, err = com.DownloadDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	bytesWritten, err = com.DownloadDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, "webui")
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

@@ -819,7 +819,7 @@ func GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch, destOwn
 
 // DownloadDatabase returns the SQLite database file to the requester
 func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID,
-	loggedInUser string) (bytesWritten int64, err error) {
+	loggedInUser, sourceSw string) (bytesWritten int64, err error) {
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
 	var bucket, id string
 	bucket, id, _, err = MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
@@ -853,7 +853,7 @@ func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder,
 	}
 
 	// Make a record of the download
-	err = LogDownload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now(), bucket+id)
+	err = LogDownload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, sourceSw, userAgent, time.Now(), bucket+id)
 	if err != nil {
 		return
 	}
