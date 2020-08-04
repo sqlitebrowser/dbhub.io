@@ -3,21 +3,21 @@ package common
 // BranchListResponseContainer holds the response to a client request for the database branch list. It's a temporary
 // structure, mainly so the JSON created for it is consistent between our various daemons
 type BranchListResponseContainer struct {
-	Default string                 `json:"default_branch"`
-	Entries map[string]BranchEntry `json:"branches"`
+	Branches      map[string]BranchEntry `json:"branches"`
+	DefaultBranch string                 `json:"default_branch"`
 }
 
 // MetadataResponse returns the branch list for a database.  It's used by both the DB4S and API daemons, to ensure
 // they return exactly the same data
 func BranchListResponse(dbOwner, dbFolder, dbName string) (list BranchListResponseContainer, err error) {
 	// Retrieve the branch list for the database
-	list.Entries, err = GetBranches(dbOwner, dbFolder, dbName)
+	list.Branches, err = GetBranches(dbOwner, dbFolder, dbName)
 	if err != nil {
 		return
 	}
 
 	// Retrieve the default branch for the database
-	list.Default, err = GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	list.DefaultBranch, err = GetDefaultBranchName(dbOwner, dbFolder, dbName)
 	if err != nil {
 		return
 	}
