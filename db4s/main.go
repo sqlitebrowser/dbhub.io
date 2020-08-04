@@ -153,28 +153,14 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the branch list for the database
-	brList, err := com.GetBranches(dbOwner, dbFolder, dbName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Retrieve the default branch for the database
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	brList, err := com.BranchListResponse(dbOwner, dbFolder, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Return the list as JSON
-	info := struct {
-		Def     string                     `json:"default_branch"`
-		Entries map[string]com.BranchEntry `json:"branches"`
-	}{
-		defBranch,
-		brList,
-	}
-	jsonList, err := json.MarshalIndent(info, "", "  ")
+	jsonList, err := json.MarshalIndent(brList, "", "  ")
 	if err != nil {
 		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
 		log.Print(errMsg)
@@ -750,61 +736,15 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the branch heads list for the database
-	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	// Retrieve the metadata for the database
+	meta, err := com.MetadataResponse(dbOwner, dbFolder, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Get the default branch for the database
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Get the complete commit list for the database
-	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Get the releases for the database
-	relList, err := com.GetReleases(dbOwner, dbFolder, dbName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Get the tags for the database
-	tagList, err := com.GetTags(dbOwner, dbFolder, dbName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Generate the link to the web page of this database in the webUI module
-	webPage := "https://" + com.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName
 
 	// Return the list as JSON
-	info := struct {
-		Branches  map[string]com.BranchEntry  `json:"branches"`
-		Commits   map[string]com.CommitEntry  `json:"commits"`
-		DefBranch string                      `json:"default_branch"`
-		Releases  map[string]com.ReleaseEntry `json:"releases"`
-		Tags      map[string]com.TagEntry     `json:"tags"`
-		WebPage   string                      `json:"web_page"`
-	}{
-		Branches:  branchList,
-		Commits:   commitList,
-		DefBranch: defBranch,
-		Releases:  relList,
-		Tags:      tagList,
-		WebPage:   webPage,
-	}
-	jsonList, err := json.MarshalIndent(info, "", "  ")
+	jsonList, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {
 		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
 		log.Print(errMsg)
