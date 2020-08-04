@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -2882,64 +2881,12 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		loggedInUser = u.(string)
 	}
 
-	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
-	bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	// Return the requested database to the user
+	var bytesWritten int64
+	bytesWritten, err = com.DownloadDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
-	}
-
-	// Get a handle from Minio for the database object
-	userDB, err := com.MinioHandle(bucket, id)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Close the object handle when this function finishes
-	defer func() {
-		com.MinioHandleClose(userDB)
-	}()
-
-	// Get the file details
-	stat, err := userDB.Stat()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Was a user agent part of the request?
-	var userAgent string
-	if ua, ok := r.Header["User-Agent"]; ok {
-		userAgent = ua[0]
-	}
-
-	// Make a record of the download
-	err = com.LogDownload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent,
-		time.Now(), bucket+id)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Send the database to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, dbName))
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", stat.Size))
-	w.Header().Set("Content-Type", "application/x-sqlite3")
-	bytesWritten, err := io.Copy(w, userDB)
-	if err != nil {
-		log.Printf("%s: Error returning DB file: %v\n", pageName, err)
-		fmt.Fprintf(w, "%s: Error returning DB file: %v\n", pageName, err)
-		return
-	}
-
-	// If downloaded by someone other than the owner, increment the download count for the database
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
-		err = com.IncrementDownloadCount(dbOwner, dbFolder, dbName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
 	}
 
 	// Log the number of bytes written

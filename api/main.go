@@ -101,6 +101,7 @@ func main() {
 	http.Handle("/v1/branches", gz.GzipHandler(handleWrapper(branchesHandler)))
 	http.Handle("/v1/columns", gz.GzipHandler(handleWrapper(columnsHandler)))
 	http.Handle("/v1/diff", gz.GzipHandler(handleWrapper(diffHandler)))
+	http.Handle("/v1/download", gz.GzipHandler(handleWrapper(downloadHandler)))
 	http.Handle("/v1/indexes", gz.GzipHandler(handleWrapper(indexesHandler)))
 	http.Handle("/v1/metadata", gz.GzipHandler(handleWrapper(metadataHandler)))
 	http.Handle("/v1/query", gz.GzipHandler(handleWrapper(queryHandler)))
@@ -166,6 +167,7 @@ func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err
 //   2. Extracts the database owner, name, and commit ID from the request
 //   3. Checks permissions
 func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner, dbName, commitID string, httpStatus int, err error) {
+	// Authenticate the request
 	loggedInUser, err = checkAuth(w, r)
 	if err != nil {
 		httpStatus = http.StatusUnauthorized
@@ -196,12 +198,12 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner,
 }
 
 // collectInfoAndOpen is an internal function which:
-//   1. Calls collectInfo
+//   1. Calls collectInfo() to authenticate the request + collect the user/database/commit/etc details
 //   2. Fetches the database from Minio
 //   3. Opens the database, returning the connection handle
 // This function exists purely because this code is common to most of the handlers
 func collectInfoAndOpen(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, httpStatus int, err error) {
-	// Call collect info and retrieve all the information
+	// Authenticate the request and collect details for the requested database
 	loggedInUser, dbOwner, dbName, commitID, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
@@ -236,12 +238,12 @@ func collectInfoAndOpen(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Con
 	// Open the SQLite database in read only mode
 	sdb, err = sqlite.Open(newDB, sqlite.OpenReadOnly)
 	if err != nil {
-		log.Printf("Couldn't open database in viewsHandler(): %s", err)
+		log.Printf("Couldn't open database in collectInfoAndOpen(): %s", err)
 		httpStatus = http.StatusInternalServerError
 		return
 	}
 	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes in viewsHandler(): %v\n", err.Error())
+		log.Printf("Couldn't enable extended result codes in collectInfoAndOpen(): %v\n", err.Error())
 		httpStatus = http.StatusInternalServerError
 		return
 	}

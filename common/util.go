@@ -15,6 +15,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/minio/minio-go"
 )
 
 // AddDatabase is handles database upload processing
@@ -810,6 +812,67 @@ func GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch, destOwn
 		if s.ID == destCommitID {
 			ancestorID = s.ID
 			break
+		}
+	}
+	return
+}
+
+// DownloadDatabase returns the SQLite database file to the requester
+func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID,
+	loggedInUser string) (bytesWritten int64, err error) {
+	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
+	var bucket, id string
+	bucket, id, _, err = MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	if err != nil {
+		return
+	}
+
+	// Get a handle from Minio for the database object
+	var userDB *minio.Object
+	userDB, err = MinioHandle(bucket, id)
+	if err != nil {
+		return
+	}
+
+	// Close the object handle when this function finishes
+	defer func() {
+		MinioHandleClose(userDB)
+	}()
+
+	// Get the file details
+	var stat minio.ObjectInfo
+	stat, err = userDB.Stat()
+	if err != nil {
+		return
+	}
+
+	// Was a user agent part of the request?
+	var userAgent string
+	if ua, ok := r.Header["User-Agent"]; ok {
+		userAgent = ua[0]
+	}
+
+	// Make a record of the download
+	err = LogDownload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now(), bucket+id)
+	if err != nil {
+		return
+	}
+
+	// Send the database to the user
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, dbName))
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", stat.Size))
+	w.Header().Set("Content-Type", "application/x-sqlite3")
+	bytesWritten, err = io.Copy(w, userDB)
+	if err != nil {
+		log.Printf("Error returning DB file: %v\n", err)
+		return
+	}
+
+	// If downloaded by someone other than the owner, increment the download count for the database
+	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
+		err = IncrementDownloadCount(dbOwner, dbFolder, dbName)
+		if err != nil {
+			return
 		}
 	}
 	return

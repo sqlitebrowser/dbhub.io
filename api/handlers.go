@@ -230,6 +230,29 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(jsonData))
 }
 
+// downloadHandler returns the requested SQLite database file
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/download
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database being queried
+//   * "dbname" is the name of the database being queried
+func downloadHandler(w http.ResponseWriter, r *http.Request) {
+	// Authenticate user and collect requested database details
+	loggedInUser, dbOwner, dbName, commitID, httpStatus, err := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+	dbFolder := "/"
+
+	// Return the requested database to the user
+	_, err = com.DownloadDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 // indexesHandler returns the list of indexes present in a SQLite database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/indexes
