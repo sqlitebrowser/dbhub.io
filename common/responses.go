@@ -19,7 +19,6 @@ func BranchListResponse(dbOwner, dbFolder, dbName string) (list BranchListRespon
 	// Retrieve the default branch for the database
 	list.Default, err = GetDefaultBranchName(dbOwner, dbFolder, dbName)
 	if err != nil {
-		//jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	return
