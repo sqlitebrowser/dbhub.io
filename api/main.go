@@ -106,7 +106,9 @@ func main() {
 	http.Handle("/v1/indexes", gz.GzipHandler(handleWrapper(indexesHandler)))
 	http.Handle("/v1/metadata", gz.GzipHandler(handleWrapper(metadataHandler)))
 	http.Handle("/v1/query", gz.GzipHandler(handleWrapper(queryHandler)))
+	http.Handle("/v1/releases", gz.GzipHandler(handleWrapper(releasesHandler)))
 	http.Handle("/v1/tables", gz.GzipHandler(handleWrapper(tablesHandler)))
+	http.Handle("/v1/tags", gz.GzipHandler(handleWrapper(tagsHandler)))
 	http.Handle("/v1/views", gz.GzipHandler(handleWrapper(viewsHandler)))
 
 	// Load our self signed CA Cert chain, check client certificates if given, and set TLS1.2 as minimum

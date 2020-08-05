@@ -140,7 +140,7 @@ func databasesHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the results
 	jsonData, err := json.Marshal(list)
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in tablesHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in databasesHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -346,7 +346,7 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the list as JSON
 	jsonList, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {
-		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
+		errMsg := fmt.Sprintf("Error when JSON marshalling the metadata: %v\n", err)
 		log.Print(errMsg)
 		jsonErr(w, errMsg, http.StatusBadRequest)
 		return
@@ -417,6 +417,38 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(jsonData))
 }
 
+// releasesHandler returns the details of all releases for a database
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/releases
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database being queried
+//   * "dbname" is the name of the database being queried
+func releasesHandler(w http.ResponseWriter, r *http.Request) {
+	// Do auth check, grab request info
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+	dbFolder := "/"
+
+	// Retrieve the list of releases
+	rels, err := com.GetReleases(dbOwner, dbFolder, dbName)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the list as JSON
+	jsonData, err := json.Marshal(rels)
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in releasesHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
+}
+
 // rootHandler handles requests for "/" and all unknown paths
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
@@ -469,6 +501,38 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	jsonData, err := json.Marshal(tables)
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in tablesHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
+}
+
+// tagsHandler returns the details of all tags for a database
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/tags
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database being queried
+//   * "dbname" is the name of the database being queried
+func tagsHandler(w http.ResponseWriter, r *http.Request) {
+	// Do auth check, grab request info
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+	dbFolder := "/"
+
+	// Retrieve the tags
+	tags, err := com.GetTags(dbOwner, dbFolder, dbName)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the tags as JSON
+	jsonData, err := json.Marshal(tags)
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in tagsHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
