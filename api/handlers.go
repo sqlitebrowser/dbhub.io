@@ -111,6 +111,38 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(jsonData))
 }
 
+// commitsHandler returns the details of all commits for a database
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/commits
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database being queried
+//   * "dbname" is the name of the database being queried
+func commitsHandler(w http.ResponseWriter, r *http.Request) {
+	// Do auth check, grab request info
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+	dbFolder := "/"
+
+	// Retrieve the commits
+	commits, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return the tags as JSON
+	jsonData, err := json.Marshal(commits)
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in commitsHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
+}
+
 // databasesHandler returns the list of databases in the requesting users account
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" https://api.dbhub.io/v1/databases
