@@ -100,6 +100,7 @@ func main() {
 	http.Handle("/", gz.GzipHandler(handleWrapper(rootHandler)))
 	http.Handle("/v1/branches", gz.GzipHandler(handleWrapper(branchesHandler)))
 	http.Handle("/v1/columns", gz.GzipHandler(handleWrapper(columnsHandler)))
+	http.Handle("/v1/databases", gz.GzipHandler(handleWrapper(databasesHandler)))
 	http.Handle("/v1/diff", gz.GzipHandler(handleWrapper(diffHandler)))
 	http.Handle("/v1/download", gz.GzipHandler(handleWrapper(downloadHandler)))
 	http.Handle("/v1/indexes", gz.GzipHandler(handleWrapper(indexesHandler)))

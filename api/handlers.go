@@ -111,6 +111,42 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(jsonData))
 }
 
+// databasesHandler returns the list of databases in the requesting users account
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" https://api.dbhub.io/v1/databases
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+func databasesHandler(w http.ResponseWriter, r *http.Request) {
+	// Authenticate the request
+	loggedInUser, err := checkAuth(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Retrieve the list of databases in the user account
+	var databases []com.DBInfo
+	databases, err = com.UserDBs(loggedInUser, com.DB_BOTH)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Extract just the database names
+	var list []string
+	for _, j := range databases {
+		list = append(list, j.Database)
+	}
+
+	// Return the results
+	jsonData, err := json.Marshal(list)
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in tablesHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
+}
+
 // diffHandler generates a diff between two databases or two versions of a database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner_a="justinclift" -F dbname_a="Join Testing.sqlite" -F commit_a="ea12..." -F commit_b="5a7c..." https://api.dbhub.io/v1/diff
