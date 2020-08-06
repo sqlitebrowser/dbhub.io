@@ -133,6 +133,16 @@
                     To return the list of branches in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/branches</pre>
+                    Output: <pre>{
+  "branches": {
+    "master": {
+      "commit": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
+      "commit_count": 2,
+      "description": ""
+    }
+  },
+  "default_branch": "master"
+}</pre>
                 </div>
             </div>
         </div>
@@ -185,7 +195,29 @@
                 <div class="col-md-12">
                     To return the list of columns in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
-                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/columns</pre>
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" -F table="table1" https://api.dbhub.io/v1/columns</pre>
+                    Output: <pre>[
+  {
+    "column_id": 0,
+    "name": "id",
+    "data_type": "INTEGER",
+    "not_null": false,
+    "default_value": "",
+    "primary_key": 1,
+    "autoinc": false,
+    "collation_seq": ""
+  },
+  {
+    "column_id": 1,
+    "name": "Name",
+    "data_type": "TEXT",
+    "not_null": false,
+    "default_value": "",
+    "primary_key": 0,
+    "autoinc": false,
+    "collation_seq": ""
+  }
+]</pre>
                 </div>
             </div>
         </div>
@@ -235,6 +267,56 @@
                     To return the list of commits in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/commits</pre>
+                    Output: <pre>{
+  "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59": {
+    "author_email": "justin@postgresql.org",
+    "author_name": "Justin Clift",
+    "committer_email": "",
+    "committer_name": "",
+    "id": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
+    "message": "",
+    "other_parents": null,
+    "parent": "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521",
+    "timestamp": "2020-07-30T12:22:46.714728207Z",
+    "tree": {
+      "id": "2a1969fe687ba6419ccea8c6ab104741fc5fa0195d32e8cf142e422dee2d41f1",
+      "entries": [
+        {
+          "entry_type": "db",
+          "last_modified": "2020-07-30T12:09:10Z",
+          "licence": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+          "name": "Join Testing.sqlite",
+          "sha256": "0ef691111cde5923085a2385a609c858555ec7101e3cda30dac94d1cf47429dc",
+          "size": 12288
+        }
+      ]
+    }
+  },
+  "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521": {
+    "author_email": "justin@postgresql.org",
+    "author_name": "Justin Clift",
+    "committer_email": "",
+    "committer_name": "",
+    "id": "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521",
+    "message": "Initial database upload, using licence CC0.",
+    "other_parents": null,
+    "parent": "",
+    "timestamp": "2020-04-20T12:04:37.379693233Z",
+    "tree": {
+      "id": "51c87fe5a7b261e8f04d319ed50810198577b44a95701bc14917560d461948e0",
+      "entries": [
+        {
+          "entry_type": "db",
+          "last_modified": "2020-04-20T12:04:37.373275716Z",
+          "licence": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+          "name": "Join Testing.sqlite",
+          "sha256": "488f863d685125a82b1112304c936a8c8769d061a114ec466fd21bb882dc8d17",
+          "size": 12288
+        }
+      ]
+    }
+  }
+}</pre>
                 </div>
             </div>
         </div>
@@ -276,6 +358,12 @@
                     To return the list of databases in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/databases</pre>
+                    Output: <pre>[
+  "Join Testing.sqlite",
+  "Assembly Election 2017.sqlite",
+  "DB4S daily users by country.sqlite",
+  "Marine Litter Survey (Keep Northern Ireland Beautiful).sqlite"
+]</pre>
                 </div>
             </div>
         </div>
@@ -340,7 +428,30 @@
                 <div class="col-md-12">
                     To return the list of diff in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
-                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/diff</pre>
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner_a="justinclift" -F dbname_a="Join Testing.sqlite" -F commit_a="cb70855613d30019055a4d907b832c10014b093556fc282e6b7d2803e2e9d59" \
+    -F commit_b="218f28dcb54819e7e4b77e36012ff15d667ca55946c56ef6370b13bdc3ddf528" -F merge="preserve_pk" https://api.dbhub.io/v1/diff</pre>
+                    Output: <pre>{
+  "diff": [
+    {
+      "object_name": "indexId",
+      "object_type": "index",
+      "schema": {
+        "action_type": "add",
+        "sql": "CREATE INDEX \"indexId\" ON \"table1\" (\n\t\"id\"\n);"
+      },
+      "data": null
+    },
+    {
+      "object_name": "indexName",
+      "object_type": "index",
+      "schema": {
+        "action_type": "add",
+        "sql": "CREATE INDEX \"indexName\" ON \"table1\" (\n\t\"Name\"\tASC\n);"
+      },
+      "data": null
+    }
+  ]
+}</pre>
                 </div>
             </div>
         </div>
@@ -379,8 +490,7 @@
                 <div class="col-md-10"></div>
             </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+                <div class="col-md-12">The database file is sent back to the requester</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
@@ -439,6 +549,28 @@
                     To return the list of indexes in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/indexes</pre>
+                    Output: <pre>[
+  {
+    "name": "indexId",
+    "table": "table1",
+    "columns": [
+      {
+        "id": 0,
+        "name": "id"
+      }
+    ]
+  },
+  {
+    "name": "indexName",
+    "table": "table1",
+    "columns": [
+      {
+        "id": 1,
+        "name": "Name"
+      }
+    ]
+  }
+]</pre>
                 </div>
             </div>
         </div>
@@ -488,6 +620,101 @@
                     To return the list of metadata in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/metadata</pre>
+                    Output: <pre>{
+  "branches": {
+    "master": {
+      "commit": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
+      "commit_count": 2,
+      "description": ""
+    }
+  },
+  "commits": {
+    "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59": {
+      "author_email": "justin@postgresql.org",
+      "author_name": "Justin Clift",
+      "committer_email": "",
+      "committer_name": "",
+      "id": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
+      "message": "",
+      "other_parents": null,
+      "parent": "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521",
+      "timestamp": "2020-07-30T12:22:46.714728207Z",
+      "tree": {
+        "id": "2a1969fe687ba6419ccea8c6ab104741fc5fa0195d32e8cf142e422dee2d41f1",
+        "entries": [
+          {
+            "entry_type": "db",
+            "last_modified": "2020-07-30T12:09:10Z",
+            "licence": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+            "name": "Join Testing.sqlite",
+            "sha256": "0ef691111cde5923085a2385a609c858555ec7101e3cda30dac94d1cf47429dc",
+            "size": 12288
+          }
+        ]
+      }
+    },
+    "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521": {
+      "author_email": "justin@postgresql.org",
+      "author_name": "Justin Clift",
+      "committer_email": "",
+      "committer_name": "",
+      "id": "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521",
+      "message": "Initial database upload, using licence CC0.",
+      "other_parents": null,
+      "parent": "",
+      "timestamp": "2020-04-20T12:04:37.379693233Z",
+      "tree": {
+        "id": "51c87fe5a7b261e8f04d319ed50810198577b44a95701bc14917560d461948e0",
+        "entries": [
+          {
+            "entry_type": "db",
+            "last_modified": "2020-04-20T12:04:37.373275716Z",
+            "licence": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+            "name": "Join Testing.sqlite",
+            "sha256": "488f863d685125a82b1112304c936a8c8769d061a114ec466fd21bb882dc8d17",
+            "size": 12288
+          }
+        ]
+      }
+    }
+  },
+  "default_branch": "master",
+  "releases": {
+    "v0.0.1": {
+      "commit": "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521",
+      "date": "2020-08-05T21:24:03.661192606+10:00",
+      "description": "Initial release! :)",
+      "email": "justin@postgresql.org",
+      "name": "Justin Clift",
+      "size": 12288
+    },
+    "v0.0.2": {
+      "commit": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
+      "date": "2020-08-05T21:25:14.160011088+10:00",
+      "description": "Another release",
+      "email": "justin@postgresql.org",
+      "name": "Justin Clift",
+      "size": 12288
+    }
+  },
+  "tags": {
+    "first": {
+      "commit": "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521",
+      "date": "2020-08-05T21:27:36.493329953+10:00",
+      "description": "First tag",
+      "email": "justin@postgresql.org",
+      "name": "Justin Clift"
+    },
+    "second": {
+      "commit": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
+      "date": "2020-08-05T21:27:50.253727352+10:00",
+      "description": "Second tag",
+      "email": "justin@postgresql.org",
+      "name": "Justin Clift"
+    }
+  },
+  "web_page": "https://dbhub.io/justinclift/Join Testing.sqlite"
+}</pre>
                 </div>
             </div>
         </div>
@@ -523,21 +750,28 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">sql</div>
-                <div class="col-md-10">The SQL query, base64 encoded</div>
+                <div class="col-md-10">The SQL query, <span style="font-weight: bold;">Base64</span> encoded</div>
             </div>
             <div class="row">
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+                <div class="col-md-12">
+                    The returned data (JSON) is in a fairly verbose format, with each field returned from the SQL query having three components:
+                    <ul>
+                        <li>The name of the return field</li>
+                        <!-- TODO: Add the info of which numeric values == what SQLite data type -->
+                        <li>The type of data in the field (numeric)</li>
+                        <li>The value of the field</li>
+                    </ul>
+                </div>
             </div>
             <div class="row">
-                <div class="col-md-12 heading pad">Example</div>
+                <div class="col-md-12 heading">Example</div>
             </div>
             <div class="row indent">
-                <div class="col-md-12">To run this query against <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>:
+                <div class="col-md-12">To run this query on <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>:
                     <pre>SELECT table1.Name, table2.value
 FROM table1 JOIN table2
 USING (id)
@@ -546,13 +780,7 @@ ORDER BY table1.id;</pre>
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" \
     -F sql="U0VMRUNUIHRhYmxlMS5OYW1lLCB0YWJsZTIudmFsdWUKRlJPTSB0YWJsZTEgSk9JTiB0YWJsZTIKVVNJTkcgKGlkKQpPUkRFUiBCWSB0YWJsZTEuaWQ7" \
     https://api.dbhub.io/v1/query</pre>
-                    The returned data (JSON) is in a fairly verbose format, with each field returned from the SQL query having three components:
-                    <ul>
-                        <li>The name of the return field</li>
-                        <li>The type of data in the field (numeric)</li>
-                        <li>The value of the field</li>
-                    </ul>
-                    Example output:
+                    Output:
                     <pre>[["[["]]{"Name":"Name","Type":3,"Value":"Foo"} ... (shortened for clarity)</pre>
                     <span style="color: darkred; font-size: larger; font-weight: bolder;">Note</span> - If you'd like the
                     data to be returned in a different format, please
@@ -607,6 +835,24 @@ ORDER BY table1.id;</pre>
                     To return the list of releases in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/releases</pre>
+                    Output: <pre>{
+  "v0.0.1": {
+    "commit": "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521",
+    "date": "2020-08-05T21:24:03.661192606+10:00",
+    "description": "Initial release! :)",
+    "email": "justin@postgresql.org",
+    "name": "Justin Clift",
+    "size": 12288
+  },
+  "v0.0.2": {
+    "commit": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
+    "date": "2020-08-05T21:25:14.160011088+10:00",
+    "description": "Another release",
+    "email": "justin@postgresql.org",
+    "name": "Justin Clift",
+    "size": 12288
+  }
+}</pre>
                 </div>
             </div>
         </div>
@@ -645,8 +891,9 @@ ORDER BY table1.id;</pre>
                 <div class="col-md-10"></div>
             </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+                <div class="col-md-12">
+                    The returned data is an array of JSON string values.  Each string is the name of a table in the database.
+                </div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
@@ -656,6 +903,11 @@ ORDER BY table1.id;</pre>
                     To return the list of tables in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/tables</pre>
+                    Output: <pre>[
+  "table1",
+  "table2",
+  "table3"
+]</pre>
                 </div>
             </div>
         </div>
@@ -705,6 +957,23 @@ ORDER BY table1.id;</pre>
                     To return the list of tags in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/tags</pre>
+                    Output:
+                    <pre>{
+  "first": {
+    "commit": "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521",
+    "date": "2020-08-05T21:27:36.493329953+10:00",
+    "description": "First tag",
+    "email": "justin@postgresql.org",
+    "name": "Justin Clift"
+  },
+  "second": {
+    "commit": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
+    "date": "2020-08-05T21:27:50.253727352+10:00",
+    "description": "Second tag",
+    "email": "justin@postgresql.org",
+    "name": "Justin Clift"
+  }
+}</pre>
                 </div>
             </div>
         </div>
@@ -747,11 +1016,6 @@ ORDER BY table1.id;</pre>
                     The returned data is an array of JSON string values.  Each string is the name of a view in the database.
                 </div>
             </div>
-            <div class="row indent">
-                <div class="col-md-12">
-                    Example: <pre>["joinedView"]</pre>
-                </div>
-            </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
@@ -760,6 +1024,11 @@ ORDER BY table1.id;</pre>
                     To return the list of views in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/views</pre>
+                    Output: <pre>[
+  "joinedView",
+  "view1",
+  "view2"
+]</pre>
                 </div>
             </div>
         </div>

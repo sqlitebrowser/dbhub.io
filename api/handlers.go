@@ -102,7 +102,7 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the results
-	jsonData, err := json.Marshal(jsonCols)
+	jsonData, err := json.MarshalIndent(jsonCols, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in columnsHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -134,7 +134,7 @@ func commitsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the tags as JSON
-	jsonData, err := json.Marshal(commits)
+	jsonData, err := json.MarshalIndent(commits, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in commitsHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -170,7 +170,7 @@ func databasesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the results
-	jsonData, err := json.Marshal(list)
+	jsonData, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in databasesHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -219,7 +219,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If no primary database owner and name are given or if no commit ids are given, return
 	if oa == "" || na == "" || ca == "" || cb == "" {
-		jsonErr(w, "No database details provided", http.StatusBadRequest)
+		jsonErr(w, "Incomplete database details provided", http.StatusBadRequest)
 		return
 	}
 
@@ -289,7 +289,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the results
-	jsonData, err := json.Marshal(diffs)
+	jsonData, err := json.MarshalIndent(diffs, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in diffHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -366,7 +366,7 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the results
-	jsonData, err := json.Marshal(indexes)
+	jsonData, err := json.MarshalIndent(indexes, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in indexesHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -462,7 +462,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the results
-	jsonData, err := json.Marshal(data.Records)
+	jsonData, err := json.MarshalIndent(data.Records, "", "  ")
 	if err != nil {
 		jsonErr(w, fmt.Sprintf("Error when JSON marshalling the returned data: %v\n", err),
 			http.StatusBadRequest)
@@ -494,7 +494,7 @@ func releasesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the list as JSON
-	jsonData, err := json.Marshal(rels)
+	jsonData, err := json.MarshalIndent(rels, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in releasesHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -552,7 +552,7 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the results
-	jsonData, err := json.Marshal(tables)
+	jsonData, err := json.MarshalIndent(tables, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in tablesHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -584,7 +584,7 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the tags as JSON
-	jsonData, err := json.Marshal(tags)
+	jsonData, err := json.MarshalIndent(tags, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in tagsHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -616,7 +616,7 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the results
-	jsonData, err := json.Marshal(views)
+	jsonData, err := json.MarshalIndent(views, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in viewsHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
