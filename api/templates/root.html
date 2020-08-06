@@ -4,8 +4,16 @@
 [[ template "head" . ]]
 <body>
 <style>
-    .dochead {
-        text-align: left;
+    * {
+        font-size: large;
+    }
+    .apiheading {
+        font-size: large;
+        font-weight: bold;
+    }
+    .heading {
+        font-size: large;
+        font-weight: bold;
     }
     .pad {
         padding-top: 10px;
@@ -14,75 +22,255 @@
         font-style: italic;
     }
 </style>
-<h1>DBHub API (in early stage development)</h1>
+<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row">
+        <div class="col-md-12"><h1>DBHub API (in early development)</h1></div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading heading">Working examples with source code</div>
+        <ul class="list-group">
+            <li class="list-group-item">
+                <a href="https://github.com/JamesPerreault/MyGourmetRecipes">MyGourmetRecipes</a> - (Javascript) A web based Gourmet Recipe Manager, by <a href="https://github.com/JamesPerreault">James Perreault</a>
+            </li>
+        </ul>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading heading">Libraries</div>
+        <ul class="list-group">
+            <li class="list-group-item"><a href="https://github.com/sqlitebrowser/go-dbhub">go-dbhub</a> - (Go) A library for accessing and using your SQLite libraries on DBHub.io</li>
+        </ul>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading heading">API functions</div>
+        <ul class="list-group">
+            <li class="list-group-item"><a href="#branches" class="apiheading">Branches</a> - Returns the list of branches for a database</li>
+            <li class="list-group-item"><a href="#columns" class="apiheading">Columns</a> - Returns the list of columns in a table or view</li>
+            <li class="list-group-item"><a href="#commits" class="apiheading">Commits</a> - Returns the details of all commits for a database</li>
+            <li class="list-group-item"><a href="#databases" class="apiheading">Databases</a> - Returns the list of databases in the requesting users account</li>
+            <li class="list-group-item"><a href="#diff" class="apiheading">Diff</a> - Generates a diff between two databases or two versions of a database</li>
+            <li class="list-group-item"><a href="#download" class="apiheading">Download</a> - Returns the requested SQLite database file</li>
+            <li class="list-group-item"><a href="#indexes" class="apiheading">Indexes</a> - Returns the details of all indexes in a SQLite database</li>
+            <li class="list-group-item"><a href="#metadata" class="apiheading">Metadata</a> - Returns the commit, branch, release, tag and web page information for a database</li>
+            <li class="list-group-item"><a href="#query" class="apiheading">Query</a> - Run a SQLite query on a database</li>
+            <li class="list-group-item"><a href="#releases" class="apiheading">Releases</a> - Returns the details of all releases for a database</li>
+            <li class="list-group-item"><a href="#tables" class="apiheading">Tables</a> - Returns the list of tables in a SQLite database</li>
+            <li class="list-group-item"><a href="#tags" class="apiheading">Tags</a> - Returns the details of all tags for a database</li>
+            <li class="list-group-item"><a href="#views" class="apiheading">Views</a> - Returns the list of views in a SQLite database</li>
+        </ul>
+    </div>
 
-<h2>Working examples with source code</h2>
+    <!-- xxxx -->
+    <div class="panel panel-default" id="branches">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">xxxx</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/xxxx">/v1/xxxx</a></div>
+                <div class="col-md-10">xxxx</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">xxxx</div>
+                <div class="col-md-10">xxxx</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
 
-<h3>Javascript</h3>
-<ul>
-    <li><a href="https://github.com/JamesPerreault/MyGourmetRecipes">MyGourmetRecipes</a> - a web based Gourmet Recipe Manager, by <a href="https://github.com/JamesPerreault">James Perreault</a></li>
-</ul>
+    <!-- Branches -->
+    <div class="panel panel-default" id="branches">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Branches</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/branches">/v1/branches</a></div>
+                <div class="col-md-10">Returns the list of branches for a database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">Branches</div>
+                <div class="col-md-10">A list of all branches in the database, along with the branch details</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">Default branch</div>
+                <div class="col-md-10">A string with the name of the default branch.  eg: "master"</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
 
-<h2>API functions</h2>
-<table>
-    <tr class="dochead">
-        <th>URL</th>
-        <th>Description</th>
-    </tr>
-    <tr>
-        <td><a href="/v1/query">/v1/query</a></td>
-        <td>Run a SQLite query on a database</td>
-    </tr>
-    <tr>
-        <th class="dochead pad">Parameters (POST)</th>
-        <th>&nbsp;</th>
-    </tr>
-    <tr>
-        <td class="paramname">apikey</td>
-        <td>Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</td>
-    </tr>
-    <tr>
-        <td class="paramname">dbowner</td>
-        <td>The owner of the database to query</td>
-    </tr>
-    <tr>
-        <td class="paramname">dbname</td>
-        <td>The name of the database</td>
-    </tr>
-    <tr>
-        <td class="paramname">sql</td>
-        <td>The SQL query, base64 encoded</td>
-    </tr>
-    <tr>
-        <th class="dochead pad" colspan="2">Example</th>
-    </tr>
-    <tr>
-        <td class="pad" colspan="2">
-            For example, to run this query against <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>:
-            <pre>
+    <!-- Columns -->
+    <div class="panel panel-default" id="columns">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Columns</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/columns">/v1/columns</a></div>
+                <div class="col-md-10">Returns the list of columns in a table or view</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">table</div>
+                <div class="col-md-10">The name of the table or view</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query -->
+    <div class="panel panel-default" id="branches">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Query</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/query">/v1/query</a></div>
+                <div class="col-md-10">Run a SQLite query on a database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">sql</div>
+                <div class="col-md-10">The SQL query, base64 encoded</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">To run this query against <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>:
+                    <pre>
 SELECT table1.Name, table2.value
 FROM table1 JOIN table2
 USING (id)
 ORDER BY table1.id;
             </pre>
 
-            Using <a href="https://curl.haxx.se">curl</a>, it would be:
-            <pre>
+                    Using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>
 $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" \
     -F sql="U0VMRUNUIHRhYmxlMS5OYW1lLCB0YWJsZTIudmFsdWUKRlJPTSB0YWJsZTEgSk9JTiB0YWJsZTIKVVNJTkcgKGlkKQpPUkRFUiBCWSB0YWJsZTEuaWQ7" \
     https://api.dbhub.io/v1/query
             </pre>
 
-            The returned data, will be in JSON:
-            <pre>
+                    The returned data, will be in JSON:
+                    <pre>
 [["[["]]{"Name":"Name","Type":3,"Value":"Foo"} ... (shortened for clarity)
             </pre>
+                </div>
 
-            Note the returned JSON format is likely to be changeable via further parameters in the near future, as the
-            current output format is very verbose.
-        </td>
-    </tr>
-</table>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
     (function(f, a, t, h, o, m){
         a[h]=a[h]||function(){

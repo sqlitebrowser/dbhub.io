@@ -47,7 +47,7 @@ func branchesHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// columnsHandler returns the list of columns present in a table or view
+// columnsHandler returns the list of columns in a table or view
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" \
 //       -F dbowner="justinclift" \
@@ -321,7 +321,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// indexesHandler returns the list of indexes present in a SQLite database
+// indexesHandler returns the details of all indexes in a SQLite database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/indexes
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
@@ -375,7 +375,7 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(jsonData))
 }
 
-// metadataHandler returns commit, branch, release, and tag information on a database
+// metadataHandler returns the commit, branch, release, tag and web page information for a database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/metadata
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
@@ -529,7 +529,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// tablesHandler returns the list of tables present in a SQLite database
+// tablesHandler returns the list of tables in a SQLite database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/tables
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
@@ -593,7 +593,7 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(jsonData))
 }
 
-// viewsHandler returns the list of views present in a SQLite database
+// viewsHandler returns the list of views in a SQLite database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/views
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
