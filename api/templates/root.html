@@ -59,57 +59,12 @@
         </ul>
     </div>
 
-    <!-- xxxx -->
-    <div class="panel panel-default" id="branches">
-        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">xxxx</div>
-        <div class="panel-body">
-            <div class="row">
-                <div class="col-md-2 heading">URL</div>
-                <div class="col-md-10 heading">Description</div>
-            </div>
-            <div class="row">
-                <div class="col-md-2"><a href="/v1/xxxx">/v1/xxxx</a></div>
-                <div class="col-md-10">xxxx</div>
-            </div>
-            <div class="row">
-                <div class="col-md-2 heading pad">Parameters (POST)</div>
-                <div class="col-md-10"></div>
-            </div>
-            <div class="row">
-                <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
-            </div>
-            <div class="row">
-                <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
-            </div>
-            <div class="row">
-                <div class="col-md-2 paramname">dbname</div>
-                <div class="col-md-10">The name of the database</div>
-            </div>
-            <div class="row">
-                <div class="col-md-2 heading pad">Return values (JSON)</div>
-                <div class="col-md-10"></div>
-            </div>
-            <div class="row">
-                <div class="col-md-2 paramname">xxxx</div>
-                <div class="col-md-10">xxxx</div>
-            </div>
-            <div class="row">
-                <div class="col-md-12 heading pad">Example</div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
-            </div>
-        </div>
-    </div>
-
     <!-- Branches -->
     <div class="panel panel-default" id="branches">
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Branches</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row">
@@ -158,7 +113,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Columns</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row">
@@ -202,12 +157,290 @@
         </div>
     </div>
 
+    <!-- Commits -->
+    <div class="panel panel-default" id="commits">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Commits</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/commits">/v1/commits</a></div>
+                <div class="col-md-10">Returns the details of all commits for a database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Databases -->
+    <div class="panel panel-default" id="databases">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Databases</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/databases">/v1/databases</a></div>
+                <div class="col-md-10">Returns the list of databases in the requesting users account</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diff -->
+    <div class="panel panel-default" id="diff">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Diff</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/diff">/v1/diff</a></div>
+                <div class="col-md-10">Generates a diff between two databases or two versions of a database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner A</div>
+                <div class="col-md-10">The owner of the first database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname A</div>
+                <div class="col-md-10">The name of the first database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">Commit A</div>
+                <div class="col-md-10">The commit ID of the first database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner B</div>
+                <div class="col-md-10">The owner of the second database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname B</div>
+                <div class="col-md-10">The name of the second database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">Commit B</div>
+                <div class="col-md-10">The commit ID of the second database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download -->
+    <div class="panel panel-default" id="download">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Download</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/download">/v1/download</a></div>
+                <div class="col-md-10">Returns the requested SQLite database file as a stream of bytes</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Indexes -->
+    <div class="panel panel-default" id="indexes">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Indexes</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/indexes">/v1/indexes</a></div>
+                <div class="col-md-10">Returns the details of all indexes in a SQLite database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="panel panel-default" id="metadata">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Metadata</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/metadata">/v1/metadata</a></div>
+                <div class="col-md-10">Returns the commit, branch, release, tag and web page information for a database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Query -->
-    <div class="panel panel-default" id="branches">
+    <div class="panel panel-default" id="query">
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Query</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row">
@@ -267,6 +500,186 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
             </pre>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- Releases -->
+    <div class="panel panel-default" id="releases">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Releases</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/releases">/v1/releases</a></div>
+                <div class="col-md-10">Returns the details of all releases for a database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables -->
+    <div class="panel panel-default" id="tables">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Tables</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/tables">/v1/tables</a></div>
+                <div class="col-md-10">Returns the list of tables in a SQLite database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="panel panel-default" id="tags">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Tags</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/tags">/v1/tags</a></div>
+                <div class="col-md-10">Returns the details of all tags for a database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Views -->
+    <div class="panel panel-default" id="views">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Views</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2"><a href="/v1/views">/v1/views</a></div>
+                <div class="col-md-10">Returns the list of views in a SQLite database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database to query</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 paramname">TBD</div>
+                <div class="col-md-10">TBD</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">TBD</div>
             </div>
         </div>
     </div>
