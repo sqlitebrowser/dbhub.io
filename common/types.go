@@ -214,6 +214,20 @@ type APIJSONColumn struct {
 	CollSeq   string `json:"collation_seq"`
 }
 
+// APIJSONIndexColumn holds the details of one column of a SQLite database index.  It's used by our API for returning
+// index information
+type APIJSONIndexColumn struct {
+	CID  int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// APIJSONIndex holds the details of an index for a SQLite database.  It's used by our API for returning index information
+type APIJSONIndex struct {
+	Name    string               `json:"name"`
+	Table   string               `json:"table"`
+	Columns []APIJSONIndexColumn `json:"columns"`
+}
+
 // APIKey is an internal structure used for passing around user API keys
 type APIKey struct {
 	Key         string    `json:"key"`
@@ -402,6 +416,7 @@ type ForkEntry struct {
 	Deleted    bool       `json:"deleted"`
 }
 
+// JsonError holds the details of an error.  It's used by our API for returning error information
 type JsonError struct {
 	Error string `json:"error"`
 }

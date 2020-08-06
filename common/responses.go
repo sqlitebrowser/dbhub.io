@@ -7,7 +7,7 @@ type BranchListResponseContainer struct {
 	DefaultBranch string                 `json:"default_branch"`
 }
 
-// MetadataResponse returns the branch list for a database.  It's used by both the DB4S and API daemons, to ensure
+// BranchListResponse returns the branch list for a database.  It's used by both the DB4S and API daemons, to ensure
 // they return exactly the same data
 func BranchListResponse(dbOwner, dbFolder, dbName string) (list BranchListResponseContainer, err error) {
 	// Retrieve the branch list for the database

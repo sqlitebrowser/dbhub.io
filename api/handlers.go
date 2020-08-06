@@ -343,8 +343,30 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve the column details for each index
+	var indexes []com.APIJSONIndex
+	for nam, tab := range idx {
+		oneIndex := com.APIJSONIndex{
+			Name:    nam,
+			Table:   tab,
+			Columns: []com.APIJSONIndexColumn{},
+		}
+		cols, err := sdb.IndexColumns("", nam)
+		if err != nil {
+			jsonErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		for _, k := range cols {
+			oneIndex.Columns = append(oneIndex.Columns, com.APIJSONIndexColumn{
+				CID:  k.Cid,
+				Name: k.Name,
+			})
+		}
+		indexes = append(indexes, oneIndex)
+	}
+
 	// Return the results
-	jsonData, err := json.Marshal(idx)
+	jsonData, err := json.Marshal(indexes)
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in indexesHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
