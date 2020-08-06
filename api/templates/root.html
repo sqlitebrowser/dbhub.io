@@ -15,32 +15,52 @@
         font-size: large;
         font-weight: bold;
     }
+    .indent {
+        margin: 5px;
+    }
     .pad {
         padding-top: 10px;
     }
     .paramname {
         font-style: italic;
     }
+
+    pre {
+        margin-top: 5px;
+    }
 </style>
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     <div class="row">
         <div class="col-md-12"><h1>DBHub API (in early development)</h1></div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading heading">Working examples with source code</div>
+    <div class="panel panel-primary" id="tags">
+        <div class="panel-heading heading">Note</div>
+        <div class="panel-body">If you'd like us to add something to this API, please
+            <a href="https://github.com/sqlitebrowser/dbhub.io/issues">let us know</a>. It may be easy for us to add,
+            and helps make a better API. :)
+        </div>
+    </div>
+
+    <!-- Examples -->
+    <div class="panel panel-info">
+        <div class="panel-heading heading">Applications using this API</div>
         <ul class="list-group">
             <li class="list-group-item">
                 <a href="https://github.com/JamesPerreault/MyGourmetRecipes">MyGourmetRecipes</a> - (Javascript) A web based Gourmet Recipe Manager, by <a href="https://github.com/JamesPerreault">James Perreault</a>
             </li>
         </ul>
     </div>
-    <div class="panel panel-default">
+
+    <!-- Libraries -->
+    <div class="panel panel-info">
         <div class="panel-heading heading">Libraries</div>
         <ul class="list-group">
             <li class="list-group-item"><a href="https://github.com/sqlitebrowser/go-dbhub">go-dbhub</a> - (Go) A library for accessing and using your SQLite libraries on DBHub.io</li>
         </ul>
     </div>
-    <div class="panel panel-default">
+
+    <!-- API functions -->
+    <div class="panel panel-info">
         <div class="panel-heading heading">API functions</div>
         <ul class="list-group">
             <li class="list-group-item"><a href="#branches" class="apiheading">Branches</a> - Returns the list of branches for a database</li>
@@ -59,6 +79,12 @@
         </ul>
     </div>
 
+    <!-- Errors -->
+    <div class="panel panel-info" id="errors">
+        <div class="panel-heading heading">Errors</div>
+        <div class="panel-body">Information on errors (TBD)</div>
+    </div>
+
     <!-- Branches -->
     <div class="panel panel-default" id="branches">
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Branches</div>
@@ -67,7 +93,7 @@
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/branches">/v1/branches</a></div>
                 <div class="col-md-10">Returns the list of branches for a database</div>
             </div>
@@ -75,15 +101,15 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
@@ -91,19 +117,23 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">Branches</div>
                 <div class="col-md-10">A list of all branches in the database, along with the branch details</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">Default branch</div>
                 <div class="col-md-10">A string with the name of the default branch.  eg: "master"</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of branches in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/branches</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -116,7 +146,7 @@
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/columns">/v1/columns</a></div>
                 <div class="col-md-10">Returns the list of columns in a table or view</div>
             </div>
@@ -124,19 +154,19 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">table</div>
                 <div class="col-md-10">The name of the table or view</div>
             </div>
@@ -144,15 +174,19 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of columns in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/columns</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -165,7 +199,7 @@
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/commits">/v1/commits</a></div>
                 <div class="col-md-10">Returns the details of all commits for a database</div>
             </div>
@@ -173,15 +207,15 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
@@ -189,15 +223,19 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of commits in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/commits</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -210,7 +248,7 @@
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/databases">/v1/databases</a></div>
                 <div class="col-md-10">Returns the list of databases in the requesting users account</div>
             </div>
@@ -218,7 +256,7 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
@@ -226,15 +264,19 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of databases in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/databases</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -247,7 +289,7 @@
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/diff">/v1/diff</a></div>
                 <div class="col-md-10">Generates a diff between two databases or two versions of a database</div>
             </div>
@@ -255,47 +297,51 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
-                <div class="col-md-2 paramname">dbowner A</div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbowner_a</div>
                 <div class="col-md-10">The owner of the first database</div>
             </div>
-            <div class="row">
-                <div class="col-md-2 paramname">dbname A</div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbname_a</div>
                 <div class="col-md-10">The name of the first database</div>
             </div>
-            <div class="row">
-                <div class="col-md-2 paramname">Commit A</div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">commit_a</div>
                 <div class="col-md-10">The commit ID of the first database</div>
             </div>
-            <div class="row">
-                <div class="col-md-2 paramname">dbowner B</div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbowner_b</div>
                 <div class="col-md-10">The owner of the second database</div>
             </div>
-            <div class="row">
-                <div class="col-md-2 paramname">dbname B</div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbname_b</div>
                 <div class="col-md-10">The name of the second database</div>
             </div>
-            <div class="row">
-                <div class="col-md-2 paramname">Commit B</div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">commit_b</div>
                 <div class="col-md-10">The commit ID of the second database</div>
             </div>
             <div class="row">
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of diff in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/diff</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -308,7 +354,7 @@
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/download">/v1/download</a></div>
                 <div class="col-md-10">Returns the requested SQLite database file as a stream of bytes</div>
             </div>
@@ -316,15 +362,15 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
@@ -332,15 +378,19 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of download in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/download</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -353,7 +403,7 @@
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/indexes">/v1/indexes</a></div>
                 <div class="col-md-10">Returns the details of all indexes in a SQLite database</div>
             </div>
@@ -361,15 +411,15 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
@@ -377,15 +427,19 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of indexes in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/indexes</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -398,7 +452,7 @@
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/metadata">/v1/metadata</a></div>
                 <div class="col-md-10">Returns the commit, branch, release, tag and web page information for a database</div>
             </div>
@@ -406,15 +460,15 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
@@ -422,15 +476,19 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of metadata in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/metadata</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -443,7 +501,7 @@
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/query">/v1/query</a></div>
                 <div class="col-md-10">Run a SQLite query on a database</div>
             </div>
@@ -451,19 +509,19 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">sql</div>
                 <div class="col-md-10">The SQL query, base64 encoded</div>
             </div>
@@ -471,35 +529,36 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-12">To run this query against <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>:
-                    <pre>
-SELECT table1.Name, table2.value
+                    <pre>SELECT table1.Name, table2.value
 FROM table1 JOIN table2
 USING (id)
-ORDER BY table1.id;
-            </pre>
-
+ORDER BY table1.id;</pre>
                     Using <a href="https://curl.haxx.se">curl</a>, it would be:
-                    <pre>
-$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" \
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" \
     -F sql="U0VMRUNUIHRhYmxlMS5OYW1lLCB0YWJsZTIudmFsdWUKRlJPTSB0YWJsZTEgSk9JTiB0YWJsZTIKVVNJTkcgKGlkKQpPUkRFUiBCWSB0YWJsZTEuaWQ7" \
-    https://api.dbhub.io/v1/query
-            </pre>
-
-                    The returned data, will be in JSON:
-                    <pre>
-[["[["]]{"Name":"Name","Type":3,"Value":"Foo"} ... (shortened for clarity)
-            </pre>
+    https://api.dbhub.io/v1/query</pre>
+                    The returned data (JSON) is in a fairly verbose format, with each field returned from the SQL query having three components:
+                    <ul>
+                        <li>The name of the return field</li>
+                        <li>The type of data in the field (numeric)</li>
+                        <li>The value of the field</li>
+                    </ul>
+                    Example output:
+                    <pre>[["[["]]{"Name":"Name","Type":3,"Value":"Foo"} ... (shortened for clarity)</pre>
+                    <span style="color: darkred; font-size: larger; font-weight: bolder;">Note</span> - If you'd like the
+                    data to be returned in a different format, please
+                    <a href="https://github.com/sqlitebrowser/dbhub.io/issues">let us know</a>.  It's easy for us to
+                    add new output formats, and helps make a better API. :)
                 </div>
-
             </div>
         </div>
     </div>
@@ -512,7 +571,7 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/releases">/v1/releases</a></div>
                 <div class="col-md-10">Returns the details of all releases for a database</div>
             </div>
@@ -520,15 +579,15 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
@@ -536,15 +595,19 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of releases in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/releases</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -557,7 +620,7 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/tables">/v1/tables</a></div>
                 <div class="col-md-10">Returns the list of tables in a SQLite database</div>
             </div>
@@ -565,15 +628,15 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
@@ -581,15 +644,19 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of tables in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/tables</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -602,7 +669,7 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/tags">/v1/tags</a></div>
                 <div class="col-md-10">Returns the details of all tags for a database</div>
             </div>
@@ -610,15 +677,15 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
@@ -626,15 +693,19 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">TBD</div>
                 <div class="col-md-10">TBD</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of tags in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/tags</pre>
+                </div>
             </div>
         </div>
     </div>
@@ -647,7 +718,7 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading">Query URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2"><a href="/v1/views">/v1/views</a></div>
                 <div class="col-md-10">Returns the list of views in a SQLite database</div>
             </div>
@@ -655,15 +726,15 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
                 <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
                 <div class="col-md-10">The owner of the database to query</div>
             </div>
-            <div class="row">
+            <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
                 <div class="col-md-10">The name of the database</div>
             </div>
@@ -671,15 +742,25 @@ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Te
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    The returned data is an array of JSON string values.  Each string is the name of a view in the database.
+                </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    Example: <pre>["joinedView"]</pre>
+                </div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
-            <div class="row">
-                <div class="col-md-12">TBD</div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To return the list of views in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/views</pre>
+                </div>
             </div>
         </div>
     </div>

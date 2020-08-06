@@ -213,7 +213,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	oa := r.PostFormValue("dbowner_a")
 	na := r.PostFormValue("dbname_a")
 	ca := r.PostFormValue("commit_a")
-	ob := r.PostFormValue("dbowner_a")
+	ob := r.PostFormValue("dbowner_b")
 	nb := r.PostFormValue("dbname_b")
 	cb := r.PostFormValue("commit_b")
 
