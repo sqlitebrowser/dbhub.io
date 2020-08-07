@@ -243,7 +243,7 @@
             <div class="row indent">
                 <div class="col-md-3 paramname">column_id</div>
                 <div class="col-md-1 type">number</div>
-                <div class="col-md-8">Which numeric position the column is in, with first column starting at 0</div>
+                <div class="col-md-8">The numeric position of the column in the table or view, with the first column starting at 0</div>
             </div>
             <div class="row indent">
                 <div class="col-md-3 paramname">name</div>
@@ -631,9 +631,40 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    The return value is a JSON array, containing the details of each index in JSON objects
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-3">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-8">Description</div>
+            </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+                <div class="col-md-3 paramname">name</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of the index</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">table</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of the table the index belongs to</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">columns</div>
+                <div class="col-md-1 type">array</div>
+                <div class="col-md-8">An array of objects listing the columns in the index</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">columns → id</div>
+                <div class="col-md-1 type">number</div>
+                <div class="col-md-8">The numeric position of the column in the index, with the first column starting at 0 </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">columns → name</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of the column in the table</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
@@ -851,8 +882,12 @@
                 <div class="col-md-10"></div>
             </div>
             <div class="row indent">
-                <div class="col-md-12">
+                <div class="col-md-12 returndesc">
                     The returned data (JSON) is in a fairly verbose format, with each field returned from the SQL query having three components:
+                </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-12">
                     <ul>
                         <li>The name of the return field</li>
                         <!-- TODO: Add the info of which numeric values == what SQLite data type -->
@@ -917,9 +952,50 @@ ORDER BY table1.id;</pre>
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    The return value is a JSON object containing the details of all the releases of the database
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-3">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-8">Description</div>
+            </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+                <div class="col-md-3 paramname">[release name]</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of the release.  eg: "v0.0.1"</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[release name] → commit</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The commit ID the release corresponds to</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[release name] → date</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">When the release was created</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[release name] → description</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">A free form text description of the release</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[release name] → email</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The email address of the person who created the release</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[release name] → name</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of the person who created the release</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[release name] → size</div>
+                <div class="col-md-1 type">number</div>
+                <div class="col-md-8">The file size of the release database, in bytes</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
@@ -984,7 +1060,7 @@ ORDER BY table1.id;</pre>
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row indent">
+            <div class="row returndesc">
                 <div class="col-md-12">
                     The returned data is an array of JSON string values.  Each string is the name of a table in the database.
                 </div>
@@ -1039,9 +1115,50 @@ ORDER BY table1.id;</pre>
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    The return value is a JSON object containing the details of all the tags in the database
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-3">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-8">Description</div>
+            </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+                <div class="col-md-3 paramname">[tag name]</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of the tag.  eg: "my first tag"</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[tag name] → commit</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The commit ID the tag corresponds to</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[tag name] → date</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">When the tag was created</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[tag name] → description</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">A free form text description of the tag</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[tag name] → email</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The email address of the person who created the tag</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[tag name] → name</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of the person who created the tag</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">[tag name] → size</div>
+                <div class="col-md-1 type">number</div>
+                <div class="col-md-8">The file size of the tagged database, in bytes</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
@@ -1105,7 +1222,7 @@ ORDER BY table1.id;</pre>
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row indent">
+            <div class="row returndesc">
                 <div class="col-md-12">
                     The returned data is an array of JSON string values.  Each string is the name of a view in the database.
                 </div>
