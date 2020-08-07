@@ -48,7 +48,7 @@
     <div class="row">
         <div class="col-md-12"><h1>DBHub API (in early development)</h1></div>
     </div>
-    <div class="panel panel-primary" id="tags">
+    <div class="panel panel-primary" id="note">
         <div class="panel-heading heading">Note</div>
         <div class="panel-body">If you feel something is missing from this API, please
             <a href="https://github.com/sqlitebrowser/dbhub.io/issues">let us know</a>. It may be easy for us to add,
@@ -348,9 +348,110 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    The return value is a JSON object containing the details of all commits in the database
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-4">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-7">Description</div>
+            </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+                <div class="col-md-4 paramname">[commit id]</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The unique ID of the commit.  This is a SHA256 of the contained values.</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → author_email</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The email address of the person who added created this commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → author_name</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The name of the person who added created this commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → committer_email</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The email address of the person who added the commit to this database, if different from the author</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → committer_name</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The name of the person who added the commit to this database, if different from the author</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → id</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The unique ID of this commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → message</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">A free form text description for this commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → other_parents</div>
+                <div class="col-md-1 type">array</div>
+                <div class="col-md-7">A list of other parent commit IDs</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → parent</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The ID of the parent commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → timestamp</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">When this commit was created</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → tree</div>
+                <div class="col-md-1 type">object</div>
+                <div class="col-md-7">Contains the information of the filesystem tree for this commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → tree → id</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">A unique id for this tree entry</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → tree → entries</div>
+                <div class="col-md-1 type">Array</div>
+                <div class="col-md-7">And array of tree entries, with one entry per filesystem object in the commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → tree → entries → entry_type</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The type of entry.  Only "db" so far.</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → tree → entries → last_modified</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">When this tree entry was created</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → tree → entries → licence</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The sha256 (a unique identifier) of the licence for the database (up to this commit)</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → tree → entries → name</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The name of the database file</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → tree → entries → sha256</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">The sha256 of the database file</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">[commit id] → tree → entries → size</div>
+                <div class="col-md-1 type">number</div>
+                <div class="col-md-7">The size of the database file in bytes</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
@@ -733,9 +834,20 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row indent">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    The return value is a JSON object, containing the details of all branches, commits, releases, tags,
+                    the default branch, and the web page of the commit.</div>
+                <div class="col-md-12">
+                    Refer to the return value information for each of the functions for details:
+                    <ul>
+                        <li><a href="#branches">Branches, and the default branch</a></li>
+                        <li><a href="#commits">Commits</a></li>
+                        <li><a href="#releases">Releases</a></li>
+                        <li><a href="#tags">Tags</a></li>
+                        <li><a href="#webpage">Webpage</a></li>
+                    </ul>
+                </div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
