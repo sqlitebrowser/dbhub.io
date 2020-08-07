@@ -24,9 +24,24 @@
     .paramname {
         font-style: italic;
     }
-
     pre {
         margin-top: 5px;
+    }
+    .returndesc {
+        border-color: darkgray;
+        border-style: solid;
+        border-radius: 8px;
+        border-width: 2px;
+        margin: 5px;
+        padding-bottom: 10px;
+        padding-top: 10px;
+    }
+    .returnhdr {
+        font-weight: bold;
+    }
+    .type {
+        font-family: monospace;
+        font-size: x-large;
     }
 </style>
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
@@ -114,16 +129,48 @@
                 <div class="col-md-10">The name of the database</div>
             </div>
             <div class="row">
-                <div class="col-md-2 heading pad">Return values (JSON)</div>
-                <div class="col-md-10"></div>
+                <div class="col-md-12 heading pad">Return values (JSON)</div>
+            </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    The return value is a JSON object containing the default branch name, and a "branches" object with
+                    the details for each of the branches
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-3">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-8">Description</div>
             </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">Branches</div>
-                <div class="col-md-10">A list of all branches in the database, along with the branch details</div>
+                <div class="col-md-3 paramname">default_branch</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of the default branch for the database.  eg: "master"</div>
             </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">Default branch</div>
-                <div class="col-md-10">A string with the name of the default branch.  eg: "master"</div>
+                <div class="col-md-3 paramname">branches</div>
+                <div class="col-md-1 type">object</div>
+                <div class="col-md-8">Contains details of all branches in the database, as an unordered set of <span class="type" style="font-style: italic;">"branch name": { branch details }</span> pairs</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">branches → [branch name]</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of a branch in the database.  eg: "master"</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">branches → [branch object] → commit</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The commit ID of the branch HEAD</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">branches → [branch object] → commit_count</div>
+                <div class="col-md-1 type">number</div>
+                <div class="col-md-8">The number of commits in the branch</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">branches → [branch object] → description</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">A free form text description for the branch</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
@@ -138,7 +185,7 @@
     "master": {
       "commit": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
       "commit_count": 2,
-      "description": ""
+      "description": "Our main development branch"
     }
   },
   "default_branch": "master"
@@ -181,19 +228,65 @@
                 <div class="col-md-10">The name of the table or view</div>
             </div>
             <div class="row">
-                <div class="col-md-2 heading pad">Return values (JSON)</div>
-                <div class="col-md-10"></div>
+                <div class="col-md-12 heading pad">Return values (JSON)</div>
+            </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    The return value is a JSON array, containing the details of each column in JSON objects
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-3">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-8">Description</div>
             </div>
             <div class="row indent">
-                <div class="col-md-2 paramname">TBD</div>
-                <div class="col-md-10">TBD</div>
+                <div class="col-md-3 paramname">column_id</div>
+                <div class="col-md-1 type">number</div>
+                <div class="col-md-8">Which numeric position the column is in, with first column starting at 0</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">name</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The name of the column</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">data_type</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The data type of the column</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">not_null</div>
+                <div class="col-md-1 type">boolean</div>
+                <div class="col-md-8">Whether the column is a NOT NULL one</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">default_value</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8">The default value for the column, if any</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">primary_key</div>
+                <div class="col-md-1 type">number</div>
+                <div class="col-md-8"><span style="color: red;">TBD</span></div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">autoinc</div>
+                <div class="col-md-1 type">boolean</div>
+                <div class="col-md-8">Whether the column is an Automatic Increment one</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-3 paramname">collation_seq</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-8"><span style="color: red;">TBD</span></div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
             <div class="row indent">
                 <div class="col-md-12">
-                    To return the list of columns in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    To return the list of columns in the "table1" table of
+                    <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" -F table="table1" https://api.dbhub.io/v1/columns</pre>
                     Output: <pre>[
@@ -346,7 +439,7 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row indent">
+            <div class="row returndesc">
                 <div class="col-md-12">
                     The returned data is an array of JSON string values.  Each string is the name of a database in your account.
                 </div>
@@ -490,15 +583,15 @@
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
             </div>
-            <div class="row indent">
-                <div class="col-md-12">The database file is sent back to the requester</div>
+            <div class="row returndesc">
+                <div class="col-md-12">The database file is returned as a stream of bytes in the request body</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>
             </div>
             <div class="row indent">
                 <div class="col-md-12">
-                    To return the list of download in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
+                    To download <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/download</pre>
                 </div>
