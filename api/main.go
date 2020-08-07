@@ -112,6 +112,12 @@ func main() {
 	http.Handle("/v1/tags", gz.GzipHandler(handleWrapper(tagsHandler)))
 	http.Handle("/v1/views", gz.GzipHandler(handleWrapper(viewsHandler)))
 
+	// favicon.ico
+	http.Handle("/favicon.ico", gz.GzipHandler(handleWrapper(func(w http.ResponseWriter, r *http.Request) {
+		logReq(r, "-")
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "favicon.ico"))
+	})))
+
 	// Load our self signed CA Cert chain, check client certificates if given, and set TLS1.2 as minimum
 	newTLSConfig := &tls.Config{
 		ClientAuth:               tls.VerifyClientCertIfGiven,
