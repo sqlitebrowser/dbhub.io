@@ -313,7 +313,7 @@ func jsonErr(w http.ResponseWriter, msg string, statusCode int) {
 	je := com.JsonError{
 		Error: msg,
 	}
-	jsonData, err := json.Marshal(je)
+	jsonData, err := json.MarshalIndent(je, "", "  ")
 	if err != nil {
 		errMsg := fmt.Sprintf("A 2nd error occurred when JSON marshalling an error structure: %v\n", err)
 		log.Print(errMsg)

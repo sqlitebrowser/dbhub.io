@@ -51,8 +51,8 @@
     <div class="panel panel-primary" id="note">
         <div class="panel-heading heading">Note</div>
         <div class="panel-body">If you feel something is missing from this API, please
-            <a href="https://github.com/sqlitebrowser/dbhub.io/issues">let us know</a>. It may be easy for us to add,
-            and helps make a better API. :)
+            <a href="https://github.com/sqlitebrowser/dbhub.io/issues">let us know</a>. It may be easy to add, and
+            helps make a better API. :)
         </div>
     </div>
 
@@ -97,7 +97,12 @@
     <!-- Errors -->
     <div class="panel panel-info" id="errors">
         <div class="panel-heading heading">Errors</div>
-        <div class="panel-body">Information on errors (TBD)</div>
+        <div class="panel-body">Errors signalled using standard HTTP status code in the response (eg 404 for "Not
+            Found", 200 for "Success", etc).  When an error occurs, the response body will be a JSON object with an
+            "error" field containing the text description of the problem.  For example:<pre>{
+  "error": "The requested database wasn't found"
+}</pre>
+        </div>
     </div>
 
     <!-- Branches -->
