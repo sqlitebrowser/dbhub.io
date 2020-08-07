@@ -97,11 +97,17 @@
     <!-- Errors -->
     <div class="panel panel-info" id="errors">
         <div class="panel-heading heading">Errors</div>
-        <div class="panel-body">Errors signalled using standard HTTP status code in the response (eg 404 for "Not
-            Found", 200 for "Success", etc).  When an error occurs, the response body will be a JSON object with an
-            "error" field containing the text description of the problem.  For example:<pre>{
+        <div class="panel-body">
+            <div>
+                Errors are signalled using standard HTTP status code in the response (eg 404 for "Not Found", 200 for
+                "Success", etc).
+            </div>
+            <div>
+                When an error occurs, the response body will be a JSON object with an "error" field containing a text
+                description of the problem as returned from DBHub.io.  For example:<pre>{
   "error": "The requested database wasn't found"
 }</pre>
+            </div>
         </div>
     </div>
 
