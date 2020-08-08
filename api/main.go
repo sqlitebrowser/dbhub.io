@@ -111,6 +111,7 @@ func main() {
 	http.Handle("/v1/tables", gz.GzipHandler(handleWrapper(tablesHandler)))
 	http.Handle("/v1/tags", gz.GzipHandler(handleWrapper(tagsHandler)))
 	http.Handle("/v1/views", gz.GzipHandler(handleWrapper(viewsHandler)))
+	http.Handle("/v1/webpage", gz.GzipHandler(handleWrapper(webpageHandler)))
 
 	// favicon.ico
 	http.Handle("/favicon.ico", gz.GzipHandler(handleWrapper(func(w http.ResponseWriter, r *http.Request) {
@@ -203,7 +204,6 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner,
 		httpStatus = http.StatusNotFound
 		return
 	}
-
 	return
 }
 

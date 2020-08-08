@@ -72,3 +72,9 @@ func MetadataResponse(dbOwner, dbFolder, dbName string) (meta MetadataResponseCo
 	meta.WebPage = "https://" + Conf.Web.ServerName + "/" + dbOwner + "/" + dbName
 	return
 }
+
+// WebpageResponseContainer holds the response to a client request for the database webUI URL. It's a temporary structure,
+// mainly so the JSON created for it is consistent between our various daemons
+type WebpageResponseContainer struct {
+	WebPage string `json:"web_page"`
+}

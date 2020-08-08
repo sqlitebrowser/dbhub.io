@@ -622,3 +622,30 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, string(jsonData))
 }
+
+// webpageHandler returns the URL of the database file in the webUI.  eg. for web browsers
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/webpage
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database being queried
+//   * "dbname" is the name of the database being queried
+func webpageHandler(w http.ResponseWriter, r *http.Request) {
+	// Authenticate user and collect requested database details
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+	dbFolder := "/"
+
+	// Return the database webUI URL to the user
+	var z com.WebpageResponseContainer
+	z.WebPage = "https://" + com.Conf.Web.ServerName + "/" + dbOwner + dbFolder + dbName
+	jsonData, err := json.MarshalIndent(z, "", "  ")
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in webpageHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
+}
