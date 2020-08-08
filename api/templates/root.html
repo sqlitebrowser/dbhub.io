@@ -79,7 +79,7 @@
         <div class="panel-heading heading">API functions</div>
         <ul class="list-group">
             <li class="list-group-item"><a href="#branches" class="apiheading">Branches</a> - Returns the list of branches for a database</li>
-            <li class="list-group-item"><a href="#columns" class="apiheading">Columns</a> - Returns the list of columns in a table or view</li>
+            <li class="list-group-item"><a href="#columns" class="apiheading">Columns</a> - Returns the details of all columns in a table or view</li>
             <li class="list-group-item"><a href="#commits" class="apiheading">Commits</a> - Returns the details of all commits for a database</li>
             <li class="list-group-item"><a href="#databases" class="apiheading">Databases</a> - Returns the list of databases in the requesting users account</li>
             <li class="list-group-item"><a href="#diff" class="apiheading">Diff</a> - Generates a diff between two databases or two versions of a database</li>
@@ -216,7 +216,10 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2"><a href="/v1/columns">/v1/columns</a></div>
-                <div class="col-md-10">Returns the list of columns in a table or view</div>
+                <div class="col-md-10">
+                    Returns the details of all columns in a table or view, as per the SQLite
+                    "<a href="https://sqlite.org/pragma.html#pragma_table_info">table_info</a>" PRAGMA.
+                </div>
             </div>
             <div class="row">
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
@@ -236,14 +239,14 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">table</div>
-                <div class="col-md-10">The name of the table or view</div>
+                <div class="col-md-10">The name of the table or view to return column information for</div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Return values (JSON)</div>
             </div>
             <div class="row returndesc">
                 <div class="col-md-12">
-                    The return value is a JSON array, containing the details of each column in JSON objects
+                    The return value is a JSON array, containing the details of each column in JSON objects.
                 </div>
             </div>
             <div class="row indent returnhdr">
@@ -269,7 +272,7 @@
             <div class="row indent">
                 <div class="col-md-3 paramname">not_null</div>
                 <div class="col-md-1 type">boolean</div>
-                <div class="col-md-8">Whether the column is a NOT NULL one</div>
+                <div class="col-md-8">Whether the column can be set to NULL</div>
             </div>
             <div class="row indent">
                 <div class="col-md-3 paramname">default_value</div>
@@ -279,17 +282,10 @@
             <div class="row indent">
                 <div class="col-md-3 paramname">primary_key</div>
                 <div class="col-md-1 type">number</div>
-                <div class="col-md-8"><span style="color: red;">TBD</span></div>
-            </div>
-            <div class="row indent">
-                <div class="col-md-3 paramname">autoinc</div>
-                <div class="col-md-1 type">boolean</div>
-                <div class="col-md-8">Whether the column is an Automatic Increment one</div>
-            </div>
-            <div class="row indent">
-                <div class="col-md-3 paramname">collation_seq</div>
-                <div class="col-md-1 type">string</div>
-                <div class="col-md-8"><span style="color: red;">TBD</span></div>
+                <div class="col-md-8">
+                    This is set to zero for columns that are not part of the primary key, and is the index of the
+                    column in the primary key for columns that are part of the primary key
+                </div>
             </div>
             <div class="row">
                 <div class="col-md-12 heading pad">Example</div>

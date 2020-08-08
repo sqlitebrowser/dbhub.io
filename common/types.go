@@ -210,8 +210,6 @@ type APIJSONColumn struct {
 	NotNull   bool   `json:"not_null"`
 	DfltValue string `json:"default_value"`
 	Pk        int    `json:"primary_key"`
-	Autoinc   bool   `json:"autoinc"`
-	CollSeq   string `json:"collation_seq"`
 }
 
 // APIJSONIndexColumn holds the details of one column of a SQLite database index.  It's used by our API for returning

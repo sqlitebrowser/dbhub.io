@@ -96,8 +96,6 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 			NotNull:   j.NotNull,
 			DfltValue: j.DfltValue,
 			Pk:        j.Pk,
-			Autoinc:   j.Autoinc,
-			CollSeq:   j.CollSeq,
 		})
 	}
 
