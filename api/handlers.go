@@ -113,8 +113,8 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/commits
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
-//   * "dbowner" is the owner of the database being queried
-//   * "dbname" is the name of the database being queried
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
 func commitsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
 	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
@@ -300,8 +300,8 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/download
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
-//   * "dbowner" is the owner of the database being queried
-//   * "dbname" is the name of the database being queried
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
 func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticate user and collect requested database details
 	loggedInUser, dbOwner, dbName, commitID, httpStatus, err := collectInfo(w, r)
@@ -323,8 +323,8 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/indexes
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
-//   * "dbowner" is the owner of the database being queried
-//   * "dbname" is the name of the database being queried
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
 func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
 	sdb, httpStatus, err := collectInfoAndOpen(w, r)
@@ -377,8 +377,8 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/metadata
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
-//   * "dbowner" is the owner of the database being queried
-//   * "dbname" is the name of the database being queried
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
 func metadataHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
 	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
@@ -413,8 +413,8 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 //       -F sql="U0VMRUNUIHRhYmxlMS5OYW1lLCB0YWJsZTIudmFsdWUKRlJPTSB0YWJsZTEgSk9JTiB0YWJsZTIKVVNJTkcgKGlkKQpPUkRFUiBCWSB0YWJsZTEuaWQ7" \
 //       https://api.dbhub.io/v1/query
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
-//   * "dbowner" is the owner of the database being queried
-//   * "dbname" is the name of the database being queried
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
 //   * "sql" is the SQL query to run, base64 encoded
 func queryHandler(w http.ResponseWriter, r *http.Request) {
 	loggedInUser, err := checkAuth(w, r)
@@ -473,8 +473,8 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/releases
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
-//   * "dbowner" is the owner of the database being queried
-//   * "dbname" is the name of the database being queried
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
 func releasesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
 	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
@@ -531,8 +531,8 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/tables
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
-//   * "dbowner" is the owner of the database being queried
-//   * "dbname" is the name of the database being queried
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
 func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
 	sdb, httpStatus, err := collectInfoAndOpen(w, r)
@@ -563,8 +563,8 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/tags
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
-//   * "dbowner" is the owner of the database being queried
-//   * "dbname" is the name of the database being queried
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
 func tagsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
 	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
@@ -589,6 +589,62 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, string(jsonData))
+}
+
+// uploadHandler creates a new database in your account, or adds a new commit to an existing database
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbname="Join Testing.sqlite" -F file=@someupload.sqlite \
+//       -F "branch=master" -F "commitmsg=stuff" -F "sourceurl=https://example.org" \
+//       -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" \
+//       -F "commit=51d494f2c5eb6734ddaa204eccb9597b426091c79c951924ac83c72038f22b55" https://api.dbhub.io/v1/upload
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbname" is the name of the database being created
+//   * "file" is the database file to upload
+//   * "branch" (optional) is the database branch this commit is for.  Uses the default database branch if not specified
+//   * "commitmsg" (optional) is a message to include with the commit.  Often a description of the changes in the new data
+//   * "sourceurl" (optional) is the URL to the reference source of the data
+//   * "lastmodified" (optional) is a datestamp in RFC3339 format
+//   * "licence" (optional) is an identifier for a license that's "in the system"
+//   * "public" (optional) is whether or not the database should be public.  True means "public", false means "not public"
+//   * "commit" (optional for new databases, required for existing ones) is the commit ID this new database revision
+//      should be appended to.  For new databases it's not needed, but for existing databases it's required (its used to
+//      detect out of date / conflicting uploads)
+func uploadHandler(w http.ResponseWriter, r *http.Request) {
+	// Authenticate user and collect requested database details
+	loggedInUser, _, dbName, commitID, httpStatus, err := collectInfo(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
+
+	// Set the maximum accepted database size for uploading
+	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+
+	// The "public" user isn't allowed to make changes
+	if loggedInUser == "public" {
+		log.Printf("User from '%s' attempted to add a database using the public certificate", r.RemoteAddr)
+		jsonErr(w, "You're using the 'public' certificate, which isn't allowed to make changes on the server",
+			http.StatusUnauthorized)
+		return
+	}
+
+	// Check whether the uploaded database is too large
+	// TODO: Have a list of users (from the config.toml file) which don't have this check applied
+	if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+		jsonErr(w,
+			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
+				com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
+		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
+			loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
+		return
+	}
+
+	// Process the upload
+	_, httpStatus, err = com.UploadResponse(w, r, loggedInUser, loggedInUser, dbName, commitID)
+	if err != nil {
+		jsonErr(w, err.Error(), httpStatus)
+		return
+	}
 }
 
 // viewsHandler returns the list of views in a SQLite database

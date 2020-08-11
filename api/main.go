@@ -110,6 +110,7 @@ func main() {
 	http.Handle("/v1/releases", gz.GzipHandler(handleWrapper(releasesHandler)))
 	http.Handle("/v1/tables", gz.GzipHandler(handleWrapper(tablesHandler)))
 	http.Handle("/v1/tags", gz.GzipHandler(handleWrapper(tagsHandler)))
+	http.Handle("/v1/upload", gz.GzipHandler(handleWrapper(uploadHandler)))
 	http.Handle("/v1/views", gz.GzipHandler(handleWrapper(viewsHandler)))
 	http.Handle("/v1/webpage", gz.GzipHandler(handleWrapper(webpageHandler)))
 
