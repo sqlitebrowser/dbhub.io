@@ -610,15 +610,22 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 //      should be appended to.  For new databases it's not needed, but for existing databases it's required (its used to
 //      detect out of date / conflicting uploads)
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
-	// Authenticate user and collect requested database details
-	loggedInUser, _, dbName, commitID, httpStatus, err := collectInfo(w, r)
+	// Set the maximum accepted database size for uploading
+	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+
+	// Authenticate the request
+	loggedInUser, err := checkAuth(w, r)
 	if err != nil {
-		jsonErr(w, err.Error(), httpStatus)
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	// Set the maximum accepted database size for uploading
-	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+	// Extract the database name and (optional) commit ID for the database from the request
+	_, dbName, commitID, err := com.GetFormODC(r)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// The "public" user isn't allowed to make changes
 	if loggedInUser == "public" {
@@ -640,7 +647,9 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Process the upload
-	_, httpStatus, err = com.UploadResponse(w, r, loggedInUser, loggedInUser, dbName, commitID)
+	var httpStatus int
+	dbOwner := loggedInUser // We always use the API key / cert owner as the database owner for uploads
+	_, httpStatus, err = com.UploadResponse(w, r, loggedInUser, dbOwner, dbName, commitID)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
