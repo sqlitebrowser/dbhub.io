@@ -85,10 +85,11 @@ func MetadataResponse(dbOwner, dbFolder, dbName string) (meta MetadataResponseCo
 	return
 }
 
-// WebpageResponseContainer holds the response to a client request for the database webUI URL. It's a temporary structure,
-// mainly so the JSON created for it is consistent between our various daemons
-type WebpageResponseContainer struct {
-	WebPage string `json:"web_page"`
+// UploadResponseContainer holds the response to a client upload. It's a temporary structure, mainly so the JSON
+// created for it is consistent between our various daemons
+type UploadResponseContainer struct {
+	CommitID string `json:"commit"`
+	URL      string `json:"url"`
 }
 
 // UploadResponse validates incoming upload requests from the db4s and api daemons, then processes the upload
@@ -489,4 +490,10 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	u += fmt.Sprintf(`?branch=%s&commit=%s`, branchName, returnCommitID)
 	retMsg = map[string]string{"commit_id": returnCommitID, "url": u}
 	return
+}
+
+// WebpageResponseContainer holds the response to a client request for the database webUI URL. It's a temporary structure,
+// mainly so the JSON created for it is consistent between our various daemons
+type WebpageResponseContainer struct {
+	WebPage string `json:"web_page"`
 }

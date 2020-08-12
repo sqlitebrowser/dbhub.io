@@ -90,7 +90,9 @@
             <li class="list-group-item"><a href="#releases" class="apiheading">Releases</a> - Returns the details of all releases for a database</li>
             <li class="list-group-item"><a href="#tables" class="apiheading">Tables</a> - Returns the list of tables in a SQLite database</li>
             <li class="list-group-item"><a href="#tags" class="apiheading">Tags</a> - Returns the details of all tags for a database</li>
+            <li class="list-group-item"><a href="#upload" class="apiheading">Upload</a> - Creates a new database in your account, or adds a new commit to an existing database</li>
             <li class="list-group-item"><a href="#views" class="apiheading">Views</a> - Returns the list of views in a SQLite database</li>
+            <li class="list-group-item"><a href="#webpage" class="apiheading">Webpage</a> - Returns the address of the database in the webUI.  eg. for web browsers</li>
         </ul>
     </div>
 
@@ -116,7 +118,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Branches</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -129,11 +131,11 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -211,7 +213,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Columns</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -227,11 +229,11 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -328,7 +330,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Commits</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -341,11 +343,11 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -368,17 +370,17 @@
             <div class="row indent">
                 <div class="col-md-4 paramname">[commit id]</div>
                 <div class="col-md-1 type">string</div>
-                <div class="col-md-7">The unique ID of the commit.  This is a SHA256 of the contained values.</div>
+                <div class="col-md-7">The unique ID of the commit.  This is the SHA256 of the contained values.</div>
             </div>
             <div class="row indent">
                 <div class="col-md-4 paramname">[commit id] → author_email</div>
                 <div class="col-md-1 type">string</div>
-                <div class="col-md-7">The email address of the person who added created this commit</div>
+                <div class="col-md-7">The email address of the person who created this commit</div>
             </div>
             <div class="row indent">
                 <div class="col-md-4 paramname">[commit id] → author_name</div>
                 <div class="col-md-1 type">string</div>
-                <div class="col-md-7">The name of the person who added created this commit</div>
+                <div class="col-md-7">The name of the person who created this commit</div>
             </div>
             <div class="row indent">
                 <div class="col-md-4 paramname">[commit id] → committer_email</div>
@@ -403,7 +405,7 @@
             <div class="row indent">
                 <div class="col-md-4 paramname">[commit id] → other_parents</div>
                 <div class="col-md-1 type">array</div>
-                <div class="col-md-7">A list of other parent commit IDs</div>
+                <div class="col-md-7">A list of other parent commit IDs, as used in merge commits</div>
             </div>
             <div class="row indent">
                 <div class="col-md-4 paramname">[commit id] → parent</div>
@@ -528,7 +530,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Databases</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -541,7 +543,7 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row">
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
@@ -576,7 +578,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Diff</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -589,7 +591,7 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner_a</div>
@@ -664,7 +666,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Download</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -677,11 +679,11 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -712,7 +714,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Indexes</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -725,11 +727,11 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -814,7 +816,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Metadata</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -827,11 +829,11 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -969,7 +971,7 @@
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Query</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -982,11 +984,11 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -1039,12 +1041,15 @@ ORDER BY table1.id;</pre>
         </div>
     </div>
 
+
+    <!--  FIXME: Add a field which specifies whether each parameter is required or optional -->
+
     <!-- Releases -->
     <div class="panel panel-default" id="releases">
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Releases</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -1057,11 +1062,11 @@ ORDER BY table1.id;</pre>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -1152,7 +1157,7 @@ ORDER BY table1.id;</pre>
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Tables</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -1165,11 +1170,11 @@ ORDER BY table1.id;</pre>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -1207,7 +1212,7 @@ ORDER BY table1.id;</pre>
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Tags</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -1220,11 +1225,11 @@ ORDER BY table1.id;</pre>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -1309,12 +1314,204 @@ ORDER BY table1.id;</pre>
         </div>
     </div>
 
+    <!-- Upload -->
+    <div class="panel panel-default" id="upload">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Upload</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2"><a href="/v1/upload">/v1/upload</a></div>
+                <div class="col-md-10">Creates a new database in your account, or adds a new commit to an existing database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    Most of the upload parameters are optional values which - if supplied - will be used in generating
+                    the database commit
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-2">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">Description</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Required</div>
+                <div class="col-md-7">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional (but recommended)</div>
+                <div class="col-md-7">The name of the database</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">commit_id</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Only required for existing databases</div>
+                <div class="col-md-7">The commit ID which this new upload should be appended to</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">authoremail</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">The email address of the person who created this commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">authorname</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">The name of the person who created this commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">branch</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">The name of the branch this database will be uploaded to</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">commitmsg</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">A free form text description for this commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">committeremail</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">
+                    The email address of the person who added the commit to this database, if different from the author
+                </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">committername</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">
+                    The name of the person who added the commit to this database, if different from the author
+                </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">committimestamp</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">
+                    This becomes the upload commit's creation timestamp.  A text string in
+                    <a href="https://tools.ietf.org/html/rfc3339#page-10">RFC 3339</a> format.
+                </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbshasum</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">
+                    The SHA256 checksum of the database file being uploaded.  If you include this, the DBHub.io cloud
+                    will verify that the uploaded database file matches this checksum.
+                </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">force</div>
+                <div class="col-md-1 type">boolean</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">
+                    Only useful when uploading a database over the top of existing commits in a branch.  Without this
+                    option being set (to true), the DBHub.io cloud will reject the upload as it could result in data
+                    loss.  <span style="color: red;">Don't use this option unless you understand in depth what it
+                    does</span>
+                </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">lastmodified</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">
+                    This value will be used for the "Last Modified" field in the new commit of the database.  A text
+                    string in <a href="https://tools.ietf.org/html/rfc3339#page-10">RFC 3339</a> format.
+                </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">licence</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">The sha256 (a unique identifier) of the licence for the database (up to this commit)</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">otherparents</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">A list of other parent commit IDs, as used in merge commits</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">public</div>
+                <div class="col-md-1 type">boolean</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">Should this database be public (true) or private (false)?</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">sourceurl</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">The URL to the reference source of the data</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    If the database creation was successful,
+                    <a href="https://tools.ietf.org/html/rfc7231#page-52" target="_blank">http response code 201</a>
+                    will be returned, along with the new commit ID and web page URL in the json response body
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-2">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-9">Description</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">commit</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-9">The unique ID of the new commit</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">url</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-9">The web browser URL of the new database, or database revision</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To upload a new database using <a href="https://curl.haxx.se">curl</a>, you could use:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbname="Join Testing.sqlite" \
+    -F file=@someupload.sqlite -F "branch=master" -F "commitmsg=stuff" -F "sourceurl=https://example.org" \
+    -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" https://api.dbhub.io/v1/upload</pre>
+                    Output: <pre>{
+  "commit": "e6ab7a2afbb5537d9e57d54c0a2a5d9e4033e1aa6db810cb9a63642a04e3813d",
+  "url": "https://dbhub.io/justinclift/Join Testing.sqlite?branch=master\u0026commit=e6ab7a2afbb5537d9e57d54c0a2a5d9e4033e1aa6db810cb9a63642a04e3813d"
+}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Views -->
     <div class="panel panel-default" id="views">
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Views</div>
         <div class="panel-body">
             <div class="row">
-                <div class="col-md-2 heading">Query URL</div>
+                <div class="col-md-2 heading">URL</div>
                 <div class="col-md-10 heading">Description</div>
             </div>
             <div class="row indent">
@@ -1327,11 +1524,11 @@ ORDER BY table1.id;</pre>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in.</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbowner</div>
-                <div class="col-md-10">The owner of the database to query</div>
+                <div class="col-md-10">The owner of the database</div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">dbname</div>
@@ -1363,6 +1560,64 @@ ORDER BY table1.id;</pre>
             </div>
         </div>
     </div>
+
+    <!-- Webpage -->
+    <div class="panel panel-default" id="webpage">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Webpage</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2"><a href="/v1/webpage">/v1/webpage</a></div>
+                <div class="col-md-10">Returns the address of the database in the webUI.  eg. for web browsers</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    The returned data is an array of JSON string values.  Each string is the name of a view in the database.
+                </div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">web_page</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-9">The URL to the database in the website</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To retrieve the URL of a database using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/webpage</pre>
+                    Output: <pre>{
+  "web_page": "https://dbhub.io/justinclift/Join Testing.sqlite"
+}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 <script>
     (function(f, a, t, h, o, m){

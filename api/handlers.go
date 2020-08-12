@@ -606,7 +606,7 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 //   * "lastmodified" (optional) is a datestamp in RFC3339 format
 //   * "licence" (optional) is an identifier for a license that's "in the system"
 //   * "public" (optional) is whether or not the database should be public.  True means "public", false means "not public"
-//   * "commit" (optional for new databases, required for existing ones) is the commit ID this new database revision
+//   * "commit" (ignored for new databases, required for existing ones) is the commit ID this new database revision
 //      should be appended to.  For new databases it's not needed, but for existing databases it's required (its used to
 //      detect out of date / conflicting uploads)
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -648,12 +648,38 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Process the upload
 	var httpStatus int
+	var x map[string]string
 	dbOwner := loggedInUser // We always use the API key / cert owner as the database owner for uploads
-	_, httpStatus, err = com.UploadResponse(w, r, loggedInUser, dbOwner, dbName, commitID)
+	x, httpStatus, err = com.UploadResponse(w, r, loggedInUser, dbOwner, dbName, commitID)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Construct the response message
+	var ok bool
+	var newCommit, newURL string
+	if newCommit, ok = x["commit_id"]; !ok {
+		jsonErr(w, "Something went wrong when uploading the database, no commit ID was returned",
+			http.StatusInternalServerError)
+		return
+	}
+	if newURL, ok = x["url"]; !ok {
+		jsonErr(w, "Something went wrong when uploading the database, no url was returned",
+			http.StatusInternalServerError)
+		return
+	}
+	z := com.UploadResponseContainer{CommitID: newCommit, URL: newURL}
+	jsonData, err := json.MarshalIndent(z, "", "  ")
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in uploadHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
+
+	// Signal the successful database creation
+	http.Error(w, "", http.StatusCreated)
 }
 
 // viewsHandler returns the list of views in a SQLite database
@@ -688,7 +714,7 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(jsonData))
 }
 
-// webpageHandler returns the URL of the database file in the webUI.  eg. for web browsers
+// webpageHandler returns the address of the database in the webUI.  eg. for web browsers
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/webpage
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
