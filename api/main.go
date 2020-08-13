@@ -102,6 +102,7 @@ func main() {
 	http.Handle("/v1/columns", gz.GzipHandler(handleWrapper(columnsHandler)))
 	http.Handle("/v1/commits", gz.GzipHandler(handleWrapper(commitsHandler)))
 	http.Handle("/v1/databases", gz.GzipHandler(handleWrapper(databasesHandler)))
+	http.Handle("/v1/delete", gz.GzipHandler(handleWrapper(deleteHandler)))
 	http.Handle("/v1/diff", gz.GzipHandler(handleWrapper(diffHandler)))
 	http.Handle("/v1/download", gz.GzipHandler(handleWrapper(downloadHandler)))
 	http.Handle("/v1/indexes", gz.GzipHandler(handleWrapper(indexesHandler)))

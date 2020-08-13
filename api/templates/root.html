@@ -82,6 +82,7 @@
             <li class="list-group-item"><a href="#columns" class="apiheading">Columns</a> - Returns the details of all columns in a table or view</li>
             <li class="list-group-item"><a href="#commits" class="apiheading">Commits</a> - Returns the details of all commits for a database</li>
             <li class="list-group-item"><a href="#databases" class="apiheading">Databases</a> - Returns the list of databases in the requesting users account</li>
+            <li class="list-group-item"><a href="#delete" class="apiheading">Delete</a> - Deletes a database from the requesting users account</li>
             <li class="list-group-item"><a href="#diff" class="apiheading">Diff</a> - Generates a diff between two databases or two versions of a database</li>
             <li class="list-group-item"><a href="#download" class="apiheading">Download</a> - Returns the requested SQLite database file</li>
             <li class="list-group-item"><a href="#indexes" class="apiheading">Indexes</a> - Returns the details of all indexes in a SQLite database</li>
@@ -568,6 +569,64 @@
   "DB4S daily users by country.sqlite",
   "Marine Litter Survey (Keep Northern Ireland Beautiful).sqlite"
 ]</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete -->
+    <div class="panel panel-default" id="delete">
+        <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Delete</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2"><a href="/v1/delete">/v1/delete</a></div>
+                <div class="col-md-10">Deletes a database from the requesting users account</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    On a successful delete, the returned JSON will be a simple status name/value pair
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-4">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-7">Description</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">status</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">Contains the string "OK" on a successful delete</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading pad">Example</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-12">
+                    To delete a database using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/delete</pre>
+                    Output: <pre>{
+  "status": "OK"
+}</pre>
                 </div>
             </div>
         </div>

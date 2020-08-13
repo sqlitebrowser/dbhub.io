@@ -177,6 +177,53 @@ func databasesHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(jsonData))
 }
 
+// deleteHandler deletes a database from the requesting users account
+// This can be run from the command line using curl, like this:
+//   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/delete
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbname" is the name of the database
+func deleteHandler(w http.ResponseWriter, r *http.Request) {
+	// Authenticate the request
+	loggedInUser, err := checkAuth(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Validate the database name
+	dbName, err := com.GetDatabase(r, false)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	dbOwner := loggedInUser
+	dbFolder := "/"
+
+	// Invalidate the memcache data for the database
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Delete the database
+	err = com.DeleteDatabase(dbOwner, dbFolder, dbName)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return a "success" message
+	z := com.StatusResponseContainer{Status: "OK"}
+	jsonData, err := json.MarshalIndent(z, "", "  ")
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in deleteHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
+}
+
 // diffHandler generates a diff between two databases or two versions of a database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner_a="justinclift" -F dbname_a="Join Testing.sqlite" -F commit_a="ea12..." -F commit_b="5a7c..." https://api.dbhub.io/v1/diff

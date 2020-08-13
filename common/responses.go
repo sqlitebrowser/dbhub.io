@@ -85,6 +85,11 @@ func MetadataResponse(dbOwner, dbFolder, dbName string) (meta MetadataResponseCo
 	return
 }
 
+// StatusResponseContainer holds a general status message response to a client request.
+type StatusResponseContainer struct {
+	Status string `json:"status"`
+}
+
 // UploadResponseContainer holds the response to a client upload. It's a temporary structure, mainly so the JSON
 // created for it is consistent between our various daemons
 type UploadResponseContainer struct {
