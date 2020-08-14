@@ -204,6 +204,7 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner,
 	}
 	if !exists {
 		httpStatus = http.StatusNotFound
+		err = fmt.Errorf("Database does not exist, or user isn't authorised to access it")
 		return
 	}
 	return
