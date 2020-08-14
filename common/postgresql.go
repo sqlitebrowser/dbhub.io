@@ -785,7 +785,7 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 	var numForks int
 	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&numForks)
 	if err != nil {
-		log.Printf("Retreving fork list failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Retrieving fork list failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
 		return err
 	}
 	if numForks == 0 {
