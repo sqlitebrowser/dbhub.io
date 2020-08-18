@@ -306,6 +306,9 @@ func extractUserFromClientCert(w http.ResponseWriter, r *http.Request) (userAcc 
 // TODO: Get rid of this, as it shouldn't be needed
 func handleWrapper(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Enable CORS (https://enable-cors.org)
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
 		// Call the original function
 		fn(w, r)
 	}
