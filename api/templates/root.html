@@ -684,6 +684,14 @@
                 <div class="col-md-2 paramname">commit_b</div>
                 <div class="col-md-10">The commit ID of the second database</div>
             </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">merge</div>
+                <div class="col-md-10">The merge strategy used for generating SQL statements (possible values: "none", "preserve_pk", "new_pk"; optional, defaults to "none")</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">include_data</div>
+                <div class="col-md-10">Set to "1" to include full row data of changed table rows</div>
+            </div>
             <div class="row">
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
                 <div class="col-md-10"></div>
