@@ -80,7 +80,7 @@
                         <tr ng-repeat-end class="tableRow">
                             <td style="border-style: none;">
                               <span ng-if="row.id != lastCommit">
-                                <button class="btn btn-primary" ng-click="viewChanges(row.id, meta.History[$index + 1].id)">View Changes</button>
+                                <button class="btn btn-primary" ng-click="viewChanges(meta.History[$index + 1].id, row.id)">View Changes</button>
                                 <br /><br />
                               </span>  
                               [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
