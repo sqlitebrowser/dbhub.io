@@ -75,11 +75,37 @@
                             <div>
                             </div>
                         </td>
-                        <td style="border-style: none;" width="80px">
+                        <td style="border-style: none;">
                             <div class="pull-left" style="padding-top: 6px;">
-                                <span ng-if="row.schema != null">Schema changed<br /></span>
+                                <span ng-if="row.schema != null && row.schema.action_type=='add'" style="font-weight: bold;">
+                                    New {{ row.object_type }}<br />
+                                </span>
+                                <span ng-if="row.schema != null && row.schema.action_type=='delete'" style="font-weight: bold;">
+                                    Deleted {{ row.object_type }}<br />
+                                </span>
+                                <span ng-if="row.schema != null && row.schema.action_type=='modify'" style="font-weight: bold;">
+                                    Schema changed<br />
+                                </span>
                                 <span ng-if="row.data.length">{{ row.data.length }} rows changed</span>
                             </div>
+                            <table ng-if="row.data.length" class="table table-responsive settingsTable">
+                                <thead>
+                                    <tr>
+                                        <td ng-repeat="c in row.data[0].pk">{{ c.Name }}</td>
+                                        <td ng-repeat="c in row.data[0].pk">{{ c.Name }}</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="d in row.data">
+                                        <td style="background-color: #fdb8c0;">
+                                            <span ng-if="d.action_type !='add'" ng-repeat="c in d.pk">{{ c.Value }}</span>
+                                        </td>
+                                        <td style="background-color: #acf2bd;">
+                                            <span ng-if="d.action_type !='delete'" ng-repeat="c in d.pk">{{ c.Value }}</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </td>
                     </tr>
                 </tbody>
