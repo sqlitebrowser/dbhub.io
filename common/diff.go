@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sort"
 	"strings"
 
 	sqlite "github.com/gwenn/gosqlite"
@@ -164,6 +165,18 @@ func dbDiff(dbA string, dbB string, merge MergeStrategy) (Diffs, error) {
 		log.Printf("Error when diffing single object in dbDiff: %s\n", err)
 		return Diffs{}, err
 	}
+
+	// Sort changes by object type to make sure it is possible to execute them in the returned order.
+	// For this it should be enough to always put tables in the first and triggers in the last position
+	sort.SliceStable(diff.Diff, func(i, j int) bool {
+		if diff.Diff[i].ObjectType == "table" && diff.Diff[j].ObjectType != "table" {
+			return true
+		} else if diff.Diff[j].ObjectType == "trigger" && diff.Diff[i].ObjectType != "trigger" {
+			return true
+		}
+
+		return false
+	})
 
 	// TODO Check for differences in the PRAGMAs of both databases
 
