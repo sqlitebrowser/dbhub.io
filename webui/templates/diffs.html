@@ -78,30 +78,32 @@
                         <td style="border-style: none;">
                             <div class="pull-left" style="padding-top: 6px;">
                                 <span ng-if="row.schema != null && row.schema.action_type=='add'" style="font-weight: bold;">
-                                    New {{ row.object_type }}<br />
+                                    Created {{ row.object_type }}<br />
                                 </span>
                                 <span ng-if="row.schema != null && row.schema.action_type=='delete'" style="font-weight: bold;">
-                                    Deleted {{ row.object_type }}<br />
+                                    Dropped {{ row.object_type }}<br />
                                 </span>
                                 <span ng-if="row.schema != null && row.schema.action_type=='modify'" style="font-weight: bold;">
                                     Schema changed<br />
                                 </span>
-                                <span ng-if="row.data.length">{{ row.data.length }} rows changed</span>
+                                <span ng-if="row.data.length">{{ row.data.length }} rows changed:</span>
                             </div>
                             <table ng-if="row.data.length" class="table table-responsive settingsTable">
                                 <thead>
                                     <tr>
-                                        <td ng-repeat="c in row.data[0].pk">{{ c.Name }}</td>
-                                        <td ng-repeat="c in row.data[0].pk">{{ c.Name }}</td>
+                                        <td ng-repeat="c in columnNames(row.object_name, false)">{{ c }}</td>
+                                        <td ng-repeat="c in columnNames(row.object_name, true)">{{ c }}</td>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr ng-repeat="d in row.data">
-                                        <td style="background-color: #fdb8c0;">
-                                            <span ng-if="d.action_type !='add'" ng-repeat="c in d.pk">{{ c.Value }}</span>
+                                        <td style="{{ d.action_type != 'add' ? 'background-color: #ffeef0;' : '' }}" ng-repeat="c in d.data_before">
+                                            <span ng-if="d.action_type !='add'" style="{{ c.Value != d.data_after[$index].Value ? 'background-color: #fdb8c0;' : '' }}">{{ c.Value }}</span>
                                         </td>
-                                        <td style="background-color: #acf2bd;">
-                                            <span ng-if="d.action_type !='delete'" ng-repeat="c in d.pk">{{ c.Value }}</span>
+                                        <td ng-if="d.action_type == 'add'" ng-repeat="c in columnNames(row.object_name, false)">
+                                        </td>
+                                        <td style="{{ d.action_type != 'delete' ? 'background-color: #e6ffed;' : '' }}" ng-repeat="c in d.data_after">
+                                            <span ng-if="d.action_type !='delete'" style="{{ c.Value != d.data_before[$index].Value ? 'background-color: #acf2bd;' : '' }}">{{ c.Value }}</span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -137,6 +139,36 @@
 
         $scope.statusMessage = "";
         $scope.Diffs = [[ .Diffs.Diff ]];
+
+        // Number of columns per table
+        $scope.columnNames = function(table, after) {
+            var result = [];
+            for(var i=0;i<$scope.Diffs.length;i++) {
+                var obj = $scope.Diffs[i];
+
+                if(obj.object_type == "table" && obj.object_name == table) {
+                    for(var j=0;j<obj.data.length;j++) {
+                        var row = obj.data[j];
+
+                        var data;
+                        if((after && row.action_type == "add") || row.action_type == "modify") {
+                            data = row.data_after;
+                        } else if(!after && row.action_type == "delete") {
+                            data = row.data_before;
+                        }
+
+                        if(data) {
+				for(var k=0;k<data.length;k++) {
+				result.push(data[k].Name);
+				}
+				return result;
+			}
+                    }
+                }
+            }
+
+            return result;
+        };
 
         // Change \u0026 to &
         $scope.decodeAmp = function(str) {
