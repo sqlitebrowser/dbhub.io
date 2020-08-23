@@ -235,6 +235,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 //   * "commit_a" is the first commit for diffing
 //   * "commit_b" is the second commit for diffing
 //   * "merge" specifies the merge strategy (possible values: "none", "preserve_pk", "new_pk"; optional, defaults to "none")
+//   * "include_data" can be set to "1" to include the full data of all changed rows instead of just the primary keys (optional, defaults to 0)
 func diffHandler(w http.ResponseWriter, r *http.Request) {
 	loggedInUser, err := checkAuth(w, r)
 	if err != nil {
@@ -252,6 +253,13 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	} else if merge != "" && merge != "none" {
 		jsonErr(w, "Invalid merge strategy", http.StatusBadRequest)
 		return
+	}
+
+	// Get include data parameter
+	includeDataValue := r.PostFormValue("include_data")
+	includeData := false
+	if includeDataValue == "1" {
+		includeData = true
 	}
 
 	// Retrieve owner, name, and commit ids
@@ -327,7 +335,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Perform diff
-	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser, mergeStrategy)
+	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser, mergeStrategy, includeData)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return

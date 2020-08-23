@@ -1869,14 +1869,14 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 func diffPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Auth0          com.Auth0Set
-		CommentList    []com.DiscussionCommentEntry
-		DB             com.SQLiteDBinfo
-		Diffs          com.Diffs
-		Meta           com.MetaInfo
-		SelectedID     int
-		MyStar         bool
-		MyWatch        bool
+		Auth0       com.Auth0Set
+		CommentList []com.DiscussionCommentEntry
+		DB          com.SQLiteDBinfo
+		Diffs       com.Diffs
+		Meta        com.MetaInfo
+		SelectedID  int
+		MyStar      bool
+		MyWatch     bool
 	}
 
 	// Retrieve session data (if any)
@@ -1966,7 +1966,7 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the diffs for these commits
-	pageData.Diffs, err = com.Diff(dbOwner, "/", dbName, commitA, dbOwner, "/", dbName, commitB, loggedInUser, com.NoMerge)
+	pageData.Diffs, err = com.Diff(dbOwner, "/", dbName, commitA, dbOwner, "/", dbName, commitB, loggedInUser, com.NoMerge, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
