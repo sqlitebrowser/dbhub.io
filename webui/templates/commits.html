@@ -78,15 +78,19 @@
                             </td>
                         </tr>
                         <tr ng-repeat-end class="tableRow">
-                            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                                <td style="border-style: none;">
+                            <td style="border-style: none;">
+                              <span ng-if="row.id != lastCommit">
+                                <button class="btn btn-primary" ng-click="viewChanges(row.id, meta.History[$index + 1].id)">View Changes</button>
+                                <br /><br />
+                              </span>  
+                              [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                     <button class="btn btn-primary" ng-click="createTag(row.id)">Create Tag or Release</button>
                                     <span ng-if="(row.id == headCommit) && (row.id != lastCommit)">
                                             <br /><br />
                                             <button class="btn btn-danger" ng-click="deleteCommit(row.id)">Delete Commit</button>
                                         </span>&nbsp;
-                                </td>
-                            [[ end ]]
+                              [[ end ]]
+                            </td>
                             <td width="15%" style="border-style: none;">&nbsp;</td>
                             <td colspan="3" style="border-style: none; vertical-align: top;">
                                 <span ng-bind-html="row.message"></span>
@@ -126,6 +130,11 @@
         // Bounce to the page for creating tags
         $scope.createTag = function(commit){
             window.location = "/createtag/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=" + commit;
+        };
+
+        // Bounce to the page for viewing changes
+        $scope.viewChanges = function(commit_a, commit_b){
+            window.location = "/diffs/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit_a=" + commit_a + "&commit_b=" + commit_b;
         };
 
         // Change \u0026 to &

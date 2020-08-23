@@ -3195,6 +3195,7 @@ func main() {
 	http.Handle("/createbranch/", gz.GzipHandler(logReq(createBranchPage)))
 	http.Handle("/creatediscuss/", gz.GzipHandler(logReq(createDiscussionPage)))
 	http.Handle("/createtag/", gz.GzipHandler(logReq(createTagPage)))
+	http.Handle("/diffs/", gz.GzipHandler(logReq(diffPage)))
 	http.Handle("/discuss/", gz.GzipHandler(logReq(discussPage)))
 	http.Handle("/forks/", gz.GzipHandler(logReq(forksPage)))
 	http.Handle("/logout", gz.GzipHandler(logReq(logoutHandler)))

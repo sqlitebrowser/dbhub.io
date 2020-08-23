@@ -1867,6 +1867,171 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 }
 
+func diffPage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		Auth0          com.Auth0Set
+		CommentList    []com.DiscussionCommentEntry
+		DB             com.SQLiteDBinfo
+		Diffs          com.Diffs
+		Meta           com.MetaInfo
+		SelectedID     int
+		MyStar         bool
+		MyWatch        bool
+	}
+
+	// Retrieve session data (if any)
+	var loggedInUser string
+	var u interface{}
+	if com.Conf.Environment.Environment != "docker" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = com.Conf.Environment.UserOverride
+	}
+	if u != nil {
+		loggedInUser = u.(string)
+		pageData.Meta.LoggedInUser = loggedInUser
+	}
+
+	// Retrieve the database owner & name
+	// TODO: Add folder support
+	dbFolder := "/"
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/diffs/" at the start of the URL
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get the commit ids
+	commitA := r.FormValue("commit_a")
+	commitB := r.FormValue("commit_b")
+
+	// Validate the supplied information
+	if dbOwner == "" || dbName == "" {
+		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
+		return
+	}
+	if commitA == "" || commitB == "" {
+		errorPage(w, r, http.StatusBadRequest, "Missing commit ids")
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
+			dbName))
+		return
+	}
+
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, commitA)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, commitB)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Get latest star and fork count
+	_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
+		return
+	}
+
+	// Retrieve the diffs for these commits
+	pageData.Diffs, err = com.Diff(dbOwner, "/", dbName, commitA, dbOwner, "/", dbName, commitB, loggedInUser, com.NoMerge)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve the latest discussion and MR counts
+	pageData.DB.Info.Discussions, pageData.DB.Info.MRs, err = com.GetDiscussionAndMRCount(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Retrieve correctly capitalised username for the database owner
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pageData.Meta.Owner = usr.Username
+
+	// Retrieve the details and status updates count for the logged in user
+	if loggedInUser != "" {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if ur.AvatarURL != "" {
+			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	// Retrieve the "forked from" information
+	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
+		return
+	}
+	pageData.Meta.ForkOwner = frkOwn
+	pageData.Meta.ForkFolder = frkFol
+	pageData.Meta.ForkDatabase = frkDB
+	pageData.Meta.ForkDeleted = frkDel
+
+	// Fill out the metadata
+	pageData.Meta.Database = dbName
+	pageData.Meta.Title = "Changes"
+
+	// Add Auth0 info to the page data
+	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+
+	// Render the main discussion list page
+	t := tmpl.Lookup("diffPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 func discussPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		Auth0          com.Auth0Set
