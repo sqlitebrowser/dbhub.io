@@ -1869,14 +1869,14 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 func diffPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Auth0       com.Auth0Set
-		CommentList []com.DiscussionCommentEntry
-		DB          com.SQLiteDBinfo
-		Diffs       com.Diffs
-		Meta        com.MetaInfo
-		SelectedID  int
-		MyStar      bool
-		MyWatch     bool
+		Auth0             com.Auth0Set
+		DB                com.SQLiteDBinfo
+		Diffs             com.Diffs
+		ColumnNamesBefore map[string][]string
+		ColumnNamesAfter  map[string][]string
+		Meta              com.MetaInfo
+		MyStar            bool
+		MyWatch           bool
 	}
 
 	// Retrieve session data (if any)
@@ -1970,6 +1970,39 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Retrieve the column information for each table with data changes
+	sdbBefore, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitA, loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer sdbBefore.Close()
+	sdbAfter, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitB, loggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer sdbAfter.Close()
+	pageData.ColumnNamesBefore = make(map[string][]string)
+	pageData.ColumnNamesAfter = make(map[string][]string)
+	for _, diff := range pageData.Diffs.Diff {
+		if diff.ObjectType == "table" && len(diff.Data) > 0 {
+			pks, _, other, err := com.GetPrimaryKeyAndOtherColumns(sdbBefore, "main", diff.ObjectName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			pageData.ColumnNamesBefore[diff.ObjectName] = append(pks, other...)
+
+			pks, _, other, err = com.GetPrimaryKeyAndOtherColumns(sdbAfter, "main", diff.ObjectName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			pageData.ColumnNamesAfter[diff.ObjectName] = append(pks, other...)
+		}
 	}
 
 	// Retrieve the latest discussion and MR counts

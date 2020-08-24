@@ -45,16 +45,16 @@ const (
 // SchemaDiff describes the changes to the schema of a database object, i.e. a created, dropped or altered object
 type SchemaDiff struct {
 	ActionType DiffType `json:"action_type"`
-	Sql        string   `json:"sql"`
+	Sql        string   `json:"sql,omitempty"`
 }
 
 // DataDiff stores a single change in the data of a table, i.e. a single new, deleted, or changed row
 type DataDiff struct {
-	ActionType DiffType    `json:"action_type"`
-	Sql        string      `json:"sql"`
-	Pk         []DataValue `json:"pk"`
-	DataBefore []DataValue `json:"data_before"`
-	DataAfter  []DataValue `json:"data_after"`
+	ActionType DiffType      `json:"action_type"`
+	Sql        string        `json:"sql,omitempty"`
+	Pk         []DataValue   `json:"pk"`
+	DataBefore []interface{} `json:"data_before,omitempty"`
+	DataAfter  []interface{} `json:"data_after,omitempty"`
 }
 
 // DiffObjectChangeset stores all the differences between two objects in a database, for example two tables.
@@ -62,8 +62,8 @@ type DataDiff struct {
 type DiffObjectChangeset struct {
 	ObjectName string      `json:"object_name"`
 	ObjectType string      `json:"object_type"`
-	Schema     *SchemaDiff `json:"schema"`
-	Data       []DataDiff  `json:"data"`
+	Schema     *SchemaDiff `json:"schema,omitempty"`
+	Data       []DataDiff  `json:"data,omitempty"`
 }
 
 // Diffs is able to store all the differences between two databases.
@@ -365,9 +365,9 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 			// If we want to include all data, add this to the row data
 			if includeData {
 				if action == ActionAdd {
-					d.DataAfter = append(d.DataAfter, row[i])
+					d.DataAfter = append(d.DataAfter, row[i].Value)
 				} else if action == ActionDelete {
-					d.DataBefore = append(d.DataBefore, row[i])
+					d.DataBefore = append(d.DataBefore, row[i].Value)
 				}
 			}
 		}
@@ -517,26 +517,26 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 		if includeData {
 			if d.ActionType == ActionAdd {
 				for i := 0; i < len(pk); i++ {
-					d.DataAfter = append(d.DataAfter, row[i])
+					d.DataAfter = append(d.DataAfter, row[i].Value)
 				}
 				for i := len(pk) + 1; i < len(row); i += 2 {
-					d.DataAfter = append(d.DataAfter, row[i+1])
+					d.DataAfter = append(d.DataAfter, row[i+1].Value)
 				}
 			} else if d.ActionType == ActionDelete {
 				for i := 0; i < len(pk); i++ {
-					d.DataBefore = append(d.DataBefore, row[i])
+					d.DataBefore = append(d.DataBefore, row[i].Value)
 				}
 				for i := len(pk) + 1; i < len(row); i += 2 {
-					d.DataBefore = append(d.DataBefore, row[i])
+					d.DataBefore = append(d.DataBefore, row[i].Value)
 				}
 			} else if d.ActionType == ActionModify {
 				for i := 0; i < len(pk); i++ {
-					d.DataBefore = append(d.DataBefore, row[i])
-					d.DataAfter = append(d.DataAfter, row[i])
+					d.DataBefore = append(d.DataBefore, row[i].Value)
+					d.DataAfter = append(d.DataAfter, row[i].Value)
 				}
 				for i := len(pk) + 1; i < len(row); i += 2 {
-					d.DataBefore = append(d.DataBefore, row[i])
-					d.DataAfter = append(d.DataAfter, row[i+1])
+					d.DataBefore = append(d.DataBefore, row[i].Value)
+					d.DataAfter = append(d.DataAfter, row[i+1].Value)
 				}
 			}
 		}

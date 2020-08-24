@@ -1034,6 +1034,11 @@ func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema, table string) (pks [
 		return nil, false, nil, err
 	}
 
+	// When there are no rows at all, exit here
+	if len(primaryKeyColumns) == 0 && len(other) == 0 {
+		return
+	}
+
 	// Did we get any primary key columns? If not, this table has only an implicit primary key which
 	// is accessible by the name rowid, _rowid_, or oid
 	if len(primaryKeyColumns) > 0 {
