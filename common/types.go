@@ -250,6 +250,7 @@ type CommitData struct {
 	AuthorName     string    `json:"author_name"`
 	AuthorUsername string    `json:"author_username"`
 	ID             string    `json:"id"`
+	Parent         string    `json:"parent"`
 	LicenceChange  string    `json:"licence_change"`
 	Message        string    `json:"message"`
 	Timestamp      time.Time `json:"timestamp"`

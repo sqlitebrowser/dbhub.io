@@ -635,6 +635,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 			c.AuthorEmail = j.AuthorEmail
 			c.AuthorName = j.AuthorName
 			c.ID = j.ID
+			c.Parent = j.Parent
 			c.Message = j.Message
 			c.Timestamp = j.Timestamp
 			c.AuthorUsername, c.AuthorAvatar, err = com.GetUsernameFromEmail(j.AuthorEmail)
@@ -2784,6 +2785,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 			c.AuthorEmail = j.AuthorEmail
 			c.AuthorName = j.AuthorName
 			c.ID = j.ID
+			c.Parent = j.Parent
 			c.Message = j.Message
 			c.Timestamp = j.Timestamp
 			c.AuthorUsername, c.AuthorAvatar, err = com.GetUsernameFromEmail(j.AuthorEmail)

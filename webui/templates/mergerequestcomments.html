@@ -143,6 +143,7 @@
                                 <div style="border: 1px solid #CCC; border-radius: 0 0 7px 7px; padding: 10px;">
                                 [[ end ]]
                                     <h4 style="margin: 0;">Commit List</h4>
+                                    <a ng-if="Disc.open === true" href="{{ '/diffs/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?commit_a=' + CommitList[CommitList.length-1].parent + '&commit_b=' + CommitList[0].id }}"><span style="vertical-align: middle;">View changes</span></a>
                                     <table class="table table-responsive settingsTable" style="margin: 5px 0 0 0;">
                                         <thead>
                                             <tr>
@@ -159,7 +160,7 @@
                                                 </td>
                                                 <td>
                                                     <span ng-if="Disc.open !== true" ng-bind="row.id | limitTo: 8" style="vertical-align: middle;"></span>
-                                                    <a ng-if="Disc.open === true" href="{{ '/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?branch=' + Disc.mr_details.source_branch + '&commit=' + row.id }}"><span ng-bind="row.id | limitTo: 8" class="blackLink" style="vertical-align: middle;"></span></a>
+                                                    <a ng-if="Disc.open === true" href="{{ '/diffs/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?commit_a=' + row.parent + '&commit_b=' + row.id }}"><span ng-bind="row.id | limitTo: 8" class="blackLink" style="vertical-align: middle;"></span></a>
                                                 </td>
                                                 <td>
                                                     <span ng-bind="row.message" style="vertical-align: middle;"></span><span ng-if="row.message === ''" style="color: grey; vertical-align: middle;">This commit has no commit message</span>
