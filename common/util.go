@@ -753,8 +753,6 @@ func GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch, destOwn
 	// end of the source list, step backwards looking for a matching ID in the destination list.
 	//   * If none is found then there's nothing in common (so abort).
 	//   * If one is found, that one is the last common commit
-	//       * For now, we only support merging to the head commit of the destination branch, so we only check for
-	//         that. Adding support for merging to non-head destination commits isn't yet supported.
 
 	// Get the details of the head commit for the source and destination database branches
 	branchList, err := GetBranches(destOwner, destFolder, destName) // Destination branch list
@@ -781,11 +779,6 @@ func GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch, destOwn
 		return
 	}
 	srcCommitID := srcBranchDetails.Commit
-	srcCommitList, err := GetCommitList(srcOwner, srcFolder, srcDBName)
-	if err != nil {
-		errType = http.StatusInternalServerError
-		return
-	}
 
 	// If the source and destination commit IDs are the same, then abort
 	if srcCommitID == destCommitID {
@@ -794,26 +787,76 @@ func GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch, destOwn
 		return
 	}
 
-	// Look for the common ancestor
-	s, ok := srcCommitList[srcCommitID]
+	// Get list of all commits
+	allCommits, err := GetCommitList(srcOwner, srcFolder, srcDBName)
+	if err != nil {
+		errType = http.StatusInternalServerError
+		return
+	}
+
+	// Build path from each commit, source and destination, to the root commit
+	s, ok := allCommits[srcCommitID]
 	if !ok {
 		errType = http.StatusInternalServerError
 		err = fmt.Errorf("Could not retrieve details for the source branch commit")
 		return
 	}
-	for s.Parent != "" {
-		commitList = append(commitList, s) // Add this commit to the list
-		s, ok = srcCommitList[s.Parent]
+	var sourcePath []CommitEntry
+	for {
+		sourcePath = append(sourcePath, s)
+		if s.Parent == "" {
+			break
+		}
+		s, ok = allCommits[s.Parent]
 		if !ok {
 			errType = http.StatusInternalServerError
 			err = fmt.Errorf("Error when walking the source branch commit list")
 			return
 		}
-		if s.ID == destCommitID {
-			ancestorID = s.ID
+	}
+
+	d, ok := allCommits[destCommitID]
+	if !ok {
+		errType = http.StatusInternalServerError
+		err = fmt.Errorf("Could not retrieve details for the destination branch commit")
+		return
+	}
+	var destPath []CommitEntry
+	for {
+		destPath = append(destPath, d)
+		if d.Parent == "" {
 			break
 		}
+		d, ok = allCommits[d.Parent]
+		if !ok {
+			errType = http.StatusInternalServerError
+			err = fmt.Errorf("Error when walking the destination branch commit list")
+			return
+		}
 	}
+
+	// Look for the common ancestor by traversing from the end (the root commit) to the start (the current HEAD) of each
+	// commit list and looking for the first commit ID that is different
+	for i := 1; ; i++ {
+		if i > len(sourcePath) || i > len(destPath) || sourcePath[len(sourcePath)-i].ID != destPath[len(destPath)-i].ID {
+			// The last common ancestor is the commit before this one. Since we're working in reverse order here,
+			// the commit before this one in time is the one after this one in the array
+			if i <= len(sourcePath) {
+				ancestorID = sourcePath[len(sourcePath)-i+1].ID
+			}
+
+			// Having found the first different commit, build a list of all commits that after it
+			for j := len(sourcePath); j >= i; j-- {
+				// Exclude merge commits
+				if len(sourcePath[len(sourcePath)-j].OtherParents) == 0 {
+					commitList = append(commitList, sourcePath[len(sourcePath)-j])
+				}
+			}
+
+			return
+		}
+	}
+
 	return
 }
 
