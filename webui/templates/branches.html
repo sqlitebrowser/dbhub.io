@@ -42,7 +42,7 @@
                         <tr ng-repeat-start="row in meta.Branches">
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                 <td style="border-style: none;">
-                                    <button class="btn btn-primary" ng-click="updateBranch(row.name)">Update</button>
+                                    <button class="btn btn-primary" ng-click="updateBranch(row.name)">Save Changes</button>
                                 </td>
                                 <td style="border-style: none;">
                                     <div>
@@ -69,7 +69,8 @@
                         <tr ng-repeat-end class="tableRow">
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                 <td style="border-style: none;">
-                                    <button ng-if="row.name != meta.DefBranch" class="btn btn-primary" ng-click="deleteBranch(row.name)">Delete</button>
+                                <button ng-if="row.name != meta.DefBranch" class="btn btn-default" ng-click="viewChanges(row.commit)">Compare with {{ meta.DefBranch }}</button>
+                                    <button ng-if="row.name != meta.DefBranch" class="btn btn-danger" ng-click="deleteBranch(row.name)">Delete</button>
                                 </td>
                                 <td style="border-style: none; padding: 0;" colspan="3">
                                     <uib-tabset>
@@ -83,7 +84,7 @@
                                 </td>
                             [[ else ]]
                                 <td style="border-style: none;">
-                                    &nbsp;
+                                    <button ng-if="row.name != meta.DefBranch" class="btn btn-default" ng-click="viewChanges(row.commit)">Compare with {{ meta.DefBranch }}</button>
                                 </td>
                                 <td style="border-style: none;">
                                     <div class="rendered minHeightSmaller" ng-bind-html="row.mkdowndesc"></div>
@@ -136,6 +137,11 @@
         for (i = 0; i < sortedNames.length; i++) {
             var nm = sortedNames[i];
             $scope.meta.Branches.push(remainingBranches[nm]);
+        }
+
+        // View changes between the default branch and a given commit id
+        $scope.viewChanges = function(commit) {
+            window.location = "/diffs/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit_a=" + $scope.meta.Branches[0].commit + "&commit_b=" + commit;
         }
 
         // Delete the branch
