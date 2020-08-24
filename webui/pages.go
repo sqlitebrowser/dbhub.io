@@ -3242,6 +3242,8 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		Licences         map[string]com.LicenceEntry
 		Meta             com.MetaInfo
 		NumLicences      int
+		MyStar           bool
+		MyWatch          bool
 	}
 	pageData.Meta.Title = "Database settings"
 
@@ -3300,6 +3302,20 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
