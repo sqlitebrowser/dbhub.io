@@ -374,29 +374,68 @@ func collectPageAuth0Info() (auth0 com.Auth0Set) {
 	return
 }
 
-func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo) (err error) {
+func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool, getOwnerAndDatabaseFromUrl bool) (errCode int, err error) {
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	if validSession {
 		meta.LoggedInUser = loggedInUser
+	}
+
+	// Ensure we have a valid logged in user
+	if requireLogin && !validSession {
+		return http.StatusUnauthorized, fmt.Errorf("You need to be logged in")
 	}
 
 	// Retrieve the details and status updates count for the logged in user
 	if validSession {
 		ur, err := com.User(loggedInUser)
 		if err != nil {
-			return err
+			return http.StatusBadRequest, err
 		}
 		if ur.AvatarURL != "" {
 			meta.AvatarURL = ur.AvatarURL + "&s=48"
 		}
 		meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
 		if err != nil {
-			return err
+			return http.StatusBadRequest, err
 		}
+	}
+
+	// Retrieve the database owner & name
+	if getOwnerAndDatabaseFromUrl {
+		// TODO: Add folder and branch name support
+		dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
+		if err != nil {
+			return http.StatusBadRequest, err
+		}
+
+		// Validate the supplied information
+		if dbOwner == "" || dbName == "" {
+			return http.StatusBadRequest, fmt.Errorf("Missing database owner or database name")
+		}
+
+		// Check if the database exists
+		exists, err := com.CheckDBExists(loggedInUser, dbOwner, "/", dbName)
+		if err != nil {
+			return http.StatusInternalServerError, fmt.Errorf("Database failure when looking up database details")
+		}
+		if !exists {
+			return http.StatusNotFound, fmt.Errorf("That database doesn't seem to exist")
+		}
+
+		// Retrieve correctly capitalised username for the database owner
+		usr, err := com.User(dbOwner)
+		if err != nil {
+			return http.StatusBadRequest, err
+		}
+
+		// Store information
+		meta.Database = dbName
+		meta.Owner = usr.Username
+		meta.Folder = "/"
 	}
 
 	return
