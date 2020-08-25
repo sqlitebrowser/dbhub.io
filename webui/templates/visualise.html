@@ -7,57 +7,6 @@
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
     [[ template "headerdatabase" . ]]
-    [[ if or (ne .DB.Info.OneLineDesc "No description") ((ne .DB.Info.SourceURL "")) ]]
-        <div class="row">
-            <div class="col-md-12">
-                <div class="well well-sm" style="margin-bottom: 10px; border: 1px solid #DDD; border-radius: 7px;">
-                    [[ if (ne .DB.Info.OneLineDesc "No description") ]]
-                        <label id="viewdesc" ng-bind="meta.OneLineDesc"></label>
-                    [[ end ]]
-                    [[ if (ne .DB.Info.SourceURL "") ]]
-                        <div>
-                            <label>Source:</label> <a href="{{ meta.SourceURL }}" ng-bind="meta.SourceURL"></a>
-                        </div>
-                    [[ end ]]
-                </div>
-            </div>
-        </div>
-    [[ end ]]
-    <div class="row">
-        <div class="col-md-12">
-            <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px;">
-                <table width="100%" class="table" style="margin-bottom: 0; border: none;">
-                    <tr style="border: none;">
-                        <td style="border: none; border-right: 1px solid #DDD;">
-                            <div style="text-align: center;">
-                                <a href="/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}" class="blackLink" style="font-weight: bold;">Commits: {{ meta.Commits }}</a>
-                            </div>
-                        </td>
-                        <td style="border: none; border-right: 1px solid #DDD;">
-                            <div style="text-align: center;">
-                                <a href="/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;">Branches: {{ meta.Branches }}</a>
-                            </div>
-                        </td>
-                        <td style="border: none; border-right: 1px solid #DDD;">
-                            <div style="text-align: center;">
-                                <a href="/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;">Tags: {{ meta.Tags }}</a>
-                            </div>
-                        </td>
-                        <td style="border: none; border-right: 1px solid #DDD;">
-                            <div style="text-align: center;">
-                                <a href="/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;">Releases: {{ meta.Releases }}</a>
-                            </div>
-                        </td>
-                        <td style="border: none;">
-                            <div style="text-align: center;">
-                                <a href="/contributors/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;">Contributors: {{ meta.Contributors }}</a>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-    </div>
     <div class="row" style="padding-bottom: 10px;">
         <div class="col-md-10">
             <span class="pull-left">
@@ -86,22 +35,6 @@
                             </li>
                         </ul>
                     </div>
-                    [[ if .Meta.LoggedInUser ]]
-                        <a href="/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="btn btn-primary">New Merge Request</a>
-                    [[ end ]]
-                </div>
-            </span>
-        </div>
-        <div class="col-md-2">
-            <span class="pull-right">
-                <!-- <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button> -->
-                <div class="btn-group" uib-dropdown keyboard-nav="true">
-                    <button type="button" class="btn btn-success" uib-dropdown-toggle>
-                        Download database <span class="caret"></span>
-                    </button>
-                    <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
-                        <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
-                    </ul>
                 </div>
             </span>
         </div>
