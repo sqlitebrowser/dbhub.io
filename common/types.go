@@ -457,6 +457,7 @@ type MetaInfo struct {
 	LoggedInUser     string
 	NumStatusUpdates int
 	Owner            string
+	PageSection      string
 	Protocol         string
 	Server           string
 	Title            string

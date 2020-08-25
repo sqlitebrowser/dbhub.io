@@ -1,0 +1,97 @@
+[[ define "headerdatabase" ]]
+<div class="row">
+    <div class="col-md-12">
+        <h2 id="viewdb" style="margin-top: 10px;">
+            <div class="pull-left">
+                <div>
+                    <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
+                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                </div>
+                [[ if .Meta.ForkOwner ]]
+                <div style="font-size: small">
+                    forked from <a href="/[[ .Meta.ForkOwner ]]">[[ .Meta.ForkOwner ]]</a> /
+                    [[ if not .Meta.ForkDeleted ]]
+                        <a href="/[[ .Meta.ForkOwner ]]/[[ .Meta.ForkDatabase ]]">[[ .Meta.ForkDatabase ]]</a>
+                    [[ else ]]
+                        deleted database
+                    [[ end ]]
+                </div>
+                [[ end ]]
+            </div>
+            <div class="pull-right">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default" ng-bind-html="watchersText" ng-click="toggleWatchers()"></button>
+                    <button type="button" class="btn btn-default" ng-bind="meta.Watchers" ng-click="watchersPage()"></button>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-default" ng-bind-html="starsText" ng-click="toggleStars()"></button>
+                    <button type="button" class="btn btn-default" ng-bind="meta.Stars" ng-click="starsPage()"></button>
+                </div>
+                <div class="btn-group">
+                    [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
+                        <button type="button" class="btn btn-default" ng-click="forkDB()"><i class="fa fa-sitemap"></i> Fork</button>
+                    [[ else ]]
+                        <button type="button" class="btn btn-default" ng-disabled="true"><i class="fa fa-sitemap"></i> Fork</button>
+                    [[ end ]]
+                    <button type="button" class="btn btn-default" ng-bind="meta.Forks" ng-click="forksPage()"></button>
+                </div>
+            </div>
+        </h2>
+    </div>
+</div>
+<div class="row" style="padding-bottom: 5px; padding-top: 10px;">
+    <div class="col-md-6">
+        [[ if eq .Meta.PageSection "db_data" ]]
+            <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-database"></i> Data</label>
+        [[ else ]]
+            <label id="viewdata" style="font-weight: 600; font-family: 'arial black';"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data"><i class="fa fa-database"></i> Data</a></label>
+        [[ end ]]
+        &nbsp; &nbsp; &nbsp;
+        [[ if eq .Meta.PageSection "db_vis" ]]
+            <label id="viewvis" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-database"></i> Visualise</label>
+        [[ else ]]
+            <label id="viewvis" style="font-weight: 600; font-family: 'arial black';"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise"><i class="fa fa-bar-chart"></i> Visualise</a></label>
+        [[ end ]]
+        &nbsp; &nbsp; &nbsp;
+        [[ if eq .Meta.PageSection "db_disc" ]]
+            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-commenting"></i> Discussions: {{ meta.Discussions }}</label>
+        [[ else ]]
+            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label>
+        [[ end ]]
+        &nbsp; &nbsp; &nbsp;
+        [[ if eq .Meta.PageSection "db_merge" ]]
+            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-clone"></i> Merge Requests: {{ meta.MRs }}</label>
+        [[ else ]]
+            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests"><i class="fa fa-clone"></i> Merge Requests:</a> {{ meta.MRs }}</label>
+        [[ end ]]
+        &nbsp; &nbsp; &nbsp;
+        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+            [[ if eq .Meta.PageSection "db_settings" ]]
+                <label id="settings" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-cog"></i> Settings</label> &nbsp; &nbsp; &nbsp;
+            [[ else ]]
+                <label id="settings" style="font-weight: 600; font-family: 'arial black';"><a href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Settings"><i class="fa fa-cog"></i> Settings</a></label>
+            [[ end ]]
+        [[ end ]]
+    </div>
+    <div class="col-md-6">
+        <div class="pull-right">
+            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                <b>Visibility:</b> <a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">{{ meta.Public }}</a> &nbsp;
+            [[ else ]]
+                <b>Visibility:</b> {{ meta.Public }} &nbsp;
+            [[ end ]]
+            <b>Commit:</b> {{ meta.CommitID | limitTo: 8 }} &nbsp;
+            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                <b>Licence:</b> <a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">{{ meta.Licence }}</a> &nbsp;
+            [[ else ]]
+                [[ if ne .DB.Info.LicenceURL "" ]]
+                    <b>Licence:</b> <a class="blackLink" href="{{ meta.LicenceURL }}">{{ meta.Licence }}</a> &nbsp;
+                [[ else ]]
+                    <b>Licence:</b> {{ meta.Licence }} &nbsp;
+                [[ end ]]
+            [[ end ]]
+            <b>Size:</b> {{ meta.Size / 1024 | number : 0 }} KB
+        </div>
+    </div>
+</div>
+[[ end ]]

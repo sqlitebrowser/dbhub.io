@@ -40,22 +40,10 @@ var (
 // apiKeyGenHandler generates a new API key, stores it in the PG database, and returns the details to the caller
 func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -286,22 +274,10 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 // Returns a list of the branches present in a database
 func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -371,16 +347,13 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(data))
 }
 
-func createBranchHandler(w http.ResponseWriter, r *http.Request) {
+func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err error) {
 	// Retrieve session data (if any)
-	var loggedInUser string
 	var u interface{}
-	validSession := false
 	if com.Conf.Environment.Environment != "docker" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
+			return "", false, err
 		}
 		u = sess.Values["UserName"]
 	} else {
@@ -389,6 +362,52 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	if u != nil {
 		loggedInUser = u.(string)
 		validSession = true
+	}
+
+	return
+}
+
+func collectPageAuth0Info() (auth0 com.Auth0Set) {
+	auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	auth0.ClientID = com.Conf.Auth0.ClientID
+	auth0.Domain = com.Conf.Auth0.Domain
+	return
+}
+
+func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo) (err error) {
+	// Retrieve session data (if any)
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		return err
+	}
+	if validSession {
+		meta.LoggedInUser = loggedInUser
+	}
+
+	// Retrieve the details and status updates count for the logged in user
+	if validSession {
+		ur, err := com.User(loggedInUser)
+		if err != nil {
+			return err
+		}
+		if ur.AvatarURL != "" {
+			meta.AvatarURL = ur.AvatarURL + "&s=48"
+		}
+		meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		if err != nil {
+			return err
+		}
+	}
+
+	return
+}
+
+func createBranchHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -504,22 +523,10 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 // Receives incoming info for adding a comment to an existing discussion
 func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -627,22 +634,10 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 // then bounces to the discussion page
 func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -732,22 +727,10 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 // Receives incoming requests from the merge request creation page, creating them if the info is correct
 func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -1041,22 +1024,10 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 
 func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -1454,22 +1425,10 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete Branch handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -1860,22 +1819,10 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 // This function deletes a given comment from a discussion.
 func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -1977,22 +1924,10 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete commit handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -2197,22 +2132,10 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete Database handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -2289,22 +2212,10 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete Release handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -2390,22 +2301,10 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete Tag handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -2489,20 +2388,10 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 // Returns the list of commits that are different between a source and destination database/branch
 func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
+	loggedInUser, _, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Retrieve source owner
@@ -2778,20 +2667,10 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
+	loggedInUser, _, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
@@ -2866,20 +2745,10 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
+	loggedInUser, _, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Return the requested database to the user
@@ -2911,22 +2780,10 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -3000,22 +2857,10 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 // Generates a client certificate for the user and gives it to the browser.
 func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -3569,22 +3414,10 @@ func markdownPreview(w http.ResponseWriter, r *http.Request) {
 // Handler which does merging to MR's.  Called from the MR details page
 func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -3762,22 +3595,10 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Preferences handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -3808,7 +3629,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate submitted form data
-	err := com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
+	err = com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
 	if err != nil {
 		log.Printf("%s: Maximum rows value failed validation: %s\n", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing maximum rows preference value")
@@ -3868,22 +3689,10 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 // Handler for the Database Settings page
 func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -4212,22 +4021,10 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Set default branch handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -4318,22 +4115,10 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -4371,22 +4156,10 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 // Returns the table and view names present in a specific database commit
 func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -4597,20 +4370,10 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
+	loggedInUser, _, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Check if the user has access to the requested database
@@ -4779,22 +4542,10 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Update Branch handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -4933,22 +4684,10 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Update Comment handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -5049,22 +4788,10 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 // This function processes discussion title and body text updates.
 func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -5174,22 +4901,10 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Update Release handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -5308,22 +5023,10 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Update Tag handler"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -5447,22 +5150,10 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user
@@ -5617,22 +5308,10 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Ensure we have a valid logged in user

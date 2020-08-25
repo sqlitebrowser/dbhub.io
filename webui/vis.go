@@ -430,6 +430,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	pageData.DB.Info.MRs = currentMRs
 
 	// Render the visualisation page
+	pageData.Meta.PageSection = "db_vis"
 	t := tmpl.Lookup("visualisePage")
 	err = t.Execute(w, pageData)
 	if err != nil {

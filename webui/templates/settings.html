@@ -5,58 +5,7 @@
 <body>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
-    <div class="row">
-        <div class="col-md-12">
-            <h2 id="viewdb" style="margin-top: 10px;">
-                <div class="pull-left">
-                    <div>
-                        <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
-                        <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
-                    </div>
-                    [[ if .Meta.ForkOwner ]]
-                    <div style="font-size: small">
-                        forked from <a href="/[[ .Meta.ForkOwner ]]">[[ .Meta.ForkOwner ]]</a> /
-                        [[ if not .Meta.ForkDeleted ]]
-                            <a href="/merge/[[ .Meta.ForkOwner ]]/[[ .Meta.ForkDatabase ]]">[[ .Meta.ForkDatabase ]]</a>
-                        [[ else ]]
-                            deleted database
-                        [[ end ]]
-                    </div>
-                    [[ end ]]
-                </div>
-                <div class="pull-right">
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-bind-html="watchersText" ng-click="toggleWatchers()"></button>
-                        <button type="button" class="btn btn-default" ng-bind="meta.Watchers" ng-click="watchersPage()"></button>
-                    </div>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default" ng-bind-html="starsText" ng-click="toggleStars()"></button>
-                        <button type="button" class="btn btn-default" ng-bind="meta.Stars" ng-click="starsPage()"></button>
-                    </div>
-                    <div class="btn-group">
-                        [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
-                        <button type="button" class="btn btn-default" ng-click="forkDB()"><i class="fa fa-sitemap"></i> Fork</button>
-                        [[ else ]]
-                        <button type="button" class="btn btn-default" ng-disabled="true"><i class="fa fa-sitemap"></i> Fork</button>
-                        [[ end ]]
-                        <button type="button" class="btn btn-default" ng-bind="meta.Forks" ng-click="forksPage()"></button>
-                    </div>
-                </div>
-            </h2>
-        </div>
-    </div>
-    <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
-        <div class="col-md-12">
-            <label id="viewdata" style="font-weight: 600; font-family: 'arial black';"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data"><i class="fa fa-database"></i> Data</a></label> &nbsp; &nbsp; &nbsp;
-            <label id="viewvis" style="font-weight: 600; font-family: 'arial black';"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise"><i class="fa fa-bar-chart"></i> Visualise</a></label> &nbsp; &nbsp; &nbsp;
-            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label> &nbsp; &nbsp; &nbsp;
-            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests"><i class="fa fa-clone"></i> Merge Requests: </a>{{ meta.MRs }}</label> &nbsp; &nbsp; &nbsp;
-            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-            <label id="settings" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"><i class="fa fa-cog"></i> Settings</a></label>
-            [[ end ]]
-        </div>
-    </div>
-
+    [[ template "headerdatabase" . ]]
     <div class="row" ng-if="statusMessage != ''">
         <div class="col-md-12">
             <div style="text-align: center; padding-bottom: 8px;">
@@ -250,28 +199,40 @@
     var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('settingsView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
-            BranchLics: [[ .BranchLics ]],
-            Database: "[[ .Meta.Database ]]",
+            BranchLics:    [[ .BranchLics ]],
+            CommitID:      "[[ .DB.Info.CommitID ]]",
+            Database:      "[[ .Meta.Database ]]",
             DefaultBranch: "[[ .DB.Info.DefaultBranch ]]",
-            DefaultTable: "[[ .DB.Info.DefaultTable ]]",
-            FullDesc: "[[ .DB.Info.FullDesc ]]",
-            OneLineDesc: "[[ .DB.Info.OneLineDesc ]]",
-            SourceURL: "[[ .DB.Info.SourceURL ]]",
-            Tables: [[ .DB.Info.Tables ]],
-            Discussions: "[[ .DB.Info.Discussions ]]",
-            Forks:       "[[ .DB.Info.Forks ]]",
-            MRs:         "[[ .DB.Info.MRs ]]",
-            MyStar:      "[[ .MyStar ]]",
-            MyWatch:     "[[ .MyWatch ]]",
-            Owner:       "[[ .Meta.Owner ]]",
-            Stars:       "[[ .DB.Info.Stars ]]",
-            Watchers:    "[[ .DB.Info.Watchers ]]",
+            DefaultTable:  "[[ .DB.Info.DefaultTable ]]",
+            FullDesc:      "[[ .DB.Info.FullDesc ]]",
+            OneLineDesc:   "[[ .DB.Info.OneLineDesc ]]",
+            SourceURL:     "[[ .DB.Info.SourceURL ]]",
+            Tables:        [[ .DB.Info.Tables ]],
+            Discussions:   "[[ .DB.Info.Discussions ]]",
+            Forks:         "[[ .DB.Info.Forks ]]",
+            Licence:       "[[ .DB.Info.Licence ]]",
+            LicenceURL:    "[[ .DB.Info.LicenceURL ]]",
+            MRs:           "[[ .DB.Info.MRs ]]",
+            MyStar:        "[[ .MyStar ]]",
+            MyWatch:       "[[ .MyWatch ]]",
+            Owner:         "[[ .Meta.Owner ]]",
+            Public:        "",
+            Size:          "[[ .DB.Info.DBEntry.Size ]]",
+            Stars:         "[[ .DB.Info.Stars ]]",
+            Watchers:      "[[ .DB.Info.Watchers ]]",
             [[ if .Meta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
                 Loggedin: "false",
             [[ end ]]
         };
+
+        // Set the displayed public/private value
+        if ("[[ .DB.Info.Public ]]" == "true") {
+            $scope.meta.Public = "Public";
+        } else {
+            $scope.meta.Public = "Private";
+        }
 
         // Sort the licence list into the desired display order
         var rawLicences = [[ .Licences ]];

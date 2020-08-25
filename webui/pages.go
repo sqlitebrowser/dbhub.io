@@ -19,51 +19,20 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 		Meta  com.MetaInfo
 	}
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-	}
-
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	pageData.Meta.Title = "What is DBHub.io?"
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("aboutPage")
-	err := t.Execute(w, pageData)
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -87,22 +56,11 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Branch list"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve the database owner & name
@@ -121,7 +79,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -133,7 +91,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -178,27 +136,8 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 		pageData.Branches = append(pageData.Branches, k)
 	}
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("branchesPage")
@@ -234,22 +173,11 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Commits settings"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve the database owner & name, and branch name
@@ -273,7 +201,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -285,7 +213,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -395,23 +323,6 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Fill out the metadata
 	pageData.Meta.Database = dbName
 	pageData.Branch = branchName
@@ -420,9 +331,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("commitsPage")
@@ -446,6 +355,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		Forks                 []com.ForkEntry
 		Meta                  com.MetaInfo
 		MyStar                bool
+		MyWatch               bool
 		SourceDBBranches      []string
 		SourceDBDefaultBranch string
 		SourceDBName          string
@@ -454,28 +364,15 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Create a Merge Request"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-		validSession = true
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Ensure we have a valid logged in user
-	if validSession != true {
+	if pageData.Meta.LoggedInUser == "" {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
@@ -490,7 +387,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve list of forks for the database
-	pageData.Forks, err = com.ForkTree(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.Forks, err = com.ForkTree(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError,
 			fmt.Sprintf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder,
@@ -505,7 +402,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 
 	// If the source database has an (accessible) parent, use that as the default destination selected for the user.
 	// If it doesn't, then set the source as the destination as well and the user will have to manually choose
-	pageData.DestOwner, pageData.DestFolder, pageData.DestDBName, err = com.ForkParent(loggedInUser, dbOwner, dbFolder,
+	pageData.DestOwner, pageData.DestFolder, pageData.DestDBName, err = com.ForkParent(pageData.Meta.LoggedInUser, dbOwner, dbFolder,
 		dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
@@ -551,7 +448,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -565,9 +462,16 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -579,21 +483,16 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
+	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
+	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
+	if licSHA != "" {
+		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(dbOwner, licSHA)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
+	} else {
+		pageData.DB.Info.Licence = "Not specified"
 	}
 
 	// If the initially chosen source and destinations can be directly applied, fill out the initial commit list entries
@@ -676,11 +575,10 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Database = dbName
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
+	pageData.Meta.PageSection = "db_merge"
 	t := tmpl.Lookup("comparePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -696,28 +594,15 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Confirm database deletion"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-		validSession = true
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Ensure we have a valid logged in user
-	if validSession != true {
+	if pageData.Meta.LoggedInUser == "" {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
@@ -732,7 +617,7 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -744,7 +629,7 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database owner matches the logged in user
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
+	if strings.ToLower(pageData.Meta.LoggedInUser) != strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
@@ -757,28 +642,11 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	ur, err := com.User(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if ur.AvatarURL != "" {
-		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-	}
-	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Fill out metadata for the page to be rendered
 	pageData.Meta.Database = dbName
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("confirmDeletePage")
@@ -806,22 +674,11 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Branch list"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve the database owner & name
@@ -840,7 +697,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -852,7 +709,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -913,27 +770,8 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("contributorsPage")
@@ -952,28 +790,15 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Create new branch"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-		validSession = true
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Ensure we have a valid logged in user
-	if validSession != true {
+	if pageData.Meta.LoggedInUser == "" {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
@@ -988,7 +813,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1000,7 +825,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database owner matches the logged in user
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
+	if strings.ToLower(pageData.Meta.LoggedInUser) != strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
@@ -1013,29 +838,12 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	ur, err := com.User(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if ur.AvatarURL != "" {
-		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-	}
-	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Fill out metadata for the page to be rendered
 	pageData.Meta.Database = dbName
 	pageData.Commit = commit
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("createBranchPage")
@@ -1053,28 +861,15 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Create new discussion"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-		validSession = true
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Ensure we have a valid logged in user
-	if validSession != true {
+	if pageData.Meta.LoggedInUser == "" {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
@@ -1089,7 +884,7 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1108,30 +903,11 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Fill out metadata for the page to be rendered
 	pageData.Meta.Database = dbName
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("createDiscussionPage")
@@ -1150,28 +926,15 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Create new tag"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-		validSession = true
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Ensure we have a valid logged in user
-	if validSession != true {
+	if pageData.Meta.LoggedInUser == "" {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
@@ -1186,7 +949,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	dbFolder := "/"
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1198,7 +961,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database owner matches the logged in user
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
+	if strings.ToLower(pageData.Meta.LoggedInUser) != strings.ToLower(dbOwner) {
 		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
@@ -1211,29 +974,12 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	ur, err := com.User(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if ur.AvatarURL != "" {
-		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-	}
-	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Fill out metadata for the page to be rendered
 	pageData.Meta.Database = dbName
 	pageData.Commit = commit
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("createTagPage")
@@ -1256,25 +1002,16 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		Config  com.TomlConfig
 	}
 
+	pageData.Meta.PageSection = "db_data"
+
 	// Store settings
 	pageData.Config = com.Conf
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Check if a specific database commit ID was given
@@ -1365,7 +1102,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1379,7 +1116,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	// * Execution can only get here if the user has access to the requested database *
 
 	// Increment the view counter for the database (excluding people viewing their own databases)
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
+	if strings.ToLower(pageData.Meta.LoggedInUser) != strings.ToLower(dbOwner) {
 		err = com.IncrementViewCount(dbOwner, dbFolder, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -1461,7 +1198,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, commitID)
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -1487,14 +1224,14 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Check if the database was starred by the logged in user
-	myStar, err := com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	myStar, err := com.CheckDBStarred(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database star status")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	myWatch, err := com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	myWatch, err := com.CheckDBWatched(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
@@ -1516,8 +1253,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// Determine the number of rows to display
 	var tempMaxRows int
-	if loggedInUser != "" {
-		tempMaxRows = com.PrefUserMaxRows(loggedInUser)
+	if pageData.Meta.LoggedInUser != "" {
+		tempMaxRows = com.PrefUserMaxRows(pageData.Meta.LoggedInUser)
 		pageData.DB.MaxRows = tempMaxRows
 	} else {
 		// Not logged in, so use the default number of rows
@@ -1525,25 +1262,12 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		pageData.DB.MaxRows = tempMaxRows
 	}
 
-	// Retrieve the details for the logged in user
-	var avatarURL string
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			avatarURL = ur.AvatarURL + "&s=48"
-		}
-	}
-
 	// Generate predictable cache keys for the metadata and sqlite table rows
 	// TODO: The cache approach needs redoing, taking into account the life cycle of each info piece
-	mdataCacheKey := com.MetadataCacheKey("dwndb-meta", loggedInUser, dbOwner, dbFolder, dbName,
+	mdataCacheKey := com.MetadataCacheKey("dwndb-meta", pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName,
 		commitID)
 	rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-		loggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
+		pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
 
 	// If a cached version of the page data exists, use it
 	ok, err := com.GetCachedData(mdataCacheKey, &pageData)
@@ -1559,9 +1283,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 		// Restore the correct MaxRow value
 		pageData.DB.MaxRows = tempMaxRows
-
-		// Restore the correct username
-		pageData.Meta.LoggedInUser = loggedInUser
 
 		// Restore the correct discussion and MR count
 		pageData.DB.Info.Discussions = currentDisc
@@ -1597,7 +1318,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			} else {
 				// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
 				log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
-					"logged in user '%s'", j, dbOwner, dbFolder, dbName, loggedInUser)
+					"logged in user '%s'", j, dbOwner, dbFolder, dbName, pageData.Meta.LoggedInUser)
 			}
 		}
 
@@ -1618,18 +1339,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-
-		// Retrieve the status updates count for the logged in user
-		if loggedInUser != "" {
-			pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-			if err != nil {
-				errorPage(w, r, http.StatusInternalServerError, err.Error())
-				return
-			}
-		}
-
-		// Ensure the correct Avatar URL is displayed
-		pageData.Meta.AvatarURL = avatarURL
 
 		// Render the page (using the caches)
 		if ok {
@@ -1746,18 +1455,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Ensure the correct Avatar URL is displayed
-	pageData.Meta.AvatarURL = avatarURL
-
-	// Retrieve the status updates count for the logged in user
-	if loggedInUser != "" {
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Fill out various metadata fields
 	pageData.Meta.Database = dbName
 	pageData.Meta.Server = com.Conf.Web.ServerName
@@ -1797,7 +1494,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		} else {
 			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
 			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
-				"logged in user '%s'", j, dbOwner, dbFolder, dbName, loggedInUser)
+				"logged in user '%s'", j, dbOwner, dbFolder, dbName, pageData.Meta.LoggedInUser)
 		}
 	}
 
@@ -1816,9 +1513,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.Meta.ForkDeleted = frkDel
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Update database star and watch status for the logged in user
 	pageData.MyStar = myStar
@@ -1880,22 +1575,11 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 		MyWatch           bool
 	}
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve the database owner & name
@@ -1922,7 +1606,7 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1934,12 +1618,12 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, commitA)
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitA)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, commitB)
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitB)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -1953,34 +1637,34 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Retrieve the diffs for these commits
-	pageData.Diffs, err = com.Diff(dbOwner, "/", dbName, commitA, dbOwner, "/", dbName, commitB, loggedInUser, com.NoMerge, true)
+	pageData.Diffs, err = com.Diff(dbOwner, "/", dbName, commitA, dbOwner, "/", dbName, commitB, pageData.Meta.LoggedInUser, com.NoMerge, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Retrieve the column information for each table with data changes
-	sdbBefore, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitA, loggedInUser)
+	sdbBefore, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitA, pageData.Meta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	defer sdbBefore.Close()
-	sdbAfter, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitB, loggedInUser)
+	sdbAfter, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitB, pageData.Meta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2021,23 +1705,6 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Retrieve the "forked from" information
 	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -2054,9 +1721,7 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Changes"
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the main discussion list page
 	t := tmpl.Lookup("diffPage")
@@ -2078,22 +1743,13 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		MyWatch        bool
 	}
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	pageData.Meta.PageSection = "db_disc"
+
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve the database owner & name
@@ -2124,7 +1780,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2136,7 +1792,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -2150,14 +1806,14 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
@@ -2185,23 +1841,6 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Retrieve the "forked from" information
 	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -2213,14 +1852,24 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.ForkDatabase = frkDB
 	pageData.Meta.ForkDeleted = frkDel
 
+	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
+	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
+	if licSHA != "" {
+		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(dbOwner, licSHA)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		pageData.DB.Info.Licence = "Not specified"
+	}
+
 	// Fill out the metadata
 	pageData.Meta.Database = dbName
 	pageData.Meta.Title = "Discussion List"
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// If a specific discussion ID was given, then we display the discussion comments page
 	if pageData.SelectedID != 0 {
@@ -2245,8 +1894,8 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// If this discussion matches one of the user's status updates, remove the status update from the list
-		if loggedInUser != "" {
-			pageData.Meta.NumStatusUpdates, err = com.StatusUpdateCheck(dbOwner, dbFolder, dbName, pageData.SelectedID, loggedInUser)
+		if pageData.Meta.LoggedInUser != "" {
+			pageData.Meta.NumStatusUpdates, err = com.StatusUpdateCheck(dbOwner, dbFolder, dbName, pageData.SelectedID, pageData.Meta.LoggedInUser)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -2280,50 +1929,20 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 	pageData.Message = msg
 	pageData.Meta.Title = "Error"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			fmt.Fprintf(w, "An error occurred when calling errorPage(): %s", err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-	}
-
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	w.WriteHeader(httpCode)
 	t := tmpl.Lookup("errorPage")
-	err := t.Execute(w, pageData)
+	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
@@ -2347,26 +1966,15 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Database = dbName
 	dbFolder := "/"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err = collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Check if the database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
 		return
@@ -2377,7 +1985,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve list of forks for the database
-	pageData.Forks, err = com.ForkTree(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.Forks, err = com.ForkTree(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError,
 			fmt.Sprintf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder,
@@ -2393,27 +2001,8 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("forksPage")
@@ -2432,22 +2021,11 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 		Stats map[com.ActivityRange]com.ActivityStats
 	}
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve the database activity stats
@@ -2463,26 +2041,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = `SQLite storage "in the cloud"`
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
-
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("rootPage")
@@ -2512,22 +2071,13 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		MyWatch             bool
 	}
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	pageData.Meta.PageSection = "db_merge"
+
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve the database owner & name
@@ -2558,7 +2108,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2570,7 +2120,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -2584,14 +2134,14 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
@@ -2619,23 +2169,6 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Retrieve the "forked from" information
 	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -2647,6 +2180,18 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.ForkDatabase = frkDB
 	pageData.Meta.ForkDeleted = frkDel
 
+	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
+	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
+	if licSHA != "" {
+		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(dbOwner, licSHA)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		pageData.DB.Info.Licence = "Not specified"
+	}
+
 	// Fill out the metadata
 	pageData.Meta.Database = dbName
 	pageData.Meta.Title = "Merge Requests"
@@ -2655,9 +2200,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	pageData.StatusMessageColour = "green"
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// If a specific MR ID was given, then we display the MR comments page
 	if pageData.SelectedID != 0 {
@@ -2679,7 +2222,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		// Check if the source database has been deleted or renamed
 		mr := &pageData.MRList[0]
 		if mr.MRDetails.SourceDBID != 0 {
-			pageData.SourceDBOK, mr.MRDetails.SourceFolder, mr.MRDetails.SourceDBName, err = com.CheckDBID(loggedInUser,
+			pageData.SourceDBOK, mr.MRDetails.SourceFolder, mr.MRDetails.SourceDBName, err = com.CheckDBID(pageData.Meta.LoggedInUser,
 				mr.MRDetails.SourceOwner, mr.MRDetails.SourceDBID)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -2826,8 +2369,8 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// If this MR matches one of the user's status updates, remove the status update from the list
-		if loggedInUser != "" {
-			pageData.Meta.NumStatusUpdates, err = com.StatusUpdateCheck(dbOwner, dbFolder, dbName, pageData.SelectedID, loggedInUser)
+		if pageData.Meta.LoggedInUser != "" {
+			pageData.Meta.NumStatusUpdates, err = com.StatusUpdateCheck(dbOwner, dbFolder, dbName, pageData.SelectedID, pageData.Meta.LoggedInUser)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -2862,7 +2405,11 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 		Meta        com.MetaInfo
 	}
 	pageData.Meta.Title = "Settings"
-	pageData.Meta.LoggedInUser = loggedInUser
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	// Grab the display name and email address for the user
 	usr, err := com.User(loggedInUser)
@@ -2886,21 +2433,6 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	// Retrieve the user preference data
 	pageData.MaxRows = com.PrefUserMaxRows(loggedInUser)
 
-	// Retrieve the details and status updates count for the logged in user
-	ur, err := com.User(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if ur.AvatarURL != "" {
-		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-	}
-	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Retrieve the list of API keys for the user
 	pageData.APIKeys, err = com.GetAPIKeys(loggedInUser)
 	if err != nil {
@@ -2909,9 +2441,7 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("prefPage")
@@ -2931,6 +2461,11 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		Watching   []com.DBEntry
 	}
 	pageData.Meta.Server = com.Conf.Web.ServerName
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
 	pageData.Meta.LoggedInUser = userName
 
 	// Check if the desired user exists
@@ -2980,31 +2515,12 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if usr.AvatarURL != "" {
-		pageData.Meta.AvatarURL = usr.AvatarURL + "&s=48"
-	}
 
-	// Retrieve the details and status updates count for the logged in user
-	ur, err := com.User(userName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if ur.AvatarURL != "" {
-		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-	}
-	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(userName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
 	pageData.Meta.Owner = usr.Username
 	pageData.Meta.Title = usr.Username
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("profilePage")
@@ -3035,22 +2551,11 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Release list"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve the database owner & name
@@ -3069,7 +2574,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3081,7 +2586,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -3149,27 +2654,8 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("releasesPage")
@@ -3213,9 +2699,7 @@ func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// If the Auth0 profile included a nickname, we use that to pre-fill the input field
 	ni := sess.Values["nickname"]
@@ -3247,28 +2731,15 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Database settings"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-		validSession = true
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Ensure we have a valid logged in user
-	if validSession != true {
+	if pageData.Meta.LoggedInUser == "" {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
@@ -3287,14 +2758,14 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
 		return
 	}
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
+	if strings.ToLower(dbOwner) != strings.ToLower(pageData.Meta.LoggedInUser) {
 		errorPage(w, r, http.StatusBadRequest,
 			"You can only access the settings page for your own databases")
 		return
 	}
 
 	// Check if the user has access to the requested database
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3306,14 +2777,14 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
@@ -3331,10 +2802,22 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.ForkDeleted = frkDel
 
 	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
+	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
+	if licSHA != "" {
+		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(dbOwner, licSHA)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		pageData.DB.Info.Licence = "Not specified"
 	}
 
 	// Get a handle from Minio for the database object
@@ -3397,7 +2880,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Populate the licence list
-	pageData.Licences, err = com.GetLicences(loggedInUser)
+	pageData.Licences, err = com.GetLicences(pageData.Meta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
 		return
@@ -3415,21 +2898,6 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	ur, err := com.User(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if ur.AvatarURL != "" {
-		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-	}
-	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Fill out the metadata
 	pageData.Meta.Database = dbName
 
@@ -3439,11 +2907,10 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
+	pageData.Meta.PageSection = "db_settings"
 	t := tmpl.Lookup("settingsPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
@@ -3460,22 +2927,11 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Stars"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve owner and database name
@@ -3489,7 +2945,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the database exists
 	// TODO: Add folder support
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
 		return
@@ -3514,27 +2970,8 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("starsPage")
@@ -3564,22 +3001,11 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Tag list"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve the database owner & name
@@ -3598,7 +3024,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3610,7 +3036,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, "")
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -3677,27 +3103,8 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("tagsPage")
@@ -3715,52 +3122,21 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 		Updates map[string][]com.StatusUpdateEntry
 	}
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-		validSession = true
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Ensure we have a valid logged in user
-	if validSession != true {
+	if pageData.Meta.LoggedInUser == "" {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
 
 	// Retrieve the list of status updates for the user
-	var err error
-	pageData.Updates, err = com.StatusUpdates(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Retrieve the details for the logged in user
-	ur, err := com.User(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if ur.AvatarURL != "" {
-		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-	}
-
-	// Check if there are any status updates for the user
-	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+	pageData.Updates, err = com.StatusUpdates(pageData.Meta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3768,12 +3144,9 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 
 	// Fill out page metadata
 	pageData.Meta.Title = "Status updates"
-	pageData.Meta.LoggedInUser = loggedInUser
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("updatesPage")
@@ -3795,34 +3168,21 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 		NumLicences   int
 	}
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
-		validSession = true
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Ensure we have a valid logged in user
-	if validSession != true {
+	if pageData.Meta.LoggedInUser == "" {
 		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
 		return
 	}
 
 	// Ensure the user has set their display name and email address
-	usr, err := com.User(loggedInUser)
+	usr, err := com.User(pageData.Meta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving user details")
 		return
@@ -3834,38 +3194,18 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Populate the licence list
-	pageData.Licences, err = com.GetLicences(loggedInUser)
+	pageData.Licences, err = com.GetLicences(pageData.Meta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
 		return
 	}
 	pageData.NumLicences = len(pageData.Licences)
 
-	// Retrieve the details for the logged in user
-	ur, err := com.User(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if ur.AvatarURL != "" {
-		pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-	}
-
-	// Check if there are any status updates for the user
-	pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Fill out page metadata
 	pageData.Meta.Title = "Upload database"
-	pageData.Meta.LoggedInUser = loggedInUser
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("uploadPage")
@@ -3886,27 +3226,17 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 	pageData.Meta.Server = com.Conf.Web.ServerName
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
-	if u != nil {
-		loggedInUser = u.(string)
-		if strings.ToLower(loggedInUser) == strings.ToLower(userName) {
-			// The logged in user is looking at their own user page
-			profilePage(w, r, loggedInUser)
-			return
-		}
-		pageData.Meta.LoggedInUser = loggedInUser
+
+	if pageData.Meta.LoggedInUser != "" && strings.ToLower(pageData.Meta.LoggedInUser) == strings.ToLower(userName) {
+		// The logged in user is looking at their own user page
+		profilePage(w, r, pageData.Meta.LoggedInUser)
+		return
 	}
 
 	// Check if the desired user exists
@@ -3920,23 +3250,6 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	if !userExists {
 		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown user: %s", userName))
 		return
-	}
-
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
 	}
 
 	// Retrieve the details for the user who's page we're looking at
@@ -3960,9 +3273,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("userPage")
@@ -3981,22 +3292,11 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Title = "Watchers"
 
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
+	// Get all meta information
+	err := collectPageMetaInfo(r, &pageData.Meta)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Retrieve owner and database name
@@ -4010,7 +3310,7 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	// Check if the database exists
 	// TODO: Add folder support
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database failure when looking up database details")
 		return
@@ -4035,27 +3335,8 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.Meta.Owner = usr.Username
 
-	// Retrieve the details and status updates count for the logged in user
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			pageData.Meta.AvatarURL = ur.AvatarURL + "&s=48"
-		}
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
+	pageData.Auth0 = collectPageAuth0Info()
 
 	// Render the page
 	t := tmpl.Lookup("watchersPage")
