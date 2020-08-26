@@ -3531,77 +3531,11 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the details of the head commit for the destination database branch
-	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName) // Destination branch list
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	branchDetails, ok := branchList[branchName]
-	if !ok {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, "Could not retrieve details for the destination branch")
-		return
-	}
-	destCommitID := branchDetails.Commit
-	destCommitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-
-	// Check if the MR commits will still apply cleanly to the destination branch
-	finalCommit := commitDiffList[len(commitDiffList)-1]
-	if finalCommit.Parent != destCommitID {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, fmt.Errorf("Destination branch has changed. Merge cannot proceed."))
-		return
-	}
-
 	// * The required details have been collected, and sanity checks completed, so merge the MR *
 
-	// Add the source commits directly to the destination commit list
-	for _, j := range commitDiffList {
-		destCommitList[j.ID] = j
-	}
-
-	// Retrieve details for the logged in user
-	usr, err := com.User(loggedInUser)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-
-	// Create a merge commit, using the details of the source commit (this gets us a correctly filled in DB tree
-	// structure easily)
-	mrg := commitDiffList[0]
-	mrg.AuthorEmail = usr.Email
-	mrg.AuthorName = usr.DisplayName
-	mrg.Message = fmt.Sprintf("Merge branch '%s' of '%s%s%s' into '%s'", srcBranchName, srcOwner, srcFolder,
+	message := fmt.Sprintf("Merge branch '%s' of '%s%s%s' into '%s'", srcBranchName, srcOwner, srcFolder,
 		srcDBName, branchName)
-	mrg.Parent = commitDiffList[0].ID
-	mrg.OtherParents = append(mrg.OtherParents, destCommitID)
-	mrg.Timestamp = time.Now().UTC()
-	mrg.ID = com.CreateCommitID(mrg)
-
-	// Add the new commit to the destination db commit list, and update the branch list with it
-	destCommitList[mrg.ID] = mrg
-	b := com.BranchEntry{
-		Commit:      mrg.ID,
-		CommitCount: branchDetails.CommitCount + len(commitDiffList) + 1,
-		Description: branchDetails.Description,
-	}
-	branchList[branchName] = b
-	err = com.StoreCommits(dbOwner, dbFolder, dbName, destCommitList)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	err = com.StoreBranches(dbOwner, dbFolder, dbName, branchList)
+	err = com.Merge(dbOwner, dbFolder, dbName, branchName, commitDiffList, message, loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
