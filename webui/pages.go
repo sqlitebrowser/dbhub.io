@@ -744,6 +744,9 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
+	pageData.Meta.Owner = dbOwner
+	pageData.Meta.Folder = dbFolder
+	pageData.Meta.Database = dbName
 
 	// Store settings
 	pageData.Config = com.Conf
