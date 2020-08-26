@@ -138,7 +138,7 @@ func checkForConflicts(srcDiffs Diffs, destDiffs Diffs, mergeStrategy MergeStrat
 				// If the schema of this object has changed in one of the branches, this is
 				// a conflict we cannot solve
 				if srcDiff.Schema != nil || destDiff.Schema != nil {
-					conflicts = append(conflicts, "Schema for " + srcDiff.ObjectName + " has changed")
+					conflicts = append(conflicts, "Schema for "+srcDiff.ObjectName+" has changed")
 
 					// No need to look further in this case
 					break
