@@ -458,6 +458,19 @@ func CreateDBTreeID(entries []DBTreeEntry) string {
 	return hex.EncodeToString(s[:])
 }
 
+// DataValuesMatch compares two slices of DataValue objects. It returns true if the two are equal, false otherwise.
+func DataValuesMatch(a []DataValue, b []DataValue) (equal bool) {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // DeleteBranchHistory safely removes the commit history for a branch, from the head of the branch back to (but not
 // including) the specified commit.  The new branch head will be at the commit ID specified
 func DeleteBranchHistory(dbOwner, dbFolder, dbName, branchName, commitID string) (isolatedTags, isolatedRels []string, err error) {
