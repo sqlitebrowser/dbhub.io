@@ -128,6 +128,7 @@ func dbDiff(dbA string, dbB string, merge MergeStrategy, includeData bool) (Diff
 		log.Printf("Couldn't open database in dbDiff(): %s", err)
 		return Diffs{}, err
 	}
+	defer sdb.Close()
 	if err = sdb.EnableExtendedResultCodes(true); err != nil {
 		log.Printf("Couldn't enable extended result codes in dbDiff(): %v\n", err.Error())
 		return Diffs{}, err
