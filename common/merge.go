@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	sqlite "github.com/gwenn/gosqlite"
 )
 
 // Merge merges the commits in commitDiffList into the destination branch destBranch of the given database
@@ -119,8 +121,76 @@ func performMerge(destOwner string, destFolder string, destName string, destComm
 		return fmt.Errorf("The two branches are in conflict. Please fix this manually.\n" + strings.Join(conflicts, "\n"))
 	}
 
-	// Merge
-	// TODO
+	// Get Minio location
+	bucket, id, _, err := MinioLocation(destOwner, destFolder, destName, destCommitID, loggedInUser)
+	if err != nil {
+		return
+	}
+
+	// Sanity check
+	if id == "" {
+		// The requested database wasn't found, or the user doesn't have permission to access it
+		return fmt.Errorf("Requested database not found")
+	}
+
+	// Retrieve database file from Minio, using locally cached version if it's already there
+	dbFile, err := RetrieveDatabaseFile(bucket, id)
+	if err != nil {
+		return
+	}
+
+	// Create a temporary file for the new database
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "merge-*.db")
+	if err != nil {
+		return
+	}
+
+	// Delete the file when we are done
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
+	// Copy destination database to temporary location
+	{
+		inFile, err := os.Open(dbFile)
+		if err != nil {
+			return err
+		}
+		defer inFile.Close()
+		_, err = io.Copy(tmpFile, inFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Open temporary database file for writing
+	var sdb *sqlite.Conn
+	sdb, err = sqlite.Open(tmpFile.Name(), sqlite.OpenReadWrite)
+	if err != nil {
+		return err
+	}
+	defer sdb.Close()
+	if err = sdb.EnableExtendedResultCodes(true); err != nil {
+		return err
+	}
+
+	// Apply all the SQL statements from the diff on the temporary database
+	for _, diff := range srcDiffs.Diff {
+		// First apply schema changes
+		if diff.Schema != nil {
+			err = sdb.Exec(diff.Schema.Sql)
+			if err != nil {
+				return
+			}
+		}
+
+		// Then apply data changes
+		for _, row := range diff.Data {
+			err = sdb.Exec(row.Sql)
+			if err != nil {
+				return
+			}
+		}
+	}
 
 	return
 }
@@ -144,30 +214,27 @@ func checkForConflicts(srcDiffs Diffs, destDiffs Diffs, mergeStrategy MergeStrat
 					break
 				}
 
-				// If both objects have changed data we need to compare that too
-				if srcDiff.Data != nil && destDiff.Data != nil {
-					// Check if there are any changed rows with the same primary key
-					for _, srcRow := range srcDiff.Data {
-						for _, destRow := range destDiff.Data {
-							if DataValuesMatch(srcRow.Pk, destRow.Pk) {
-								// We have found two changes which affect the same primary key. So this is a potential
-								// conflict. The question now is whether it is actually a problem or not.
+				// Check if there are any changed rows with the same primary key
+				for _, srcRow := range srcDiff.Data {
+					for _, destRow := range destDiff.Data {
+						if DataValuesMatch(srcRow.Pk, destRow.Pk) {
+							// We have found two changes which affect the same primary key. So this is a potential
+							// conflict. The question now is whether it is actually a problem or not.
 
-								// Every combination of updates, inserts, and deletes is a conflict except for the
-								// case where the source row is inserted using the NewPkMerge strategy which generates
-								// a new primary key which doesn't conflict.
-								if !(srcRow.ActionType == "add" && mergeStrategy == NewPkMerge) {
-									// Generate and add conflict description
-									conflictString := "Conflict in " + srcDiff.ObjectName + " for "
-									for _, pk := range srcRow.Pk {
-										conflictString += pk.Name + "=" + pk.Value.(string) + ","
-									}
-									conflicts = append(conflicts, strings.TrimSuffix(conflictString, ","))
+							// Every combination of updates, inserts, and deletes is a conflict except for the
+							// case where the source row is inserted using the NewPkMerge strategy which generates
+							// a new primary key which doesn't conflict.
+							if !(srcRow.ActionType == "add" && mergeStrategy == NewPkMerge) {
+								// Generate and add conflict description
+								conflictString := "Conflict in " + srcDiff.ObjectName + " for "
+								for _, pk := range srcRow.Pk {
+									conflictString += pk.Name + "=" + pk.Value.(string) + ","
 								}
-
-								// No need to look through the rest of the destination rows
-								break
+								conflicts = append(conflicts, strings.TrimSuffix(conflictString, ","))
 							}
+
+							// No need to look through the rest of the destination rows
+							break
 						}
 					}
 				}
