@@ -5154,11 +5154,17 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Grab and validate the supplied "public" form field
+	var accessType com.SetAccessType
 	public, err := com.GetPub(r)
 	if err != nil {
 		log.Printf("%s: Error when converting public value to boolean: %v\n", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Public value incorrect")
 		return
+	}
+	if public {
+		accessType = com.SetToPublic
+	} else {
+		accessType = com.SetToPrivate
 	}
 
 	// Validate the licence value
@@ -5254,7 +5260,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Sanity check the uploaded database, and if ok then add it to the system
 	numBytes, _, sha, err := com.AddDatabase(loggedInUser, loggedInUser, dbFolder, dbName, createBranch, branchName,
-		commitID, public, licenceName, commitMsg, sourceURL, tempFile, time.Now(), time.Time{},
+		commitID, accessType, licenceName, commitMsg, sourceURL, tempFile, time.Now(), time.Time{},
 		"", "", "", "", nil, "")
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())

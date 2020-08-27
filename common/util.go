@@ -21,7 +21,7 @@ import (
 
 // AddDatabase is handles database upload processing
 func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bool, branchName,
-	commitID string, public bool, licenceName, commitMsg, sourceURL string, newDB io.Reader,
+	commitID string, accessType SetAccessType, licenceName, commitMsg, sourceURL string, newDB io.Reader,
 	lastModified, commitTime time.Time, authorName, authorEmail, committerName, committerEmail string,
 	otherParents []string, dbSha string) (numBytes int64, newCommitID string, calculatedDbSha string, err error) {
 
@@ -172,6 +172,20 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 					commitMsg = fmt.Sprintf("Database licence changed from '%s' to '%s'.", l, licenceName)
 				}
 			}
+		}
+	}
+
+	// Figure out new access type
+	var public bool
+	switch accessType {
+	case SetToPublic:
+		public = true
+	case SetToPrivate:
+		public = false
+	case KeepCurrentAccessType:
+		public, err = CommitPublicFlag(loggedInUser, dbOwner, dbFolder, dbName, commitID)
+		if err != nil {
+			return
 		}
 	}
 
@@ -388,6 +402,16 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 
 	// Database successfully uploaded
 	return numBytes, c.ID, sha, nil
+}
+
+// CommitPublicFlag returns the public flag of a given commit
+func CommitPublicFlag(loggedInUser, dbOwner, dbFolder, dbName, commitID string) (public bool, err error) {
+	var DB SQLiteDBinfo
+	err = DBDetails(&DB, loggedInUser, dbOwner, dbFolder, dbName, commitID)
+	if err != nil {
+		return
+	}
+	return DB.Info.Public, nil
 }
 
 // CommitLicenceSHA returns the licence used by the database in a given commit

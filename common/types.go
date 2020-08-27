@@ -70,6 +70,15 @@ const (
 	Internal
 )
 
+// SetAccessType is used for setting the public flag of a database
+type SetAccessType int
+
+const (
+	SetToPublic SetAccessType = iota
+	SetToPrivate
+	KeepCurrentAccessType
+)
+
 // ************************
 // Configuration file types
 

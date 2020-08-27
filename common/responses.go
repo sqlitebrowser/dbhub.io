@@ -225,13 +225,20 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	}
 
 	// If a public/private setting was provided then use it
-	var public bool
+	var accessType SetAccessType
 	if z := r.FormValue("public"); z != "" {
+		var public bool
 		public, err = strconv.ParseBool(z)
 		if err != nil {
 			httpStatus = http.StatusBadRequest
 			err = fmt.Errorf("Error when converting public value to boolean: %v\n", err)
 			return
+		}
+
+		if public {
+			accessType = SetToPublic
+		} else {
+			accessType = SetToPrivate
 		}
 	}
 
@@ -470,7 +477,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 
 	// Sanity check the uploaded database, and if ok then add it to the system
 	numBytes, returnCommitID, sha, err := AddDatabase(loggedInUser, targetUser, targetFolder, targetDB, createBranch,
-		branchName, commitID, public, licenceName, commitMsg, sourceURL, tempFile, lastMod,
+		branchName, commitID, accessType, licenceName, commitMsg, sourceURL, tempFile, lastMod,
 		commitTime, authorName, authorEmail, committerName, committerEmail, otherParents, dbSHA256)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
