@@ -195,33 +195,16 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	// TODO: Ugh, this is an ugly approach just to add the username to the commit data.  Surely there's a better way?
-	// TODO  Maybe store the username in the commit data structure in the database instead?
-	// TODO: Display licence changes too
-	uName, avatarURL, err := com.GetUsernameFromEmail(rawList[headID].AuthorEmail)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if avatarURL != "" {
-		avatarURL += "&s=30"
-	}
 
-	// Create the history entry
-	pageData.History = []HistEntry{
-		{
-			AuthorEmail:    rawList[headID].AuthorEmail,
-			AuthorName:     rawList[headID].AuthorName,
-			AuthorUserName: uName,
-			AvatarURL:      avatarURL,
-			CommitterEmail: rawList[headID].CommitterEmail,
-			CommitterName:  rawList[headID].CommitterName,
-			ID:             rawList[headID].ID,
-			Message:        string(gfm.Markdown([]byte(rawList[headID].Message))),
-			Parent:         rawList[headID].Parent,
-			Timestamp:      rawList[headID].Timestamp,
-		},
-	}
+	// To create the commit history we need to follow both, the parent commit id and the other parents commit ids,
+	// to include merged commits. When following a merged branch we do however end up with the regular commits at
+	// some point. In this example the first line is what you get by following the parent ids. We also want to
+	// include the second line which we get by following c8's other parent's id.
+	// c1 -> c2 -> c3 -> c4 -> c5 -> c8
+	//               \-> c6 -> c7 /
+	// However, we don't want c1 and c2 to be included twice. This is why we assemble a list of all regular parent
+	// commit ids first as a look-up table for knowing when to stop traversing the other branches of the tree.
+	regularBranchCommitIds := map[string]bool{}
 	commitData := com.CommitEntry{Parent: rawList[headID].Parent}
 	for commitData.Parent != "" {
 		commitData, ok = rawList[commitData.Parent]
@@ -229,29 +212,74 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 			errorPage(w, r, http.StatusInternalServerError, "Internal error when retrieving commit data")
 			return
 		}
-		uName, avatarURL, err = com.GetUsernameFromEmail(commitData.AuthorEmail)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if avatarURL != "" {
-			avatarURL += "&s=30"
+
+		regularBranchCommitIds[commitData.ID] = true
+	}
+
+	// This function recursively follows all branches of the tree
+	var traverseTree func(string, bool) (err error)
+	traverseTree = func(id string, stopAtRegularBranch bool) (err error) {
+		for id != "" {
+			// If we want to stop at the regular branch check if this commit id is a known regular branch
+			// commit id. If so return here
+			if stopAtRegularBranch {
+				_, ok = regularBranchCommitIds[id]
+				if ok {
+					return
+				}
+
+				// Add this commit id to the list of known commit ids to stop at. Just to be sure
+				// to avoid double commits in messes up commit histories.
+				// TODO Maybe remove this when we are able to display an actual tree structure.
+				regularBranchCommitIds[id] = true
+			}
+
+			// TODO: Ugh, this is an ugly approach just to add the username to the commit data.  Surely there's a better way?
+			// TODO  Maybe store the username in the commit data structure in the database instead?
+			// TODO: Display licence changes too
+			commit, ok := rawList[id]
+			if !ok {
+				return fmt.Errorf("Internal error when retrieving commit data")
+			}
+			uName, avatarURL, err := com.GetUsernameFromEmail(commit.AuthorEmail)
+			if err != nil {
+				return err
+			}
+			if avatarURL != "" {
+				avatarURL += "&s=30"
+			}
+
+			// Create a history entry
+			newEntry := HistEntry{
+				AuthorEmail:    commit.AuthorEmail,
+				AuthorName:     commit.AuthorName,
+				AuthorUserName: uName,
+				AvatarURL:      avatarURL,
+				CommitterEmail: commit.CommitterEmail,
+				CommitterName:  commit.CommitterName,
+				ID:             commit.ID,
+				Message:        string(gfm.Markdown([]byte(commit.Message))),
+				Parent:         commit.Parent,
+				Timestamp:      commit.Timestamp,
+			}
+			pageData.History = append(pageData.History, newEntry)
+
+			// Follow the other parents if there are any
+			for _, v := range commit.OtherParents {
+				traverseTree(v, true)
+			}
+
+			id = commit.Parent
 		}
 
-		// Create a history entry
-		newEntry := HistEntry{
-			AuthorEmail:    commitData.AuthorEmail,
-			AuthorName:     commitData.AuthorName,
-			AuthorUserName: uName,
-			AvatarURL:      avatarURL,
-			CommitterEmail: commitData.CommitterEmail,
-			CommitterName:  commitData.CommitterName,
-			ID:             commitData.ID,
-			Message:        string(gfm.Markdown([]byte(commitData.Message))),
-			Parent:         commitData.Parent,
-			Timestamp:      commitData.Timestamp,
-		}
-		pageData.History = append(pageData.History, newEntry)
+		return
+	}
+
+	// Create the history list
+	err = traverseTree(headID, false)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	// Fill out the metadata
