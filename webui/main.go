@@ -3535,7 +3535,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	message := fmt.Sprintf("Merge branch '%s' of '%s%s%s' into '%s'", srcBranchName, srcOwner, srcFolder,
 		srcDBName, branchName)
-	err = com.Merge(dbOwner, dbFolder, dbName, branchName, srcOwner, srcFolder, srcDBName, commitDiffList, message, loggedInUser)
+	_, err = com.Merge(dbOwner, dbFolder, dbName, branchName, srcOwner, srcFolder, srcDBName, commitDiffList, message, loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())

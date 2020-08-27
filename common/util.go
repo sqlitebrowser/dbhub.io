@@ -46,6 +46,10 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 			"Error: %v\n", loggedInUser, dbOwner, dbFolder, dbName, err)
 		return
 	}
+	if numBytes == 0 {
+		err = errors.New("Copying file failed")
+		return
+	}
 
 	// Sanity check the uploaded database, and get the list of tables in the database
 	sTbls, err := SanityCheck(tempDBName)

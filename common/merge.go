@@ -12,16 +12,15 @@ import (
 )
 
 // Merge merges the commits in commitDiffList into the destination branch destBranch of the given database
-func Merge(destOwner string, destFolder string, destName string, destBranch string, srcOwner string, srcFolder string, srcName string, commitDiffList []CommitEntry, message string, loggedInUser string) (err error) {
+func Merge(destOwner, destFolder, destName, destBranch, srcOwner, srcFolder, srcName string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
 	// Get the details of the head commit for the destination database branch
 	branchList, err := GetBranches(destOwner, destFolder, destName) // Destination branch list
 	if err != nil {
-		return err
+		return
 	}
 	branchDetails, ok := branchList[destBranch]
 	if !ok {
-		err = fmt.Errorf("Could not retrieve details for the destination branch")
-		return
+		return "", fmt.Errorf("Could not retrieve details for the destination branch")
 	}
 	destCommitID := branchDetails.Commit
 
@@ -29,18 +28,40 @@ func Merge(destOwner string, destFolder string, destName string, destBranch stri
 	finalCommit := commitDiffList[len(commitDiffList)-1]
 	fastForwardPossible := finalCommit.Parent == destCommitID
 
-	// If fast forwarding doesn't work we need to perform an actual merge of the branch heads
-	if !fastForwardPossible {
-		// Perform merge
-		err = performMerge(destOwner, destFolder, destName, destCommitID, srcOwner, srcFolder, srcName, commitDiffList, loggedInUser)
+	// If fast-forwarding is possible just add a merge commit and save the new commit list.
+	// If it is not possible save the source commits and perform the actual merging which creates its own merge commit.
+	if fastForwardPossible {
+		// We can fast-forward. So simply add a merge commit on top of the just added source commits and save
+		// the new commit list and branch details.
+
+		newCommitID, err = performFastForward(destOwner, destFolder, destName, destBranch, destCommitID, commitDiffList, message, loggedInUser)
 		if err != nil {
 			return
 		}
+	} else {
+		// We cannot fast-forward. This means we have to perform an actual merge. A merge commit is automatically created
+		// by the performMerge() function so we do not have to worry about that.
+		// Perform merge
+		newCommitID, err = performMerge(destOwner, destFolder, destName, destBranch, destCommitID, srcOwner, srcFolder, srcName, commitDiffList, message, loggedInUser)
+		if err != nil {
+			return
+		}
+	}
 
-		// TODO If the merge is actually successful, stop anyway. This is because storing the resulting
-		// database and creating a proper merge commit isn't implemented yet.
-		err = fmt.Errorf("Merging other than by fast-forwarding is not yet implemented")
-		return
+	return
+}
+
+// addCommitsForMerging simply adds the commits listed in commitDiffList to the destination branch of the databases.
+// It neither performs any merging nor does it create a merge commit.
+func addCommitsForMerging(destOwner, destFolder, destName, destBranch string, commitDiffList []CommitEntry, newHead bool) (err error) {
+	// Get the details of the head commit for the destination database branch
+	branchList, err := GetBranches(destOwner, destFolder, destName) // Destination branch list
+	if err != nil {
+		return err
+	}
+	branchDetails, ok := branchList[destBranch]
+	if !ok {
+		return fmt.Errorf("Could not retrieve details for the destination branch")
 	}
 
 	// Get destination commit list
@@ -54,28 +75,18 @@ func Merge(destOwner string, destFolder string, destName string, destBranch stri
 		destCommitList[j.ID] = j
 	}
 
-	// Retrieve details for the logged in user
-	usr, err := User(loggedInUser)
-	if err != nil {
-		return err
+	// New head commit id
+	var newHeadCommitId string
+	if newHead {
+		newHeadCommitId = commitDiffList[0].ID
+	} else {
+		newHeadCommitId = branchDetails.Commit
 	}
 
-	// Create a merge commit, using the details of the source commit (this gets us a correctly filled in DB tree
-	// structure easily)
-	mrg := commitDiffList[0]
-	mrg.AuthorEmail = usr.Email
-	mrg.AuthorName = usr.DisplayName
-	mrg.Message = message
-	mrg.Parent = commitDiffList[0].ID
-	mrg.OtherParents = append(mrg.OtherParents, destCommitID)
-	mrg.Timestamp = time.Now().UTC()
-	mrg.ID = CreateCommitID(mrg)
-
-	// Add the new commit to the destination db commit list, and update the branch list with it
-	destCommitList[mrg.ID] = mrg
+	// Update the branch list
 	b := BranchEntry{
-		Commit:      mrg.ID,
-		CommitCount: branchDetails.CommitCount + len(commitDiffList) + 1,
+		Commit:      newHeadCommitId,
+		CommitCount: branchDetails.CommitCount + len(commitDiffList),
 		Description: branchDetails.Description,
 	}
 	branchList[destBranch] = b
@@ -91,8 +102,41 @@ func Merge(destOwner string, destFolder string, destName string, destBranch stri
 	return
 }
 
+// performFastForward performs a merge by simply fast-forwarding to a new head.
+func performFastForward(destOwner, destFolder, destName, destBranch, destCommitID string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
+	// Retrieve details for the logged in user
+	usr, err := User(loggedInUser)
+	if err != nil {
+		return
+	}
+
+	// Create a merge commit, using the details of the source commit (this gets us a correctly filled in DB tree
+	// structure easily)
+	mrg := commitDiffList[0]
+	mrg.AuthorEmail = usr.Email
+	mrg.AuthorName = usr.DisplayName
+	mrg.Message = message
+	mrg.Parent = commitDiffList[0].ID
+	mrg.OtherParents = append(mrg.OtherParents, destCommitID)
+	mrg.Timestamp = time.Now().UTC()
+	mrg.ID = CreateCommitID(mrg)
+
+	// Add the merge commit to the list of new commits to be added to the destination branch
+	var newCommitDiffList []CommitEntry
+	newCommitDiffList = append(newCommitDiffList, mrg)
+	newCommitDiffList = append(newCommitDiffList, commitDiffList...)
+
+	// Add the source commits and the new merge commit to the destination db commit list and update the branch list with it
+	err = addCommitsForMerging(destOwner, destFolder, destName, destBranch, newCommitDiffList, true)
+	if err != nil {
+		return
+	}
+
+	return mrg.ID, nil
+}
+
 // performMerge takes the destination database and applies the changes from commitDiffList on it.
-func performMerge(destOwner string, destFolder string, destName string, destCommitID string, srcOwner string, srcFolder string, srcName string, commitDiffList []CommitEntry, loggedInUser string) (err error) {
+func performMerge(destOwner, destFolder, destName, destBranch, destCommitID, srcOwner, srcFolder, srcName string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
 	// Figure out the last common ancestor and the current head of the branch to merge
 	lastCommonAncestorId := commitDiffList[len(commitDiffList)-1].Parent
 	currentHeadToMerge := commitDiffList[0].ID
@@ -102,7 +146,7 @@ func performMerge(destOwner string, destFolder string, destName string, destComm
 	// for checking for conflicts.
 	destDiffs, err := Diff(destOwner, destFolder, destName, lastCommonAncestorId, destOwner, destFolder, destName, destCommitID, loggedInUser, NoMerge, false)
 	if err != nil {
-		return err
+		return
 	}
 
 	// Figure out the changes made to the source branch since this common ancestor.
@@ -110,7 +154,7 @@ func performMerge(destOwner string, destFolder string, destName string, destComm
 	// the destination branch head.
 	srcDiffs, err := Diff(srcOwner, srcFolder, srcName, lastCommonAncestorId, srcOwner, srcFolder, srcName, currentHeadToMerge, loggedInUser, NewPkMerge, false)
 	if err != nil {
-		return err
+		return
 	}
 
 	// Check for conflicts
@@ -118,7 +162,7 @@ func performMerge(destOwner string, destFolder string, destName string, destComm
 	if conflicts != nil {
 		// TODO We don't have developed an intelligent conflict strategy yet.
 		// So in the case of a conflict, just abort with an error message.
-		return fmt.Errorf("The two branches are in conflict. Please fix this manually.\n" + strings.Join(conflicts, "\n"))
+		return "", fmt.Errorf("The two branches are in conflict. Please fix this manually.\n" + strings.Join(conflicts, "\n"))
 	}
 
 	// Get Minio location
@@ -130,7 +174,7 @@ func performMerge(destOwner string, destFolder string, destName string, destComm
 	// Sanity check
 	if id == "" {
 		// The requested database wasn't found, or the user doesn't have permission to access it
-		return fmt.Errorf("Requested database not found")
+		return "", fmt.Errorf("Requested database not found")
 	}
 
 	// Retrieve database file from Minio, using locally cached version if it's already there
@@ -140,7 +184,7 @@ func performMerge(destOwner string, destFolder string, destName string, destComm
 	}
 
 	// Create a temporary file for the new database
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "merge-*.db")
+	tmpFile, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-merge-*.db")
 	if err != nil {
 		return
 	}
@@ -153,43 +197,73 @@ func performMerge(destOwner string, destFolder string, destName string, destComm
 	{
 		inFile, err := os.Open(dbFile)
 		if err != nil {
-			return err
+			return "", err
 		}
 		defer inFile.Close()
 		_, err = io.Copy(tmpFile, inFile)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
 	// Open temporary database file for writing
-	var sdb *sqlite.Conn
-	sdb, err = sqlite.Open(tmpFile.Name(), sqlite.OpenReadWrite)
+	func() {
+		var sdb *sqlite.Conn
+		sdb, err = sqlite.Open(tmpFile.Name(), sqlite.OpenReadWrite)
+		if err != nil {
+			return
+		}
+		defer sdb.Close()
+		if err = sdb.EnableExtendedResultCodes(true); err != nil {
+			return
+		}
+
+		// Apply all the SQL statements from the diff on the temporary database
+		for _, diff := range srcDiffs.Diff {
+			// First apply schema changes
+			if diff.Schema != nil {
+				err = sdb.Exec(diff.Schema.Sql)
+				if err != nil {
+					return
+				}
+			}
+
+			// Then apply data changes
+			for _, row := range diff.Data {
+				err = sdb.Exec(row.Sql)
+				if err != nil {
+					return
+				}
+			}
+		}
+	}()
+
+	// Retrieve details for the logged in user
+	usr, err := User(loggedInUser)
 	if err != nil {
-		return err
-	}
-	defer sdb.Close()
-	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		return err
+		return
 	}
 
-	// Apply all the SQL statements from the diff on the temporary database
-	for _, diff := range srcDiffs.Diff {
-		// First apply schema changes
-		if diff.Schema != nil {
-			err = sdb.Exec(diff.Schema.Sql)
-			if err != nil {
-				return
-			}
-		}
+	// Seek to start of temporary file. When not doing this AddDatabase() cannot copy the file
+	_, err = tmpFile.Seek(0, 0)
+	if err != nil {
+		return
+	}
 
-		// Then apply data changes
-		for _, row := range diff.Data {
-			err = sdb.Exec(row.Sql)
-			if err != nil {
-				return
-			}
-		}
+	// The merging was successful. This means we can add the list of source commits to the destination branch.
+	// This needs to be done before calling AddDatabase() because AddDatabase() adds its own merge commit on
+	// top of the just updated commit list.
+	err = addCommitsForMerging(destOwner, destFolder, destName, destBranch, commitDiffList, false)
+	if err != nil {
+		return
+	}
+
+	// Store merged database
+	_, newCommitID, _, err = AddDatabase(loggedInUser, destOwner, destFolder, destName, false, destBranch, destCommitID,
+		KeepCurrentAccessType, "", message, "", tmpFile, time.Now(), time.Time{}, usr.DisplayName, usr.Email, usr.DisplayName, usr.Email,
+		[]string{currentHeadToMerge}, "")
+	if err != nil {
+		return
 	}
 
 	return
@@ -220,6 +294,9 @@ func checkForConflicts(srcDiffs Diffs, destDiffs Diffs, mergeStrategy MergeStrat
 						if DataValuesMatch(srcRow.Pk, destRow.Pk) {
 							// We have found two changes which affect the same primary key. So this is a potential
 							// conflict. The question now is whether it is actually a problem or not.
+
+							// TODO For two UPDATE statements we could check whether they only change different
+							// columns and allow them in this case.
 
 							// Every combination of updates, inserts, and deletes is a conflict except for the
 							// case where the source row is inserted using the NewPkMerge strategy which generates
