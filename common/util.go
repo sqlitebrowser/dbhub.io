@@ -20,17 +20,17 @@ import (
 )
 
 // AddDatabase is handles database upload processing
-func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string, createBranch bool, branchName,
-	commitID string, public bool, licenceName, commitMsg, sourceURL string, newDB io.Reader, serverSw string,
+func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bool, branchName,
+	commitID string, public bool, licenceName, commitMsg, sourceURL string, newDB io.Reader,
 	lastModified, commitTime time.Time, authorName, authorEmail, committerName, committerEmail string,
-	otherParents []string, dbSha string) (numBytes int64, newCommitID string, err error) {
+	otherParents []string, dbSha string) (numBytes int64, newCommitID string, calculatedDbSha string, err error) {
 
 	// Create a temporary file to store the database in
 	tempDB, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
 	if err != nil {
 		log.Printf("Error creating temporary file. User: '%s', Database: '%s%s%s', Error: %v\n", loggedInUser,
 			dbOwner, dbFolder, dbName, err)
-		return 0, "", err
+		return
 	}
 	tempDBName := tempDB.Name()
 
@@ -44,23 +44,24 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	if err != nil {
 		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
 			"Error: %v\n", loggedInUser, dbOwner, dbFolder, dbName, err)
-		return 0, "", err
+		return
 	}
 
 	// Sanity check the uploaded database, and get the list of tables in the database
 	sTbls, err := SanityCheck(tempDBName)
 	if err != nil {
-		return 0, "", err
+		return
 	}
 
 	// Return to the start of the temporary file
 	newOff, err := tempDB.Seek(0, 0)
 	if err != nil {
 		log.Printf("Seeking on the temporary file failed: %v\n", err.Error())
-		return 0, "", err
+		return
 	}
 	if newOff != 0 {
-		return 0, "", errors.New("Seeking to the start of the temporary file failed")
+		err = errors.New("Seeking to the start of the temporary file failed")
+		return
 	}
 
 	// Generate sha256 of the uploaded file
@@ -69,14 +70,14 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	s := sha256.New()
 	_, err = io.CopyBuffer(s, tempDB, buf)
 	if err != nil {
-		return 0, "", err
+		return
 	}
 	sha := hex.EncodeToString(s.Sum(nil))
 
 	// If we were given a SHA256 for the file, make sure it matches our calculated one
 	if dbSha != "" && dbSha != sha {
-		return 0, "",
-			fmt.Errorf("SHA256 given (%s) for uploaded file doesn't match the calculated value (%s)", dbSha, sha)
+		err = fmt.Errorf("SHA256 given (%s) for uploaded file doesn't match the calculated value (%s)", dbSha, sha)
+		return
 	}
 
 	// Check if the database already exists in the system
@@ -84,20 +85,20 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	needDefaultBranchCreated := false
 	var branches map[string]BranchEntry
 	exists, err := CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
-	if err != err {
-		return 0, "", err
+	if err != nil {
+		return
 	}
 	if exists {
 		// Load the existing branchHeads for the database
 		branches, err = GetBranches(loggedInUser, dbFolder, dbName)
 		if err != nil {
-			return 0, "", err
+			return
 		}
 
 		// If no branch name was given, use the default for the database
 		defBranch, err = GetDefaultBranchName(loggedInUser, dbFolder, dbName)
 		if err != nil {
-			return 0, "", err
+			return
 		}
 		if branchName == "" {
 			branchName = defBranch
@@ -126,7 +127,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 		if exists {
 			lic, err := CommitLicenceSHA(loggedInUser, dbFolder, dbName, commitID)
 			if err != nil {
-				return 0, "", err
+				return 0, "", "", err
 			}
 			if lic != "" {
 				// The previous commit for the database had a licence, so we use that for this commit too
@@ -136,7 +137,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 			// It's a new database, and the licence hasn't been specified
 			e.LicenceSHA, err = GetLicenceSha256FromName(loggedInUser, licenceName)
 			if err != nil {
-				return 0, "", err
+				return
 			}
 
 			// If no commit message was given, use a default one and include the info of no licence being specified
@@ -148,7 +149,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 		// A licence was specified by the client, so use that
 		e.LicenceSHA, err = GetLicenceSha256FromName(loggedInUser, licenceName)
 		if err != nil {
-			return 0, "", err
+			return
 		}
 
 		// Generate an appropriate commit message if none was provided
@@ -160,13 +161,13 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 				// The database already exists, so check if the licence has changed
 				lic, err := CommitLicenceSHA(loggedInUser, dbFolder, dbName, commitID)
 				if err != nil {
-					return 0, "", err
+					return 0, "", "", err
 				}
 				if e.LicenceSHA != lic {
 					// The licence has changed, so we create a reasonable commit message indicating this
 					l, _, err := GetLicenceInfoFromSha256(loggedInUser, lic)
 					if err != nil {
-						return 0, "", err
+						return 0, "", "", err
 					}
 					commitMsg = fmt.Sprintf("Database licence changed from '%s' to '%s'.", l, licenceName)
 				}
@@ -182,12 +183,13 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	// Retrieve the details for the user
 	usr, err := User(loggedInUser)
 	if err != nil {
-		return 0, "", err
+		return
 	}
 
 	// If either the display name or email address is empty, tell the user we need them first
 	if usr.DisplayName == "" || usr.Email == "" {
-		return 0, "", errors.New("You need to set your full name and email address in Preferences first")
+		err = errors.New("You need to set your full name and email address in Preferences first")
+		return
 	}
 
 	// Construct a commit structure pointing to the tree
@@ -256,9 +258,9 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 									}
 								}
 							}
-							return 0, "", fmt.Errorf(msg)
+							return 0, "", "", fmt.Errorf(msg)
 						}
-						return 0, "", err
+						return 0, "", "", err
 					}
 				}
 				c.Parent = commitID
@@ -269,7 +271,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 			// The branch name given isn't (yet) part of the database.  If we've been told to create the branch, then
 			// we use the commit also passed (a requirement!) as the parent.  Otherwise, we error out
 			if !createBranch {
-				return 0, "", errors.New("Error when looking up branch details")
+				return 0, "", "", errors.New("Error when looking up branch details")
 			}
 			c.Parent = commitID
 		}
@@ -283,7 +285,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	if exists {
 		commitList, err := GetCommitList(loggedInUser, dbFolder, dbName)
 		if err != nil {
-			return 0, "", err
+			return 0, "", "", err
 		}
 		var ok bool
 		var c2 CommitEntry
@@ -295,7 +297,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 				m := fmt.Sprintf("Error when counting commits in branch '%s' of database '%s%s%s'\n", branchName,
 					loggedInUser, dbFolder, dbName)
 				log.Print(m)
-				return 0, "", errors.New(m)
+				return 0, "", "", errors.New(m)
 			}
 		}
 	}
@@ -304,10 +306,10 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	newOff, err = tempDB.Seek(0, 0)
 	if err != nil {
 		log.Printf("Seeking on the temporary file (2nd time) failed: %v\n", err.Error())
-		return 0, "", err
+		return
 	}
 	if newOff != 0 {
-		return 0, "", errors.New("Seeking to start of temporary database file didn't work")
+		return 0, "", "", errors.New("Seeking to start of temporary database file didn't work")
 	}
 
 	// Update the branch with the commit for this new database upload & the updated commit count for the branch
@@ -318,14 +320,14 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	err = StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, tempDB, sha, numBytes, "",
 		"", needDefaultBranchCreated, branchName, sourceURL)
 	if err != nil {
-		return 0, "", err
+		return
 	}
 
 	// If the database already existed, update it's contributor count
 	if exists {
 		err = UpdateContributorsCount(loggedInUser, dbFolder, dbName)
 		if err != nil {
-			return 0, "", err
+			return
 		}
 	}
 
@@ -334,7 +336,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	if createBranch {
 		err = StoreBranches(dbOwner, dbFolder, dbName, branches)
 		if err != nil {
-			return 0, "", err
+			return
 		}
 	}
 
@@ -343,7 +345,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	if branchName == defBranch {
 		defTbl, err := GetDefaultTableName(dbOwner, dbFolder, dbName)
 		if err != nil {
-			return 0, "", err
+			return 0, "", "", err
 		}
 		defFound := false
 		for _, j := range sTbls {
@@ -355,7 +357,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 			// The default table is present in the previous commit, so we clear the default table value
 			err = StoreDefaultTableName(dbOwner, dbFolder, dbName, "")
 			if err != nil {
-				return 0, "", err
+				return 0, "", "", err
 			}
 		}
 	}
@@ -364,21 +366,8 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	if !exists {
 		err = ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName)
 		if err != nil {
-			return 0, "", err
+			return
 		}
-	}
-
-	// Was a user agent part of the request?
-	var userAgent string
-	ua, ok := r.Header["User-Agent"]
-	if ok {
-		userAgent = ua[0]
-	}
-
-	// Make a record of the upload
-	err = LogUpload(loggedInUser, dbFolder, dbName, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now().UTC(), sha)
-	if err != nil {
-		return 0, "", err
 	}
 
 	// Invalidate the memcached entry for the database (only really useful if we're updating an existing database)
@@ -386,7 +375,7 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
-		return 0, "", err
+		return
 	}
 
 	// Invalidate any memcached entries for the previous highest version # of the database
@@ -394,11 +383,11 @@ func AddDatabase(r *http.Request, loggedInUser, dbOwner, dbFolder, dbName string
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for any previous database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
-		return 0, "", err
+		return
 	}
 
 	// Database successfully uploaded
-	return numBytes, c.ID, nil
+	return numBytes, c.ID, sha, nil
 }
 
 // CommitLicenceSHA returns the licence used by the database in a given commit

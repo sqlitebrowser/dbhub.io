@@ -5253,9 +5253,23 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Sanity check the uploaded database, and if ok then add it to the system
-	numBytes, _, err := com.AddDatabase(r, loggedInUser, loggedInUser, dbFolder, dbName, createBranch, branchName,
-		commitID, public, licenceName, commitMsg, sourceURL, tempFile, "webui", time.Now(), time.Time{},
+	numBytes, _, sha, err := com.AddDatabase(loggedInUser, loggedInUser, dbFolder, dbName, createBranch, branchName,
+		commitID, public, licenceName, commitMsg, sourceURL, tempFile, time.Now(), time.Time{},
 		"", "", "", "", nil, "")
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Was a user agent part of the request?
+	var userAgent string
+	ua, ok := r.Header["User-Agent"]
+	if ok {
+		userAgent = ua[0]
+	}
+
+	// Make a record of the upload
+	err = com.LogUpload(loggedInUser, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

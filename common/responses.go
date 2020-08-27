@@ -469,11 +469,23 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	}
 
 	// Sanity check the uploaded database, and if ok then add it to the system
-	var numBytes int64
-	var returnCommitID string
-	numBytes, returnCommitID, err = AddDatabase(r, loggedInUser, targetUser, targetFolder, targetDB, createBranch,
-		branchName, commitID, public, licenceName, commitMsg, sourceURL, tempFile, "db4s", lastMod,
+	numBytes, returnCommitID, sha, err := AddDatabase(loggedInUser, targetUser, targetFolder, targetDB, createBranch,
+		branchName, commitID, public, licenceName, commitMsg, sourceURL, tempFile, lastMod,
 		commitTime, authorName, authorEmail, committerName, committerEmail, otherParents, dbSHA256)
+	if err != nil {
+		httpStatus = http.StatusInternalServerError
+		return
+	}
+
+	// Was a user agent part of the request?
+	var userAgent string
+	ua, ok := r.Header["User-Agent"]
+	if ok {
+		userAgent = ua[0]
+	}
+
+	// Make a record of the upload
+	err = LogUpload(loggedInUser, targetFolder, targetDB, loggedInUser, r.RemoteAddr, "db4s", userAgent, time.Now().UTC(), sha)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return
