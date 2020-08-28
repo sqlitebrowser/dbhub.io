@@ -482,6 +482,13 @@ type ReleaseEntry struct {
 	Size          int64     `json:"size"`
 }
 
+type ShareDatabasePermissions string
+
+const (
+	MayRead         ShareDatabasePermissions = "r"
+	MayReadAndWrite ShareDatabasePermissions = "rw"
+)
+
 type SQLiteDBinfo struct {
 	Info     DBInfo
 	MaxRows  int

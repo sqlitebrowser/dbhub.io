@@ -141,6 +141,28 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 
 	// TODO: These validation functions should probably be in the common library instead
 
+	// Check if the database exists already
+	exists, err := CheckDBExists(targetUser, targetFolder, targetDB)
+	if err != nil {
+		httpStatus = http.StatusInternalServerError
+		return
+	}
+
+	// Check permissions
+	if exists {
+		allowed, err := CheckDBPermissions(loggedInUser, targetUser, targetFolder, targetDB, true)
+		if err != nil {
+			return nil, http.StatusInternalServerError, err
+		}
+		if !allowed {
+			return nil, http.StatusBadRequest, fmt.Errorf("Database not found")
+		}
+	} else if loggedInUser != targetUser {
+		httpStatus = http.StatusForbidden
+		err = fmt.Errorf("You cannot upload a database for another user")
+		return
+	}
+
 	// If a branch name was provided then validate it
 	var branchName string
 	if z := r.FormValue("branch"); z != "" {
@@ -352,21 +374,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 		dbSHA256 = z
 	}
 
-	// Verify the user is uploading to a location they have write access for
-	if strings.ToLower(targetUser) != strings.ToLower(loggedInUser) {
-		log.Printf("Attempt by '%s' to write to unauthorised location: %v\n", loggedInUser, r.URL.Path)
-		http.Error(w, fmt.Sprintf("Error code 401: You don't have write permission for '%s'",
-			r.URL.Path), http.StatusForbidden)
-		return
-	}
-
 	// Check if the database exists already
-	var exists bool
-	exists, err = CheckDBExists(loggedInUser, targetUser, targetFolder, targetDB)
-	if err != nil {
-		httpStatus = http.StatusInternalServerError
-		return
-	}
 	if !exists && branchName == "" {
 		// If the database doesn't already exist, and no branch name was provided, then default to master
 		branchName = "master"

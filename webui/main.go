@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -301,7 +302,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -418,7 +419,7 @@ func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool,
 		}
 
 		// Check if the database exists
-		exists, err := com.CheckDBExists(loggedInUser, dbOwner, "/", dbName)
+		exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, "/", dbName, false)
 		if err != nil {
 			return http.StatusInternalServerError, fmt.Errorf("Database failure when looking up database details")
 		}
@@ -481,7 +482,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the requested database exists
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -489,12 +490,6 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
-		return
-	}
-
-	// Make sure the database owner matches the logged in user
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
-		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
 
@@ -633,7 +628,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since discussions are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -715,7 +710,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	discText := txt
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since discussions are considered public
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -969,13 +964,13 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the databases exist
-	srcExists, err := com.CheckDBExists(loggedInUser, srcOwner, srcFolder, srcDBName)
+	srcExists, err := com.CheckDBPermissions(loggedInUser, srcOwner, srcFolder, srcDBName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	destExists, err := com.CheckDBExists(loggedInUser, destOwner, destFolder, destDBName)
+	destExists, err := com.CheckDBPermissions(loggedInUser, destOwner, destFolder, destDBName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1108,7 +1103,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the requested database exists
 	dbFolder := "/"
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1116,12 +1111,6 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
 			dbName))
-		return
-	}
-
-	// Make sure the database owner matches the logged in user
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
-		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
 		return
 	}
 
@@ -1459,6 +1448,32 @@ func checkNameHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// This is called from the username selection page, to check if a name is available.
+func checkUserExistsHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve the username from the URL
+	userName := r.FormValue("name")
+
+	// Validate the username
+	err := com.ValidateUser(userName)
+	if err != nil {
+		return
+	}
+
+	// Check if the username exists
+	exists, err := com.CheckUserExists(userName)
+	if err != nil {
+		return
+	}
+	if exists {
+		fmt.Fprint(w, "y")
+		return
+	}
+
+	// The username does not exist
+	fmt.Fprint(w, "n")
+	return
+}
+
 // This function deletes a branch.
 func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete Branch handler"
@@ -1498,7 +1513,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1506,12 +1521,6 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		log.Printf("%s: Validation failed for database to delete: %s", pageName, err)
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -1912,7 +1921,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2004,7 +2013,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2012,12 +2021,6 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -2201,7 +2204,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
@@ -2285,7 +2288,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2293,12 +2296,6 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -2374,7 +2371,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2382,12 +2379,6 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -2570,13 +2561,13 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the databases exist
-	srcExists, err := com.CheckDBExists(loggedInUser, srcOwner, srcFolder, srcDBName)
+	srcExists, err := com.CheckDBPermissions(loggedInUser, srcOwner, srcFolder, srcDBName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	destExists, err := com.CheckDBExists(loggedInUser, destOwner, destFolder, destDBName)
+	destExists, err := com.CheckDBPermissions(loggedInUser, destOwner, destFolder, destDBName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2833,7 +2824,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the user has access to the specific version of the source database requested
-	allowed, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2851,7 +2842,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the user doesn't have a database of the same name already
 	// Note the use of "loggedInUser" for the 2nd parameter in this call, unlike using "dbOwner" in the call above
-	exists, err := com.CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, loggedInUser, dbFolder, dbName, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3100,6 +3091,7 @@ func main() {
 	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))
 	http.Handle("/x/callback", gz.GzipHandler(logReq(auth0CallbackHandler)))
 	http.Handle("/x/checkname", gz.GzipHandler(logReq(checkNameHandler)))
+	http.Handle("/x/checkuserexists", gz.GzipHandler(logReq(checkUserExistsHandler)))
 	http.Handle("/x/createbranch", gz.GzipHandler(logReq(createBranchHandler)))
 	http.Handle("/x/createcomment/", gz.GzipHandler(logReq(createCommentHandler)))
 	http.Handle("/x/creatediscuss", gz.GzipHandler(logReq(createDiscussHandler)))
@@ -3491,7 +3483,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -3500,13 +3492,6 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
-		return
-	}
-
-	// Ensure the request is coming from the database owner
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "Only the database owner can merge in merge requests")
 		return
 	}
 
@@ -3706,6 +3691,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	fullDesc := r.PostFormValue("fulldesc")
 	defTable := r.PostFormValue("defaulttable") // TODO: Update the default table to be "per branch"
 	licences := r.PostFormValue("licences")
+	sharesRaw := r.PostFormValue("shares")
 
 	// Validate the licence names
 	branchLics := make(map[string]string)
@@ -3719,6 +3705,22 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, fmt.Sprintf(
 				"Validation failed on licence name for branch '%s'", bName))
+			return
+		}
+	}
+
+	// Validate the share information
+	shares := make(map[string]com.ShareDatabasePermissions)
+	err = json.Unmarshal([]byte(sharesRaw), &shares)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for user, access := range shares {
+		exists, err := com.CheckUserExists(user)
+		if exists == false || err != nil || (access != com.MayRead && access != com.MayReadAndWrite) {
+			errorPage(w, r, http.StatusBadRequest, fmt.Sprintf(
+				"Validation failed for user '%s'", user))
 			return
 		}
 	}
@@ -3956,6 +3958,20 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Store the new share settings if they changed
+	oldShares, err := com.GetShares(dbOwner, dbFolder, dbName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if reflect.DeepEqual(shares, oldShares) == false {
+		err = com.StoreShares(dbOwner, dbFolder, dbName, shares)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	// If the database doesn't have a 1-liner description, don't save the placeholder text as one
 	if oneLineDesc == "No description" {
 		oneLineDesc = ""
@@ -4028,7 +4044,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4163,7 +4179,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4171,13 +4187,6 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "Access denied")
 		return
 	}
 
@@ -4580,7 +4589,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4588,12 +4597,6 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -4734,7 +4737,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since discussions are considered public
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4844,7 +4847,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since MRs are considered public
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -4939,7 +4942,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4947,12 +4950,6 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -5061,7 +5058,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5069,12 +5066,6 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	if !exists {
 		log.Printf("%s: Validation failed for database name: %s", pageName, err)
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Make sure the database is owned by the logged in user. eg prevent changes to other people's databases
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -5222,7 +5213,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists already
-	exists, err := com.CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, loggedInUser, dbFolder, dbName, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

@@ -25,6 +25,25 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	lastModified, commitTime time.Time, authorName, authorEmail, committerName, committerEmail string,
 	otherParents []string, dbSha string) (numBytes int64, newCommitID string, calculatedDbSha string, err error) {
 
+	// Check if the database already exists in the system
+	exists, err := CheckDBExists(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return
+	}
+
+	// Check permissions
+	if exists {
+		allowed, err := CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+		if err != nil {
+			return 0, "", "", err
+		}
+		if !allowed {
+			return 0, "", "", errors.New("Database not found")
+		}
+	} else if loggedInUser != dbOwner {
+		return 0, "", "", errors.New("You cannot upload a database for another user")
+	}
+
 	// Create a temporary file to store the database in
 	tempDB, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
 	if err != nil {
@@ -88,19 +107,15 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	var defBranch string
 	needDefaultBranchCreated := false
 	var branches map[string]BranchEntry
-	exists, err := CheckDBExists(loggedInUser, loggedInUser, dbFolder, dbName)
-	if err != nil {
-		return
-	}
 	if exists {
 		// Load the existing branchHeads for the database
-		branches, err = GetBranches(loggedInUser, dbFolder, dbName)
+		branches, err = GetBranches(dbOwner, dbFolder, dbName)
 		if err != nil {
 			return
 		}
 
 		// If no branch name was given, use the default for the database
-		defBranch, err = GetDefaultBranchName(loggedInUser, dbFolder, dbName)
+		defBranch, err = GetDefaultBranchName(dbOwner, dbFolder, dbName)
 		if err != nil {
 			return
 		}
@@ -129,7 +144,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 		// No licence was specified by the client, so check if the database is already in the system and
 		// already has one.  If so, we use that.
 		if exists {
-			lic, err := CommitLicenceSHA(loggedInUser, dbFolder, dbName, commitID)
+			lic, err := CommitLicenceSHA(dbOwner, dbFolder, dbName, commitID)
 			if err != nil {
 				return 0, "", "", err
 			}
@@ -163,7 +178,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 				commitMsg = fmt.Sprintf("Initial database upload, using licence %s.", licenceName)
 			} else {
 				// The database already exists, so check if the licence has changed
-				lic, err := CommitLicenceSHA(loggedInUser, dbFolder, dbName, commitID)
+				lic, err := CommitLicenceSHA(dbOwner, dbFolder, dbName, commitID)
 				if err != nil {
 					return 0, "", "", err
 				}
@@ -301,7 +316,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	// If the database already exists, count the number of commits in the new branch
 	commitCount := 1
 	if exists {
-		commitList, err := GetCommitList(loggedInUser, dbFolder, dbName)
+		commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
 		if err != nil {
 			return 0, "", "", err
 		}
@@ -313,7 +328,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 			c2, ok = commitList[c2.Parent]
 			if !ok {
 				m := fmt.Sprintf("Error when counting commits in branch '%s' of database '%s%s%s'\n", branchName,
-					loggedInUser, dbFolder, dbName)
+					dbOwner, dbFolder, dbName)
 				log.Print(m)
 				return 0, "", "", errors.New(m)
 			}
@@ -335,7 +350,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	b.Commit = c.ID
 	b.CommitCount = commitCount
 	branches[branchName] = b
-	err = StoreDatabase(loggedInUser, dbFolder, dbName, branches, c, public, tempDB, sha, numBytes, "",
+	err = StoreDatabase(dbOwner, dbFolder, dbName, branches, c, public, tempDB, sha, numBytes, "",
 		"", needDefaultBranchCreated, branchName, sourceURL)
 	if err != nil {
 		return
@@ -343,7 +358,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 
 	// If the database already existed, update it's contributor count
 	if exists {
-		err = UpdateContributorsCount(loggedInUser, dbFolder, dbName)
+		err = UpdateContributorsCount(dbOwner, dbFolder, dbName)
 		if err != nil {
 			return
 		}
@@ -389,7 +404,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	}
 
 	// Invalidate the memcached entry for the database (only really useful if we're updating an existing database)
-	err = InvalidateCacheEntry(loggedInUser, loggedInUser, "/", dbName, "") // Empty string indicates "for all versions"
+	err = InvalidateCacheEntry(loggedInUser, dbOwner, "/", dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -397,7 +412,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	}
 
 	// Invalidate any memcached entries for the previous highest version # of the database
-	err = InvalidateCacheEntry(loggedInUser, loggedInUser, dbFolder, dbName, c.ID) // And empty string indicates "for all commits"
+	err = InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, c.ID) // And empty string indicates "for all commits"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for any previous database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())

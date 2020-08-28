@@ -131,11 +131,12 @@ func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
 	return nil
 }
 
-// CheckDBExists checks if a database exists
+// CheckDBExists checks if a database exists. It does NOT perform any permission checks.
 // If an error occurred, the true/false value should be ignored, as only the error value is valid
-func CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error) {
+func CheckDBExists(dbOwner, dbFolder, dbName string) (bool, error) {
+	// Query matching databases
 	dbQuery := `
-		SELECT count(db_id)
+		SELECT COUNT(db_id)
 		FROM sqlite_databases
 		WHERE user_id = (
 				SELECT user_id
@@ -144,31 +145,105 @@ func CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error)
 			)
 			AND folder = $2
 			AND db_name = $3
-			AND is_deleted = false`
-	// If the request is from someone who's not logged in, or is for another users database, ensure we only consider
-	// public databases
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) || loggedInUser == "" {
-		dbQuery += `
-			AND public = true`
-	}
-	var DBCount int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DBCount)
+			AND is_deleted = false
+		LIMIT 1`
+	var dbCount int
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbCount)
 	if err != nil {
-		log.Printf("Checking if a database exists failed: %v\n", err)
-		return true, err
-	}
-	if DBCount == 0 {
-		// Database isn't in our system
-		return false, nil
+		return false, err
 	}
 
-	// Database exists
-	return true, nil
+	// Return true if the database count is not zero
+	return dbCount != 0, nil
+}
+
+// CheckDBPermissions checks if a database exists and can be accessed by the given user.
+// If an error occurred, the true/false value should be ignored, as only the error value is valid
+func CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName string, writeAccess bool) (bool, error) {
+	// Query id and public flag of the database
+	dbQuery := `
+		SELECT db_id, public
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)
+			AND folder = $2
+			AND db_name = $3
+			AND is_deleted = false
+		LIMIT 1`
+	var dbId int
+	var dbPublic bool
+	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbId, &dbPublic)
+
+	// There are two possible error cases: no rows returned or another error.
+	// If no rows were returned the database simply does not exist and no error is returned to the caller.
+	// If there was another, actual error this error is returned to the caller.
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+
+	// If we get here this means that the database does exist. The next step is to check
+	// the permissions.
+
+	if loggedInUser == "" {
+		// If the request is from someone who's not logged in, only allow read-only access to
+		// public databases.
+
+		return dbPublic && writeAccess == false, nil
+	} else if strings.ToLower(loggedInUser) == strings.ToLower(dbOwner) {
+		// If the request is from the owner of the database, always allow access to the database
+
+		return true, nil
+	} else {
+		// If the request is from someone who is logged in but not the owner of the database, check
+		// if the database is shared with the logged in user.
+
+		// Query shares
+		dbQuery = `
+			SELECT access
+			FROM database_shares
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE lower(user_name) = lower($1)
+				)
+				AND db_id = $2
+			LIMIT 1`
+		var dbAccess ShareDatabasePermissions
+		err := pdb.QueryRow(dbQuery, loggedInUser, dbId).Scan(&dbAccess)
+
+		// Check if there are any shares. If not, don't allow access.
+		if err != nil {
+			if err == pgx.ErrNoRows {
+				return false, nil
+			} else {
+				return false, err
+			}
+		}
+
+		// If there are shares, check the permissions
+		if writeAccess {
+			// If write access is required, only return true if writing is allowed
+			return dbAccess == MayReadAndWrite, nil
+		} else {
+			// If no write access is required, always return true if there is a share for this database and user
+			return true, nil
+		}
+	}
+
+	// Just to be sure
+	return false, nil
 }
 
 // CheckDBID checks if a given database ID is available, and returns it's folder/name so the caller can determine if it
 // has been renamed.  If an error occurs, the true/false value should be ignored, as only the error value is valid
-func CheckDBID(loggedInUser, dbOwner string, dbID int64) (avail bool, dbFolder, dbName string, err error) {
+func CheckDBID(dbOwner string, dbID int64) (avail bool, dbFolder, dbName string, err error) {
 	dbQuery := `
 		SELECT folder, db_name
 		FROM sqlite_databases
@@ -179,12 +254,6 @@ func CheckDBID(loggedInUser, dbOwner string, dbID int64) (avail bool, dbFolder, 
 			)
 			AND db_id = $2
 			AND is_deleted = false`
-	// If the request is from someone who's not logged in, or is for another users database, ensure we only consider
-	// public databases
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) || loggedInUser == "" {
-		dbQuery += `
-			AND public = true`
-	}
 	err = pdb.QueryRow(dbQuery, dbOwner, dbID).Scan(&dbFolder, &dbName)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -483,8 +552,16 @@ func DB4SDefaultList(loggedInUser string) (UserInfoSlice, error) {
 
 // DBDetails returns the details for a specific database
 func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commitID string) error {
+	// Check permissions first
+	allowed, err := CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	if err != nil {
+		return err
+	}
+	if allowed == false {
+		return fmt.Errorf("The requested database doesn't exist")
+	}
+
 	// If no commit ID was supplied, we retrieve the latest commit one from the default branch
-	var err error
 	if commitID == "" {
 		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
 		if err != nil {
@@ -507,12 +584,6 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 			AND db.folder = $2
 			AND db.db_name = $3
 			AND db.is_deleted = false`
-
-	// If the request is for another users database, ensure we only look up public ones
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
-		dbQuery += `
-			AND db.public = true`
-	}
 
 	// Generate a predictable cache key for this functions' metadata.  Probably not sharable with other functions
 	// cached metadata
@@ -2187,6 +2258,45 @@ func GetReleases(dbOwner, dbFolder, dbName string) (releases map[string]ReleaseE
 	return releases, nil
 }
 
+// GetShares returns a map with all users for which the given database is shared as key and their
+// permissions as value.
+func GetShares(dbOwner, dbFolder, dbName string) (shares map[string]ShareDatabasePermissions, err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND folder = $2
+				AND db_name = $3
+		)
+		SELECT usr.user_name, share.access
+		FROM database_shares AS share, d, users AS usr
+		WHERE share.db_id = d.db_id AND usr.user_id = share.user_id
+		ORDER BY usr.user_name`
+	rows, e := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	if e != nil && e != pgx.ErrNoRows {
+		return nil, e
+	}
+	defer rows.Close()
+
+	shares = make(map[string]ShareDatabasePermissions)
+
+	var name string
+	var access ShareDatabasePermissions
+	for rows.Next() {
+		err = rows.Scan(&name, &access)
+		if err != nil {
+			return
+		}
+		shares[name] = access
+	}
+	return
+}
+
 // GetTags returns the tags for a database
 func GetTags(dbOwner, dbFolder, dbName string) (tags map[string]TagEntry, err error) {
 	dbQuery := `
@@ -2564,6 +2674,16 @@ func LogUpload(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, serverSw, userAg
 // If the requested database doesn't exist, or the loggedInUser doesn't have access to it, then an error will be
 // returned
 func MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser string) (minioBucket, minioID string, lastModified time.Time, err error) {
+	// Check permissions
+	allowed, err := CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	if err != nil {
+		return
+	}
+	if !allowed {
+		err = errors.New("Database not found")
+		return
+	}
+
 	// If no commit was provided, we grab the default one
 	if commitID == "" {
 		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
@@ -2586,12 +2706,6 @@ func MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser string) (mi
 			AND db.folder = $2
 			AND db.db_name = $3
 			AND db.is_deleted = false`
-
-	// If the request is for another users database, it needs to be a public one
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
-		dbQuery += `
-				AND db.public = true`
-	}
 
 	var sha, mod string
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&sha, &mod)
@@ -3781,6 +3895,71 @@ func StoreReleases(dbOwner, dbFolder, dbName string, releases map[string]Release
 	return nil
 }
 
+// StoreShares stores the shares of a database
+func StoreShares(dbOwner, dbFolder, dbName string, shares map[string]ShareDatabasePermissions) (err error) {
+	// Begin a transaction
+	tx, err := pdb.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// Delete all current shares for this database
+	deleteQuery := `
+		DELETE FROM database_shares
+		WHERE db_id = (
+			SELECT db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE lower(user_name) = lower($1)
+				)
+				AND folder = $2
+				AND db_name = $3
+				AND is_deleted = false
+		)`
+	_, err = tx.Exec(deleteQuery, dbOwner, dbFolder, dbName)
+	if err != nil {
+		return
+	}
+
+	// Insert new shares
+	for name, access := range shares {
+		insertQuery := `
+			WITH o AS (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			), u AS (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($4)
+			), d AS (
+				SELECT db.db_id
+				FROM sqlite_databases AS db, o
+				WHERE db.user_id = o.user_id
+				AND folder = $2
+				AND db_name = $3
+			)
+			INSERT INTO database_shares (db_id, user_id, access)
+			SELECT d.db_id, u.user_id, $5 FROM d, u`
+		_, err := tx.Exec(insertQuery, dbOwner, dbFolder, dbName, name, access)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return
+	}
+	return
+}
+
 // StoreStatusUpdates stores the status updates list for a user
 func StoreStatusUpdates(userName string, statusUpdates map[string][]StatusUpdateEntry) error {
 	dbQuery := `
@@ -4106,8 +4285,15 @@ func UpdateComment(dbOwner, dbFolder, dbName, loggedInUser string, discID, comID
 		return err
 	}
 
-	// Ensure only the database owner or comment creator can update the comment
-	if (strings.ToLower(loggedInUser) != strings.ToLower(dbOwner)) && (strings.ToLower(loggedInUser) != strings.ToLower(comCreator)) {
+	// Ensure only users with write access or the comment creator can update the comment
+	allowed := strings.ToLower(loggedInUser) != strings.ToLower(comCreator)
+	if !allowed {
+		allowed, err = CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+		if err != nil {
+			return err
+		}
+	}
+	if !allowed {
 		return errors.New("Not authorised")
 	}
 
@@ -4189,8 +4375,15 @@ func UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser string, discID int
 		return err
 	}
 
-	// Ensure only the database owner or discussion starter can update the discussion
-	if (strings.ToLower(loggedInUser) != strings.ToLower(dbOwner)) && (strings.ToLower(loggedInUser) != strings.ToLower(discCreator)) {
+	// Ensure only users with write access or the discussion starter can update the discussion
+	allowed := strings.ToLower(loggedInUser) != strings.ToLower(discCreator)
+	if !allowed {
+		allowed, err = CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+		if err != nil {
+			return err
+		}
+	}
+	if !allowed {
 		return errors.New("Not authorised")
 	}
 

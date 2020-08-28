@@ -141,7 +141,7 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(userAcc, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -325,7 +325,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(userAcc, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -724,7 +724,7 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(userAcc, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

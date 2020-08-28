@@ -197,7 +197,7 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner,
 
 	// Check if the user has access to the requested database
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return

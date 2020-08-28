@@ -495,7 +495,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return

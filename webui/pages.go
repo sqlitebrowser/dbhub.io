@@ -535,7 +535,7 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database owner matches the logged in user
 	if strings.ToLower(pageData.Meta.LoggedInUser) != strings.ToLower(pageData.Meta.Owner) {
-		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
+		errorPage(w, r, http.StatusUnauthorized, "You can't delete databases you don't own")
 		return
 	}
 
@@ -662,9 +662,14 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Make sure the database owner matches the logged in user
-	if strings.ToLower(pageData.Meta.LoggedInUser) != strings.ToLower(pageData.Meta.Owner) {
-		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
+	// Make sure the logged in user has the permissions to proceed
+	allowed, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, true)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if allowed == false {
+		errorPage(w, r, http.StatusUnauthorized, "You are not authorised to change this database")
 		return
 	}
 
@@ -731,9 +736,14 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Make sure the database owner matches the logged in user
-	if strings.ToLower(pageData.Meta.LoggedInUser) != strings.ToLower(pageData.Meta.Owner) {
-		errorPage(w, r, http.StatusUnauthorized, "You can't change databases you don't own")
+	// Make sure the logged in user has the permissions to proceed
+	allowed, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, true)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if allowed == false {
+		errorPage(w, r, http.StatusUnauthorized, "You are not authorised to change this database")
 		return
 	}
 
@@ -867,7 +877,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBExists(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1650,6 +1660,17 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Make sure the logged in user has the permissions to proceed
+	allowed, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, false)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if allowed == false {
+		errorPage(w, r, http.StatusNotFound, "Database not found")
+		return
+	}
+
 	// Retrieve list of forks for the database
 	pageData.Forks, err = com.ForkTree(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 	if err != nil {
@@ -1845,7 +1866,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		// Check if the source database has been deleted or renamed
 		mr := &pageData.MRList[0]
 		if mr.MRDetails.SourceDBID != 0 {
-			pageData.SourceDBOK, mr.MRDetails.SourceFolder, mr.MRDetails.SourceDBName, err = com.CheckDBID(pageData.Meta.LoggedInUser,
+			pageData.SourceDBOK, mr.MRDetails.SourceFolder, mr.MRDetails.SourceDBName, err = com.CheckDBID(
 				mr.MRDetails.SourceOwner, mr.MRDetails.SourceDBID)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -2315,6 +2336,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		NumLicences      int
 		MyStar           bool
 		MyWatch          bool
+		Shares           map[string]com.ShareDatabasePermissions
 	}
 	pageData.Meta.Title = "Database settings"
 
@@ -2451,6 +2473,13 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		pageData.DB.Info.DefaultTable = pageData.DB.Info.Tables[0]
 	}
 
+	// Retrieve the share settings
+	pageData.Shares, err = com.GetShares(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	// Add Auth0 info to the page data
 	pageData.Auth0 = collectPageAuth0Info()
 
@@ -2476,6 +2505,17 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
+		return
+	}
+
+	// Make sure the logged in user has the permissions to proceed
+	allowed, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, false)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if allowed == false {
+		errorPage(w, r, http.StatusNotFound, "Database not found")
 		return
 	}
 
@@ -2661,6 +2701,17 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Make sure the logged in user has the permissions to proceed
+	allowed, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, true)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if allowed == false {
+		errorPage(w, r, http.StatusUnauthorized, "You don't have the permissions to change this database")
+		return
+	}
+
 	// Populate the licence list
 	pageData.Licences, err = com.GetLicences(pageData.Meta.LoggedInUser)
 	if err != nil {
@@ -2764,6 +2815,17 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
+		return
+	}
+
+	// Make sure the logged in user has the permissions to proceed
+	allowed, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, false)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if allowed == false {
+		errorPage(w, r, http.StatusNotFound, "Database not found")
 		return
 	}
 

@@ -17,6 +17,16 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: permissions; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.permissions AS ENUM (
+    'r',
+    'rw'
+);
+
+
+--
 -- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -146,6 +156,18 @@ CREATE SEQUENCE public.database_licences_lic_id_seq
 --
 
 ALTER SEQUENCE public.database_licences_lic_id_seq OWNED BY public.database_licences.lic_id;
+
+
+--
+-- Name: database_shares; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.database_shares (
+    db_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    date_last_change timestamp with time zone DEFAULT now() NOT NULL,
+    access public.permissions NOT NULL
+);
 
 
 --
@@ -664,6 +686,14 @@ ALTER TABLE ONLY public.database_licences
 
 
 --
+-- Name: database_shares database_shares_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_shares
+    ADD CONSTRAINT database_shares_pkey PRIMARY KEY (db_id, user_id);
+
+
+--
 -- Name: database_stars database_stars_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -954,6 +984,22 @@ ALTER TABLE ONLY public.database_downloads
 
 ALTER TABLE ONLY public.database_licences
     ADD CONSTRAINT database_licences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: database_shares database_shares_db_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_shares
+    ADD CONSTRAINT database_shares_db_id_fkey FOREIGN KEY (db_id) REFERENCES public.sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: database_shares database_shares_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.database_shares
+    ADD CONSTRAINT database_shares_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

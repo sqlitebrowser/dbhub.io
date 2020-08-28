@@ -98,7 +98,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -488,10 +488,14 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure this request is from the database owner
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "Not authorised to delete visualisations for this database")
+	// Make sure the logged in user has the permissions to proceed
+	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if allowed == false {
+		errorPage(w, r, http.StatusNotFound, "Database not found")
 		return
 	}
 
@@ -604,7 +608,7 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -667,20 +671,15 @@ func visGet(w http.ResponseWriter, r *http.Request) {
 		loggedInUser = u.(string)
 	}
 
-	// If this request is from anyone other than the database owner, check that this is a public database
-	if strings.ToLower(dbOwner) != strings.ToLower(loggedInUser) {
-		// Check if the database exists and the user has access to it
-		exists, err := com.CheckDBExists(loggedInUser, dbOwner, dbFolder, dbName)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, err)
-			return
-		}
-		if !exists {
-			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprint(w, "No authorisation to retrieve visualisations for this database")
-			return
-		}
+	// Make sure the logged in user has the permissions to proceed
+	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if allowed == false {
+		errorPage(w, r, http.StatusNotFound, "Database not found")
+		return
 	}
 
 	// Retrieve a set of visualisation parameters for this database
@@ -812,10 +811,14 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Make sure the save request is coming from the database owner
-	if loggedInUser != dbOwner {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "Only the database owner is allowed to save a visualisation (at least for now)")
+	// Make sure the logged in user has the permissions to proceed
+	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if allowed == false {
+		errorPage(w, r, http.StatusNotFound, "Database not found")
 		return
 	}
 
