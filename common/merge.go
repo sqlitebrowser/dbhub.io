@@ -194,20 +194,25 @@ func performMerge(destOwner, destFolder, destName, destBranch, destCommitID, src
 	defer tmpFile.Close()
 
 	// Copy destination database to temporary location
-	{
+	err = func() (err error) {
 		inFile, err := os.Open(dbFile)
 		if err != nil {
-			return "", err
+			return
 		}
 		defer inFile.Close()
 		_, err = io.Copy(tmpFile, inFile)
 		if err != nil {
-			return "", err
+			return
 		}
+
+		return
+	}()
+	if err != nil {
+		return
 	}
 
 	// Open temporary database file for writing
-	func() {
+	err = func() (err error) {
 		var sdb *sqlite.Conn
 		sdb, err = sqlite.Open(tmpFile.Name(), sqlite.OpenReadWrite)
 		if err != nil {
@@ -236,7 +241,12 @@ func performMerge(destOwner, destFolder, destName, destBranch, destCommitID, src
 				}
 			}
 		}
+
+		return
 	}()
+	if err != nil {
+		return
+	}
 
 	// Retrieve details for the logged in user
 	usr, err := User(loggedInUser)
