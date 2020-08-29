@@ -742,7 +742,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 		Owner:    dbOwner,
 		Title:    discTitle,
 		Type:     com.EVENT_NEW_DISCUSSION,
-		URL:      fmt.Sprintf("/discuss/%s%s%s?id=%d", dbOwner, dbFolder, dbName, id),
+		URL:      fmt.Sprintf("/discuss/%s%s%s?id=%d", url.PathEscape(dbOwner), dbFolder, url.PathEscape(dbName), id),
 		UserName: loggedInUser,
 	}
 	err = com.NewEvent(details)
@@ -1032,7 +1032,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		Owner:    destOwner,
 		Title:    title,
 		Type:     com.EVENT_NEW_MERGE_REQUEST,
-		URL:      fmt.Sprintf("/merge/%s%s%s?id=%d", destOwner, destFolder, destDBName, x.ID),
+		URL:      fmt.Sprintf("/merge/%s%s%s?id=%d", url.PathEscape(destOwner), destFolder, url.PathEscape(destDBName), x.ID),
 		UserName: loggedInUser,
 	}
 	err = com.NewEvent(details)
