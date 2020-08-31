@@ -183,9 +183,9 @@ func CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName string, writeAcc
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return false, nil
-		} else {
-			return false, err
 		}
+
+		return false, err
 	}
 
 	// If we get here this means that the database does exist. The next step is to check
@@ -200,45 +200,42 @@ func CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName string, writeAcc
 		// If the request is from the owner of the database, always allow access to the database
 
 		return true, nil
-	} else {
-		// If the request is from someone who is logged in but not the owner of the database, check
-		// if the database is shared with the logged in user.
-
-		// Query shares
-		dbQuery = `
-			SELECT access
-			FROM database_shares
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE lower(user_name) = lower($1)
-				)
-				AND db_id = $2
-			LIMIT 1`
-		var dbAccess ShareDatabasePermissions
-		err := pdb.QueryRow(dbQuery, loggedInUser, dbId).Scan(&dbAccess)
-
-		// Check if there are any shares. If not, don't allow access.
-		if err != nil {
-			if err == pgx.ErrNoRows {
-				return false, nil
-			} else {
-				return false, err
-			}
-		}
-
-		// If there are shares, check the permissions
-		if writeAccess {
-			// If write access is required, only return true if writing is allowed
-			return dbAccess == MayReadAndWrite, nil
-		} else {
-			// If no write access is required, always return true if there is a share for this database and user
-			return true, nil
-		}
 	}
 
-	// Just to be sure
-	return false, nil
+	// If the request is from someone who is logged in but not the owner of the database, check
+	// if the database is shared with the logged in user.
+
+	// Query shares
+	dbQuery = `
+		SELECT access
+		FROM database_shares
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)
+			AND db_id = $2
+		LIMIT 1`
+	var dbAccess ShareDatabasePermissions
+	err := pdb.QueryRow(dbQuery, loggedInUser, dbId).Scan(&dbAccess)
+
+	// Check if there are any shares. If not, don't allow access.
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	// If there are shares, check the permissions
+	if writeAccess {
+		// If write access is required, only return true if writing is allowed
+		return dbAccess == MayReadAndWrite, nil
+	}
+
+	// If no write access is required, always return true if there is a share for this database and user
+	return true, nil
 }
 
 // CheckDBID checks if a given database ID is available, and returns it's folder/name so the caller can determine if it
