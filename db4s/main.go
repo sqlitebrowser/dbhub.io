@@ -809,7 +809,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Do the remaining input validation, and add the database to the system in the appropriate spot
-	m, httpStatus, err := com.UploadResponse(w, r, userAcc, targetUser, "", "")
+	m, httpStatus, err := com.UploadResponse(w, r, userAcc, targetUser, "", "", "db4s")
 	if err != nil {
 		http.Error(w, err.Error(), httpStatus)
 		return

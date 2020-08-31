@@ -705,7 +705,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	var httpStatus int
 	var x map[string]string
 	dbOwner := loggedInUser // We always use the API key / cert owner as the database owner for uploads
-	x, httpStatus, err = com.UploadResponse(w, r, loggedInUser, dbOwner, dbName, commitID)
+	x, httpStatus, err = com.UploadResponse(w, r, loggedInUser, dbOwner, dbName, commitID, "api")
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
