@@ -217,7 +217,7 @@ func CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName string, writeAcc
 			AND db_id = $2
 		LIMIT 1`
 	var dbAccess ShareDatabasePermissions
-	err := pdb.QueryRow(dbQuery, loggedInUser, dbId).Scan(&dbAccess)
+	err = pdb.QueryRow(dbQuery, loggedInUser, dbId).Scan(&dbAccess)
 
 	// Check if there are any shares. If not, don't allow access.
 	if err != nil {

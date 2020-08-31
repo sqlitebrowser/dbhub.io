@@ -98,7 +98,7 @@ type UploadResponseContainer struct {
 }
 
 // UploadResponse validates incoming upload requests from the db4s and api daemons, then processes the upload
-func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, targetUser, targetDB, commitID string) (retMsg map[string]string, httpStatus int, err error) {
+func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, targetUser, targetDB, commitID, module string) (retMsg map[string]string, httpStatus int, err error) {
 	// Grab the uploaded file and form variables
 	var tempFile multipart.File
 	var handler *multipart.FileHeader
