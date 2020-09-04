@@ -1,0 +1,123 @@
+[[ define "script_headerdatabase" ]]
+
+$scope.meta["CommitID"]    = "[[ .DB.Info.CommitID ]]";
+$scope.meta["Discussions"] = "[[ .DB.Info.Discussions ]]";
+$scope.meta["Forks"]       = "[[ .DB.Info.Forks ]]";
+$scope.meta["Licence"]     = "[[ .DB.Info.Licence ]]";
+$scope.meta["LicenceURL"]  = "[[ .DB.Info.LicenceURL ]]";
+$scope.meta["MRs"]         = "[[ .DB.Info.MRs ]]";
+$scope.meta["MyStar"]      = "[[ .MyStar ]]";
+$scope.meta["MyWatch"]     = "[[ .MyWatch ]]";
+$scope.meta["Size"]        = "[[ .DB.Info.DBEntry.Size ]]";
+$scope.meta["Stars"]       = "[[ .DB.Info.Stars ]]";
+$scope.meta["Watchers"]    = "[[ .DB.Info.Watchers ]]";
+
+// Set the displayed public/private value
+if ("[[ .DB.Info.Public ]]" == "true") {
+    $scope.meta["Public"] = "Public";
+} else {
+    $scope.meta["Public"] = "Private";
+}
+
+// Fork the database
+$scope.forkDB = function() {
+    // Check if the user is logged in
+    if ($scope.meta.Loggedin != "true") {
+        // User needs to be logged in
+        lock.show();
+        return;
+    }
+
+    // Only proceed if the database being forked doesn't already belong to the user
+    if ("[[ .Meta.LoggedInUser ]]" != "[[ .Meta.Owner ]]") {
+        // Call the fork database code, which should bounce us to the forked database
+        window.location = "/x/forkdb/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]";
+    }
+};
+
+// Sends the user to the forks page for the database
+$scope.forksPage = function() {
+    window.location = "/forks/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+};
+
+// Sends the user to the stars page for the database
+$scope.starsPage = function() {
+    window.location = "/stars/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+};
+
+// Sends the user to the login page (if not logged in), else toggles starring of the database for the user
+$scope.toggleStars = function() {
+    if ($scope.meta.Loggedin != "true") {
+        // User needs to be logged in
+        lock.show();
+    } else {
+        $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
+            .then(function (response) {
+                var tempval = response.data;
+                if (tempval != "-1") {
+                    // Update star button text
+                    if ($scope.meta.MyStar != "true") {
+                        $scope.meta.MyStar = "true";
+                    } else {
+                        $scope.meta.MyStar = "false";
+                    }
+                    $scope.updateStarsText();
+
+                    // Update displayed star count
+                    $scope.meta.Stars = tempval;
+                }
+            })
+    }
+};
+
+// Turns on watching for a database
+$scope.toggleWatchers = function() {
+    if ($scope.meta.Loggedin != "true") {
+        // User needs to be logged in
+        lock.show();
+        return;
+    }
+
+    // Retrieve the branch list for the newly selected database
+    $http.get("/x/watch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
+        .then(function (response) {
+            // Update watch button text
+            if ($scope.meta.MyWatch != "true") {
+                $scope.meta.MyWatch = "true";
+            } else {
+                $scope.meta.MyWatch = "false";
+            }
+            $scope.updateWatchersText();
+
+            // Update displayed watcher count
+            $scope.meta.Watchers = response.data;
+        });
+};
+
+// Update star button text to say "Stars" or "Unstar"
+$scope.starsText = "<i class=\"fa fa-star\"></i> Star";
+$scope.updateStarsText = function() {
+    if ($scope.meta.MyStar != "true") {
+        $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
+    } else {
+        $scope.starsText = "<i class=\"fa fa-star\"></i> Unstar";
+    }
+};
+$scope.updateStarsText();
+
+// Update watchers button text to say "Watch" or "Unwatch"
+$scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
+$scope.updateWatchersText = function() {
+    if ($scope.meta.MyWatch != "true") {
+        $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
+    } else {
+        $scope.watchersText = "<i class=\"fa fa-eye\"></i> Unwatch";
+    }
+};
+$scope.updateWatchersText();
+
+// Sends the user to the watchers page for the database
+$scope.watchersPage = function() {
+    window.location = "/watchers/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
+};
+[[ end ]]

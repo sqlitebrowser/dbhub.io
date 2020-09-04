@@ -397,13 +397,6 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get latest star and fork count
-	_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Check if the database was starred by the logged in user
 	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 	if err != nil {
@@ -416,18 +409,6 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
-	}
-
-	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
-	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
-	if licSHA != "" {
-		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(pageData.Meta.Owner, licSHA)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	} else {
-		pageData.DB.Info.Licence = "Not specified"
 	}
 
 	// If the initially chosen source and destinations can be directly applied, fill out the initial commit list entries
@@ -494,17 +475,6 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 			pageData.CommitList = append(pageData.CommitList, c)
 		}
 	}
-
-	// Retrieve the "forked from" information
-	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-		return
-	}
-	pageData.Meta.ForkOwner = frkOwn
-	pageData.Meta.ForkFolder = frkFol
-	pageData.Meta.ForkDatabase = frkDB
-	pageData.Meta.ForkDeleted = frkDel
 
 	// Add Auth0 info to the page data
 	pageData.Auth0 = collectPageAuth0Info()
@@ -986,18 +956,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		return
 	}
 
-	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
-	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
-	if licSHA != "" {
-		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(dbOwner, licSHA)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	} else {
-		pageData.DB.Info.Licence = "Not specified"
-	}
-
 	// Check if the database was starred by the logged in user
 	myStar, err := com.CheckDBStarred(pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName)
 	if err != nil {
@@ -1095,24 +1053,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 				log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
 					"logged in user '%s'", j, dbOwner, dbFolder, dbName, pageData.Meta.LoggedInUser)
 			}
-		}
-
-		// Retrieve the "forked from" information
-		frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-			return
-		}
-		pageData.Meta.ForkOwner = frkOwn
-		pageData.Meta.ForkFolder = frkFol
-		pageData.Meta.ForkDatabase = frkDB
-		pageData.Meta.ForkDeleted = frkDel
-
-		// Get latest star and fork count
-		_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(dbOwner, dbFolder, dbName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
 		}
 
 		// Render the page (using the caches)
@@ -1223,7 +1163,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Fill out various metadata fields
-	pageData.Meta.Server = com.Conf.Web.ServerName
 	pageData.Meta.Title = fmt.Sprintf("%s %s %s", dbOwner, dbFolder, dbName)
 
 	// Retrieve default branch name details
@@ -1266,17 +1205,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	pageData.DB.Info.Branch = branchName
 	pageData.DB.Info.Commits = branchHeads[branchName].CommitCount
-
-	// Retrieve the "forked from" information
-	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-		return
-	}
-	pageData.Meta.ForkOwner = frkOwn
-	pageData.Meta.ForkFolder = frkFol
-	pageData.Meta.ForkDatabase = frkDB
-	pageData.Meta.ForkDeleted = frkDel
 
 	// Add Auth0 info to the page data
 	pageData.Auth0 = collectPageAuth0Info()
@@ -1370,13 +1298,6 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get latest star and fork count
-	_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Check if the database was starred by the logged in user
 	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 	if err != nil {
@@ -1430,24 +1351,6 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 			pageData.ColumnNamesAfter[diff.ObjectName] = append(pks, other...)
 		}
 	}
-
-	// Retrieve the latest discussion and MR counts
-	pageData.DB.Info.Discussions, pageData.DB.Info.MRs, err = com.GetDiscussionAndMRCount(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Retrieve the "forked from" information
-	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-		return
-	}
-	pageData.Meta.ForkOwner = frkOwn
-	pageData.Meta.ForkFolder = frkFol
-	pageData.Meta.ForkDatabase = frkDB
-	pageData.Meta.ForkDeleted = frkDel
 
 	// Fill out the metadata
 	pageData.Meta.Title = "Changes"
@@ -1503,13 +1406,6 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get latest star and fork count
-	_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Check if the database was starred by the logged in user
 	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 	if err != nil {
@@ -1529,36 +1425,6 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
-	}
-
-	// Retrieve the latest discussion and MR counts
-	pageData.DB.Info.Discussions, pageData.DB.Info.MRs, err = com.GetDiscussionAndMRCount(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Retrieve the "forked from" information
-	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-		return
-	}
-	pageData.Meta.ForkOwner = frkOwn
-	pageData.Meta.ForkFolder = frkFol
-	pageData.Meta.ForkDatabase = frkDB
-	pageData.Meta.ForkDeleted = frkDel
-
-	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
-	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
-	if licSHA != "" {
-		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(pageData.Meta.Owner, licSHA)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	} else {
-		pageData.DB.Info.Licence = "Not specified"
 	}
 
 	// Fill out the metadata
@@ -1779,13 +1645,6 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get latest star and fork count
-	_, pageData.DB.Info.Stars, pageData.DB.Info.Forks, err = com.SocialStats(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Check if the database was starred by the logged in user
 	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 	if err != nil {
@@ -1805,36 +1664,6 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
-	}
-
-	// Retrieve the latest discussion and MR counts
-	pageData.DB.Info.Discussions, pageData.DB.Info.MRs, err = com.GetDiscussionAndMRCount(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Retrieve the "forked from" information
-	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-		return
-	}
-	pageData.Meta.ForkOwner = frkOwn
-	pageData.Meta.ForkFolder = frkFol
-	pageData.Meta.ForkDatabase = frkDB
-	pageData.Meta.ForkDeleted = frkDel
-
-	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
-	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
-	if licSHA != "" {
-		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(pageData.Meta.Owner, licSHA)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	} else {
-		pageData.DB.Info.Licence = "Not specified"
 	}
 
 	// Fill out the metadata
@@ -2104,7 +1933,6 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		Stars      []com.DBEntry
 		Watching   []com.DBEntry
 	}
-	pageData.Meta.Server = com.Conf.Web.ServerName
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
@@ -2368,34 +2196,11 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve the "forked from" information
-	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-		return
-	}
-	pageData.Meta.ForkOwner = frkOwn
-	pageData.Meta.ForkFolder = frkFol
-	pageData.Meta.ForkDatabase = frkDB
-	pageData.Meta.ForkDeleted = frkDel
-
 	// Retrieve the database details
 	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
-	}
-
-	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
-	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
-	if licSHA != "" {
-		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(pageData.Meta.Owner, licSHA)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	} else {
-		pageData.DB.Info.Licence = "Not specified"
 	}
 
 	// Get a handle from Minio for the database object
@@ -2732,7 +2537,6 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		Meta          com.MetaInfo
 		UserAvatarURL string
 	}
-	pageData.Meta.Server = com.Conf.Web.ServerName
 
 	// Get all meta information
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false)

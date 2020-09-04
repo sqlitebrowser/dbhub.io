@@ -11,7 +11,6 @@ import (
 	"github.com/gorilla/sessions"
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
-	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 )
 
 func visualisePage(w http.ResponseWriter, r *http.Request) {
@@ -33,37 +32,11 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		VisNames    []string
 	}
 
-	// Retrieve the database owner & name
-	// TODO: Add folder support
-	dbFolder := "/"
-	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/discuss/" at the start of the URL
+	// Get all meta information
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		errorPage(w, r, errCode, err.Error())
 		return
-	}
-
-	// Validate the supplied information
-	if dbOwner == "" || dbName == "" {
-		errorPage(w, r, http.StatusBadRequest, "Missing database owner or database name")
-		return
-	}
-
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		pageData.Meta.LoggedInUser = loggedInUser
 	}
 
 	// Check if a specific database commit ID was given
@@ -98,46 +71,37 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
-			dbName))
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", pageData.Meta.Owner, pageData.Meta.Folder,
+			pageData.Meta.Database))
 		return
 	}
 
 	// * Execution can only get here if the user has access to the requested database *
 
-	// Increment the view counter for the database (excluding people viewing their own databases)
-	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
-		err = com.IncrementViewCount(dbOwner, dbFolder, dbName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-
 	// If a specific commit was requested, make sure it exists in the database commit history
 	if commitID != "" {
-		commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+		commitList, err := com.GetCommitList(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 		if _, ok := commitList[commitID]; !ok {
 			// The requested commit isn't one in the database commit history so error out
-			errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for database '%s%s%s'", dbOwner,
-				dbFolder, dbName))
+			errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for database '%s%s%s'", pageData.Meta.Owner,
+				pageData.Meta.Folder, pageData.Meta.Database))
 			return
 		}
 	}
 
 	// If a specific release was requested, and no commit ID was given, retrieve the commit ID matching the release
 	if commitID == "" && releaseName != "" {
-		releases, err := com.GetReleases(dbOwner, dbFolder, dbName)
+		releases, err := com.GetReleases(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve releases for database")
 			return
@@ -151,7 +115,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the branch info for the database
-	branchHeads, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	branchHeads, err := com.GetBranches(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve branch information for database")
 		return
@@ -169,7 +133,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 	// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
 	if commitID == "" && tagName != "" {
-		tags, err := com.GetTags(dbOwner, dbFolder, dbName)
+		tags, err := com.GetTags(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for database")
 			return
@@ -184,7 +148,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 	// If we still haven't determined the required commit ID, use the head commit of the default branch
 	if commitID == "" {
-		commitID, err = com.DefaultCommit(dbOwner, dbFolder, dbName)
+		commitID, err = com.DefaultCommit(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -192,56 +156,24 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, loggedInUser, dbOwner, dbFolder, dbName, commitID)
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Get the latest discussion and merge request count directly from PG, skipping the ones (incorrectly) stored in memcache
-	currentDisc, currentMRs, err := com.GetDiscussionAndMRCount(dbOwner, dbFolder, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
-	licSHA := pageData.DB.Info.DBEntry.LicenceSHA
-	if licSHA != "" {
-		pageData.DB.Info.Licence, pageData.DB.Info.LicenceURL, err = com.GetLicenceInfoFromSha256(dbOwner, licSHA)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-	} else {
-		pageData.DB.Info.Licence = "Not specified"
-	}
-
 	// Check if the database was starred by the logged in user
-	myStar, err := com.CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	myStar, err := com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database star status")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	myWatch, err := com.CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	myWatch, err := com.CheckDBWatched(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
-	}
-
-	// Retrieve the details for the logged in user
-	var avatarURL string
-	if loggedInUser != "" {
-		ur, err := com.User(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if ur.AvatarURL != "" {
-			avatarURL = ur.AvatarURL + "&s=48"
-		}
 	}
 
 	// TODO: Cache/retrieve the cached SQLite table and column names from memcached.
@@ -260,7 +192,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	defer sdb.Close()
 
 	// Retrieve the list of tables and views in the database
-	tables, err := com.TablesAndViews(sdb, dbName)
+	tables, err := com.TablesAndViews(sdb, pageData.Meta.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -268,7 +200,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	pageData.DB.Info.Tables = tables
 
 	// Get a list of all saved visualisations for this database
-	pageData.VisNames, err = com.GetVisualisations(dbOwner, dbFolder, dbName)
+	pageData.VisNames, err = com.GetVisualisations(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -290,7 +222,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Retrieve a set of visualisation parameters for this database
-		params, ok, err := com.GetVisualisationParams(dbOwner, dbFolder, dbName, visName)
+		params, ok, err := com.GetVisualisationParams(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, visName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -319,7 +251,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 			// Automatically run the saved query
 			var data com.SQLiteRecordSet
-			data, err = com.SQLiteRunQueryDefensive(w, r, com.Visualisation, dbOwner, dbFolder, dbName, commitID, loggedInUser, params.SQL)
+			data, err = com.SQLiteRunQueryDefensive(w, r, com.Visualisation, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitID, pageData.Meta.LoggedInUser, params.SQL)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -331,39 +263,17 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			//	TODO: Cache/retrieve the data for this visualisation too
-			//	hash := visHash(dbOwner, dbFolder, dbName, commitID, "default", params)
-			//	data, ok, err := com.GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash)
-		}
-	}
-
-	// Retrieve correctly capitalised username for the user
-	usr, err := com.User(dbOwner)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	pageData.Meta.Owner = usr.Username
-
-	// Ensure the correct Avatar URL is displayed
-	pageData.Meta.AvatarURL = avatarURL
-
-	// Retrieve the status updates count for the logged in user
-	if loggedInUser != "" {
-		pageData.Meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
+			//	hash := visHash(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitID, "default", params)
+			//	data, ok, err := com.GetVisualisationData(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitID, hash)
 		}
 	}
 
 	// Fill out various metadata fields
-	pageData.Meta.Database = dbName
-	pageData.Meta.Server = com.Conf.Web.ServerName
-	pageData.Meta.Title = fmt.Sprintf("vis - %s %s %s", dbOwner, dbFolder, dbName)
+	pageData.Meta.Title = fmt.Sprintf("vis - %s %s %s", pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 
 	// Retrieve default branch name details
 	if branchName == "" {
-		branchName, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+		branchName, err = com.GetDefaultBranchName(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
 			return
@@ -395,39 +305,15 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
 			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
-				"logged in user '%s'", j, dbOwner, dbFolder, dbName, loggedInUser)
+				"logged in user '%s'", j, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.Meta.LoggedInUser)
 		}
 	}
 
 	pageData.DB.Info.Branch = branchName
-	pageData.DB.Info.Commits = branchHeads[branchName].CommitCount
-
-	// Retrieve the "forked from" information
-	frkOwn, frkFol, frkDB, frkDel, err := com.ForkedFrom(dbOwner, dbFolder, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Database query failure")
-		return
-	}
-	pageData.Meta.ForkOwner = frkOwn
-	pageData.Meta.ForkFolder = frkFol
-	pageData.Meta.ForkDatabase = frkDB
-	pageData.Meta.ForkDeleted = frkDel
-
-	// Add Auth0 info to the page data
-	pageData.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageData.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageData.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Update database star and watch status for the logged in user
 	pageData.MyStar = myStar
 	pageData.MyWatch = myWatch
-
-	// Render the full description as markdown
-	pageData.DB.Info.FullDesc = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
-
-	// Restore the correct discussion and MR count
-	pageData.DB.Info.Discussions = currentDisc
-	pageData.DB.Info.MRs = currentMRs
 
 	// Render the visualisation page
 	pageData.Meta.PageSection = "db_vis"

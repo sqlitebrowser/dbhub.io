@@ -569,98 +569,98 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 		}
 	}
 
-	// Retrieve the database details
-	dbQuery := `
-		SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
-			$4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
-			db.branches, db.release_count, db.contributors, db.one_line_description, db.full_description,
-			db.default_table, db.public, db.source_url, db.tags, db.default_branch
-		FROM sqlite_databases AS db
-		WHERE db.user_id = (
-				SELECT user_id
-				FROM users
-				WHERE lower(user_name) = lower($1)
-			)
-			AND db.folder = $2
-			AND db.db_name = $3
-			AND db.is_deleted = false`
-
 	// Generate a predictable cache key for this functions' metadata.  Probably not sharable with other functions
 	// cached metadata
 	mdataCacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, commitID)
 
-	// Use a cached version of the query response if it exists
+	// Only query database if there is no cached version of the response
 	ok, err := GetCachedData(mdataCacheKey, &DB)
 	if err != nil {
 		log.Printf("Error retrieving data from cache: %v\n", err)
 	}
-	if ok {
-		// Data was in cache, so we use that
-		return nil
+	if !ok {
+		// Retrieve the database details
+		dbQuery := `
+			SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
+				$4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
+				db.branches, db.release_count, db.contributors, db.one_line_description, db.full_description,
+				db.default_table, db.public, db.source_url, db.tags, db.default_branch
+			FROM sqlite_databases AS db
+			WHERE db.user_id = (
+					SELECT user_id
+					FROM users
+					WHERE lower(user_name) = lower($1)
+				)
+				AND db.folder = $2
+				AND db.db_name = $3
+				AND db.is_deleted = false`
+
+		// Retrieve the requested database details
+		var defTable, fullDesc, oneLineDesc, sourceURL pgx.NullString
+		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
+			&DB.Info.RepoModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
+			&DB.Info.CommitID,
+			&DB.Info.DBEntry,
+			&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
+			&DB.Info.Public, &sourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch)
+
+		if err != nil {
+			log.Printf("Error when retrieving database details: %v\n", err.Error())
+			return errors.New("The requested database doesn't exist")
+		}
+		if !oneLineDesc.Valid {
+			DB.Info.OneLineDesc = "No description"
+		} else {
+			DB.Info.OneLineDesc = oneLineDesc.String
+		}
+		if !fullDesc.Valid {
+			DB.Info.FullDesc = "No full description"
+		} else {
+			DB.Info.FullDesc = fullDesc.String
+		}
+		if !defTable.Valid {
+			DB.Info.DefaultTable = ""
+		} else {
+			DB.Info.DefaultTable = defTable.String
+		}
+		if !sourceURL.Valid {
+			DB.Info.SourceURL = ""
+		} else {
+			DB.Info.SourceURL = sourceURL.String
+		}
+
+		// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
+		licSHA := DB.Info.DBEntry.LicenceSHA
+		if licSHA != "" {
+			DB.Info.Licence, DB.Info.LicenceURL, err = GetLicenceInfoFromSha256(dbOwner, licSHA)
+			if err != nil {
+				return err
+			}
+		} else {
+			DB.Info.Licence = "Not specified"
+		}
+
+		// Fill out the fields we already have data for
+		DB.Info.Database = dbName
+		DB.Info.Folder = dbFolder
+
+		// Cache the database details
+		err = CacheData(mdataCacheKey, DB, Conf.Memcache.DefaultCacheTime)
+		if err != nil {
+			log.Printf("Error when caching page data: %v\n", err)
+		}
 	}
 
-	// Retrieve the requested database details
-	var defTable, fullDesc, oneLineDesc, sourceURL pgx.NullString
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
-		&DB.Info.RepoModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
-		&DB.Info.CommitID,
-		&DB.Info.DBEntry,
-		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
-		&DB.Info.Public, &sourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch)
-
+	// The social stats are always updated because they could change without the cache being updated
+	DB.Info.Watchers, DB.Info.Stars, DB.Info.Forks, err = SocialStats(dbOwner, dbFolder, dbName)
 	if err != nil {
-		log.Printf("Error when retrieving database details: %v\n", err.Error())
-		return errors.New("The requested database doesn't exist")
-	}
-	if !oneLineDesc.Valid {
-		DB.Info.OneLineDesc = "No description"
-	} else {
-		DB.Info.OneLineDesc = oneLineDesc.String
-	}
-	if !fullDesc.Valid {
-		DB.Info.FullDesc = "No full description"
-	} else {
-		DB.Info.FullDesc = fullDesc.String
-	}
-	if !defTable.Valid {
-		DB.Info.DefaultTable = ""
-	} else {
-		DB.Info.DefaultTable = defTable.String
-	}
-	if !sourceURL.Valid {
-		DB.Info.SourceURL = ""
-	} else {
-		DB.Info.SourceURL = sourceURL.String
-	}
-
-	// Fill out the fields we already have data for
-	DB.Info.Database = dbName
-	DB.Info.Folder = dbFolder
-
-	// Retrieve latest fork count
-	// TODO: This can probably be folded into the above SQL query as a sub-select, as a minor optimisation
-	dbQuery = `
-		SELECT forks
-		FROM sqlite_databases
-		WHERE db_id = (
-			SELECT root_database
-			FROM sqlite_databases
-			WHERE user_id = (
-				SELECT user_id
-				FROM users
-				WHERE lower(user_name) = lower($1))
-			AND folder = $2
-			AND db_name = $3)`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&DB.Info.Forks)
-	if err != nil {
-		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
 		return err
 	}
 
-	// Cache the database details
-	err = CacheData(mdataCacheKey, DB, Conf.Memcache.DefaultCacheTime)
+	// Retrieve the latest discussion and MR counts
+	DB.Info.Discussions, DB.Info.MRs, err = GetDiscussionAndMRCount(dbOwner, dbFolder, dbName)
 	if err != nil {
-		log.Printf("Error when caching page data: %v\n", err)
+		return err
 	}
 
 	return nil
@@ -2990,9 +2990,9 @@ func SocialStats(dbOwner, dbFolder, dbName string) (wa, st, fo int, err error) {
 
 	// TODO: Implement caching of these stats
 
-	// Retrieve latest star count
+	// Retrieve latest star, fork, and watcher count
 	dbQuery := `
-		SELECT stars
+		SELECT stars, forks, watchers
 		FROM sqlite_databases
 		WHERE user_id = (
 				SELECT user_id
@@ -3001,34 +3001,13 @@ func SocialStats(dbOwner, dbFolder, dbName string) (wa, st, fo int, err error) {
 			)
 			AND folder = $2
 			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&st)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&st, &fo, &wa)
 	if err != nil {
-		log.Printf("Error retrieving star count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Error retrieving social stats count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
 		return -1, -1, -1, err
 	}
 
-	// Retrieve latest fork count
-	dbQuery = `
-		SELECT forks
-		FROM sqlite_databases
-		WHERE db_id = (
-				SELECT root_database
-				FROM sqlite_databases
-				WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE lower(user_name) = lower($1)
-					)
-			AND folder = $2
-			AND db_name = $3)`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&fo)
-	if err != nil {
-		log.Printf("Error retrieving fork count for '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
-		return -1, -1, -1, err
-	}
-
-	// TODO: Implement watchers
-	return 0, st, fo, nil
+	return
 }
 
 // StatusUpdates returns the list of outstanding status updates for a user

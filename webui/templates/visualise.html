@@ -176,33 +176,13 @@
         </div>
         <div class="col-md-2">&nbsp;</div>
     </div>
-    <div class="row" style="border: none;">
+    <div id="fullrow" class="row" style="border: none;">
         &nbsp;
     </div>
     <div ng-show="showVis === true" class="row">
         <div class="col-md-12">
             <div id="vis" style="width:100%;"></div>
         </div>
-    </div>
-    <div class="row" style="border: none;">
-        &nbsp;
-    </div>
-    <div id="descdiv" class="row" style="border: none;">
-        <div class="col-md-12" style="border: none;">
-            <div style="border: 1px solid #DDD; border-radius: 7px; padding: 1px;">
-                <table class="table table-striped table-responsive" style="margin: 0;">
-                    <tr style="border-bottom: 1px solid #DDD;">
-                        <td class="page-header" style="border: none;"><h4>DESCRIPTION</h4></td>
-                    </tr>
-                    <tr>
-                        <td class="rendered" id="viewreadme" ng-bind-html="meta.FullDesc"></td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        &nbsp;
     </div>
 </div>
 [[ template "footer" . ]]
@@ -261,30 +241,9 @@
         // Pre-filled database metadata
         $scope.meta = {
             Branch:       "[[ .DB.Info.Branch ]]",
-            Branches:     "[[ .DB.Info.Branches ]]",
             BranchList:   [[ .DB.Info.BranchList ]],
-            CommitID:     "[[ .DB.Info.CommitID ]]",
-            Commits:      "[[ .DB.Info.Commits ]]",
-            Contributors: "[[ .DB.Info.Contributors ]]",
             Database:     "[[ .Meta.Database ]]",
-            Discussions:  "[[ .DB.Info.Discussions ]]",
-            Forks:        "[[ .DB.Info.Forks ]]",
-            FullDesc:     "[[ .DB.Info.FullDesc ]]",
-            Licence:      "[[ .DB.Info.Licence ]]",
-            LicenceURL:   "[[ .DB.Info.LicenceURL ]]",
-            MRs:          "[[ .DB.Info.MRs ]]",
-            MyStar:       "[[ .MyStar ]]",
-            MyWatch:      "[[ .MyWatch ]]",
-            OneLineDesc:  "[[ .DB.Info.OneLineDesc ]]",
             Owner:        "[[ .Meta.Owner ]]",
-            Public:       "",
-            Releases:     "[[ .DB.Info.Releases ]]",
-            Size:         "[[ .DB.Info.DBEntry.Size ]]",
-            SourceURL:    "[[ .DB.Info.SourceURL ]]",
-            Stars:        "[[ .DB.Info.Stars ]]",
-            Watchers:     "[[ .DB.Info.Watchers ]]",
-            Tables:       [[ .DB.Info.Tables ]],
-            Tags:         "[[ .DB.Info.Tags ]]",
             [[ if .Meta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
@@ -303,13 +262,6 @@
         $scope.radioYAxisShowLabels = true;
         if (![[ .ShowYLabel ]]) {
             $scope.radioYAxisShowLabels = false;
-        }
-
-        // Set the displayed public/private value
-        if ("[[ .DB.Info.Public ]]" === "true") {
-            $scope.meta.Public = "Public";
-        } else {
-            $scope.meta.Public = "Private";
         }
 
         // Display a Plotly chart
@@ -331,7 +283,7 @@
             plotLayout = {
                 autosize: true,
                 title: chartData.Title,
-                width: document.getElementById("descdiv").offsetWidth,
+                width: document.getElementById("fullrow").offsetWidth,
                 xaxis: {},
                 yaxis: {},
             };
@@ -832,108 +784,6 @@
             $scope.doChart(true);
         }
 
-        // Fork the database
-        $scope.forkDB = function() {
-            // Check if the user is logged in
-            if ($scope.meta.Loggedin !== "true") {
-                // User needs to be logged in
-                lock.show();
-                return;
-            }
-
-            // Only proceed if the database being forked doesn't already belong to the user
-            if ("[[ .Meta.LoggedInUser ]]" !== "[[ .Meta.Owner ]]") {
-                // Call the fork database code, which should bounce us to the forked database
-                window.location = "/x/forkdb/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]";
-            }
-        };
-
-        // Sends the user to the forks page for the database
-        $scope.forksPage = function() {
-            window.location = "/forks/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
-        };
-
-        // Sends the user to the stars page for the database
-        $scope.starsPage = function() {
-            window.location = "/stars/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
-        };
-
-        // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
-        $scope.toggleStars = function() {
-            if ($scope.meta.Loggedin !== "true") {
-                // User needs to be logged in
-                lock.show();
-                return;
-            }
-            $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
-                .then(function (response) {
-                    var tempval = response.data;
-                    if (tempval !== "-1") {
-                        // Update star button text
-                        if ($scope.meta.MyStar !== "true") {
-                            $scope.meta.MyStar = "true";
-                        } else {
-                            $scope.meta.MyStar = "false";
-                        }
-                        $scope.updateStarsText();
-
-                        // Update displayed star count
-                        $scope.meta.Stars = tempval;
-                    }
-                })
-        };
-
-        // Turns on watching for a database
-        $scope.toggleWatchers = function() {
-            if ($scope.meta.Loggedin !== "true") {
-                // User needs to be logged in
-                lock.show();
-                return;
-            }
-
-            // Retrieve the branch list for the newly selected database
-            $http.get("/x/watch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
-                .then(function (response) {
-                    // Update watch button text
-                    if ($scope.meta.MyWatch !== "true") {
-                        $scope.meta.MyWatch = "true";
-                    } else {
-                        $scope.meta.MyWatch = "false";
-                    }
-                    $scope.updateWatchersText();
-
-                    // Update displayed watcher count
-                    $scope.meta.Watchers = response.data;
-                });
-        };
-
-        // Update star button text to say "Stars" or "Unstar"
-        $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
-        $scope.updateStarsText = function() {
-            if ($scope.meta.MyStar !== "true") {
-                $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
-            } else {
-                $scope.starsText = "<i class=\"fa fa-star\"></i> Unstar";
-            }
-        };
-        $scope.updateStarsText();
-
-        // Update watchers button text to say "Watch" or "Unwatch"
-        $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
-        $scope.updateWatchersText = function() {
-            if ($scope.meta.MyWatch !== "true") {
-                $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
-            } else {
-                $scope.watchersText = "<i class=\"fa fa-eye\"></i> Unwatch";
-            }
-        };
-        $scope.updateWatchersText();
-
-        // Sends the user to the watchers page for the database
-        $scope.watchersPage = function() {
-            window.location = "/watchers/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
-        };
-
         // Auth0 authentication
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
@@ -941,6 +791,8 @@
         $scope.showLock = function() {
             lock.show();
         };
+
+        [[ template "script_headerdatabase" . ]]
     });
 </script>
 </body>

@@ -376,6 +376,9 @@ func collectPageAuth0Info() (auth0 com.Auth0Set) {
 }
 
 func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool, getOwnerAndDatabaseFromUrl bool) (errCode int, err error) {
+	// Server name
+	meta.Server = com.Conf.Web.ServerName
+
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -437,6 +440,12 @@ func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool,
 		meta.Database = dbName
 		meta.Owner = usr.Username
 		meta.Folder = "/"
+
+		// Retrieve the "forked from" information
+		meta.ForkOwner, meta.ForkFolder, meta.ForkDatabase, meta.ForkDeleted, err = com.ForkedFrom(meta.Owner, meta.Folder, meta.Database)
+		if err != nil {
+			return http.StatusBadRequest, err
+		}
 	}
 
 	return

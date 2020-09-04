@@ -266,7 +266,6 @@
     app.controller('settingsView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
             BranchLics:    [[ .BranchLics ]],
-            CommitID:      "[[ .DB.Info.CommitID ]]",
             Database:      "[[ .Meta.Database ]]",
             DefaultBranch: "[[ .DB.Info.DefaultBranch ]]",
             DefaultTable:  "[[ .DB.Info.DefaultTable ]]",
@@ -274,31 +273,13 @@
             OneLineDesc:   "[[ .DB.Info.OneLineDesc ]]",
             SourceURL:     "[[ .DB.Info.SourceURL ]]",
             Tables:        [[ .DB.Info.Tables ]],
-            Discussions:   "[[ .DB.Info.Discussions ]]",
-            Forks:         "[[ .DB.Info.Forks ]]",
-            Licence:       "[[ .DB.Info.Licence ]]",
-            LicenceURL:    "[[ .DB.Info.LicenceURL ]]",
-            MRs:           "[[ .DB.Info.MRs ]]",
-            MyStar:        "[[ .MyStar ]]",
-            MyWatch:       "[[ .MyWatch ]]",
             Owner:         "[[ .Meta.Owner ]]",
-            Public:        "",
-            Size:          "[[ .DB.Info.DBEntry.Size ]]",
-            Stars:         "[[ .DB.Info.Stars ]]",
-            Watchers:      "[[ .DB.Info.Watchers ]]",
             [[ if .Meta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
                 Loggedin: "false",
             [[ end ]]
         };
-
-        // Set the displayed public/private value
-        if ("[[ .DB.Info.Public ]]" == "true") {
-            $scope.meta.Public = "Public";
-        } else {
-            $scope.meta.Public = "Private";
-        }
 
         // Sort the licence list into the desired display order
         var rawLicences = [[ .Licences ]];
@@ -465,87 +446,6 @@
             }
         };
 
-        // Sends the user to the stars page for the database
-        $scope.starsPage = function() {
-            window.location = "/stars/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
-        };
-
-        // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
-        $scope.toggleStars = function() {
-            if ($scope.meta.Loggedin != "true") {
-                // User needs to be logged in
-                lock.show();
-            } else {
-                $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
-                    .then(function (response) {
-                        var tempval = response.data;
-                        if (tempval != "-1") {
-                            // Update star button text
-                            if ($scope.meta.MyStar != "true") {
-                                $scope.meta.MyStar = "true";
-                            } else {
-                                $scope.meta.MyStar = "false";
-                            }
-                            $scope.updateStarsText();
-
-                            // Update displayed star count
-                            $scope.meta.Stars = tempval;
-                        }
-                    })
-            }
-        };
-
-        // Turns on watching for a database
-        $scope.toggleWatchers = function() {
-            if ($scope.meta.Loggedin != "true") {
-                // User needs to be logged in
-                lock.show();
-                return;
-            }
-
-            // Retrieve the branch list for the newly selected database
-            $http.get("/x/watch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
-                .then(function (response) {
-                    // Update watch button text
-                    if ($scope.meta.MyWatch != "true") {
-                        $scope.meta.MyWatch = "true";
-                    } else {
-                        $scope.meta.MyWatch = "false";
-                    }
-                    $scope.updateWatchersText();
-
-                    // Update displayed watcher count
-                    $scope.meta.Watchers = response.data;
-                });
-        };
-
-        // Update star button text to say "Stars" or "Unstar"
-        $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
-        $scope.updateStarsText = function() {
-            if ($scope.meta.MyStar != "true") {
-                $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
-            } else {
-                $scope.starsText = "<i class=\"fa fa-star\"></i> Unstar";
-            }
-        };
-        $scope.updateStarsText();
-
-        // Update watchers button text to say "Watch" or "Unwatch"
-        $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
-        $scope.updateWatchersText = function() {
-            if ($scope.meta.MyWatch != "true") {
-                $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
-            } else {
-                $scope.watchersText = "<i class=\"fa fa-eye\"></i> Unwatch";
-            }
-        };
-        $scope.updateWatchersText();
-
-        // Sends the user to the watchers page for the database
-        $scope.watchersPage = function() {
-            window.location = "/watchers/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
-        };
-
         // Code for Auth0
         var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
@@ -554,6 +454,8 @@
         $scope.showLock = function() {
             lock.show();
         };
+
+        [[ template "script_headerdatabase" . ]]
     });
 </script>
 </body>
