@@ -660,10 +660,14 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 // Displays a web page to input information needed for creating a new discussion.
 func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Auth0 com.Auth0Set
-		Meta  com.MetaInfo
+		Auth0   com.Auth0Set
+		DB      com.SQLiteDBinfo
+		Meta    com.MetaInfo
+		MyStar  bool
+		MyWatch bool
 	}
 	pageData.Meta.Title = "Create new discussion"
+	pageData.Meta.PageSection = "db_disc"
 
 	// Get all meta information
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true)
@@ -672,8 +676,26 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Add Auth0 info to the page data
-	pageData.Auth0 = collectPageAuth0Info()
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
+		return
+	}
 
 	// Render the page
 	t := tmpl.Lookup("createDiscussionPage")
