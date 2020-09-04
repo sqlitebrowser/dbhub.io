@@ -191,15 +191,18 @@ func CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName string, writeAcc
 	// If we get here this means that the database does exist. The next step is to check
 	// the permissions.
 
-	if loggedInUser == "" {
-		// If the request is from someone who's not logged in, only allow read-only access to
-		// public databases.
-
-		return dbPublic && writeAccess == false, nil
-	} else if strings.ToLower(loggedInUser) == strings.ToLower(dbOwner) {
+	if strings.ToLower(loggedInUser) == strings.ToLower(dbOwner) {
 		// If the request is from the owner of the database, always allow access to the database
 
 		return true, nil
+	} else if writeAccess == false && dbPublic {
+		// Read access to public databases is always permitted
+
+		return true, nil
+	} else if loggedInUser == "" {
+		// If the user is not logged in and we reach this point, access is not permitted
+
+		return false, nil
 	}
 
 	// If the request is from someone who is logged in but not the owner of the database, check

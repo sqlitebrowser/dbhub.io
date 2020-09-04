@@ -2701,17 +2701,6 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, true)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if allowed == false {
-		errorPage(w, r, http.StatusUnauthorized, "You don't have the permissions to change this database")
-		return
-	}
-
 	// Populate the licence list
 	pageData.Licences, err = com.GetLicences(pageData.Meta.LoggedInUser)
 	if err != nil {
