@@ -215,13 +215,10 @@ func MemcacheHandle() *memcache.Client {
 
 // MetadataCacheKey generates a predictable cache key for metadata information
 func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) string {
-	var cacheString string
-	if strings.ToLower(loggedInUser) == strings.ToLower(dbOwner) {
-		cacheString = fmt.Sprintf("%s/%s/%s/%s/%s", prefix, strings.ToLower(dbOwner), dbFolder, dbName, commitID)
-	} else {
-		// Requests for other users databases are cached separately from users own database requests
-		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%s", prefix, strings.ToLower(dbOwner), dbFolder, dbName, commitID)
-	}
+	// The following schema of the cache string makes sure that the information is stored separately for all users.
+	// Users who are not logged in all have the same empty user name and this way get the same cache key.
+	cacheString := fmt.Sprintf("%s/%s/%s/%s/%s/%s", prefix, loggedInUser, strings.ToLower(dbOwner), dbFolder, dbName, commitID)
+
 	tempArr := md5.Sum([]byte(cacheString))
 	return hex.EncodeToString(tempArr[:])
 }
