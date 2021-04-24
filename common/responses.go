@@ -120,7 +120,6 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 				return
 			}
 		}
-		return
 	}
 	defer tempFile.Close()
 
