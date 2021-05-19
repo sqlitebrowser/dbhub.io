@@ -37,17 +37,19 @@
                             </div>
                         </td>
                     </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div style="text-align: center;">
+                                <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
+                                <input type="hidden" name="folder" value="/">
+                                <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
+                                <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelCreate()">
+                                <input type="submit" class="btn btn-primary" value="Create">
+                            </div>
+                        </td>
+                    </tr>
                 </table>
             </form>
-        </div>
-        <div class="row">
-            <div class="col-md-12" style="text-align: center; padding-top: 10px; padding-bottom: 15px;">
-                <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
-                <input type="hidden" name="folder" value="/">
-                <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
-                <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelCreate()">
-                <input type="submit" class="btn btn-primary" value="Create">
-            </div>
         </div>
     </div>
 </div>
