@@ -707,27 +707,34 @@
                 <div class="col-md-12">
                     To return the list of diff in <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>
                     using <a href="https://curl.haxx.se">curl</a>, it would be:
-                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner_a="justinclift" -F dbname_a="Join Testing.sqlite" -F commit_a="cb70855613d30019055a4d907b832c10014b093556fc282e6b7d2803e2e9d59" \
-    -F commit_b="218f28dcb54819e7e4b77e36012ff15d667ca55946c56ef6370b13bdc3ddf528" -F merge="preserve_pk" https://api.dbhub.io/v1/diff</pre>
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner_a="justinclift" -F dbname_a="Join Testing.sqlite" -F commit_a="c82ba65add364427e9af3f540be8bf98e8cd6bdb825b07c334858e816c983db0" \
+    -F commit_b="7beb90a62a842dcb095592a5083f22533552da17eb72891d26c87ae48070885d" -F merge="preserve_pk" https://api.dbhub.io/v1/diff</pre>
                     Output: <pre>{
   "diff": [
     {
-      "object_name": "indexId",
-      "object_type": "index",
-      "schema": {
-        "action_type": "add",
-        "sql": "CREATE INDEX \"indexId\" ON \"table1\" (\n\t\"id\"\n);"
-      },
-      "data": null
+      "object_name": "table2",
+      "object_type": "table",
+      "data": [
+        {
+          "action_type": "modify",
+          "sql": "UPDATE \"table2\" SET \"value\"=5.1 WHERE \"rowid\"=1;",
+          "pk": [
+            {
+              "Name": "rowid",
+              "Type": 4,
+              "Value": "1"
+            }
+          ]
+        }
+      ]
     },
     {
-      "object_name": "indexName",
-      "object_type": "index",
+      "object_name": "joinedView",
+      "object_type": "view",
       "schema": {
         "action_type": "add",
-        "sql": "CREATE INDEX \"indexName\" ON \"table1\" (\n\t\"Name\"\tASC\n);"
-      },
-      "data": null
+        "sql": "CREATE VIEW joinedView AS\nSELECT table1.Name, table2.value\nFROM table1 JOIN table2\nUSING (id)\nORDER BY table1.id;"
+      }
     }
   ]
 }</pre>
