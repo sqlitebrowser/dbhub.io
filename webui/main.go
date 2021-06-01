@@ -38,6 +38,93 @@ var (
 	store *gsm.MemcacheStore
 )
 
+// apiPermissionsUpdateHandler handles updating API permissions as requested from the User's Settings page
+func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// FIXME: General dev/debug output
+	d := fmt.Sprintf("Setting received for user: %v", loggedInUser)
+	fmt.Println(d)
+
+	// TODO
+	//   * Validate the input
+	//     * ksuid.Parse() seems like it'll be useful for API keys
+	//   * Should this function also receive the change in selected database for the api key? probably yes
+	//   * Save the new values to a database table
+	//     * So, figure out an appropriate structure. Maybe:
+	//       * apikey_id or similar name : maybe bigint?
+	//       * database_id : whatever we use for database ids
+	//       * permissions : jsonb structure with name/value pairs for the API permissions
+
+	// Retrieve API key
+	a := r.PostFormValue("apikey")
+	apiKey, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	fmt.Printf("API key: %v\n", apiKey)
+
+	// Retrieve permission name
+	// TODO: Validation for the permission name could just be a big case statement
+	p := r.PostFormValue("perm")
+	perm, err := url.QueryUnescape(p)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	fmt.Printf("Permission name: %v\n", perm)
+
+	// Retrieve new permission value
+	// TODO: Validation
+	v := r.PostFormValue("value")
+	value, err := url.QueryUnescape(v)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	fmt.Printf("New value: %v\n", value)
+
+	// TODO: From the docs, it seems like we could use ksuid.Parse() as a reasonable validator for provided api keys.
+	//       But, we definitely need to test with some wrong values to see what happens (eg empty string, null, words, etc)
+	//       Whatever we use, we should create a validator function for api keys using it, and apply that to our api end point
+	//       as well.  It doesn't validate them as well as I'd like. :/
+	_, err = ksuid.Parse(apiKey)
+	if err != nil {
+		log.Printf("Validation failed for API key: '%s'- %s", apiKey, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// TODO: Return some kind of success flag to the caller
+	//d := com.APIKey{
+	//	Key:         key,
+	//	DateCreated: creationTime,
+	//}
+	data, err := json.Marshal(d)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+}
+
 // apiKeyGenHandler generates a new API key, stores it in the PG database, and returns the details to the caller
 func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
@@ -3097,6 +3184,7 @@ func main() {
 	http.Handle("/vis/", gz.GzipHandler(logReq(visualisePage)))
 	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))
 	http.Handle("/x/apikeygen", gz.GzipHandler(logReq(apiKeyGenHandler)))
+	http.Handle("/x/apipermupdate", gz.GzipHandler(logReq(apiPermissionsUpdateHandler)))
 	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))
 	http.Handle("/x/callback", gz.GzipHandler(logReq(auth0CallbackHandler)))
 	http.Handle("/x/checkname", gz.GzipHandler(logReq(checkNameHandler)))
