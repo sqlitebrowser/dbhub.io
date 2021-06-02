@@ -241,6 +241,27 @@ type APIKey struct {
 	DateCreated time.Time `json:"date_created"`
 }
 
+type APIPermission uint
+
+const (
+	APIPERM_BRANCHES  = 0 // These are not iota, as it would be seriously bad for these numbers to change
+	APIPERM_COLUMNS   = 1
+	APIPERM_COMMITS   = 2
+	APIPERM_DATABASES = 3
+	APIPERM_DELETE    = 4
+	APIPERM_DIFF      = 5
+	APIPERM_DOWNLOAD  = 6
+	APIPERM_INDEXES   = 7
+	APIPERM_METADATA  = 8
+	APIPERM_QUERY     = 9
+	APIPERM_RELEASES  = 10
+	APIPERM_TABLES    = 11
+	APIPERM_TAGS      = 12
+	APIPERM_UPLOAD    = 13
+	APIPERM_VIEWS     = 14
+	APIPERM_WEBPAGE   = 15
+)
+
 type Auth0Set struct {
 	CallbackURL string
 	ClientID    string

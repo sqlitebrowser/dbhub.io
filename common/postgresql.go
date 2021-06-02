@@ -131,6 +131,15 @@ func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
 	return nil
 }
 
+// APIPermStore saves a new API key to the PostgreSQL database
+func APIPermStore(loggedInUser, apiKey string, dbName string, perm APIPermission, value bool) error {
+
+	// TODO: Everything for this function ;)
+	fmt.Printf("User: %v, api key: %v, database: %v, perm: %v, value: %v\n", loggedInUser, apiKey, dbName, perm, value)
+
+	return nil
+}
+
 // CheckDBExists checks if a database exists. It does NOT perform any permission checks.
 // If an error occurred, the true/false value should be ignored, as only the error value is valid
 func CheckDBExists(dbOwner, dbFolder, dbName string) (bool, error) {

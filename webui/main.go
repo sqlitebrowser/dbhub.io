@@ -53,13 +53,10 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// FIXME: General dev/debug output
-	d := fmt.Sprintf("Setting received for user: %v", loggedInUser)
-	fmt.Println(d)
-
 	// TODO
 	//   * Validate the input
 	//     * ksuid.Parse() seems like it'll be useful for API keys
+	//       * Better turn it into an API key validation function, and add it to the common library
 	//   * Should this function also receive the change in selected database for the api key? probably yes
 	//   * Save the new values to a database table
 	//     * So, figure out an appropriate structure. Maybe:
@@ -75,34 +72,8 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	fmt.Printf("API key: %v\n", apiKey)
 
-	// Retrieve permission name
-	// TODO: Validation for the permission name could just be a big case statement
-	p := r.PostFormValue("perm")
-	perm, err := url.QueryUnescape(p)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	fmt.Printf("Permission name: %v\n", perm)
-
-	// Retrieve new permission value
-	// TODO: Validation
-	v := r.PostFormValue("value")
-	value, err := url.QueryUnescape(v)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	fmt.Printf("New value: %v\n", value)
-
-	// TODO: From the docs, it seems like we could use ksuid.Parse() as a reasonable validator for provided api keys.
-	//       But, we definitely need to test with some wrong values to see what happens (eg empty string, null, words, etc)
-	//       Whatever we use, we should create a validator function for api keys using it, and apply that to our api end point
-	//       as well.  It doesn't validate them as well as I'd like. :/
+	// Validate the API key
 	_, err = ksuid.Parse(apiKey)
 	if err != nil {
 		log.Printf("Validation failed for API key: '%s'- %s", apiKey, err)
@@ -111,12 +82,94 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Retrieve permission name
+	p := r.PostFormValue("perm")
+	p2, err := url.QueryUnescape(p)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	var perm com.APIPermission
+	switch strings.ToLower(p2) {
+	case "branches":
+		perm = com.APIPERM_BRANCHES
+	case "columns":
+		perm = com.APIPERM_COLUMNS
+	case "commits":
+		perm = com.APIPERM_COMMITS
+	case "databases":
+		perm = com.APIPERM_DATABASES
+	case "delete":
+		perm = com.APIPERM_DELETE
+	case "diff":
+		perm = com.APIPERM_DIFF
+	case "download":
+		perm = com.APIPERM_DOWNLOAD
+	case "indexes":
+		perm = com.APIPERM_INDEXES
+	case "metadata":
+		perm = com.APIPERM_METADATA
+	case "query":
+		perm = com.APIPERM_QUERY
+	case "releases":
+		perm = com.APIPERM_RELEASES
+	case "tables":
+		perm = com.APIPERM_TABLES
+	case "tags":
+		perm = com.APIPERM_TAGS
+	case "upload":
+		perm = com.APIPERM_UPLOAD
+	case "views":
+		perm = com.APIPERM_VIEWS
+	case "webpage":
+		perm = com.APIPERM_WEBPAGE
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Unknown permission name")
+		return
+	}
+
+	// Retrieve updated permission value
+	v := r.PostFormValue("value")
+	v2, err := url.QueryUnescape(v)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Validate the provided value
+	value := false
+	switch strings.ToLower(v2) {
+	case "true":
+		value = true
+	case "false":
+		value = false
+	default:
+		// TODO: If we're processing a database-name update (eg to change the db an API key is for), then we'll need to ignore a missing value
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid true/false value")
+		return
+	}
+
+	// TODO: Make sure the given API key has been issued to this user
+
+
+	// TODO: Store the updated value in the database
+	err = com.APIPermStore(loggedInUser, apiKey, "mydatabase", perm, value)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// TODO: Return some kind of success flag to the caller
 	//d := com.APIKey{
 	//	Key:         key,
 	//	DateCreated: creationTime,
 	//}
-	data, err := json.Marshal(d)
+	data, err := json.Marshal("New value saved!")
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
