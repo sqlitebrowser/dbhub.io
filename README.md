@@ -29,3 +29,7 @@ or run it locally for your own users.
   and [Dio](https://github.com/sqlitebrowser/dio) use for communicating with DBHub.io.
 * [webui](webui/) - The main public facing webUI.
 
+### Libraries for accessing DBHub.io via API
+
+* [go-dbhub](https://github.com/sqlitebrowser/go-dbhub) - A Go library for accessing and using your SQLite libraries on DBHub.io.
+* [pydbhub](https://github.com/LeMoussel/pydbhub) - A Python library for accessing and using your SQLite libraries on DBHub.io.
