@@ -157,7 +157,7 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 
 	// TODO: Store the updated value in the database
-	err = com.APIPermStore(loggedInUser, apiKey, "mydatabase", perm, value)
+	err = com.APIPermStore(loggedInUser, apiKey, "tempdb1.sqlite", perm, value)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

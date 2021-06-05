@@ -137,6 +137,92 @@ func APIPermStore(loggedInUser, apiKey string, dbName string, perm APIPermission
 	// TODO: Everything for this function ;)
 	fmt.Printf("User: %v, api key: %v, database: %v, perm: %v, value: %v\n", loggedInUser, apiKey, dbName, perm, value)
 
+	// TODO: Check if the database name "all" was specified
+
+	// Data structure for holding the API permission values
+	permData := make(map[APIPermission]bool)
+
+	// Fetch the existing permission data for the api key (if set)
+	dbQuery := `
+		WITH ids AS (
+			SELECT user_id, db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1)
+				AND db_name = $2
+		), key_info AS (
+			SELECT key_id
+			FROM api_keys, ids
+			WHERE api_keys.user_id = ids.user_id
+				AND key = $3
+		)
+		SELECT permissions
+		FROM api_permissions, ids, key_info
+		WHERE api_permissions.user_id = ids.user_id
+			AND api_permissions.db_id = ids.db_id
+			AND api_permissions.key_id = key_info.key_id`
+	err := pdb.QueryRow(dbQuery, loggedInUser, dbName, apiKey).Scan(&permData)
+	if err != nil {
+		log.Printf("Fetching API key permissions failed: %v\n", err)
+		return err
+	}
+
+	// TODO: Detect if no existing row data was retrieved
+	//       * In that case, it's an API key generated before permissions were available.  So, we default
+	//         to "all databases" and "all permissions are turned on"
+	if len(permData) == 0 {
+		// TODO: Figure out the "all databases" bit too
+		//       * I guess "all databases" would mean storing null for the field?
+		//       * Alternatively, we might need to store the database name as a string?
+		permData[APIPERM_BRANCHES] = true
+		permData[APIPERM_COLUMNS] = true
+		permData[APIPERM_COMMITS] = true
+		permData[APIPERM_DATABASES] = true
+		permData[APIPERM_DELETE] = true
+		permData[APIPERM_DIFF] = true
+		permData[APIPERM_DOWNLOAD] = true
+		permData[APIPERM_INDEXES] = true
+		permData[APIPERM_METADATA] = true
+		permData[APIPERM_QUERY] = true
+		permData[APIPERM_RELEASES] = true
+		permData[APIPERM_TABLES] = true
+		permData[APIPERM_TAGS] = true
+		permData[APIPERM_UPLOAD] = true
+		permData[APIPERM_VIEWS] = true
+		permData[APIPERM_WEBPAGE] = true
+	}
+
+	// Incorporate the updated permission data from the user
+	permData[perm] = value
+
+	// Store the updated permissions
+	dbQuery = `
+		WITH ids AS (
+			SELECT user_id, db_id
+			FROM sqlite_databases
+			WHERE user_id = (
+					SELECT user_id
+					FROM users
+					WHERE user_name = $1)
+				AND db_name = $2
+		), key_info AS (
+			SELECT key_id
+			FROM api_keys, ids
+			WHERE api_keys.user_id = ids.user_id
+				AND key = $3
+		)
+		INSERT INTO api_permissions (key_id, user_id, db_id, permissions)
+		SELECT (SELECT key_id FROM key_info), (SELECT user_id FROM ids), (SELECT db_id FROM ids), $4`
+	commandTag, err := pdb.Exec(dbQuery, loggedInUser, dbName, apiKey, permData)
+	if err != nil {
+		log.Printf("Updating permissions for API key '%v' failed: %v\n", apiKey, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%d) affected when updating API key: %v permissions\n", numRows, apiKey)
+	}
 	return nil
 }
 
