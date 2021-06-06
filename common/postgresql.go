@@ -132,50 +132,38 @@ func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
 }
 
 // APIPermStore saves a new API key to the PostgreSQL database
-func APIPermStore(loggedInUser, apiKey string, dbName string, perm APIPermission, value bool) error {
-
-	// TODO: Everything for this function ;)
-	fmt.Printf("User: %v, api key: %v, database: %v, perm: %v, value: %v\n", loggedInUser, apiKey, dbName, perm, value)
-
-	// TODO: Check if the database name "all" was specified
-
+func APIPermStore(loggedInUser, apiKey, dbName string, allDB bool, perm APIPermission, value bool) error {
 	// Data structure for holding the API permission values
 	permData := make(map[APIPermission]bool)
 
-	// Fetch the existing permission data for the api key (if set)
+	// Retrieve the existing API key permissions
 	dbQuery := `
-		WITH ids AS (
-			SELECT user_id, db_id
-			FROM sqlite_databases
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE user_name = $1)
-				AND db_name = $2
+		WITH uid AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
 		), key_info AS (
 			SELECT key_id
-			FROM api_keys, ids
-			WHERE api_keys.user_id = ids.user_id
-				AND key = $3
+			FROM api_keys, uid
+			WHERE api_keys.user_id = uid.user_id
+				AND key = $2
 		)
 		SELECT permissions
-		FROM api_permissions, ids, key_info
-		WHERE api_permissions.user_id = ids.user_id
-			AND api_permissions.db_id = ids.db_id
+		FROM api_permissions, uid, key_info
+		WHERE api_permissions.user_id = uid.user_id
 			AND api_permissions.key_id = key_info.key_id`
-	err := pdb.QueryRow(dbQuery, loggedInUser, dbName, apiKey).Scan(&permData)
+	err := pdb.QueryRow(dbQuery, loggedInUser, apiKey).Scan(&permData)
 	if err != nil {
-		log.Printf("Fetching API key permissions failed: %v\n", err)
-		return err
+		// Returning no rows is ok for this call
+		if err != pgx.ErrNoRows {
+			log.Printf("Fetching API key permissions failed: %v\n", err)
+			return err
+		}
 	}
 
-	// TODO: Detect if no existing row data was retrieved
-	//       * In that case, it's an API key generated before permissions were available.  So, we default
-	//         to "all databases" and "all permissions are turned on"
+	// If there isn't any permission data for the API key, it means the key was generated before permissions were
+	// available.  So, we default to "all databases" and "all permissions are turned on"
 	if len(permData) == 0 {
-		// TODO: Figure out the "all databases" bit too
-		//       * I guess "all databases" would mean storing null for the field?
-		//       * Alternatively, we might need to store the database name as a string?
 		permData[APIPERM_BRANCHES] = true
 		permData[APIPERM_COLUMNS] = true
 		permData[APIPERM_COMMITS] = true
@@ -197,25 +185,37 @@ func APIPermStore(loggedInUser, apiKey string, dbName string, perm APIPermission
 	// Incorporate the updated permission data from the user
 	permData[perm] = value
 
+	// If this api key applies to "all databases", then we store null in its db_id field
+	var dbID pgx.NullInt64
+	if allDB != true {
+		var d int
+		d, err = databaseID(loggedInUser, "/", dbName)
+		if err != nil {
+			log.Printf("Retrieving database ID failed: %v\n", err)
+			return err
+		}
+		dbID.Int64 = int64(d)
+		dbID.Valid = true
+	}
+
 	// Store the updated permissions
 	dbQuery = `
-		WITH ids AS (
-			SELECT user_id, db_id
-			FROM sqlite_databases
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE user_name = $1)
-				AND db_name = $2
+		WITH uid AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
 		), key_info AS (
 			SELECT key_id
-			FROM api_keys, ids
-			WHERE api_keys.user_id = ids.user_id
-				AND key = $3
+			FROM api_keys, uid
+			WHERE api_keys.user_id = uid.user_id
+				AND key = $2
 		)
 		INSERT INTO api_permissions (key_id, user_id, db_id, permissions)
-		SELECT (SELECT key_id FROM key_info), (SELECT user_id FROM ids), (SELECT db_id FROM ids), $4`
-	commandTag, err := pdb.Exec(dbQuery, loggedInUser, dbName, apiKey, permData)
+		SELECT (SELECT key_id FROM key_info), (SELECT user_id FROM uid), $3, $4
+		ON CONFLICT (user_id, key_id)
+			DO UPDATE
+			SET db_id = $3, permissions = $4`
+	commandTag, err := pdb.Exec(dbQuery, loggedInUser, apiKey, dbID, permData)
 	if err != nil {
 		log.Printf("Updating permissions for API key '%v' failed: %v\n", apiKey, err)
 		return err

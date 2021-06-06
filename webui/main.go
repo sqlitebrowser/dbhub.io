@@ -82,6 +82,10 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: Retrieve the database name
+
+	// TODO: Add the "All databases" value to the front end and here
+
 	// Retrieve permission name
 	p := r.PostFormValue("perm")
 	p2, err := url.QueryUnescape(p)
@@ -139,7 +143,7 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate the provided value
+	// Validate the provided permission value
 	value := false
 	switch strings.ToLower(v2) {
 	case "true":
@@ -155,9 +159,8 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Make sure the given API key has been issued to this user
 
-
-	// TODO: Store the updated value in the database
-	err = com.APIPermStore(loggedInUser, apiKey, "tempdb1.sqlite", perm, value)
+	// Store the updated permissions in the database
+	err = com.APIPermStore(loggedInUser, apiKey, "tempdb1.sqlite", true, perm, value)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
