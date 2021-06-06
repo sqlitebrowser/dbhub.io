@@ -69,7 +69,7 @@
                                     <a href="">All databases</a>
                                 </li>
                                 <li class="divider"></li>
-                                <li ng-repeat="database in dbList" role="menuitem" ng-click="selectDB(api.key, database)">
+                                <li ng-repeat="database in dbList | orderBy" role="menuitem" ng-click="selectDB(api.key, database)">
                                     <a href="">{{ database }}</a>
                                 </li>
                             </ul>
@@ -243,7 +243,7 @@
         $scope.dbList = [[ .DBNames ]];
 
         // Set initial permissions to true for the API keys
-        // TODO: These will need updating, depending on what the server sends
+        // TODO: These will need updating, depending on what the server sets
         $scope.radioBranches = "true";
         $scope.radioColumns = "true";
         $scope.radioCommits = "true";
@@ -261,13 +261,12 @@
         $scope.radioViews = "true";
         $scope.radioWebpage = "true";
 
-        // TODO: These will depend on what the server sends. eg existing value stored in the backend
+        // TODO: Update this to use what the server sets. eg existing value stored in the backend
         $scope.allDatabases = true;
         $scope.selectedDB = "All databases";
 
         // Send the changed database selection to the server
         $scope.changeDB = function(apiKey, newDB) {
-console.log("changeDB() called");
             // Send the new database info to the server
             $http({
                 method: "POST",
@@ -279,12 +278,10 @@ console.log("changeDB() called");
                 }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
-console.log(response.data);
                 // Clear any error message
                 $scope.statusMessageColour = "green";
                 $scope.statusMessage = "";
             }, function failure(response) {
-console.log(response.data);
                 $scope.statusMessageColour = "red";
                 $scope.statusMessage = "Server message: " + response.data;
             });
@@ -294,7 +291,6 @@ console.log(response.data);
         $scope.allDBs = function(apiKey) {
             $scope.selectedDB = "All databases";
             $scope.allDatabases = true;
-console.log("ALL databases set to true");
 
             // Send the change to the backend
             $scope.changeDB(apiKey, "");
@@ -304,9 +300,7 @@ console.log("ALL databases set to true");
         $scope.selectDB = function(apiKey, newDB) {
             // TODO: Work with multiple api keys
             $scope.selectedDB = newDB;
-console.log("Selected database set to: " + newDB);
             $scope.allDatabases = false;
-console.log("ALL databases set to false");
 
             // Send the change to the backend
             $scope.changeDB(apiKey, newDB);

@@ -1936,8 +1936,15 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 		return
 	}
 
-	// TODO: Retrieve the list of user databases
-	pageData.DBNames = []string{"foo", "bar", "tempdb1.sqlite"}
+	// Create the list of databases belonging to the user
+	dbList, err := com.UserDBs(loggedInUser, com.DB_BOTH)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Retrieving list of databases failed")
+		return
+	}
+	for _, db := range dbList {
+		pageData.DBNames = append(pageData.DBNames, db.Database)
+	}
 
 	// Add Auth0 info to the page data
 	pageData.Auth0 = collectPageAuth0Info()
