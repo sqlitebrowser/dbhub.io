@@ -50,13 +50,13 @@
                     <th>Databases</th>
                     <th>Allowed function calls</th>
                 </tr>
-                <tr ng-repeat="row in apiKeys">
-                    <td><p style="font-family: monospace, monospace; text-align: center;">{{ row.key }}</p>
+                <tr ng-repeat="api in apiKeys">
+                    <td><p style="font-family: monospace, monospace; text-align: center;">{{ api.key }}</p>
                         <div style="text-align: center;">
-                            <input type="submit" class="btn btn-primary" value="Revoke" ng-click="apiKeyRevoke()">
+                            <input type="submit" class="btn btn-primary" value="Revoke" ng-click="apiKeyRevoke(api.key)">
                         </div>
                     </td>
-                    <td>{{ row.date_created | date : 'medium' }}</td>
+                    <td>{{ api.date_created | date : 'medium' }}</td>
                     <td>
                         <div class="btn-group" uib-dropdown keyboard-nav="true">
                             <button id="viewtable" type="button" class="btn">{{ selectedDB }}</button>
@@ -65,7 +65,11 @@
                                 <span class="caret"></span>
                             </button>
                             <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                <li ng-repeat="database in dbList" role="menuitem" ng-click="changeDB(database)">
+                                <li role="menuitem" ng-click="allDBs(api.key)">
+                                    <a href="">All databases</a>
+                                </li>
+                                <li class="divider"></li>
+                                <li ng-repeat="database in dbList" role="menuitem" ng-click="selectDB(api.key, database)">
                                     <a href="">{{ database }}</a>
                                 </li>
                             </ul>
@@ -77,15 +81,15 @@
                                 <th>Branches()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioBranches" ng-click="apiPermUpdate(row.key, 'branches', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioBranches" ng-click="apiPermUpdate(row.key, 'branches', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioBranches" ng-click="apiPermUpdate(api.key, 'branches', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioBranches" ng-click="apiPermUpdate(api.key, 'branches', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                                 <th>Metadata()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioMetadata" ng-click="apiPermUpdate(row.key, 'metadata', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioMetadata" ng-click="apiPermUpdate(row.key, 'metadata', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioMetadata" ng-click="apiPermUpdate(api.key, 'metadata', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioMetadata" ng-click="apiPermUpdate(api.key, 'metadata', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                             </tr>
@@ -93,15 +97,15 @@
                                 <th>Columns()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioColumns" ng-click="apiPermUpdate(row.key, 'columns', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioColumns" ng-click="apiPermUpdate(row.key, 'columns', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioColumns" ng-click="apiPermUpdate(api.key, 'columns', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioColumns" ng-click="apiPermUpdate(api.key, 'columns', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                                 <th>Query()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioQuery" ng-click="apiPermUpdate(row.key, 'query', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioQuery" ng-click="apiPermUpdate(row.key, 'query', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioQuery" ng-click="apiPermUpdate(api.key, 'query', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioQuery" ng-click="apiPermUpdate(api.key, 'query', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                             </tr>
@@ -109,15 +113,15 @@
                                 <th>Commits()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioCommits" ng-click="apiPermUpdate(row.key, 'commits', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioCommits" ng-click="apiPermUpdate(row.key, 'commits', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioCommits" ng-click="apiPermUpdate(api.key, 'commits', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioCommits" ng-click="apiPermUpdate(api.key, 'commits', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                                 <th>Releases()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioReleases" ng-click="apiPermUpdate(row.key, 'releases', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioReleases" ng-click="apiPermUpdate(row.key, 'releases', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioReleases" ng-click="apiPermUpdate(api.key, 'releases', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioReleases" ng-click="apiPermUpdate(api.key, 'releases', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                             </tr>
@@ -125,15 +129,15 @@
                                 <th>Databases()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioDatabases" ng-click="apiPermUpdate(row.key, 'databases', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioDatabases" ng-click="apiPermUpdate(row.key, 'databases', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioDatabases" ng-click="apiPermUpdate(api.key, 'databases', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioDatabases" ng-click="apiPermUpdate(api.key, 'databases', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                                 <th>Tables()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioTables" ng-click="apiPermUpdate(row.key, 'tables', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioTables" ng-click="apiPermUpdate(row.key, 'tables', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioTables" ng-click="apiPermUpdate(api.key, 'tables', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioTables" ng-click="apiPermUpdate(api.key, 'tables', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                             </tr>
@@ -141,15 +145,15 @@
                                 <th>Delete()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioDelete" ng-click="apiPermUpdate(row.key, 'delete', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioDelete" ng-click="apiPermUpdate(row.key, 'delete', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioDelete" ng-click="apiPermUpdate(api.key, 'delete', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioDelete" ng-click="apiPermUpdate(api.key, 'delete', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                                 <th>Tags()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioTags" ng-click="apiPermUpdate(row.key, 'tags', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioTags" ng-click="apiPermUpdate(row.key, 'tags', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioTags" ng-click="apiPermUpdate(api.key, 'tags', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioTags" ng-click="apiPermUpdate(api.key, 'tags', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                             </tr>
@@ -157,15 +161,15 @@
                                 <th>Diff()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioDiff" ng-click="apiPermUpdate(row.key, 'diff', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioDiff" ng-click="apiPermUpdate(row.key, 'diff', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioDiff" ng-click="apiPermUpdate(api.key, 'diff', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioDiff" ng-click="apiPermUpdate(api.key, 'diff', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                                 <th>Upload()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioUpload" ng-click="apiPermUpdate(row.key, 'upload', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioUpload" ng-click="apiPermUpdate(row.key, 'upload', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioUpload" ng-click="apiPermUpdate(api.key, 'upload', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioUpload" ng-click="apiPermUpdate(api.key, 'upload', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                             </tr>
@@ -173,15 +177,15 @@
                                 <th>Download()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioDownload" ng-click="apiPermUpdate(row.key, 'download', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioDownload" ng-click="apiPermUpdate(row.key, 'download', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioDownload" ng-click="apiPermUpdate(api.key, 'download', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioDownload" ng-click="apiPermUpdate(api.key, 'download', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                                 <th>Views()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioViews" ng-click="apiPermUpdate(row.key, 'views', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioViews" ng-click="apiPermUpdate(row.key, 'views', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioViews" ng-click="apiPermUpdate(api.key, 'views', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioViews" ng-click="apiPermUpdate(api.key, 'views', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                             </tr>
@@ -189,15 +193,15 @@
                                 <th>Indexes()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioIndexes" ng-click="apiPermUpdate(row.key, 'indexes', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioIndexes" ng-click="apiPermUpdate(row.key, 'indexes', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioIndexes" ng-click="apiPermUpdate(api.key, 'indexes', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioIndexes" ng-click="apiPermUpdate(api.key, 'indexes', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                                 <th>Webpage()</th>
                                 <td>
                                     <div class="btn-group">
-                                        <label class="btn btn-default" ng-model="radioWebpage" ng-click="apiPermUpdate(row.key, 'webpage', 'true')" uib-btn-radio="'true'">Yes</label>
-                                        <label class="btn btn-default" ng-model="radioWebpage" ng-click="apiPermUpdate(row.key, 'webpage', 'false')" uib-btn-radio="'false'">No</label>
+                                        <label class="btn btn-default" ng-model="radioWebpage" ng-click="apiPermUpdate(api.key, 'webpage', 'true')" uib-btn-radio="'true'">Yes</label>
+                                        <label class="btn btn-default" ng-model="radioWebpage" ng-click="apiPermUpdate(api.key, 'webpage', 'false')" uib-btn-radio="'false'">No</label>
                                     </div>
                                 </td>
                             </tr>
@@ -230,12 +234,16 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
         // API Keys
         $scope.apiKeys = [[ .APIKeys ]];
 
+        // Database names
+        $scope.dbList = [[ .DBNames ]];
+
         // Set initial permissions to true for the API keys
+        // TODO: These will need updating, depending on what the server sends
         $scope.radioBranches = "true";
         $scope.radioColumns = "true";
         $scope.radioCommits = "true";
@@ -253,11 +261,56 @@
         $scope.radioViews = "true";
         $scope.radioWebpage = "true";
 
-        // Placeholder values
-        // TODO: ...
-        $scope.dbList = ["SomeDatabase", "AnotherDatabase", "MyDatabase"];
-        $scope.selectedDB = "MyDatabase";
+        // TODO: These will depend on what the server sends. eg existing value stored in the backend
+        $scope.allDatabases = true;
+        $scope.selectedDB = "All databases";
 
+        // Send the changed database selection to the server
+        $scope.changeDB = function(apiKey, newDB) {
+console.log("changeDB() called");
+            // Send the new database info to the server
+            $http({
+                method: "POST",
+                url: "/x/apikeydbupdate/",
+                data: $httpParamSerializerJQLike({
+                    "apikey": encodeURIComponent(apiKey),
+                    "dbname": encodeURIComponent(newDB),
+                    "alldbs": encodeURIComponent($scope.allDatabases),
+                }),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+            }).then(function (response) {
+console.log(response.data);
+                // Clear any error message
+                $scope.statusMessageColour = "green";
+                $scope.statusMessage = "";
+            }, function failure(response) {
+console.log(response.data);
+                $scope.statusMessageColour = "red";
+                $scope.statusMessage = "Server message: " + response.data;
+            });
+        }
+
+        // Select "all databases"
+        $scope.allDBs = function(apiKey) {
+            $scope.selectedDB = "All databases";
+            $scope.allDatabases = true;
+console.log("ALL databases set to true");
+
+            // Send the change to the backend
+            $scope.changeDB(apiKey, "");
+        }
+
+        // Change the selected database
+        $scope.selectDB = function(apiKey, newDB) {
+            // TODO: Work with multiple api keys
+            $scope.selectedDB = newDB;
+console.log("Selected database set to: " + newDB);
+            $scope.allDatabases = false;
+console.log("ALL databases set to false");
+
+            // Send the change to the backend
+            $scope.changeDB(apiKey, newDB);
+        }
 
         // If the supplied display name is blank, we set a placeholder value instead
         $scope.FullName = "";
@@ -286,29 +339,22 @@
             lock.show();
         };
 
-        // Call the server to update the api permission
-        $scope.apiPermUpdate = function(apikey, perm, value) {
-            console.log("apikey: " + apikey);
-            console.log("perm: " + perm);
-            console.log("value: " + value);
-
+        // Send the updated permission to the backend
+        $scope.apiPermUpdate = function(apiKey, perm, value) {
             $http({
                 method: "POST",
-                url: "/x/apipermupdate/",
+                url: "/x/apikeypermupdate/",
                 data: $httpParamSerializerJQLike({
-                    "apikey": encodeURIComponent(apikey),
+                    "apikey": encodeURIComponent(apiKey),
                     "perm": encodeURIComponent(perm),
                     "value": encodeURIComponent(value)
                 }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
-                console.log(response.data);
-
+                // Clear any error message
                 $scope.statusMessageColour = "green";
-                $scope.statusMessage = "Server message: " + response.data;
+                $scope.statusMessage = "";
             }, function failure(response) {
-                console.log(response.data);
-
                 $scope.statusMessageColour = "red";
                 $scope.statusMessage = "Server message: " + response.data;
             });

@@ -96,43 +96,53 @@ func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) 
 	return nil
 }
 
-// APIKeySave saves a new API key to the PostgreSQL database
-func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
-	// Make sure the API key isn't already in the database
-	dbQuery := `
-		SELECT count(key)
-		FROM api_keys
-		WHERE key = $1`
-	var keyCount int
-	err := pdb.QueryRow(dbQuery, key).Scan(&keyCount)
-	if err != nil {
-		log.Printf("Checking if an API key exists failed: %v\n", err)
-		return err
-	}
-	if keyCount != 0 {
-		// API key is already in our system
-		log.Printf("Duplicate API key (%s) generated for user '%s'\n", key, loggedInUser)
-		return fmt.Errorf("API generator created duplicate key.  Try again, just in case...")
+// APIKeyDBSave changes which database an API key applies to
+func APIKeyDBSave(loggedInUser, apiKey, dbName string, allDB bool) error {
+	var dbID pgx.NullInt64
+	var err error
+
+	// If this api key applies to "all databases", then we store null in its db_id field
+	if allDB != true {
+		var d int
+		d, err = databaseID(loggedInUser, "/", dbName)
+		if err != nil {
+			log.Printf("Retrieving database ID failed: %v\n", err)
+			return err
+		}
+		dbID.Int64 = int64(d)
+		dbID.Valid = true
 	}
 
-	// Add the new API key to the database
-	dbQuery = `
-		INSERT INTO api_keys (user_id, key, date_created)
-		SELECT (SELECT user_id FROM users WHERE lower(user_name) = lower($1)), $2, $3`
-	commandTag, err := pdb.Exec(dbQuery, loggedInUser, key, dateCreated)
+	// Store the updated database
+	dbQuery := `
+		WITH uid AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		), key_info AS (
+			SELECT key_id
+			FROM api_keys, uid
+			WHERE api_keys.user_id = uid.user_id
+				AND key = $2
+		)
+		INSERT INTO api_permissions (key_id, user_id, db_id)
+		SELECT (SELECT key_id FROM key_info), (SELECT user_id FROM uid), $3
+		ON CONFLICT (user_id, key_id)
+			DO UPDATE
+			SET db_id = $3`
+	commandTag, err := pdb.Exec(dbQuery, loggedInUser, apiKey, dbID)
 	if err != nil {
-		log.Printf("Adding API key to database failed: %v\n", err)
+		log.Printf("Updating database for API key '%v' failed: %v\n", apiKey, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected when adding API key: %v, username: %v\n", numRows, key,
-			loggedInUser)
+		log.Printf("Wrong number of rows (%d) affected when updating API key '%v' database \n", numRows, apiKey)
 	}
 	return nil
 }
 
-// APIPermStore saves a new API key to the PostgreSQL database
-func APIPermStore(loggedInUser, apiKey, dbName string, allDB bool, perm APIPermission, value bool) error {
+// APIKeyPermSave updates the permissions for an API key
+func APIKeyPermSave(loggedInUser, apiKey string, perm APIPermission, value bool) error {
 	// Data structure for holding the API permission values
 	permData := make(map[APIPermission]bool)
 
@@ -185,19 +195,6 @@ func APIPermStore(loggedInUser, apiKey, dbName string, allDB bool, perm APIPermi
 	// Incorporate the updated permission data from the user
 	permData[perm] = value
 
-	// If this api key applies to "all databases", then we store null in its db_id field
-	var dbID pgx.NullInt64
-	if allDB != true {
-		var d int
-		d, err = databaseID(loggedInUser, "/", dbName)
-		if err != nil {
-			log.Printf("Retrieving database ID failed: %v\n", err)
-			return err
-		}
-		dbID.Int64 = int64(d)
-		dbID.Valid = true
-	}
-
 	// Store the updated permissions
 	dbQuery = `
 		WITH uid AS (
@@ -210,18 +207,53 @@ func APIPermStore(loggedInUser, apiKey, dbName string, allDB bool, perm APIPermi
 			WHERE api_keys.user_id = uid.user_id
 				AND key = $2
 		)
-		INSERT INTO api_permissions (key_id, user_id, db_id, permissions)
-		SELECT (SELECT key_id FROM key_info), (SELECT user_id FROM uid), $3, $4
+		INSERT INTO api_permissions (key_id, user_id, permissions)
+		SELECT (SELECT key_id FROM key_info), (SELECT user_id FROM uid), $3
 		ON CONFLICT (user_id, key_id)
 			DO UPDATE
-			SET db_id = $3, permissions = $4`
-	commandTag, err := pdb.Exec(dbQuery, loggedInUser, apiKey, dbID, permData)
+			SET permissions = $3`
+	commandTag, err := pdb.Exec(dbQuery, loggedInUser, apiKey, permData)
 	if err != nil {
 		log.Printf("Updating permissions for API key '%v' failed: %v\n", apiKey, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%d) affected when updating API key: %v permissions\n", numRows, apiKey)
+	}
+	return nil
+}
+
+// APIKeySave saves a new API key to the PostgreSQL database
+func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
+	// Make sure the API key isn't already in the database
+	dbQuery := `
+		SELECT count(key)
+		FROM api_keys
+		WHERE key = $1`
+	var keyCount int
+	err := pdb.QueryRow(dbQuery, key).Scan(&keyCount)
+	if err != nil {
+		log.Printf("Checking if an API key exists failed: %v\n", err)
+		return err
+	}
+	if keyCount != 0 {
+		// API key is already in our system
+		log.Printf("Duplicate API key (%s) generated for user '%s'\n", key, loggedInUser)
+		return fmt.Errorf("API generator created duplicate key.  Try again, just in case...")
+	}
+
+	// Add the new API key to the database
+	dbQuery = `
+		INSERT INTO api_keys (user_id, key, date_created)
+		SELECT (SELECT user_id FROM users WHERE lower(user_name) = lower($1)), $2, $3`
+	commandTag, err := pdb.Exec(dbQuery, loggedInUser, key, dateCreated)
+	if err != nil {
+		log.Printf("Adding API key to database failed: %v\n", err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%d) affected when adding API key: %v, username: %v\n", numRows, key,
+			loggedInUser)
 	}
 	return nil
 }

@@ -1894,6 +1894,7 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	var pageData struct {
 		APIKeys     []com.APIKey
 		Auth0       com.Auth0Set
+		DBNames     []string
 		DisplayName string
 		Email       string
 		MaxRows     int
@@ -1934,6 +1935,9 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// TODO: Retrieve the list of user databases
+	pageData.DBNames = []string{"foo", "bar", "tempdb1.sqlite"}
 
 	// Add Auth0 info to the page data
 	pageData.Auth0 = collectPageAuth0Info()

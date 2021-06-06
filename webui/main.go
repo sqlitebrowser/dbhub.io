@@ -38,8 +38,140 @@ var (
 	store *gsm.MemcacheStore
 )
 
-// apiPermissionsUpdateHandler handles updating API permissions as requested from the User's Settings page
-func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
+// apiKeyDbUpdateHandler handles updating the API key database as requested from the User's Settings page
+func apiKeyDbUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Retrieve API key
+	a := r.PostFormValue("apikey")
+	apiKey, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Validate the API key
+	_, err = ksuid.Parse(apiKey)
+	if err != nil {
+		log.Printf("Validation failed for API key: '%s'- %s", apiKey, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve the database name
+	d := r.PostFormValue("dbname")
+	dbName, err := url.QueryUnescape(d)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// TODO: Validate the database name
+
+
+	// Check if the "all databases" variable was set
+	allDBs := false
+	z := r.PostFormValue("alldbs")
+	z2, err := url.QueryUnescape(z)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	switch z2 {
+	case "true":
+		allDBs = true
+	case "false":
+		// Nothing to do here, as the value starts out initialised to false
+	default:
+		// Unknown value passed
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// TODO: Make sure the given API key has been issued to this user
+
+
+	// Store the updated database for the API key
+	err = com.APIKeyDBSave(loggedInUser, apiKey, dbName, allDBs)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: Return some kind of success flag to the caller
+	data, err := json.Marshal("Database updated!")
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+
+}
+
+// apiKeyGenHandler generates a new API key, stores it in the PG database, and returns the details to the caller
+func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Generate new API key
+	creationTime := time.Now()
+	keyRaw, err := ksuid.NewRandom()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	key := keyRaw.String()
+
+	// Save the API key in PG database
+	err = com.APIKeySave(key, loggedInUser, creationTime)
+
+	// Log the key creation
+	log.Printf("New API key created for user '%s', key: '%s'\n", loggedInUser, key)
+
+	// Return the API key to the caller
+	d := com.APIKey{
+		Key:         key,
+		DateCreated: creationTime,
+	}
+	data, err := json.Marshal(d)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+}
+
+// apiKeyPermsUpdateHandler handles updating API permissions as requested from the User's Settings page
+func apiKeyPermsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -57,12 +189,6 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	//   * Validate the input
 	//     * ksuid.Parse() seems like it'll be useful for API keys
 	//       * Better turn it into an API key validation function, and add it to the common library
-	//   * Should this function also receive the change in selected database for the api key? probably yes
-	//   * Save the new values to a database table
-	//     * So, figure out an appropriate structure. Maybe:
-	//       * apikey_id or similar name : maybe bigint?
-	//       * database_id : whatever we use for database ids
-	//       * permissions : jsonb structure with name/value pairs for the API permissions
 
 	// Retrieve API key
 	a := r.PostFormValue("apikey")
@@ -81,10 +207,6 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
-
-	// TODO: Retrieve the database name
-
-	// TODO: Add the "All databases" value to the front end and here
 
 	// Retrieve permission name
 	p := r.PostFormValue("perm")
@@ -151,7 +273,6 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	case "false":
 		value = false
 	default:
-		// TODO: If we're processing a database-name update (eg to change the db an API key is for), then we'll need to ignore a missing value
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Invalid true/false value")
 		return
@@ -160,63 +281,15 @@ func apiPermissionsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Make sure the given API key has been issued to this user
 
 	// Store the updated permissions in the database
-	err = com.APIPermStore(loggedInUser, apiKey, "tempdb1.sqlite", true, perm, value)
+	err = com.APIKeyPermSave(loggedInUser, apiKey, perm, value)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: Return some kind of success flag to the caller
-	//d := com.APIKey{
-	//	Key:         key,
-	//	DateCreated: creationTime,
-	//}
-	data, err := json.Marshal("New value saved!")
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprint(w, string(data))
-}
-
-// apiKeyGenHandler generates a new API key, stores it in the PG database, and returns the details to the caller
-func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
-	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Ensure we have a valid logged in user
-	if validSession != true {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	// Generate new API key
-	creationTime := time.Now()
-	keyRaw, err := ksuid.NewRandom()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	key := keyRaw.String()
-
-	// Save the API key in PG database
-	err = com.APIKeySave(key, loggedInUser, creationTime)
-
-	// Log the key creation
-	log.Printf("New API key created for user '%s', key: '%s'\n", loggedInUser, key)
-
-	// Return the API key to the caller
-	d := com.APIKey{
-		Key:         key,
-		DateCreated: creationTime,
-	}
-	data, err := json.Marshal(d)
+	// TODO: Return success info to the caller
+	data, err := json.Marshal("Updated permissions saved!")
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -3240,7 +3313,8 @@ func main() {
 	http.Handle("/vis/", gz.GzipHandler(logReq(visualisePage)))
 	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))
 	http.Handle("/x/apikeygen", gz.GzipHandler(logReq(apiKeyGenHandler)))
-	http.Handle("/x/apipermupdate", gz.GzipHandler(logReq(apiPermissionsUpdateHandler)))
+	http.Handle("/x/apikeydbupdate", gz.GzipHandler(logReq(apiKeyDbUpdateHandler)))
+	http.Handle("/x/apikeypermupdate", gz.GzipHandler(logReq(apiKeyPermsUpdateHandler)))
 	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))
 	http.Handle("/x/callback", gz.GzipHandler(logReq(auth0CallbackHandler)))
 	http.Handle("/x/checkname", gz.GzipHandler(logReq(checkNameHandler)))
