@@ -11,7 +11,16 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/segmentio/ksuid"
 )
+
+// CheckAPIKey checks if a given string is a valid API key
+func CheckAPIKey(apiKey string) (err error) {
+	// Validate the API key
+	_, err = ksuid.Parse(apiKey)
+	return
+}
 
 // CheckUnicode checks if a given string is unicode, and safe for using in SQLite queries (eg no SQLite control characters)
 func CheckUnicode(rawInput string) (str string, err error) {

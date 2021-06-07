@@ -155,8 +155,15 @@ func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err
 	// Extract the API key from the request
 	apiKey := r.FormValue("apikey")
 
-	// Check if API key was provided
+	// Check if an API key was provided
 	if apiKey != "" {
+		// Validate the API key
+		err = com.CheckAPIKey(apiKey)
+		if err != nil {
+			err = fmt.Errorf("Incorrect or unknown API key and certificate")
+			return
+		}
+
 		// Look up the owner of the API key
 		loggedInUser, err = com.GetAPIKeyUser(apiKey)
 	} else {
