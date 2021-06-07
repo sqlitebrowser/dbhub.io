@@ -63,7 +63,7 @@ func apiKeyDbUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the API key
-	_, err = ksuid.Parse(apiKey)
+	err = com.CheckAPIKey(apiKey)
 	if err != nil {
 		log.Printf("Validation failed for API key: '%s'- %s", apiKey, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -71,20 +71,9 @@ func apiKeyDbUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve the database name
-	d := r.PostFormValue("dbname")
-	dbName, err := url.QueryUnescape(d)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-
-	// TODO: Validate the database name
-
-
-	// Check if the "all databases" variable was set
+	// Check if the "all databases" variable was set.  If not, get the database name
 	allDBs := false
+	var dbName string
 	z := r.PostFormValue("alldbs")
 	z2, err := url.QueryUnescape(z)
 	if err != nil {
@@ -96,7 +85,22 @@ func apiKeyDbUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	case "true":
 		allDBs = true
 	case "false":
-		// Nothing to do here, as the value starts out initialised to false
+		// Retrieve the database name
+		d := r.PostFormValue("dbname")
+		dbName, err = url.QueryUnescape(d)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+
+		// Validate the database name
+		err = com.ValidateDB(dbName)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
 	default:
 		// Unknown value passed
 		w.WriteHeader(http.StatusBadRequest)
@@ -104,8 +108,19 @@ func apiKeyDbUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Make sure the given API key has been issued to this user
-
+	// Make sure the given API key has been issued to the user doing the update
+	keyOwner, err := com.GetAPIKeyUser(apiKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if keyOwner != loggedInUser {
+		log.Printf("Error: attempt by '%v' to change API key permissions for someone else's ('%v') API key",
+			keyOwner, loggedInUser)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Store the updated database for the API key
 	err = com.APIKeyDBSave(loggedInUser, apiKey, dbName, allDBs)
@@ -123,7 +138,6 @@ func apiKeyDbUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, string(data))
-
 }
 
 // apiKeyGenHandler generates a new API key, stores it in the PG database, and returns the details to the caller
@@ -185,11 +199,6 @@ func apiKeyPermsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO
-	//   * Validate the input
-	//     * ksuid.Parse() seems like it'll be useful for API keys
-	//       * Better turn it into an API key validation function, and add it to the common library
-
 	// Retrieve API key
 	a := r.PostFormValue("apikey")
 	apiKey, err := url.QueryUnescape(a)
@@ -200,7 +209,7 @@ func apiKeyPermsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the API key
-	_, err = ksuid.Parse(apiKey)
+	err = com.CheckAPIKey(apiKey)
 	if err != nil {
 		log.Printf("Validation failed for API key: '%s'- %s", apiKey, err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -208,7 +217,7 @@ func apiKeyPermsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve permission name
+	// Retrieve and validate the updated permission name
 	p := r.PostFormValue("perm")
 	p2, err := url.QueryUnescape(p)
 	if err != nil {
@@ -278,7 +287,19 @@ func apiKeyPermsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Make sure the given API key has been issued to this user
+	// Make sure the given API key has been issued to the user doing the update
+	keyOwner, err := com.GetAPIKeyUser(apiKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if keyOwner != loggedInUser {
+		log.Printf("Error: attempt by '%v' to change API key permissions for someone else's ('%v') API key",
+			keyOwner, loggedInUser)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Store the updated permissions in the database
 	err = com.APIKeyPermSave(loggedInUser, apiKey, perm, value)
