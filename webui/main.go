@@ -170,10 +170,31 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	// Log the key creation
 	log.Printf("New API key created for user '%s', key: '%s'\n", loggedInUser, key)
 
+	// Create a structure holding the default permissions
+	permData := make(map[com.APIPermission]bool)
+	permData[com.APIPERM_BRANCHES] = true
+	permData[com.APIPERM_COLUMNS] = true
+	permData[com.APIPERM_COMMITS] = true
+	permData[com.APIPERM_DATABASES] = true
+	permData[com.APIPERM_DELETE] = true
+	permData[com.APIPERM_DIFF] = true
+	permData[com.APIPERM_DOWNLOAD] = true
+	permData[com.APIPERM_INDEXES] = true
+	permData[com.APIPERM_METADATA] = true
+	permData[com.APIPERM_QUERY] = true
+	permData[com.APIPERM_RELEASES] = true
+	permData[com.APIPERM_TABLES] = true
+	permData[com.APIPERM_TAGS] = true
+	permData[com.APIPERM_UPLOAD] = true
+	permData[com.APIPERM_VIEWS] = true
+	permData[com.APIPERM_WEBPAGE] = true
+
 	// Return the API key to the caller
 	d := com.APIKey{
+		Database:    "", // Default to "all databases"
 		Key:         key,
 		DateCreated: creationTime,
+		Permissions:  permData,
 	}
 	data, err := json.Marshal(d)
 	if err != nil {
@@ -3333,8 +3354,8 @@ func main() {
 	http.Handle("/upload/", gz.GzipHandler(logReq(uploadPage)))
 	http.Handle("/vis/", gz.GzipHandler(logReq(visualisePage)))
 	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))
-	http.Handle("/x/apikeygen", gz.GzipHandler(logReq(apiKeyGenHandler)))
 	http.Handle("/x/apikeydbupdate", gz.GzipHandler(logReq(apiKeyDbUpdateHandler)))
+	http.Handle("/x/apikeygen", gz.GzipHandler(logReq(apiKeyGenHandler)))
 	http.Handle("/x/apikeypermupdate", gz.GzipHandler(logReq(apiKeyPermsUpdateHandler)))
 	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))
 	http.Handle("/x/callback", gz.GzipHandler(logReq(auth0CallbackHandler)))

@@ -141,6 +141,27 @@ func APIKeyDBSave(loggedInUser, apiKey, dbName string, allDB bool) error {
 	return nil
 }
 
+// APIKeyPermissions returns the permissions and applicable database for an API key
+func APIKeyPermissions(apiKey string) (apiDetails APIKey, err error) {
+	// Retrieve the API key database and permissions
+	// TODO: Make sure this query gets the right data (haven't test it yet)
+	dbQuery := `
+		WITH key_info AS (
+			SELECT key_id
+			FROM api_keys
+			WHERE key = $1
+		)
+		SELECT db.dbname, api.permissions
+		FROM sqlite_databases db, api_permissions api, key_info
+		WHERE api.db_id = db.db_id
+			AND api_permissions.key_id = key_info.key_id`
+	err = pdb.QueryRow(dbQuery, apiKey).Scan(&apiDetails.Database, &apiDetails.Permissions)
+	if err != nil {
+		log.Printf("Fetching API key database and permissions failed: %v\n", err)
+	}
+	return
+}
+
 // APIKeyPermSave updates the permissions for an API key
 func APIKeyPermSave(loggedInUser, apiKey string, perm APIPermission, value bool) error {
 	// Data structure for holding the API permission values
@@ -224,6 +245,7 @@ func APIKeyPermSave(loggedInUser, apiKey string, perm APIPermission, value bool)
 }
 
 // APIKeySave saves a new API key to the PostgreSQL database
+// TODO: Add the chosen database and permissions
 func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
 	// Make sure the API key isn't already in the database
 	dbQuery := `
@@ -2034,6 +2056,7 @@ func GetBranches(dbOwner, dbFolder, dbName string) (branches map[string]BranchEn
 }
 
 // GetAPIKeys returns the list of API keys for a user
+// TODO: Add the chosen database and API key permissions to the returned data
 func GetAPIKeys(user string) ([]APIKey, error) {
 	dbQuery := `
 		SELECT key, date_created
