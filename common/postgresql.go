@@ -2056,12 +2056,13 @@ func GetBranches(dbOwner, dbFolder, dbName string) (branches map[string]BranchEn
 }
 
 // GetAPIKeys returns the list of API keys for a user
-// TODO: Add the chosen database and API key permissions to the returned data
 func GetAPIKeys(user string) ([]APIKey, error) {
 	dbQuery := `
-		SELECT key, date_created
-		FROM api_keys
-		WHERE user_id = (
+		SELECT api.key, api.date_created, db.db_name, perms.permissions
+		FROM api_keys api
+		INNER JOIN api_permissions perms ON api.key_id = perms.key_id
+		INNER JOIN sqlite_databases db ON db.db_id = perms.db_id
+		WHERE api.user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
@@ -2076,12 +2077,14 @@ func GetAPIKeys(user string) ([]APIKey, error) {
 	for rows.Next() {
 		var key string
 		var dateCreated time.Time
-		err = rows.Scan(&key, &dateCreated)
+		var dbName pgx.NullString
+		var perms map[APIPermission]bool
+		err = rows.Scan(&key, &dateCreated, &dbName, &perms)
 		if err != nil {
 			log.Printf("Error retrieving API key list: %v\n", err)
 			return nil, err
 		}
-		keys = append(keys, APIKey{Key: key, DateCreated: dateCreated})
+		keys = append(keys, APIKey{Key: key, DateCreated: dateCreated, Database: dbName.String, Permissions: perms})
 	}
 	return keys, nil
 }
