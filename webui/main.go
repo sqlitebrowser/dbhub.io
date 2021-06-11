@@ -172,29 +172,29 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create a structure holding the default permissions
 	permData := make(map[com.APIPermission]bool)
-	permData[com.APIPERM_BRANCHES] = true
-	permData[com.APIPERM_COLUMNS] = true
-	permData[com.APIPERM_COMMITS] = true
-	permData[com.APIPERM_DATABASES] = true
-	permData[com.APIPERM_DELETE] = true
-	permData[com.APIPERM_DIFF] = true
-	permData[com.APIPERM_DOWNLOAD] = true
-	permData[com.APIPERM_INDEXES] = true
-	permData[com.APIPERM_METADATA] = true
-	permData[com.APIPERM_QUERY] = true
-	permData[com.APIPERM_RELEASES] = true
-	permData[com.APIPERM_TABLES] = true
-	permData[com.APIPERM_TAGS] = true
-	permData[com.APIPERM_UPLOAD] = true
-	permData[com.APIPERM_VIEWS] = true
-	permData[com.APIPERM_WEBPAGE] = true
+	permData[com.APIPermBranches] = true
+	permData[com.APIPermColumns] = true
+	permData[com.APIPermCommits] = true
+	permData[com.APIPermDatabases] = true
+	permData[com.APIPermDelete] = true
+	permData[com.APIPermDiff] = true
+	permData[com.APIPermDownload] = true
+	permData[com.APIPermIndexes] = true
+	permData[com.APIPermMetadata] = true
+	permData[com.APIPermQuery] = true
+	permData[com.APIPermReleases] = true
+	permData[com.APIPermTables] = true
+	permData[com.APIPermTags] = true
+	permData[com.APIPermUpload] = true
+	permData[com.APIPermViews] = true
+	permData[com.APIPermWebpage] = true
 
 	// Return the API key to the caller
 	d := com.APIKey{
 		Database:    "", // Default to "all databases"
 		Key:         key,
 		DateCreated: creationTime,
-		Permissions:  permData,
+		Permissions: permData,
 	}
 	data, err := json.Marshal(d)
 	if err != nil {
@@ -249,37 +249,37 @@ func apiKeyPermsUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	var perm com.APIPermission
 	switch strings.ToLower(p2) {
 	case "branches":
-		perm = com.APIPERM_BRANCHES
+		perm = com.APIPermBranches
 	case "columns":
-		perm = com.APIPERM_COLUMNS
+		perm = com.APIPermColumns
 	case "commits":
-		perm = com.APIPERM_COMMITS
+		perm = com.APIPermCommits
 	case "databases":
-		perm = com.APIPERM_DATABASES
+		perm = com.APIPermDatabases
 	case "delete":
-		perm = com.APIPERM_DELETE
+		perm = com.APIPermDelete
 	case "diff":
-		perm = com.APIPERM_DIFF
+		perm = com.APIPermDiff
 	case "download":
-		perm = com.APIPERM_DOWNLOAD
+		perm = com.APIPermDownload
 	case "indexes":
-		perm = com.APIPERM_INDEXES
+		perm = com.APIPermIndexes
 	case "metadata":
-		perm = com.APIPERM_METADATA
+		perm = com.APIPermMetadata
 	case "query":
-		perm = com.APIPERM_QUERY
+		perm = com.APIPermQuery
 	case "releases":
-		perm = com.APIPERM_RELEASES
+		perm = com.APIPermReleases
 	case "tables":
-		perm = com.APIPERM_TABLES
+		perm = com.APIPermTables
 	case "tags":
-		perm = com.APIPERM_TAGS
+		perm = com.APIPermTags
 	case "upload":
-		perm = com.APIPERM_UPLOAD
+		perm = com.APIPermUpload
 	case "views":
-		perm = com.APIPERM_VIEWS
+		perm = com.APIPermViews
 	case "webpage":
-		perm = com.APIPERM_WEBPAGE
+		perm = com.APIPermWebpage
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Unknown permission name")
@@ -3330,6 +3330,7 @@ func main() {
 	// Our pages
 	http.Handle("/", gz.GzipHandler(logReq(mainHandler)))
 	http.Handle("/about", gz.GzipHandler(logReq(aboutPage)))
+	http.Handle("/apiperms", gz.GzipHandler(logReq(apiPermissionsPage)))
 	http.Handle("/branches/", gz.GzipHandler(logReq(branchesPage)))
 	http.Handle("/commits/", gz.GzipHandler(logReq(commitsPage)))
 	http.Handle("/compare/", gz.GzipHandler(logReq(comparePage)))

@@ -141,27 +141,6 @@ func APIKeyDBSave(loggedInUser, apiKey, dbName string, allDB bool) error {
 	return nil
 }
 
-// APIKeyPermissions returns the permissions and applicable database for an API key
-func APIKeyPermissions(apiKey string) (apiDetails APIKey, err error) {
-	// Retrieve the API key database and permissions
-	// TODO: Make sure this query gets the right data (haven't test it yet)
-	dbQuery := `
-		WITH key_info AS (
-			SELECT key_id
-			FROM api_keys
-			WHERE key = $1
-		)
-		SELECT db.dbname, api.permissions
-		FROM sqlite_databases db, api_permissions api, key_info
-		WHERE api.db_id = db.db_id
-			AND api_permissions.key_id = key_info.key_id`
-	err = pdb.QueryRow(dbQuery, apiKey).Scan(&apiDetails.Database, &apiDetails.Permissions)
-	if err != nil {
-		log.Printf("Fetching API key database and permissions failed: %v\n", err)
-	}
-	return
-}
-
 // APIKeyPermSave updates the permissions for an API key
 func APIKeyPermSave(loggedInUser, apiKey string, perm APIPermission, value bool) error {
 	// Data structure for holding the API permission values
@@ -195,22 +174,22 @@ func APIKeyPermSave(loggedInUser, apiKey string, perm APIPermission, value bool)
 	// If there isn't any permission data for the API key, it means the key was generated before permissions were
 	// available.  So, we default to "all databases" and "all permissions are turned on"
 	if len(permData) == 0 {
-		permData[APIPERM_BRANCHES] = true
-		permData[APIPERM_COLUMNS] = true
-		permData[APIPERM_COMMITS] = true
-		permData[APIPERM_DATABASES] = true
-		permData[APIPERM_DELETE] = true
-		permData[APIPERM_DIFF] = true
-		permData[APIPERM_DOWNLOAD] = true
-		permData[APIPERM_INDEXES] = true
-		permData[APIPERM_METADATA] = true
-		permData[APIPERM_QUERY] = true
-		permData[APIPERM_RELEASES] = true
-		permData[APIPERM_TABLES] = true
-		permData[APIPERM_TAGS] = true
-		permData[APIPERM_UPLOAD] = true
-		permData[APIPERM_VIEWS] = true
-		permData[APIPERM_WEBPAGE] = true
+		permData[APIPermBranches] = true
+		permData[APIPermColumns] = true
+		permData[APIPermCommits] = true
+		permData[APIPermDatabases] = true
+		permData[APIPermDelete] = true
+		permData[APIPermDiff] = true
+		permData[APIPermDownload] = true
+		permData[APIPermIndexes] = true
+		permData[APIPermMetadata] = true
+		permData[APIPermQuery] = true
+		permData[APIPermReleases] = true
+		permData[APIPermTables] = true
+		permData[APIPermTags] = true
+		permData[APIPermUpload] = true
+		permData[APIPermViews] = true
+		permData[APIPermWebpage] = true
 	}
 
 	// Incorporate the updated permission data from the user
@@ -2053,6 +2032,27 @@ func GetBranches(dbOwner, dbFolder, dbName string) (branches map[string]BranchEn
 		return nil, err
 	}
 	return branches, nil
+}
+
+// GetAPIKey returns the details for an API key
+func GetAPIKey(apiKey string) (apiDetails APIKey, err error) {
+	// TODO: Make sure this query gets the right data (haven't tested it yet)
+	// TODO: Add the remaining API key details
+	dbQuery := `
+		WITH key_info AS (
+			SELECT key_id
+			FROM api_keys
+			WHERE key = $1
+		)
+		SELECT db.dbname, api.permissions
+		FROM sqlite_databases db, api_permissions api, key_info
+		WHERE api.db_id = db.db_id
+			AND api_permissions.key_id = key_info.key_id`
+	err = pdb.QueryRow(dbQuery, apiKey).Scan(&apiDetails.Database, &apiDetails.Permissions)
+	if err != nil {
+		log.Printf("Fetching API key database and permissions failed: %v\n", err)
+	}
+	return
 }
 
 // GetAPIKeys returns the list of API keys for a user

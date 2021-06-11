@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -32,6 +33,72 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 
 	// Render the page
 	t := tmpl.Lookup("aboutPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+// Renders the "API Key permissions" page.
+func apiPermissionsPage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		Auth0   com.Auth0Set
+		Meta    com.MetaInfo
+		KeyInfo com.APIKey
+	}
+
+	// Get all meta information
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, false)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	pageData.Meta.Title = "What is DBHub.io?"
+
+	// Add Auth0 info to the page data
+	pageData.Auth0 = collectPageAuth0Info()
+
+	// Get the API key from the user provided data
+	a := r.PostFormValue("apikey")
+	apiKey, err := url.QueryUnescape(a)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Validate the API key
+	err = com.CheckAPIKey(apiKey)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// If no API key was provided, display an error instead of the page content
+	if apiKey == "" {
+		errorPage(w, r, http.StatusBadRequest, "No API key provided")
+		return
+	}
+
+	// Verify the API key belongs to the logged in user. eg don't allow looking at other people's API keys
+	keyOwner, err := com.GetAPIKeyUser(apiKey)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if keyOwner != pageData.Meta.LoggedInUser {
+		errorPage(w, r, http.StatusBadRequest, "Unknown API key")
+		return
+	}
+
+	// Retrieve the API key details
+	pageData.KeyInfo, err = com.GetAPIKey(apiKey)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Render the page
+	t := tmpl.Lookup("apipermsPage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
