@@ -2115,7 +2115,8 @@ func GetAPIKeys(user string) (apiKeys map[string]APIKey, err error) {
 			log.Printf("Error retrieving API key permissions: %v\n", err)
 			return
 		}
-		// If there aren't (yet) any permissions saved for the api key, we set the defaults
+
+		// If there aren't (yet) any permissions saved for the api key, we enable everything by default
 		if err == pgx.ErrNoRows {
 			perms = make(map[APIPermission]bool)
 			perms[APIPermBranches] = true
