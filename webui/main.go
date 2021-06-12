@@ -3330,7 +3330,6 @@ func main() {
 	// Our pages
 	http.Handle("/", gz.GzipHandler(logReq(mainHandler)))
 	http.Handle("/about", gz.GzipHandler(logReq(aboutPage)))
-	http.Handle("/apiperms", gz.GzipHandler(logReq(apiPermissionsPage)))
 	http.Handle("/branches/", gz.GzipHandler(logReq(branchesPage)))
 	http.Handle("/commits/", gz.GzipHandler(logReq(commitsPage)))
 	http.Handle("/compare/", gz.GzipHandler(logReq(comparePage)))
