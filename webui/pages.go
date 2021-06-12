@@ -2003,6 +2003,15 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 		return
 	}
 
+	// The API keys with no database value set should have their text say "All databases"
+	for key, j := range pageData.APIKeys {
+		if j.Database == "" {
+			tmp := pageData.APIKeys[key]
+			tmp.Database = "All databases"
+			pageData.APIKeys[key] = tmp
+		}
+	}
+
 	// Create the list of databases belonging to the user
 	dbList, err := com.UserDBs(loggedInUser, com.DB_BOTH)
 	if err != nil {
