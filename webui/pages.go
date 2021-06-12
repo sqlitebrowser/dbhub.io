@@ -1959,7 +1959,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Settings page.
 func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	var pageData struct {
-		APIKeys     []com.APIKey
+		APIKeys     map[string]com.APIKey
 		Auth0       com.Auth0Set
 		DBNames     []string
 		DisplayName string
@@ -2002,17 +2002,6 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	//// TODO: Handle multiple API keys
-	//
-	//// TODO: Get the API key permissions and applicable database
-	//for _, apiKey := range pageData.APIKeys {
-	//	dbName, perms , err := com.APIKeyPermissions(apiKey.Key)
-	//	if err != nil {
-	//		errorPage(w, r, http.StatusInternalServerError, "Retrieving API key details failed")
-	//		return
-	//	}
-	//}
 
 	// Create the list of databases belonging to the user
 	dbList, err := com.UserDBs(loggedInUser, com.DB_BOTH)

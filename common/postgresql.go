@@ -2056,9 +2056,46 @@ func GetAPIKey(apiKey string) (apiDetails APIKey, err error) {
 }
 
 // GetAPIKeys returns the list of API keys for a user
-func GetAPIKeys(user string) ([]APIKey, error) {
+func GetAPIKeys(user string) (apiKeys map[string]APIKey, err error) {
+	// TODO: Do this as one query, probably using an outer join
+
+	// Get the API key(s) and their creation dates
+	apiKeys = make(map[string]APIKey)
 	dbQuery := `
-		SELECT api.key, api.date_created, db.db_name, perms.permissions
+		SELECT key, date_created
+		FROM api_keys
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)`
+	var rows *pgx.Rows
+	defer func() {
+		if rows != nil {
+			rows.Close()
+		}
+	}()
+	rows, err = pdb.Query(dbQuery, user)
+	if err != nil {
+		log.Printf("Database query failed: %v\n", err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var key string
+		var dateCreated time.Time
+		err = rows.Scan(&key, &dateCreated)
+		if err != nil {
+			log.Printf("Error retrieving API key list: %v\n", err)
+			return
+		}
+		apiKeys[key] = APIKey{Key: key, DateCreated: dateCreated}
+	}
+
+	// Get the database and permissions for each key, if it exists
+	for key, details := range apiKeys {
+		dbQuery = `
+		SELECT db.db_name, perms.permissions
 		FROM api_keys api
 		INNER JOIN api_permissions perms ON api.key_id = perms.key_id
 		INNER JOIN sqlite_databases db ON db.db_id = perms.db_id
@@ -2066,27 +2103,43 @@ func GetAPIKeys(user string) ([]APIKey, error) {
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
-			)`
-	rows, err := pdb.Query(dbQuery, user)
-	if err != nil {
-		log.Printf("Database query failed: %v\n", err)
-		return nil, err
-	}
-	defer rows.Close()
-	var keys []APIKey
-	for rows.Next() {
-		var key string
-		var dateCreated time.Time
+			)
+			AND perms.key_id = (
+				SELECT key_id
+				FROM api_keys
+				WHERE key = $2)`
 		var dbName pgx.NullString
 		var perms map[APIPermission]bool
-		err = rows.Scan(&key, &dateCreated, &dbName, &perms)
-		if err != nil {
-			log.Printf("Error retrieving API key list: %v\n", err)
-			return nil, err
+		err = pdb.QueryRow(dbQuery, user, key).Scan(&dbName, &perms)
+		if err != nil && err != pgx.ErrNoRows {
+			log.Printf("Error retrieving API key permissions: %v\n", err)
+			return
 		}
-		keys = append(keys, APIKey{Key: key, DateCreated: dateCreated, Database: dbName.String, Permissions: perms})
+		// If there aren't (yet) any permissions saved for the api key, we set the defaults
+		if err == pgx.ErrNoRows {
+			perms = make(map[APIPermission]bool)
+			perms[APIPermBranches] = true
+			perms[APIPermColumns] = true
+			perms[APIPermCommits] = true
+			perms[APIPermDatabases] = true
+			perms[APIPermDelete] = true
+			perms[APIPermDiff] = true
+			perms[APIPermDownload] = true
+			perms[APIPermIndexes] = true
+			perms[APIPermMetadata] = true
+			perms[APIPermQuery] = true
+			perms[APIPermReleases] = true
+			perms[APIPermTables] = true
+			perms[APIPermTags] = true
+			perms[APIPermUpload] = true
+			perms[APIPermViews] = true
+			perms[APIPermWebpage] = true
+			err = nil
+		}
+
+		apiKeys[key] = APIKey{Key: key, DateCreated: details.DateCreated, Database: dbName.String, Permissions: perms}
 	}
-	return keys, nil
+	return
 }
 
 // GetAPIKeyUser returns the owner of a given API key.  Returns an empty string if the key has no known owner
