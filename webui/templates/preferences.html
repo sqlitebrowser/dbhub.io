@@ -242,7 +242,7 @@
         // Database names
         $scope.dbList = [[ .DBNames ]];
 
-        // Send the changed database selection to the server
+        // Send the changed database selection to the backend
         $scope.changeDB = function(apiKey, newDB) {
             // Work out the "all databases" value to send
             let allDBs = false;
@@ -250,7 +250,7 @@
                 allDBs = true;
             }
 
-            // Send the new database info to the server
+            // Send the new database info to the backend
             $http({
                 method: "POST",
                 url: "/x/apikeydbupdate/",
@@ -343,7 +343,7 @@
         $scope.statusMessage = "";
         $scope.statusMessageColour = "red";
         $scope.apiKeyGen = function() {
-            // Call the server to generate a new API key
+            // Call the backend to generate a new API key
             $http.get("/x/apikeygen").then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
