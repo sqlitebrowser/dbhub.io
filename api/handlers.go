@@ -21,12 +21,19 @@ import (
 //   * "dbname" is the name of the database
 func branchesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, apiKey, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	err = permissionCheck(loggedInUser, apiKey, dbName, "branches")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Retrieve the branch list for the database
 	brList, err := com.BranchListResponse(dbOwner, dbFolder, dbName)
@@ -59,7 +66,7 @@ func branchesHandler(w http.ResponseWriter, r *http.Request) {
 //   * "table" is the name of the table or view
 func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, httpStatus, err := collectInfoAndOpen(w, r)
+	sdb, httpStatus, err := collectInfoAndOpen(w, r, "columns")
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -117,12 +124,19 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database
 func commitsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, apiKey, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	err = permissionCheck(loggedInUser, apiKey, dbName, "commits")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Retrieve the commits
 	commits, err := com.GetCommitList(dbOwner, dbFolder, dbName)
@@ -147,7 +161,16 @@ func commitsHandler(w http.ResponseWriter, r *http.Request) {
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
 func databasesHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticate the request
-	loggedInUser, err := checkAuth(w, r)
+	loggedInUser, apiKey, err := checkAuth(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Make sure the API key has permission to run this function on the requested database
+	// TODO: We probably need a special case for handling the Databases(), Releases(), and Tags() functions.
+	//       Maybe set the dbName value here to a magic value, which permissionCheck() looks for?
+	err = permissionCheck(loggedInUser, apiKey, "what should we do here", "databases")
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -184,7 +207,7 @@ func databasesHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database
 func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticate the request
-	loggedInUser, err := checkAuth(w, r)
+	loggedInUser, apiKey, err := checkAuth(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -198,6 +221,13 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	dbOwner := loggedInUser
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	err = permissionCheck(loggedInUser, apiKey, dbName, "delete")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Invalidate the memcache data for the database
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
@@ -237,7 +267,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 //   * "merge" specifies the merge strategy (possible values: "none", "preserve_pk", "new_pk"; optional, defaults to "none")
 //   * "include_data" can be set to "1" to include the full data of all changed rows instead of just the primary keys (optional, defaults to 0)
 func diffHandler(w http.ResponseWriter, r *http.Request) {
-	loggedInUser, err := checkAuth(w, r)
+	loggedInUser, apiKey, err := checkAuth(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -334,6 +364,18 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Make sure the API key has permission to run this function on the requested databases
+	err = permissionCheck(loggedInUser, apiKey, dbNameA, "diff")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	err = permissionCheck(loggedInUser, apiKey, dbNameB, "diff")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	// Perform diff
 	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser, mergeStrategy, includeData)
 	if err != nil {
@@ -359,12 +401,19 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database
 func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticate user and collect requested database details
-	loggedInUser, dbOwner, dbName, commitID, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, apiKey, commitID, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	err = permissionCheck(loggedInUser, apiKey, dbName, "download")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Return the requested database to the user
 	_, err = com.DownloadDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, "api")
@@ -382,7 +431,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database
 func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, httpStatus, err := collectInfoAndOpen(w, r)
+	sdb, httpStatus, err := collectInfoAndOpen(w, r, "indexes")
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -436,12 +485,19 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database
 func metadataHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, apiKey, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	err = permissionCheck(loggedInUser, apiKey, dbName, "metadata")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Retrieve the metadata for the database
 	meta, err := com.MetadataResponse(dbOwner, dbFolder, dbName)
@@ -472,7 +528,7 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database
 //   * "sql" is the SQL query to run, base64 encoded
 func queryHandler(w http.ResponseWriter, r *http.Request) {
-	loggedInUser, err := checkAuth(w, r)
+	loggedInUser, apiKey, err := checkAuth(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -485,6 +541,13 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	err = permissionCheck(loggedInUser, apiKey, dbName, "query")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
@@ -532,12 +595,21 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database
 func releasesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, apiKey, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	// TODO: We probably need a special case for handling the Databases(), Releases(), and Tags() functions.
+	//       Maybe set the dbName value here to a magic value, which permissionCheck() looks for?
+	err = permissionCheck(loggedInUser, apiKey, "what should we do here", "releases")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Retrieve the list of releases
 	rels, err := com.GetReleases(dbOwner, dbFolder, dbName)
@@ -590,7 +662,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database
 func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, httpStatus, err := collectInfoAndOpen(w, r)
+	sdb, httpStatus, err := collectInfoAndOpen(w, r, "tables")
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -622,12 +694,21 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database
 func tagsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, apiKey, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	// TODO: We probably need a special case for handling the Databases(), Releases(), and Tags() functions.
+	//       Maybe set the dbName value here to a magic value, which permissionCheck() looks for?
+	err = permissionCheck(loggedInUser, apiKey, "what should we do here", "tags")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Retrieve the tags
 	tags, err := com.GetTags(dbOwner, dbFolder, dbName)
@@ -669,7 +750,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
 
 	// Authenticate the request
-	loggedInUser, err := checkAuth(w, r)
+	loggedInUser, apiKey, err := checkAuth(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -679,6 +760,13 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	_, dbName, commitID, err := com.GetFormODC(r)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the API key has permission to run this function on the requested database
+	err = permissionCheck(loggedInUser, apiKey, dbName, "upload")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -745,7 +833,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database being queried
 func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info, open the database
-	sdb, httpStatus, err := collectInfoAndOpen(w, r)
+	sdb, httpStatus, err := collectInfoAndOpen(w, r, "views")
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
@@ -777,12 +865,19 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 //   * "dbname" is the name of the database being queried
 func webpageHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticate user and collect requested database details
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, apiKey, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	err = permissionCheck(loggedInUser, apiKey, dbName, "webpage")
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Return the database webUI URL to the user
 	var z com.WebpageResponseContainer

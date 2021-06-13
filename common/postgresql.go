@@ -141,6 +141,27 @@ func APIKeyDBSave(loggedInUser, apiKey, dbName string, allDB bool) error {
 	return nil
 }
 
+// APIKeyPerms returns the permission details of an API key
+func APIKeyPerms(loggedInUser, apiKey string) (apiDetails APIKey, err error) {
+	// TODO: Make sure this query gets the right data (haven't tested it yet)
+	// TODO: Add the remaining API key details
+	dbQuery := `
+		WITH key_info AS (
+			SELECT key_id
+			FROM api_keys
+			WHERE key = $1
+		)
+		SELECT db.dbname, api.permissions
+		FROM sqlite_databases db, api_permissions api, key_info
+		WHERE api.db_id = db.db_id
+			AND api_permissions.key_id = key_info.key_id`
+	err = pdb.QueryRow(dbQuery, apiKey).Scan(&apiDetails.Database, &apiDetails.Permissions)
+	if err != nil {
+		log.Printf("Fetching API key database and permissions failed: %v\n", err)
+	}
+	return
+}
+
 // APIKeyPermSave updates the permissions for an API key
 func APIKeyPermSave(loggedInUser, apiKey string, perm APIPermission, value bool) error {
 	// Data structure for holding the API permission values
@@ -2032,27 +2053,6 @@ func GetBranches(dbOwner, dbFolder, dbName string) (branches map[string]BranchEn
 		return nil, err
 	}
 	return branches, nil
-}
-
-// GetAPIKey returns the details for an API key
-func GetAPIKey(apiKey string) (apiDetails APIKey, err error) {
-	// TODO: Make sure this query gets the right data (haven't tested it yet)
-	// TODO: Add the remaining API key details
-	dbQuery := `
-		WITH key_info AS (
-			SELECT key_id
-			FROM api_keys
-			WHERE key = $1
-		)
-		SELECT db.dbname, api.permissions
-		FROM sqlite_databases db, api_permissions api, key_info
-		WHERE api.db_id = db.db_id
-			AND api_permissions.key_id = key_info.key_id`
-	err = pdb.QueryRow(dbQuery, apiKey).Scan(&apiDetails.Database, &apiDetails.Permissions)
-	if err != nil {
-		log.Printf("Fetching API key database and permissions failed: %v\n", err)
-	}
-	return
 }
 
 // GetAPIKeys returns the list of API keys for a user
