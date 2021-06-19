@@ -151,10 +151,10 @@ func APIKeyPerms(loggedInUser, apiKey string) (apiDetails APIKey, err error) {
 			FROM api_keys
 			WHERE key = $1
 		)
-		SELECT db.dbname, api.permissions
+		SELECT db.db_name, api.permissions
 		FROM sqlite_databases db, api_permissions api, key_info
 		WHERE api.db_id = db.db_id
-			AND api_permissions.key_id = key_info.key_id`
+			AND api.key_id = key_info.key_id`
 	err = pdb.QueryRow(dbQuery, apiKey).Scan(&apiDetails.Database, &apiDetails.Permissions)
 	if err != nil {
 		log.Printf("Fetching API key database and permissions failed: %v\n", err)
