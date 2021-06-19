@@ -423,6 +423,28 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	return numBytes, c.ID, sha, nil
 }
 
+// APIKeyPermDefaults creates a map with the default API key permissions
+func APIKeyPermDefaults() (Perms map[APIPermission]bool) {
+	Perms = make(map[APIPermission]bool)
+	Perms[APIPermBranches] = true
+	Perms[APIPermColumns] = true
+	Perms[APIPermCommits] = true
+	Perms[APIPermDatabases] = true
+	Perms[APIPermDelete] = true
+	Perms[APIPermDiff] = true
+	Perms[APIPermDownload] = true
+	Perms[APIPermIndexes] = true
+	Perms[APIPermMetadata] = true
+	Perms[APIPermQuery] = true
+	Perms[APIPermReleases] = true
+	Perms[APIPermTables] = true
+	Perms[APIPermTags] = true
+	Perms[APIPermUpload] = true
+	Perms[APIPermViews] = true
+	Perms[APIPermWebpage] = true
+	return
+}
+
 // CommitPublicFlag returns the public flag of a given commit
 func CommitPublicFlag(loggedInUser, dbOwner, dbFolder, dbName, commitID string) (public bool, err error) {
 	var DB SQLiteDBinfo

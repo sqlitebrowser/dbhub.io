@@ -1892,8 +1892,9 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Settings page.
 func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	var pageData struct {
-		APIKeys     []com.APIKey
+		APIKeys     map[string]com.APIKey
 		Auth0       com.Auth0Set
+		DBNames     []string
 		DisplayName string
 		Email       string
 		MaxRows     int
@@ -1933,6 +1934,25 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// The API keys with no database value set should have their text say "All databases"
+	for key, j := range pageData.APIKeys {
+		if j.Database == "" {
+			tmp := pageData.APIKeys[key]
+			tmp.Database = "All databases"
+			pageData.APIKeys[key] = tmp
+		}
+	}
+
+	// Create the list of databases belonging to the user
+	dbList, err := com.UserDBs(loggedInUser, com.DB_BOTH)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Retrieving list of databases failed")
+		return
+	}
+	for _, db := range dbList {
+		pageData.DBNames = append(pageData.DBNames, db.Database)
 	}
 
 	// Add Auth0 info to the page data

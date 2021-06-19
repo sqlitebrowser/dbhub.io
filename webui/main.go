@@ -38,6 +38,108 @@ var (
 	store *gsm.MemcacheStore
 )
 
+// apiKeyDbUpdateHandler handles updating the API key database as requested from the User's Settings page
+func apiKeyDbUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Retrieve API key
+	a := r.PostFormValue("apikey")
+	apiKey, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Validate the API key
+	err = com.CheckAPIKey(apiKey)
+	if err != nil {
+		log.Printf("Validation failed for API key: '%s'- %s", apiKey, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Check if the "all databases" variable was set.  If not, get the database name
+	allDBs := false
+	var dbName string
+	z := r.PostFormValue("alldbs")
+	z2, err := url.QueryUnescape(z)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	switch z2 {
+	case "true":
+		allDBs = true
+	case "false":
+		// Retrieve the database name
+		d := r.PostFormValue("dbname")
+		dbName, err = url.QueryUnescape(d)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+
+		// Validate the database name
+		err = com.ValidateDB(dbName)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+	default:
+		// Unknown value passed
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Make sure the given API key has been issued to the user doing the update
+	keyOwner, err := com.GetAPIKeyUser(apiKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if keyOwner != loggedInUser {
+		log.Printf("Error: attempt by '%v' to change API key permissions for someone else's ('%v') API key",
+			keyOwner, loggedInUser)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Store the updated database for the API key
+	err = com.APIKeyDBSave(loggedInUser, apiKey, dbName, allDBs)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: Return some kind of success flag to the caller
+	data, err := json.Marshal("Database updated!")
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+}
+
 // apiKeyGenHandler generates a new API key, stores it in the PG database, and returns the details to the caller
 func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
@@ -68,12 +170,152 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	// Log the key creation
 	log.Printf("New API key created for user '%s', key: '%s'\n", loggedInUser, key)
 
+	// Create a structure holding the default permissions
+	permData := com.APIKeyPermDefaults()
+
 	// Return the API key to the caller
 	d := com.APIKey{
+		Database:    "", // Default to "all databases"
 		Key:         key,
 		DateCreated: creationTime,
+		Permissions: permData,
 	}
 	data, err := json.Marshal(d)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+}
+
+// apiKeyPermsUpdateHandler handles updating API permissions as requested from the User's Settings page
+func apiKeyPermsUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Retrieve API key
+	a := r.PostFormValue("apikey")
+	apiKey, err := url.QueryUnescape(a)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Validate the API key
+	err = com.CheckAPIKey(apiKey)
+	if err != nil {
+		log.Printf("Validation failed for API key: '%s'- %s", apiKey, err)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Retrieve and validate the updated permission name
+	p := r.PostFormValue("perm")
+	p2, err := url.QueryUnescape(p)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	var perm com.APIPermission
+	switch strings.ToLower(p2) {
+	case "branches":
+		perm = com.APIPermBranches
+	case "columns":
+		perm = com.APIPermColumns
+	case "commits":
+		perm = com.APIPermCommits
+	case "databases":
+		perm = com.APIPermDatabases
+	case "delete":
+		perm = com.APIPermDelete
+	case "diff":
+		perm = com.APIPermDiff
+	case "download":
+		perm = com.APIPermDownload
+	case "indexes":
+		perm = com.APIPermIndexes
+	case "metadata":
+		perm = com.APIPermMetadata
+	case "query":
+		perm = com.APIPermQuery
+	case "releases":
+		perm = com.APIPermReleases
+	case "tables":
+		perm = com.APIPermTables
+	case "tags":
+		perm = com.APIPermTags
+	case "upload":
+		perm = com.APIPermUpload
+	case "views":
+		perm = com.APIPermViews
+	case "webpage":
+		perm = com.APIPermWebpage
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Unknown permission name")
+		return
+	}
+
+	// Retrieve updated permission value
+	v := r.PostFormValue("value")
+	v2, err := url.QueryUnescape(v)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+
+	// Validate the provided permission value
+	value := false
+	switch strings.ToLower(v2) {
+	case "true":
+		value = true
+	case "false":
+		value = false
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid true/false value")
+		return
+	}
+
+	// Make sure the given API key has been issued to the user doing the update
+	keyOwner, err := com.GetAPIKeyUser(apiKey)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if keyOwner != loggedInUser {
+		log.Printf("Error: attempt by '%v' to change API key permissions for someone else's ('%v') API key",
+			keyOwner, loggedInUser)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Store the updated permissions in the database
+	err = com.APIKeyPermSave(loggedInUser, apiKey, perm, value)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: Return success info to the caller
+	data, err := json.Marshal("Updated permissions saved!")
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -3096,7 +3338,9 @@ func main() {
 	http.Handle("/upload/", gz.GzipHandler(logReq(uploadPage)))
 	http.Handle("/vis/", gz.GzipHandler(logReq(visualisePage)))
 	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))
+	http.Handle("/x/apikeydbupdate", gz.GzipHandler(logReq(apiKeyDbUpdateHandler)))
 	http.Handle("/x/apikeygen", gz.GzipHandler(logReq(apiKeyGenHandler)))
+	http.Handle("/x/apikeypermupdate", gz.GzipHandler(logReq(apiKeyPermsUpdateHandler)))
 	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))
 	http.Handle("/x/callback", gz.GzipHandler(logReq(auth0CallbackHandler)))
 	http.Handle("/x/checkname", gz.GzipHandler(logReq(checkNameHandler)))

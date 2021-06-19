@@ -96,7 +96,177 @@ func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) 
 	return nil
 }
 
+// APIKeyDBSave changes which database an API key applies to
+func APIKeyDBSave(loggedInUser, apiKey, dbName string, allDB bool) error {
+	var dbID pgx.NullInt64
+	var err error
+
+	// If this api key applies to "all databases", then we store null in its db_id field
+	if allDB != true {
+		var d int
+		d, err = databaseID(loggedInUser, "/", dbName)
+		if err != nil {
+			log.Printf("Retrieving database ID failed: %v\n", err)
+			return err
+		}
+		dbID.Int64 = int64(d)
+		dbID.Valid = true
+	}
+
+	// Store the updated database
+	dbQuery := `
+		WITH uid AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		), key_info AS (
+			SELECT key_id
+			FROM api_keys, uid
+			WHERE api_keys.user_id = uid.user_id
+				AND key = $2
+		)
+		INSERT INTO api_permissions (key_id, user_id, db_id)
+		SELECT (SELECT key_id FROM key_info), (SELECT user_id FROM uid), $3
+		ON CONFLICT (user_id, key_id)
+			DO UPDATE
+			SET db_id = $3`
+	commandTag, err := pdb.Exec(dbQuery, loggedInUser, apiKey, dbID)
+	if err != nil {
+		log.Printf("Updating database for API key '%v' failed: %v\n", apiKey, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%d) affected when updating API key '%v' database \n", numRows, apiKey)
+	}
+	return nil
+}
+
+// APIKeyPerms returns the permission details of an API key
+func APIKeyPerms(loggedInUser, apiKey string) (apiDetails APIKey, err error) {
+	// TODO: The multiple SQL queries below are probably do-able with a single query, except I'm not real awake atm.
+	//       So will just make it work like this for now.
+	var keyID pgx.NullInt64
+	dbQuery := `
+		SELECT key_id
+		FROM api_keys
+		WHERE key = $1`
+	err = pdb.QueryRow(dbQuery, apiKey).Scan(&keyID)
+	if err != nil {
+		log.Printf("Fetching API key ID failed: %v\n", err)
+	}
+
+	var dbID pgx.NullInt64
+	dbQuery = `
+			SELECT db_id, permissions
+			FROM api_permissions
+			WHERE key_id = $1`
+	err = pdb.QueryRow(dbQuery, keyID).Scan(&dbID, &apiDetails.Permissions)
+	if err != nil && err != pgx.ErrNoRows {
+		log.Printf("Fetching database ID and permissions failed: %v\n", err)
+		return
+	}
+
+	// If no results were returned, it means no permissions have been set for this api key yet, so use the default of
+	// "everything enabled"
+	if err == pgx.ErrNoRows {
+		// Return "All databases" and "all permissions enabled"
+		apiDetails.Permissions = APIKeyPermDefaults()
+		err = nil
+		return
+	}
+
+	// If a database ID was returned then look up the database name
+	if dbID.Valid {
+		dbQuery = `
+		SELECT db.db_name
+		FROM sqlite_databases db
+		WHERE db.db_id = $1`
+		err = pdb.QueryRow(dbQuery, dbID).Scan(&apiDetails.Database)
+		if err != nil {
+			log.Printf("Fetching database name failed: %v\n", err)
+		}
+	}
+
+	// Just for safety, in case something weird is happening
+	if apiDetails.Permissions == nil {
+		// Not sure this case would ever be hit?  It would mean there is a database assigned to the api key, but no
+		// permissions.  In theory, that shouldn't be able to happen.  Maybe set some defaults here, just in case?
+		apiDetails.Permissions = APIKeyPermDefaults()
+		log.Printf("Unexpected weirdness with API key permissions.  The api key '%v' has a database set, but no permissions\n", apiKey)
+		return
+	}
+	return
+}
+
+// APIKeyPermSave updates the permissions for an API key
+func APIKeyPermSave(loggedInUser, apiKey string, perm APIPermission, value bool) error {
+	// Data structure for holding the API permission values
+	permData := make(map[APIPermission]bool)
+
+	// Retrieve the existing API key permissions
+	dbQuery := `
+		WITH uid AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		), key_info AS (
+			SELECT key_id
+			FROM api_keys, uid
+			WHERE api_keys.user_id = uid.user_id
+				AND key = $2
+		)
+		SELECT permissions
+		FROM api_permissions, uid, key_info
+		WHERE api_permissions.user_id = uid.user_id
+			AND api_permissions.key_id = key_info.key_id`
+	err := pdb.QueryRow(dbQuery, loggedInUser, apiKey).Scan(&permData)
+	if err != nil {
+		// Returning no rows is ok for this call
+		if err != pgx.ErrNoRows {
+			log.Printf("Fetching API key permissions failed: %v\n", err)
+			return err
+		}
+	}
+
+	// If there isn't any permission data for the API key, it means the key was generated before permissions were
+	// available.  So, we default to "all databases" and "all permissions are turned on"
+	if len(permData) == 0 {
+		permData = APIKeyPermDefaults()
+	}
+
+	// Incorporate the updated permission data from the user
+	permData[perm] = value
+
+	// Store the updated permissions
+	dbQuery = `
+		WITH uid AS (
+			SELECT user_id
+			FROM users
+			WHERE user_name = $1
+		), key_info AS (
+			SELECT key_id
+			FROM api_keys, uid
+			WHERE api_keys.user_id = uid.user_id
+				AND key = $2
+		)
+		INSERT INTO api_permissions (key_id, user_id, permissions)
+		SELECT (SELECT key_id FROM key_info), (SELECT user_id FROM uid), $3
+		ON CONFLICT (user_id, key_id)
+			DO UPDATE
+			SET permissions = $3`
+	commandTag, err := pdb.Exec(dbQuery, loggedInUser, apiKey, permData)
+	if err != nil {
+		log.Printf("Updating permissions for API key '%v' failed: %v\n", apiKey, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%d) affected when updating API key: %v permissions\n", numRows, apiKey)
+	}
+	return nil
+}
+
 // APIKeySave saves a new API key to the PostgreSQL database
+// TODO: Add the chosen database and permissions
 func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
 	// Make sure the API key isn't already in the database
 	dbQuery := `
@@ -1907,7 +2077,11 @@ func GetBranches(dbOwner, dbFolder, dbName string) (branches map[string]BranchEn
 }
 
 // GetAPIKeys returns the list of API keys for a user
-func GetAPIKeys(user string) ([]APIKey, error) {
+func GetAPIKeys(user string) (apiKeys map[string]APIKey, err error) {
+	// TODO: Do this as one query, probably using an outer join
+
+	// Get the API key(s) and their creation dates
+	apiKeys = make(map[string]APIKey)
 	dbQuery := `
 		SELECT key, date_created
 		FROM api_keys
@@ -1916,24 +2090,62 @@ func GetAPIKeys(user string) ([]APIKey, error) {
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)`
-	rows, err := pdb.Query(dbQuery, user)
+	var rows *pgx.Rows
+	defer func() {
+		if rows != nil {
+			rows.Close()
+		}
+	}()
+	rows, err = pdb.Query(dbQuery, user)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
-		return nil, err
+		return
 	}
 	defer rows.Close()
-	var keys []APIKey
 	for rows.Next() {
 		var key string
 		var dateCreated time.Time
 		err = rows.Scan(&key, &dateCreated)
 		if err != nil {
 			log.Printf("Error retrieving API key list: %v\n", err)
-			return nil, err
+			return
 		}
-		keys = append(keys, APIKey{Key: key, DateCreated: dateCreated})
+		apiKeys[key] = APIKey{Key: key, DateCreated: dateCreated}
 	}
-	return keys, nil
+
+	// Get the database and permissions for each key, if it exists
+	for key, details := range apiKeys {
+		dbQuery = `
+		SELECT db.db_name, perms.permissions
+		FROM api_keys api
+		INNER JOIN api_permissions perms ON api.key_id = perms.key_id
+		INNER JOIN sqlite_databases db ON db.db_id = perms.db_id
+		WHERE api.user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)
+			AND perms.key_id = (
+				SELECT key_id
+				FROM api_keys
+				WHERE key = $2)`
+		var dbName pgx.NullString
+		var perms map[APIPermission]bool
+		err = pdb.QueryRow(dbQuery, user, key).Scan(&dbName, &perms)
+		if err != nil && err != pgx.ErrNoRows {
+			log.Printf("Error retrieving API key permissions: %v\n", err)
+			return
+		}
+
+		// If there aren't (yet) any permissions saved for the api key, we enable everything by default
+		if err == pgx.ErrNoRows || perms == nil {
+			perms = APIKeyPermDefaults()
+			err = nil
+		}
+
+		apiKeys[key] = APIKey{Key: key, DateCreated: details.DateCreated, Database: dbName.String, Permissions: perms}
+	}
+	return
 }
 
 // GetAPIKeyUser returns the owner of a given API key.  Returns an empty string if the key has no known owner

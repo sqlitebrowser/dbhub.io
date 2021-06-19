@@ -151,12 +151,22 @@ func main() {
 }
 
 // checkAuth authenticates and logs the incoming request
-func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err error) {
+func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser, apiKey string, err error) {
 	// Extract the API key from the request
-	apiKey := r.FormValue("apikey")
+	a := r.FormValue("apikey")
 
-	// Check if API key was provided
-	if apiKey != "" {
+	// Check if an API key was provided
+	if a != "" {
+		// Validate the API key
+		err = com.CheckAPIKey(a)
+		if err != nil {
+			err = fmt.Errorf("Incorrect or unknown API key and certificate")
+			return
+		}
+
+		// API key passed validation
+		apiKey = a
+
 		// Look up the owner of the API key
 		loggedInUser, err = com.GetAPIKeyUser(apiKey)
 	} else {
@@ -170,6 +180,12 @@ func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err
 		return
 	}
 
+	// If the client authenticated through their certificate instead of an API key, then we need to pass
+	// that information along for special handling
+	if apiKey == "" {
+		apiKey = "clientcert"
+	}
+
 	// Log the incoming request
 	logReq(r, loggedInUser)
 	return
@@ -177,11 +193,11 @@ func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err
 
 // collectInfo is an internal function which:
 //   1. Authenticates incoming requests
-//   2. Extracts the database owner, name, and commit ID from the request
+//   2. Extracts the database owner, name, api key, and commit ID from the request
 //   3. Checks permissions
-func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner, dbName, commitID string, httpStatus int, err error) {
+func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner, dbName, apiKey, commitID string, httpStatus int, err error) {
 	// Authenticate the request
-	loggedInUser, err = checkAuth(w, r)
+	loggedInUser, apiKey, err = checkAuth(w, r)
 	if err != nil {
 		httpStatus = http.StatusUnauthorized
 		return
@@ -215,14 +231,21 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner,
 //   2. Fetches the database from Minio
 //   3. Opens the database, returning the connection handle
 // This function exists purely because this code is common to most of the handlers
-func collectInfoAndOpen(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, httpStatus int, err error) {
+func collectInfoAndOpen(w http.ResponseWriter, r *http.Request, permName com.APIPermission) (sdb *sqlite.Conn, httpStatus int, err error) {
 	// Authenticate the request and collect details for the requested database
-	loggedInUser, dbOwner, dbName, commitID, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, apiKey, commitID, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return
 	}
 	dbFolder := "/"
+
+	// Make sure the API key has permission to run this function on the requested database
+	err = permissionCheck(loggedInUser, apiKey, dbName, permName)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	// Get Minio bucket
 	bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
@@ -336,4 +359,32 @@ func logReq(r *http.Request, loggedInUser string) {
 	fmt.Fprintf(reqLog, "%v - %s [%s] \"%s %s %s\" \"-\" \"-\" \"%s\" \"%s\"\n", r.RemoteAddr,
 		loggedInUser, time.Now().Format(time.RFC3339Nano), r.Method, r.URL, r.Proto,
 		r.Referer(), r.Header.Get("User-Agent"))
+}
+
+// permissionCheck checks if a given incoming api key request is allowed to run on the requested database
+func permissionCheck(loggedInUser, apiKey, dbName string, permName com.APIPermission) (err error) {
+	// Retrieve the permission details for the api key
+	var apiDetails com.APIKey
+	apiDetails, err = com.APIKeyPerms(loggedInUser, apiKey)
+	if err != nil {
+		return
+	}
+
+	// If the user authenticated using their client certificate, we skip the permission checks as they have
+	// full access to all their databases
+	if apiKey != "clientcert" {
+		// Ensure the database name matches
+		// TODO: We probably need a special case for handling the Databases(), Releases(), and Tags() functions.
+		if apiDetails.Database != dbName && apiDetails.Database != "" { // Empty string in the database means "All databases allowed"
+			err = fmt.Errorf("Permission denied")
+			return
+		}
+
+		// Ensure the required function permission has been granted
+		if apiDetails.Permissions[permName] != true {
+			err = fmt.Errorf("Permission denied")
+			return
+		}
+	}
+	return
 }

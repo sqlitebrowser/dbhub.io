@@ -237,9 +237,32 @@ type APIJSONIndex struct {
 
 // APIKey is an internal structure used for passing around user API keys
 type APIKey struct {
-	Key         string    `json:"key"`
-	DateCreated time.Time `json:"date_created"`
+	Database    string                 `json:"database_name"`
+	DateCreated time.Time              `json:"date_created"`
+	Key         string                 `json:"key"`
+	Permissions map[APIPermission]bool `json:"permissions"`
 }
+
+type APIPermission string
+
+const (
+	APIPermBranches  = "branches"
+	APIPermColumns   = "columns"
+	APIPermCommits   = "commits"
+	APIPermDatabases = "databases"
+	APIPermDelete    = "delete"
+	APIPermDiff      = "diff"
+	APIPermDownload  = "download"
+	APIPermIndexes   = "indexes"
+	APIPermMetadata  = "metadata"
+	APIPermQuery     = "query"
+	APIPermReleases  = "releases"
+	APIPermTables    = "tables"
+	APIPermTags      = "tags"
+	APIPermUpload    = "upload"
+	APIPermViews     = "views"
+	APIPermWebpage   = "webpage"
+)
 
 type Auth0Set struct {
 	CallbackURL string
