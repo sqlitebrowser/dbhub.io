@@ -143,21 +143,57 @@ func APIKeyDBSave(loggedInUser, apiKey, dbName string, allDB bool) error {
 
 // APIKeyPerms returns the permission details of an API key
 func APIKeyPerms(loggedInUser, apiKey string) (apiDetails APIKey, err error) {
-	// TODO: Make sure this query gets the right data (haven't tested it yet)
-	// TODO: Add the remaining API key details
+	// TODO: The multiple SQL queries below are probably do-able with a single query, except I'm not real awake atm.
+	//       So will just make it work like this for now.
+	var keyID pgx.NullInt64
 	dbQuery := `
-		WITH key_info AS (
-			SELECT key_id
-			FROM api_keys
-			WHERE key = $1
-		)
-		SELECT db.db_name, api.permissions
-		FROM sqlite_databases db, api_permissions api, key_info
-		WHERE api.db_id = db.db_id
-			AND api.key_id = key_info.key_id`
-	err = pdb.QueryRow(dbQuery, apiKey).Scan(&apiDetails.Database, &apiDetails.Permissions)
+		SELECT key_id
+		FROM api_keys
+		WHERE key = $1`
+	err = pdb.QueryRow(dbQuery, apiKey).Scan(&keyID)
 	if err != nil {
-		log.Printf("Fetching API key database and permissions failed: %v\n", err)
+		log.Printf("Fetching API key ID failed: %v\n", err)
+	}
+
+	var dbID pgx.NullInt64
+	dbQuery = `
+			SELECT db_id, permissions
+			FROM api_permissions
+			WHERE key_id = $1`
+	err = pdb.QueryRow(dbQuery, keyID).Scan(&dbID, &apiDetails.Permissions)
+	if err != nil && err != pgx.ErrNoRows {
+		log.Printf("Fetching database ID and permissions failed: %v\n", err)
+		return
+	}
+
+	// If no results were returned, it means no permissions have been set for this api key yet, so use the default of
+	// "everything enabled"
+	if err == pgx.ErrNoRows {
+		// Return "All databases" and "all permissions enabled"
+		apiDetails.Permissions = APIKeyPermDefaults()
+		err = nil
+		return
+	}
+
+	// If a database ID was returned then look up the database name
+	if dbID.Valid {
+		dbQuery = `
+		SELECT db.db_name
+		FROM sqlite_databases db
+		WHERE db.db_id = $1`
+		err = pdb.QueryRow(dbQuery, dbID).Scan(&apiDetails.Database)
+		if err != nil {
+			log.Printf("Fetching database name failed: %v\n", err)
+		}
+	}
+
+	// Just for safety, in case something weird is happening
+	if apiDetails.Permissions == nil {
+		// Not sure this case would ever be hit?  It would mean there is a database assigned to the api key, but no
+		// permissions.  In theory, that shouldn't be able to happen.  Maybe set some defaults here, just in case?
+		apiDetails.Permissions = APIKeyPermDefaults()
+		log.Printf("Unexpected weirdness with API key permissions.  The api key '%v' has a database set, but no permissions\n", apiKey)
+		return
 	}
 	return
 }
@@ -195,22 +231,7 @@ func APIKeyPermSave(loggedInUser, apiKey string, perm APIPermission, value bool)
 	// If there isn't any permission data for the API key, it means the key was generated before permissions were
 	// available.  So, we default to "all databases" and "all permissions are turned on"
 	if len(permData) == 0 {
-		permData[APIPermBranches] = true
-		permData[APIPermColumns] = true
-		permData[APIPermCommits] = true
-		permData[APIPermDatabases] = true
-		permData[APIPermDelete] = true
-		permData[APIPermDiff] = true
-		permData[APIPermDownload] = true
-		permData[APIPermIndexes] = true
-		permData[APIPermMetadata] = true
-		permData[APIPermQuery] = true
-		permData[APIPermReleases] = true
-		permData[APIPermTables] = true
-		permData[APIPermTags] = true
-		permData[APIPermUpload] = true
-		permData[APIPermViews] = true
-		permData[APIPermWebpage] = true
+		permData = APIKeyPermDefaults()
 	}
 
 	// Incorporate the updated permission data from the user
@@ -2118,23 +2139,7 @@ func GetAPIKeys(user string) (apiKeys map[string]APIKey, err error) {
 
 		// If there aren't (yet) any permissions saved for the api key, we enable everything by default
 		if err == pgx.ErrNoRows || perms == nil {
-			perms = make(map[APIPermission]bool)
-			perms[APIPermBranches] = true
-			perms[APIPermColumns] = true
-			perms[APIPermCommits] = true
-			perms[APIPermDatabases] = true
-			perms[APIPermDelete] = true
-			perms[APIPermDiff] = true
-			perms[APIPermDownload] = true
-			perms[APIPermIndexes] = true
-			perms[APIPermMetadata] = true
-			perms[APIPermQuery] = true
-			perms[APIPermReleases] = true
-			perms[APIPermTables] = true
-			perms[APIPermTags] = true
-			perms[APIPermUpload] = true
-			perms[APIPermViews] = true
-			perms[APIPermWebpage] = true
+			perms = APIKeyPermDefaults()
 			err = nil
 		}
 

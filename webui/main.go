@@ -171,23 +171,7 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("New API key created for user '%s', key: '%s'\n", loggedInUser, key)
 
 	// Create a structure holding the default permissions
-	permData := make(map[com.APIPermission]bool)
-	permData[com.APIPermBranches] = true
-	permData[com.APIPermColumns] = true
-	permData[com.APIPermCommits] = true
-	permData[com.APIPermDatabases] = true
-	permData[com.APIPermDelete] = true
-	permData[com.APIPermDiff] = true
-	permData[com.APIPermDownload] = true
-	permData[com.APIPermIndexes] = true
-	permData[com.APIPermMetadata] = true
-	permData[com.APIPermQuery] = true
-	permData[com.APIPermReleases] = true
-	permData[com.APIPermTables] = true
-	permData[com.APIPermTags] = true
-	permData[com.APIPermUpload] = true
-	permData[com.APIPermViews] = true
-	permData[com.APIPermWebpage] = true
+	permData := com.APIKeyPermDefaults()
 
 	// Return the API key to the caller
 	d := com.APIKey{
