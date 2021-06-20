@@ -19,6 +19,28 @@ RUN addgroup dbhub && \
 RUN echo "/usr/bin/memcached -u memcached -d" >> /usr/local/bin/start.sh && \
     chmod +x /usr/local/bin/start.sh
 
+### Minio (everything except downloading the server executable)
+
+# Create the Minio OS user
+RUN addgroup minio && \
+    adduser -D -S -s /bin/ash -G minio minio
+
+# Install Minio
+ENV MINIO_UPDATE off
+ENV MINIO_ROOT_USER minio
+ENV MINIO_ROOT_PASSWORD minio123
+ENV MINIO_DATA /data/minio
+
+# Add script pieces for initialising & starting Minio
+RUN echo "mkdir -p ${MINIO_DATA}" >> /usr/local/bin/init.sh && \
+    echo "chown minio:minio ${MINIO_DATA}" >> /usr/local/bin/init.sh && \
+    su - minio -c "echo export MINIO_UPDATE=${MINIO_UPDATE} >> .profile" && \
+    su - minio -c "echo export MINIO_ROOT_USER=${MINIO_ROOT_USER} >> .profile" && \
+    su - minio -c "echo export MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD} >> .profile" && \
+    su - dbhub -c "echo export MINIO_ROOT_USER=${MINIO_ROOT_USER} >> .profile" && \
+    su - dbhub -c "echo export MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD} >> .profile" && \
+    echo "su - minio -c '/usr/local/bin/minio server ${MINIO_DATA} &'" >> /usr/local/bin/start.sh
+
 ### PostgreSQL
 
 # Create PostgreSQL directories
@@ -43,37 +65,32 @@ RUN echo "mkdir -p ${PGDATA}" >> /usr/local/bin/init.sh && \
     echo "su - postgres -c 'pg_ctl -D ${PGDATA} start'" >> /usr/local/bin/start.sh && \
     chmod +x /usr/local/bin/init.sh
 
-### Minio
+# Set the dependencies and DBHub.io daemons to automatically start
+ENTRYPOINT /usr/local/bin/start.sh
 
-# Create the Minio OS user
-RUN addgroup minio && \
-    adduser -D -S -s /bin/ash -G minio minio
-
-# Install Minio
-ENV MINIO_UPDATE off
-ENV MINIO_ROOT_USER minio
-ENV MINIO_ROOT_PASSWORD minio123
-ENV MINIO_DATA /data/minio
-RUN mkdir -p /go/src/github.com/minio && \
-    curl -L -o /usr/local/bin/minio https://dl.minio.io/server/minio/release/linux-amd64/minio && \
-    chmod +x /usr/local/bin/minio
-
-# Add script pieces for initialising & starting Minio
-RUN echo "mkdir -p ${MINIO_DATA}" >> /usr/local/bin/init.sh && \
-    echo "chown minio:minio ${MINIO_DATA}" >> /usr/local/bin/init.sh && \
-    su - minio -c "echo export MINIO_UPDATE=${MINIO_UPDATE} >> .profile" && \
-    su - minio -c "echo export MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY} >> .profile" && \
-    su - minio -c "echo export MINIO_SECRET_KEY=${MINIO_SECRET_KEY} >> .profile" && \
-    su - dbhub -c "echo export MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY} >> .profile" && \
-    su - dbhub -c "echo export MINIO_SECRET_KEY=${MINIO_SECRET_KEY} >> .profile" && \
-    echo "su - minio -c '/usr/local/bin/minio server ${MINIO_DATA} &'" >> /usr/local/bin/start.sh
-
-### DBHub.io
+### DBHub.io (initial dir creation only)
 
 # Create directores for the DBHub daemons
 RUN mkdir -p /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue && \
     chown -R dbhub:dbhub /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue && \
     chmod 700 /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue
+
+### Other pieces
+
+# Config file
+ENV CONFIG_FILE /go/src/github.com/sqlitebrowser/dbhub.io/docker/config.toml
+
+# Add script pieces for starting DBHub.io services
+RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui &'" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-db4s &'" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-api'" >> /usr/local/bin/start.sh
+
+### Minio (download the server executable)
+
+# Download the latest Minio binary
+RUN curl -L -o /usr/local/bin/minio https://dl.minio.io/server/minio/release/linux-amd64/minio && \
+    chmod +x /usr/local/bin/minio
 
 # Build the DBHub.io daemons
 RUN mkdir -p /go/src/github.com/sqlitebrowser && \
@@ -84,19 +101,5 @@ RUN mkdir -p /go/src/github.com/sqlitebrowser && \
     go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-db4s github.com/sqlitebrowser/dbhub.io/db4s && \
     go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-webui github.com/sqlitebrowser/dbhub.io/webui
 
-### Other pieces
-
-# Config file
-ENV CONFIG_FILE /go/src/github.com/sqlitebrowser/dbhub.io/docker/config.toml
-
-# Add script pieces for starting DBHub.io services
-RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/local/bin/start.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui &'" >> /usr/local/bin/start.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-db4s &'" >> /usr/local/bin/start.sh
-
-# 2021-06-21 JC Commented out for now, as they _might_ no longer be useful
-# Make Minio webUI (9000), DBHub.io webUI (8443), and the DB4S end point (5550)
-# ports available outside this container
-#EXPOSE 8443 5550 9000
-
-#VOLUME /data
+# Initialise everything
+RUN /usr/local/bin/init.sh
