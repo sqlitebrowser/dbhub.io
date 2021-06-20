@@ -1,13 +1,14 @@
 ## Description
 
-This is an in-development all-in-one docker image for local development
-of the DBHub.io daemons, or development of DB Browser for SQLite's (DB4S)
-communication with those daemons.
+This is a docker image for running the DBHub.io daemons, so we can test PR's
+automatically.  And eventually, probably automatically test DB4S communication
+with them too.
 
-It includes the two DBHub.io daemons:
+It includes the three DBHub.io daemons:
 
 * The webUI, listening on port 8080
 * The DB4S end point (the daemon DB Browser for SQLite talks to) on port 5550
+* The REST API end point, listening on port 8444
 
 ...and the dependencies for the daemons:
 
@@ -15,9 +16,8 @@ It includes the two DBHub.io daemons:
 * Memcached
 * Minio
 
-This is done as an all-in-one image - which should work with all local docker
-deployments - instead of as separate services, purely because it should be
-easier to maintain this way. :)
+This is done as an all-in-one image for now.  It _might_ be broken into
+separate services per damon, but that'll be a later thing (if needed).
 
 
 ## How to use
