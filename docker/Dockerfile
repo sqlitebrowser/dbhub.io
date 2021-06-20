@@ -1,5 +1,5 @@
 # vim:set ft=dockerfile:
-FROM alpine:3.8
+FROM alpine:3.14
 
 LABEL maintainer="Justin Clift <justin@postgresql.org>"
 
@@ -70,11 +70,6 @@ RUN echo "mkdir -p ${MINIO_DATA}" >> /usr/local/bin/init.sh && \
 
 ### DBHub.io
 
-# Install dep
-ENV GOPATH /go
-RUN mkdir -p /go/bin && \
-    curl -L https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-
 # Create directores for the DBHub daemons
 RUN mkdir -p /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue && \
     chown -R dbhub:dbhub /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue && \
@@ -85,15 +80,11 @@ RUN mkdir -p /go/src/github.com/sqlitebrowser && \
     cd /go/src/github.com/sqlitebrowser && \
     git clone https://github.com/sqlitebrowser/dbhub.io && \
     cd /go/src/github.com/sqlitebrowser/dbhub.io &&  \
-    /go/bin/dep ensure && \
-    go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-webui github.com/sqlitebrowser/dbhub.io/webui && \
-    go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-db4s github.com/sqlitebrowser/dbhub.io/db4s
+    go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-api github.com/sqlitebrowser/dbhub.io/api && \
+    go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-db4s github.com/sqlitebrowser/dbhub.io/db4s && \
+    go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-webui github.com/sqlitebrowser/dbhub.io/webui
 
 ### Other pieces
-
-# Delve (for debugging)
-RUN apk add --no-cache libc6-compat
-RUN go get github.com/derekparker/delve/cmd/dlv
 
 # Config file
 ENV CONFIG_FILE /go/src/github.com/sqlitebrowser/dbhub.io/docker/config.toml
@@ -103,8 +94,9 @@ RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/l
     echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui &'" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-db4s &'" >> /usr/local/bin/start.sh
 
-# Make Delve (40000), Minio webUI (9000), DBHub.io webUI (8443), and the DB4S end point (5550)
+# 2021-06-21 JC Commented out for now, as they _might_ no longer be useful
+# Make Minio webUI (9000), DBHub.io webUI (8443), and the DB4S end point (5550)
 # ports available outside this container
-EXPOSE 8443 5550 9000 40000
+#EXPOSE 8443 5550 9000
 
-VOLUME /data
+#VOLUME /data

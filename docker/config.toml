@@ -54,8 +54,11 @@ request_log = "/var/log/dbhub/request.log"
 session_store_password = "example"
 
 [api]
+base_dir = "/go/src/github.com/sqlitebrowser/dbhub.io"
 bind_address = ":8444"
 server_name = "docker-dev.dbhub.io:8444"
 certificate = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/docker-dev.dbhub.io.cert.pem"
 certificate_key = "/go/src/github.com/sqlitebrowser/dbhub.io/docker/certs/docker-dev.dbhub.io.key.pem"
 request_log = "/var/log/dbhub/api_request.log"
+session_store_password = "example2"
+website_name = "DBHub.io"
