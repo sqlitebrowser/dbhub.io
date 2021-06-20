@@ -51,8 +51,8 @@ RUN addgroup minio && \
 
 # Install Minio
 ENV MINIO_UPDATE off
-ENV MINIO_ACCESS_KEY minio
-ENV MINIO_SECRET_KEY minio123
+ENV MINIO_ROOT_USER minio
+ENV MINIO_ROOT_PASSWORD minio123
 ENV MINIO_DATA /data/minio
 RUN mkdir -p /go/src/github.com/minio && \
     curl -L -o /usr/local/bin/minio https://dl.minio.io/server/minio/release/linux-amd64/minio && \
