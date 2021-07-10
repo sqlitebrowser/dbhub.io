@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 10.12
--- Dumped by pg_dump version 10.12
+-- Dumped from database version 12.6
+-- Dumped by pg_dump version 12.6
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -17,6 +17,20 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: jsquery; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS jsquery WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION jsquery; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION jsquery IS 'data type for jsonb inspection';
+
+
+--
 -- Name: permissions; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -26,23 +40,9 @@ CREATE TYPE public.permissions AS ENUM (
 );
 
 
---
--- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
-
-
---
--- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
-
-
 SET default_tablespace = '';
 
-SET default_with_oids = false;
+SET default_table_access_method = heap;
 
 --
 -- Name: api_keys; Type: TABLE; Schema: public; Owner: -
@@ -73,6 +73,18 @@ CREATE SEQUENCE public.api_keys_key_id_seq
 --
 
 ALTER SEQUENCE public.api_keys_key_id_seq OWNED BY public.api_keys.key_id;
+
+
+--
+-- Name: api_permissions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.api_permissions (
+    key_id bigint,
+    user_id bigint,
+    db_id bigint,
+    permissions jsonb
+);
 
 
 --
@@ -135,7 +147,7 @@ CREATE TABLE public.database_licences (
     display_order integer,
     lic_id integer NOT NULL,
     full_name text,
-    file_format text DEFAULT 'text'::text NOT NULL
+    file_format text
 );
 
 
@@ -654,6 +666,14 @@ ALTER TABLE ONLY public.vis_query_runs ALTER COLUMN query_run_id SET DEFAULT nex
 
 
 --
+-- Name: api_keys api_keys_key_id; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT api_keys_key_id UNIQUE (key_id);
+
+
+--
 -- Name: api_keys api_keys_pk; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -960,6 +980,30 @@ CREATE INDEX watchers_db_id_idx ON public.watchers USING btree (db_id);
 
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: api_permissions api_permissions_api_keys_key_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_permissions
+    ADD CONSTRAINT api_permissions_api_keys_key_id_fk FOREIGN KEY (key_id) REFERENCES public.api_keys(key_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: api_permissions api_permissions_sqlite_databases_db_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_permissions
+    ADD CONSTRAINT api_permissions_sqlite_databases_db_id_fk FOREIGN KEY (db_id) REFERENCES public.sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: api_permissions api_permissions_users_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_permissions
+    ADD CONSTRAINT api_permissions_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
