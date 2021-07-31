@@ -7,6 +7,9 @@ github.com/Freeaqingme/dkim
 # github.com/NYTimes/gziphandler v1.1.1
 ## explicit
 github.com/NYTimes/gziphandler
+# github.com/aymerick/douceur v0.2.0
+github.com/aymerick/douceur/css
+github.com/aymerick/douceur/parser
 # github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 ## explicit
 github.com/bradfitz/gomemcache/memcache
@@ -32,6 +35,8 @@ github.com/golang/protobuf/proto
 # github.com/google/uuid v1.1.1
 ## explicit
 github.com/google/uuid
+# github.com/gorilla/css v1.0.0
+github.com/gorilla/css/scanner
 # github.com/gorilla/securecookie v1.1.1
 github.com/gorilla/securecookie
 # github.com/gorilla/sessions v1.2.0
@@ -68,9 +73,10 @@ github.com/leodido/go-urn
 ## explicit
 # github.com/memcachier/mc v2.0.1+incompatible
 ## explicit
-# github.com/microcosm-cc/bluemonday v1.0.2
+# github.com/microcosm-cc/bluemonday v1.0.15
 ## explicit
 github.com/microcosm-cc/bluemonday
+github.com/microcosm-cc/bluemonday/css
 # github.com/minio/minio-go v6.0.14+incompatible
 ## explicit
 github.com/minio/minio-go
@@ -139,8 +145,7 @@ golang.org/x/crypto/argon2
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
-# golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
-## explicit
+# golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -152,12 +157,11 @@ golang.org/x/net/publicsuffix
 ## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20200519105757-fe76b779f299
-## explicit
+# golang.org/x/sys v0.0.0-20210423082822-04245dca01da
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.6
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
