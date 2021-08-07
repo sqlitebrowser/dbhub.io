@@ -46,6 +46,8 @@ const (
 type SchemaDiff struct {
 	ActionType DiffType `json:"action_type"`
 	Sql        string   `json:"sql,omitempty"`
+	Before     string   `json:"before"`
+	After      string   `json:"after"`
 }
 
 // DataDiff stores a single change in the data of a table, i.e. a single new, deleted, or changed row
@@ -208,7 +210,7 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, me
 
 	// Check for dropped object
 	if sqlInMain != "" && sqlInAux == "" {
-		diff.Schema = &SchemaDiff{ActionType: ActionDelete}
+		diff.Schema = &SchemaDiff{ActionType: ActionDelete, Before: sqlInMain}
 		if merge != NoMerge {
 			diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";"
 		}
@@ -228,7 +230,7 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, me
 
 	// Check for added object
 	if sqlInMain == "" && sqlInAux != "" {
-		diff.Schema = &SchemaDiff{ActionType: ActionAdd}
+		diff.Schema = &SchemaDiff{ActionType: ActionAdd, After: sqlInAux}
 		if merge != NoMerge {
 			diff.Schema.Sql = sqlInAux + ";"
 		}
@@ -247,7 +249,7 @@ func diffSingleObject(sdb *sqlite.Conn, objectName string, objectType string, me
 
 	// Check for modified object
 	if sqlInMain != "" && sqlInAux != "" && sqlInMain != sqlInAux {
-		diff.Schema = &SchemaDiff{ActionType: ActionModify}
+		diff.Schema = &SchemaDiff{ActionType: ActionModify, Before: sqlInMain, After: sqlInAux}
 		if merge != NoMerge {
 			diff.Schema.Sql = "DROP " + strings.ToUpper(objectType) + " " + EscapeId(objectName) + ";" + sqlInAux + ";"
 		}

@@ -27,14 +27,18 @@
                         </td>
                         <td style="border-style: none;">
                             <div class="pull-left" style="padding-top: 6px;">
-                                <span ng-if="row.schema != null && row.schema.action_type=='add'" style="font-weight: bold;">
-                                    Created {{ row.object_type }}<br />
+                                <span ng-if="row.schema != null && row.schema.action_type=='add'">
+                                    <span style="font-weight: bold;">Created {{ row.object_type }}</span><br />
+                                    <span style="background-color: #e6ffed;">{{ row.schema.after }}</span><br/>
                                 </span>
-                                <span ng-if="row.schema != null && row.schema.action_type=='delete'" style="font-weight: bold;">
-                                    Dropped {{ row.object_type }}<br />
+                                <span ng-if="row.schema != null && row.schema.action_type=='delete'">
+                                    <span style="font-weight: bold;">Dropped {{ row.object_type }}</span><br />
+                                    <span style="background-color: #fdb8c0;">{{ row.schema.before }}</span><br/>
                                 </span>
-                                <span ng-if="row.schema != null && row.schema.action_type=='modify'" style="font-weight: bold;">
-                                    Schema changed<br />
+                                <span ng-if="row.schema != null && row.schema.action_type=='modify'">
+                                    <span style="font-weight: bold;">Schema changed</span><br />
+                                    <span style="background-color: #fdb8c0;">{{ row.schema.before }}</span><br/>
+                                    <span style="background-color: #e6ffed;">{{ row.schema.after }}</span><br/>
                                 </span>
                                 <span ng-if="row.data.length">{{ row.data.length }} rows changed:</span>
                             </div>
