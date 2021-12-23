@@ -5,7 +5,6 @@ github.com/Freeaqingme/dkim v0.0.0-20160606200812-57418d2fbdcd h1:OXAdgeC8/sNLxo
 github.com/Freeaqingme/dkim v0.0.0-20160606200812-57418d2fbdcd/go.mod h1:2jaO1ZDxGuwzrfRhIe1QKvws/FY3SJ9f1EMNLQLTa0g=
 github.com/NYTimes/gziphandler v1.1.1 h1:ZUDjpQae29j0ryrS0u/B8HZfJBtBQHjqw2rQ2cqUQ3I=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
-github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
 github.com/aymerick/douceur v0.2.0 h1:Mv+mAeH1Q+n9Fr+oyamOlAkUNPWPlA8PPGR0QAaYuPk=
 github.com/aymerick/douceur v0.2.0/go.mod h1:wlT5vV2O3h55X9m7iVYN0TBM0NH/MmbLnd30/FjWUq4=
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 h1:DDGfHa7BWjL4YnC6+E63dPcxHo2sUxDIu8g3QgEJdRY=
@@ -88,8 +87,8 @@ github.com/mattn/go-isatty v0.0.12 h1:wuysRhFDzyxgEmMf5xjvJ2M9dZoWAXNNr5LSBS7uHX
 github.com/mattn/go-isatty v0.0.12/go.mod h1:cbi8OIDigv2wuxKPP5vlRcQ1OAZbq2CE4Kysco4FUpU=
 github.com/memcachier/mc v2.0.1+incompatible h1:s8EDz0xrJLP8goitwZOoq1vA/sm0fPS4X3KAF0nyhWQ=
 github.com/memcachier/mc v2.0.1+incompatible/go.mod h1:7bkvFE61leUBvXz+yxsOnGBQSZpBSPIMUQSmmSHvuXc=
-github.com/microcosm-cc/bluemonday v1.0.15 h1:J4uN+qPng9rvkBZBoBb8YGR+ijuklIMpSOZZLjYpbeY=
-github.com/microcosm-cc/bluemonday v1.0.15/go.mod h1:ZLvAzeakRwrGnzQEvstVzVt3ZpqOF2+sdFr0Om+ce30=
+github.com/microcosm-cc/bluemonday v1.0.16 h1:kHmAq2t7WPWLjiGvzKa5o3HzSfahUKiOq7fAPUiMNIc=
+github.com/microcosm-cc/bluemonday v1.0.16/go.mod h1:Z0r70sCuXHig8YpBzCc5eGHAap2K7e/u082ZUpDRRqM=
 github.com/minio/minio-go v6.0.14+incompatible h1:fnV+GD28LeqdN6vT2XdGKW8Qe/IfjJDswNVuni6km9o=
 github.com/minio/minio-go v6.0.14+incompatible/go.mod h1:7guKYtitv8dktvNUGrhzmNlA5wrAABTQXCoesZdFQO8=
 github.com/mitchellh/go-homedir v1.1.0 h1:lukF9ziXFxDFPkA1vsr5zpc1XuPDn/wFntq5mG+4E0Y=

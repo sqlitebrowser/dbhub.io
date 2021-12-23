@@ -32,7 +32,7 @@ require (
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/memcachier/mc v2.0.1+incompatible // indirect
-	github.com/microcosm-cc/bluemonday v1.0.15 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.16 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pborman/uuid v1.2.0 // indirect
