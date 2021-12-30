@@ -1503,7 +1503,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// General error display page.
+// General error display page
 func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string) {
 	var pageData struct {
 		Auth0   com.Auth0Set
@@ -1514,9 +1514,11 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 	pageData.Meta.Title = "Error"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
+	_, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		// We can't use errorPage() here, as it can lead to a recursive loop (which crashes)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, `<html><head><title>Internal Server Error</title></head><body>Internal Server Error</body></html>`)
 		return
 	}
 
