@@ -41,6 +41,16 @@
                 </table>
             </form>
 
+            <hr />
+
+            <h3 style="text-align: center;"><a href="https://sqlitebrowser.org/" target="_blank">DB4S Integration</a></h3>
+            <div style="text-align: center; font-style: italic; font-size: large;">This is needed for easily making changes to your uploaded databases.</div>
+            <div style="text-align: center;">
+                <input type="submit" class="btn btn-primary" value="Generate new client certificate" ng-click="genCert()">
+            </div>
+
+            <hr />
+
             <h3 style="text-align: center;"><a href="https://api.dbhub.io" target="_blank">API keys</a></h3>
             <div style="text-align: center; font-style: italic; font-size: large;">(In early development, but you're welcome to use it.)</div>
             <table class="table table-striped table-responsive settingsTable" style="margin-bottom: 20px;">
@@ -100,6 +110,11 @@
         } else {
             $scope.EmailAddr = "[[ .Email ]]";
         }
+
+        // Generate new client certificate
+        $scope.genCert = function() {
+            window.location = '/x/gencert'
+        };
 
         // Auth0
         let lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
