@@ -80,7 +80,7 @@
             [[ else ]]
                 <b>Visibility:</b> {{ meta.Public }} &nbsp;
             [[ end ]]
-            <b>Commit:</b> {{ meta.CommitID | limitTo: 8 }} &nbsp;
+            <b>Last Commit:</b> {{ meta.CommitID | limitTo: 8 }} ({{ getTimePeriodTxt(meta.RepoModified, false) }}) &nbsp;
             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                 <b>Licence:</b> <a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">{{ meta.Licence }}</a> &nbsp;
             [[ else ]]

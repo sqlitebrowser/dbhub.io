@@ -1,16 +1,17 @@
 [[ define "script_headerdatabase" ]]
 
-$scope.meta["CommitID"]    = "[[ .DB.Info.CommitID ]]";
-$scope.meta["Discussions"] = "[[ .DB.Info.Discussions ]]";
-$scope.meta["Forks"]       = "[[ .DB.Info.Forks ]]";
-$scope.meta["Licence"]     = "[[ .DB.Info.Licence ]]";
-$scope.meta["LicenceURL"]  = "[[ .DB.Info.LicenceURL ]]";
-$scope.meta["MRs"]         = "[[ .DB.Info.MRs ]]";
-$scope.meta["MyStar"]      = "[[ .MyStar ]]";
-$scope.meta["MyWatch"]     = "[[ .MyWatch ]]";
-$scope.meta["Size"]        = "[[ .DB.Info.DBEntry.Size ]]";
-$scope.meta["Stars"]       = "[[ .DB.Info.Stars ]]";
-$scope.meta["Watchers"]    = "[[ .DB.Info.Watchers ]]";
+$scope.meta["CommitID"]      = "[[ .DB.Info.CommitID ]]";
+$scope.meta["Discussions"]   = "[[ .DB.Info.Discussions ]]";
+$scope.meta["Forks"]         = "[[ .DB.Info.Forks ]]";
+$scope.meta["Licence"]       = "[[ .DB.Info.Licence ]]";
+$scope.meta["LicenceURL"]    = "[[ .DB.Info.LicenceURL ]]";
+$scope.meta["MRs"]           = "[[ .DB.Info.MRs ]]";
+$scope.meta["MyStar"]        = "[[ .MyStar ]]";
+$scope.meta["MyWatch"]       = "[[ .MyWatch ]]";
+$scope.meta["RepoModified"]  = [[ .DB.Info.RepoModified ]];
+$scope.meta["Size"]          = "[[ .DB.Info.DBEntry.Size ]]";
+$scope.meta["Stars"]         = "[[ .DB.Info.Stars ]]";
+$scope.meta["Watchers"]      = "[[ .DB.Info.Watchers ]]";
 
 // Set the displayed public/private value
 if ("[[ .DB.Info.Public ]]" == "true") {
@@ -120,4 +121,10 @@ $scope.updateWatchersText();
 $scope.watchersPage = function() {
     window.location = "/watchers/[[ .Meta.Owner ]]/[[ .Meta.Database ]]"
 };
+
+// Returns a nicely presented "time elapsed" string
+$scope.getTimePeriodTxt = function(date1, includeOn) {
+	return getTimePeriod(date1, includeOn)
+};
+
 [[ end ]]
