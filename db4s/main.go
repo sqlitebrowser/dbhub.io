@@ -212,7 +212,7 @@ func generateDefaultList(pageName string, userAcc string) (defaultList []byte, e
 	userList, err = com.DB4SDefaultList(userAcc)
 	if err != nil {
 		// Return an empty set
-		return []byte{'{', '}'}, err
+		return []byte{'[', ']'}, err
 	}
 
 	// Ready the data for JSON Marshalling
@@ -244,7 +244,7 @@ func generateDefaultList(pageName string, userAcc string) (defaultList []byte, e
 		}
 	} else {
 		// Return an empty set indicator, instead of "null"
-		defaultList = []byte{'{', '}'}
+		defaultList = []byte{'[', ']'}
 	}
 	return defaultList, nil
 }
@@ -1019,7 +1019,7 @@ func userDatabaseList(userAcc string, user string) (dbList []byte, err error) {
 		dbList = msg.Bytes()
 	} else {
 		// Return an empty set indicator, instead of "null"
-		dbList = []byte{'{', '}'}
+		dbList = []byte{'[', ']'}
 	}
 	return dbList, nil
 }
