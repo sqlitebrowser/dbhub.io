@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "cypress": "^12.3.0",
+    "yarn": "^1.22.19"
+  },
+  "name": "dbhub.io",
+  "version": "0.5.0",
+  "description": "A cloud for SQLite databases, with special integration for DB Browser for SQLite",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'tbd'",
+    "cypress:test": "echo 'tbd'",
+    "start": "echo 'tbd'"
+  },
+  "engines": {
+    "node": "^14.21.2",
+    "yarn": "^1.22.19"
+  },
+  "repository": "https://github.com/sqlitebrowser/dbhub.io",
+  "author": "Justin Clift <justin@postgresql.org>",
+  "license": "AGPL-3.0-or-later",
+  "private": false
+}
