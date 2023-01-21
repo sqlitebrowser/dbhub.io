@@ -93,7 +93,7 @@ RUN curl -L -o /usr/local/bin/minio https://dl.minio.io/server/minio/release/lin
     chmod +x /usr/local/bin/minio
 
 # Build the DBHub.io daemons
-RUN cd / && git clone --branch cypress-v2 --depth 5 https://github.com/sqlitebrowser/dbhub.io
+RUN cd / && git clone --branch master --depth 5 https://github.com/sqlitebrowser/dbhub.io
 RUN cd /dbhub.io/api && go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-api . && \
     cd /dbhub.io/db4s && go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-db4s . && \
     cd /dbhub.io/webui && go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-webui .
