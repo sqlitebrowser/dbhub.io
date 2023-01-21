@@ -1,0 +1,59 @@
+#!/bin/sh
+
+# Useful variables
+DEST=${PWD}/local
+PKG_CONFIG_PATH=${DEST}/lib/pkgconfig
+GOBIN=${DEST}/bin
+
+# If this script is passed an argument of "clean", then delete the
+# locally compiled pieces
+if [ "$1" = "clean" ]; then
+  echo "Removing local SQLite and compiled DBHub.io executables"
+  rm -rf ${DEST} other/cache
+  exit
+fi
+
+# Builds a local SQLite
+if [ ! -e "${DEST}/lib/libsqlite3.so" ]; then
+  if [ ! -d "other/cache" ]; then
+    mkdir -p other/cache
+  fi
+  cd other/cache
+  if [ ! -f sqlite-autoconf-3400100.tar.gz ]; then
+    echo "Downloading SQLite source code"
+    curl -sOL https://sqlite.org/2022/sqlite-autoconf-3400100.tar.gz
+  fi
+  if [ ! -f sqlite-autoconf-3400100.tar.gz ]; then
+    echo "Downloading the SQLite source code did not work"
+    exit 1
+  fi
+  echo "Compiling local SQLite"
+  tar xfz sqlite-autoconf-3400100.tar.gz
+  cd sqlite-autoconf-3400100
+  ./configure --prefix=${DEST} --enable-dynamic-extensions=no
+  make
+  make install
+  cd ..
+  rm -rf sqlite-autoconf-3400100
+  cd ../..
+fi
+
+# Builds the Go binaries
+if [ ! -x "${GOBIN}/api" ]; then
+  echo "Compiling DBHub.io API executable"
+  cd api
+  go install .
+  cd ..
+fi
+if [ ! -x "${GOBIN}/db4s" ]; then
+  echo "Compiling DBHub.io DB4S API executable"
+  cd db4s
+  go install .
+  cd ..
+fi
+if [ ! -x "${GOBIN}/webui" ]; then
+  echo "Compiling DBHub.io web User Interface executable"
+  cd webui
+  go install .
+  cd ..
+fi

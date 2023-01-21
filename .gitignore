@@ -6,6 +6,8 @@
 # Folders
 _obj
 _test
+local
+other/cache
 
 # Architecture specific extensions/prefixes
 *.[568vq]
@@ -31,5 +33,6 @@ _testmain.go
 
 # DBHub.io generated files
 request.log
+api/api
 db4s/db4s
 webui/webui
