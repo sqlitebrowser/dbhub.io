@@ -31,7 +31,7 @@ if [ ! -e "${DEST}/lib/libsqlite3.so" ]; then
   tar xfz sqlite-autoconf-3400100.tar.gz
   cd sqlite-autoconf-3400100
   ./configure --prefix=${DEST} --enable-dynamic-extensions=no
-  make
+  make -j9
   make install
   cd ..
   rm -rf sqlite-autoconf-3400100
