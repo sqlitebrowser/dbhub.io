@@ -3,7 +3,7 @@
 # Useful variables
 DEST=${PWD}/local
 PKG_CONFIG_PATH=${DEST}/lib/pkgconfig
-GOBIN=${DEST}/bin
+export GOBIN=${DEST}/bin
 
 # If this script is passed an argument of "clean", then delete the
 # locally compiled pieces
