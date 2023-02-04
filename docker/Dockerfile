@@ -13,6 +13,9 @@ RUN  \
 RUN addgroup dbhub && \
     adduser -D -S -s /bin/ash -G dbhub dbhub
 
+# Location of the DBHub.io source code
+ENV DBHUB_SOURCE /dbhub.io
+
 ### Memcached
 
 # Generate script for starting Memcached
@@ -31,10 +34,12 @@ ENV MINIO_ROOT_USER minio
 ENV MINIO_ROOT_PASSWORD minio123
 ENV MINIO_DATA /data/minio
 
-# Add script pieces for initialising & starting Minio
-RUN echo "mkdir -p ${MINIO_DATA}" >> /usr/local/bin/init.sh && \
-    echo "chown minio:minio ${MINIO_DATA}" >> /usr/local/bin/init.sh && \
-    su - minio -c "echo export MINIO_UPDATE=${MINIO_UPDATE} >> .profile" && \
+# Create Minio data directory
+RUN mkdir -p ${MINIO_DATA}
+RUN chown minio:minio ${MINIO_DATA}
+
+# Create Minio user .profile and startup script
+RUN su - minio -c "echo export MINIO_UPDATE=${MINIO_UPDATE} >> .profile" && \
     su - minio -c "echo export MINIO_ROOT_USER=${MINIO_ROOT_USER} >> .profile" && \
     su - minio -c "echo export MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD} >> .profile" && \
     su - dbhub -c "echo export MINIO_ROOT_USER=${MINIO_ROOT_USER} >> .profile" && \
@@ -46,6 +51,7 @@ RUN echo "mkdir -p ${MINIO_DATA}" >> /usr/local/bin/init.sh && \
 # Create PostgreSQL directories
 ENV PGDATA /data/postgresql
 RUN su - postgres -c "echo export PGDATA=${PGDATA} >> .profile"
+RUN su - postgres -c "echo export DBHUB_SOURCE=${DBHUB_SOURCE} >> .profile"
 RUN mkdir -p "$PGDATA" && \
     chown -R postgres:postgres "$PGDATA" && \
     chmod 777 "$PGDATA" # this 777 will be replaced by 700 at runtime (allows semi-arbitrary "--user" values)
@@ -60,7 +66,7 @@ RUN echo "mkdir -p ${PGDATA}" >> /usr/local/bin/init.sh && \
     echo "su - postgres -c 'pg_ctl -D ${PGDATA} start'" >> /usr/local/bin/init.sh && \
     echo "su - postgres -c 'createuser -d dbhub'" >> /usr/local/bin/init.sh && \
     echo "su - postgres -c 'createdb -O dbhub dbhub'" >> /usr/local/bin/init.sh && \
-    echo "su - dbhub -c 'psql dbhub < /dbhub.io/database/dbhub.sql'" >> /usr/local/bin/init.sh && \
+    echo "su - dbhub -c 'psql dbhub < /${DBHUB_SOURCE}/database/dbhub.sql'" >> /usr/local/bin/init.sh && \
     echo "su - postgres -c 'pg_ctl -D ${PGDATA} stop'" >> /usr/local/bin/init.sh && \
     echo "su - postgres -c 'pg_ctl -D ${PGDATA} start'" >> /usr/local/bin/start.sh && \
     chmod +x /usr/local/bin/init.sh
@@ -78,25 +84,47 @@ RUN mkdir -p /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue &
 ### Other pieces
 
 # Config file
-ENV CONFIG_FILE /dbhub.io/docker/config.toml
+ENV CONFIG_FILE ${DBHUB_SOURCE}/docker/config.toml
 
-# Add script pieces for starting DBHub.io services
-RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/local/bin/start.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui &'" >> /usr/local/bin/start.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-db4s &'" >> /usr/local/bin/start.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-api'" >> /usr/local/bin/start.sh
-
-### Minio (download the server executable)
-
-# Download the latest Minio binary
+# Download the latest Minio server binary
 RUN curl -L -o /usr/local/bin/minio https://dl.minio.io/server/minio/release/linux-amd64/minio && \
     chmod +x /usr/local/bin/minio
 
+# Add script pieces for starting DBHub.io services
+# Note that we only background the webui and api daemons.  The db4s daemon is left running, to prevent start.sh from exiting
+RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui &'" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-api &'" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-db4s'" >> /usr/local/bin/start.sh
+
+# Create script to compile DBHub.io daemons
+RUN echo "cd ${DBHUB_SOURCE}/api" >> /usr/local/bin/compile.sh && \
+    echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-api ." >> /usr/local/bin/compile.sh && \
+    echo "cd ${DBHUB_SOURCE}/db4s" >> /usr/local/bin/compile.sh && \
+    echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-db4s ." >> /usr/local/bin/compile.sh && \
+    echo "cd ${DBHUB_SOURCE}/webui" >> /usr/local/bin/compile.sh && \
+    echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-webui ." >> /usr/local/bin/compile.sh && \
+    chmod +x /usr/local/bin/compile.sh
+
+# Create script to restart the DBHub.io webui and api daemons
+RUN echo "# Kill the existing running daemons" >> /usr/local/bin/restart.sh && \
+    echo "pkill dbhub-webui" >> /usr/local/bin/restart.sh && \
+    echo "pkill dbhub-api" >> /usr/local/bin/restart.sh && \
+    echo "" >> /usr/local/bin/restart.sh && \
+    echo "# Restart the daemons" >> /usr/local/bin/restart.sh && \
+    echo "chmod o+w /dev/console" >> /usr/local/bin/restart.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 | tail -F /home/dbhub/output.log > /dev/console &'" >> /usr/local/bin/restart.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
+    echo "" >> /usr/local/bin/restart.sh && \
+    echo "# Delay long enough for the DBHub.io daemons to start" >> /usr/local/bin/restart.sh && \
+    echo "sleep 1" >> /usr/local/bin/restart.sh && \
+    chmod +x /usr/local/bin/restart.sh
+
 # Build the DBHub.io daemons
 RUN cd / && git clone --branch master --depth 5 https://github.com/sqlitebrowser/dbhub.io
-RUN cd /dbhub.io/api && go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-api . && \
-    cd /dbhub.io/db4s && go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-db4s . && \
-    cd /dbhub.io/webui && go build -gcflags "all=-N -l" -o /usr/local/bin/dbhub-webui .
+VOLUME ${DBHUB_SOURCE}
+RUN /usr/local/bin/compile.sh
 
-# Initialise everything
-RUN /usr/local/bin/init.sh
+# Initialise PostgreSQL and Minio
+WORKDIR /usr/local/bin
+RUN init.sh

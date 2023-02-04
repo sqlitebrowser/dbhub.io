@@ -8,9 +8,22 @@
   "description": "A cloud for SQLite databases, with special integration for DB Browser for SQLite",
   "main": "index.js",
   "scripts": {
-    "build": "echo 'tbd'",
-    "cypress:test": "echo 'tbd'",
-    "start": "echo 'tbd'"
+    "build": "./build_dbhub.sh",
+    "clean": "./build_dbhub.sh clean",
+    "cypress:install": "./node_modules/.bin/cypress install",
+    "cypress:open": "./node_modules/.bin/cypress open",
+    "cypress:test": "./node_modules/.bin/cypress run",
+    "docker:attach": "docker attach dbhub-build",
+    "docker:build": "docker build --tag dbhub-build docker",
+    "docker:exec": "docker exec -it dbhub-build /bin/sh",
+    "docker:psql": "docker exec -it dbhub-build psql -U postgres dbhub",
+    "docker:recompile": "docker exec -it dbhub-build /bin/sh /usr/local/bin/compile.sh",
+    "docker:restart": "docker exec -it dbhub-build /bin/sh /usr/local/bin/restart.sh",
+    "docker:start": "docker run -itd --rm --name dbhub-build -p 9443:9443/tcp -p 9444:9444/tcp dbhub-build:latest",
+    "docker:startlive": "docker run -it --rm --name dbhub-build -p 9443:9443/tcp -p 9444:9444/tcp dbhub-build:latest",
+    "docker:startlocal": "docker run -itd --rm --name dbhub-build -p 9443:9443/tcp -p 9444:9444/tcp --mount type=bind,src=\"$(pwd)\",target=/dbhub.io dbhub-build:latest",
+    "docker:stop": "docker container stop dbhub-build",
+    "docker:tail": "docker exec -it dbhub-build tail -F /home/dbhub/output.log"
   },
   "engines": {
     "node": "^14.21.2",
