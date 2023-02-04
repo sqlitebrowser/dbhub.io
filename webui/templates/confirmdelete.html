@@ -12,7 +12,7 @@
         <div class="col-md-10">
             <div style="text-align: center;">
                 <h2>[[ .Meta.Title ]]</h2>
-                <h3 style="color: red;">Are you sure you want to delete  [[ .Meta.Owner ]]/[[ .Meta.Database ]]?</h3>
+                <h3 style="color: red;">Are you sure you want to delete [[ .Meta.Owner ]]/[[ .Meta.Database ]]?</h3>
                 <h3>There is no "undo" if you proceed.</h3>
                 <br />
 
@@ -24,8 +24,8 @@
                     </div>
                 </div>
 
-                <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelDelete()">
-                <input type="submit" class="btn btn-danger" value="Yes, delete it" ng-click="deleteDatabase()">
+                <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelDelete()" data-cy="cancelbtn">
+                <input type="submit" class="btn btn-danger" value="Yes, delete it" ng-click="deleteDatabase()" data-cy="confirmbtn">
             </div>
             <br /><br />
         </div>
@@ -36,7 +36,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('confirmDeleteView', function($scope, $http, $httpParamSerializerJQLike) {
 
         // Handler for the cancel button.  Just bounces back to the database settings page
@@ -58,8 +58,8 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // If successful, reload the page
-                var status = response.status;
-                if (status == 200) {
+                let status = response.status;
+                if (status === 200) {
                     window.location = '/[[ .Meta.Owner ]]';
                 }
             }, function failure(response) {
@@ -68,13 +68,16 @@
             });
         };
 
-        // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
     });
 </script>
 </body>

@@ -2805,6 +2805,98 @@ func RenameDatabase(userName, dbFolder, dbName, newName string) error {
 	return nil
 }
 
+// ResetDB resets the database to its default state. eg for testing purposes
+func ResetDB() error {
+	// We probably don't want to drop the database itself, as that'd screw up the current database
+	// connection.  Instead, lets truncate all the tables then load their default values
+	tableNames := []string{
+		"api_keys",
+		"database_downloads",
+		"database_files",
+		"database_licences",
+		"database_shares",
+		"database_stars",
+		"database_uploads",
+		"db4s_connects",
+		"discussion_comments",
+		"discussions",
+		"email_queue",
+		"events",
+		"sqlite_databases",
+		"users",
+		"vis_params",
+		"vis_query_runs",
+		"vis_result_cache",
+		"watchers",
+	}
+
+	sequenceNames := []string{
+		"api_keys_key_id_seq",
+		"database_downloads_dl_id_seq",
+		"database_licences_lic_id_seq",
+		"database_uploads_up_id_seq",
+		"db4s_connects_connect_id_seq",
+		"discussion_comments_com_id_seq",
+		"discussions_disc_id_seq",
+		"email_queue_email_id_seq",
+		"events_event_id_seq",
+		"sqlite_databases_db_id_seq",
+		"users_user_id_seq",
+		"vis_query_runs_query_run_id_seq",
+	}
+
+	// Begin a transaction
+	tx, err := pdb.Begin()
+	if err != nil {
+		return err
+	}
+	// Set up an automatic transaction roll back if the function exits without committing
+	defer tx.Rollback()
+
+	// Truncate the database tables
+	for _, tbl := range tableNames {
+		// Ugh, string smashing just feels so wrong when working with SQL
+		dbQuery := fmt.Sprintf("TRUNCATE TABLE %v CASCADE", tbl)
+		_, err := pdb.Exec(dbQuery)
+		if err != nil {
+			log.Printf("Error truncating table while resetting database: %v\n", err)
+			return err
+		}
+	}
+
+	// Reset the sequences
+	for _, seq := range sequenceNames {
+		dbQuery := fmt.Sprintf("ALTER SEQUENCE %v RESTART", seq)
+		_, err := pdb.Exec(dbQuery)
+		if err != nil {
+			log.Printf("Error restarting sequence while resetting database: %v\n", err)
+			return err
+		}
+	}
+
+	// Add the default user to the system
+	err = AddDefaultUser()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	// Add the default licences
+	err = AddDefaultLicences()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	// Log the database reset
+	log.Println("Database reset")
+	return nil
+}
+
 // SaveDBSettings saves updated database settings to PostgreSQL
 func SaveDBSettings(userName, dbFolder, dbName, oneLineDesc, fullDesc, defaultTable string, public bool, sourceURL, defaultBranch string) error {
 	// Check for values which should be NULL

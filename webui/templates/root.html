@@ -117,7 +117,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize', 'bootstrapLightbox']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize', 'bootstrapLightbox']);
     app.controller('rootView', function($scope, Lightbox) {
         // Activity stats
         $scope.stats = {
@@ -219,7 +219,7 @@
 
         // Switch to the upload database page
         $scope.uploadForm = function() {
-            if ("[[ .Meta.LoggedInUser ]]" == "") {
+            if ("[[ .Meta.LoggedInUser ]]" === "") {
                 // User needs to be logged in
                 lock.show();
             } else {
@@ -227,13 +227,16 @@
             }
         };
 
-        // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
     });
 </script>
 </body>

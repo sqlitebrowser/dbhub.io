@@ -12,8 +12,8 @@
         <div class="col-md-8">
             <h2 style="text-align: center;">
                 People watching
-                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
-                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                <a class="blackLink" href="/[[ .Meta.Owner ]]" data-cy="ownerlnk">[[ .Meta.Owner ]]</a> /
+                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="dblnk">[[ .Meta.Database ]]</a>
             </h2>
             <table ng-if="watchers.Watchers != ''" class="table table-striped table-responsive profileTable">
                 <tr ng-repeat="row in watchers.Watchers">
@@ -32,7 +32,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
         app.controller('watchersView', function($scope) {
             $scope.watchers = { Watchers: [[ .Watchers ]] }
 
@@ -41,13 +41,16 @@
                 return getTimePeriod(date1, includeOn)
             };
 
-            var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            [[ if eq .Meta.Environment "production" ]]
+            // Only invoke the Auth0 pieces in the production environment
+            const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
                 redirectUrl: "[[ .Auth0.CallbackURL]]"
             }});
 
             $scope.showLock = function() {
                 lock.show();
             };
+            [[ end ]]
         });
 </script>
 </body>

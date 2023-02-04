@@ -352,7 +352,7 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
+	if com.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -461,7 +461,7 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 	// Retrieve session data (if any)
 	var loggedInUser string
 	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
+	if com.Conf.Environment.Environment == "production" {
 		var sess *sessions.Session
 		sess, err = store.Get(r, "dbhub-user")
 		if err != nil {
@@ -543,7 +543,7 @@ func visGet(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
+	if com.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -675,7 +675,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	validSession := false
-	if com.Conf.Environment.Environment != "docker" {
+	if com.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)

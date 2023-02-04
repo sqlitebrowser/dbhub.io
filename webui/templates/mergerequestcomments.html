@@ -234,7 +234,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('mergeRequestCommentsView', function($scope, $http, $httpParamSerializerJQLike) {
         // Pre-filled data
         $scope.meta = {
@@ -272,9 +272,9 @@
 
         // Set up the initial edit/preview pieces for editing comments
         if ($scope.CommentList !== null) {
-            var numComments = $scope.CommentList.length;
-            for (var i = 0; i < numComments; i++) {
-                var comID = $scope.CommentList[i].com_id;
+            let numComments = $scope.CommentList.length;
+            for (let i = 0; i < numComments; i++) {
+                let comID = $scope.CommentList[i].com_id;
                 $scope['comstate' + comID] = "static";
                 $scope['comtext' + comID] = $scope.CommentList[i].body;
                 $scope['combackup' + comID] = $scope.CommentList[i].body;
@@ -285,7 +285,7 @@
         // Add a comment to the merge request
         $scope.addComment = function(alsoClose) {
             // Send the comment text to the server
-            var txt = document.getElementById("comtext").value;
+            let txt = document.getElementById("comtext").value;
             $http({
                 method: "POST",
                 url: "/x/createcomment/",
@@ -335,7 +335,7 @@
 
         // Switch to the create MR page
         $scope.createMR = function() {
-            if ($scope.meta.Loggedin != "true") {
+            if ($scope.meta.Loggedin !== "true") {
                 // User needs to be logged in
                 lock.show();
             } else {
@@ -417,19 +417,19 @@
 
         // Returns the whether a comment should be in static display or edit mode
         $scope.getCommentState = function(comID) {
-            var comState = $scope['comstate' + comID];
+            let comState = $scope['comstate' + comID];
             return comState;
         };
 
         // Returns the updated text for a comment
         $scope.getCommentText = function(comID) {
-            var newComText = $scope['comtext' + comID];
+            let newComText = $scope['comtext' + comID];
             return newComText;
         };
 
         // Returns the rendered text for a comment
         $scope.getCommentTextRendered = function(comID) {
-            var newRender = $scope['comrender' + comID];
+            let newRender = $scope['comrender' + comID];
             return newRender;
         };
 
@@ -437,7 +437,7 @@
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
             // Retrieve latest markdown text from the text area
-            var txt = document.getElementById("comtext").value;
+            let txt = document.getElementById("comtext").value;
 
             // Call the server, asking for a rendered version of the markdown
             $http({
@@ -451,7 +451,7 @@
         // Render markdown preview for a comment edit box
         $scope.getMarkdownCom = function(comID) {
             // Call the server, asking for a rendered version of the markdown
-            var txt = document.getElementById("com" + comID).value;
+            let txt = document.getElementById("com" + comID).value;
             $http({
                 method: "POST",
                 url: "/x/markdownpreview/",
@@ -466,7 +466,7 @@
         $scope.editDiscBodyPreview = "";
         $scope.getMarkdownDisc = function() {
             // Retrieve text from the MR edit area
-            var txt = document.getElementById("disctext").value;
+            let txt = document.getElementById("disctext").value;
 
             // Call the server, asking for a markdown rendered version of the text
             $http({
@@ -512,7 +512,7 @@
 
         // Update the close button label as appropriate for text area content
         $scope.updateCloseButton = function() {
-            var txt = document.getElementById("comtext").value;
+            let txt = document.getElementById("comtext").value;
             if (txt.length > 0) {
                 if ($scope.Disc.open === true) {
                     $scope.closeLabel = "Add comment and close without merging";
@@ -530,7 +530,7 @@
 
         // Send updated comment text to the server
         $scope.updateComment = function(comID) {
-            var txt = document.getElementById("com" + comID).value;
+            let txt = document.getElementById("com" + comID).value;
             $http({
                 method: "POST",
                 url: "/x/updatecomment/",
@@ -563,8 +563,8 @@
         // Send the updated MR values to the server
         $scope.updateDiscussion = function() {
             // Retrieve text from the MR edit area
-            var txt = document.getElementById("disctext").value;
-            var title = document.getElementById("disctitle").value;
+            let txt = document.getElementById("disctext").value;
+            let title = document.getElementById("disctitle").value;
 
             // Send the new MR details to the server
             $http({
@@ -597,14 +597,16 @@
             });
         };
 
-        // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
-
+        [[ end ]]
         [[ template "script_headerdatabase" . ]]
     });
 </script>

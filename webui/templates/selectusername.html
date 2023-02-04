@@ -38,24 +38,27 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('selectusernameView', function($scope, $http) {
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
 
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
 
         $scope.checkMsg = "";
 
         $scope.checkName = function() {
-            var tempName = document.getElementById('username').value;
+            let tempName = document.getElementById('username').value;
             $http.get("/x/checkname?name=" + tempName)
                 .then(function (response) {
-                    var tempval = response.data;
-                    if (tempval != "y") {
+                    let tempval = response.data;
+                    if (tempval !== "y") {
                         $scope.checkMsg = '✘ Name not available';
                         document.getElementById('availtext').style.color = "#FF0000";
                     } else {

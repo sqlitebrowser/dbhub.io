@@ -9,8 +9,8 @@
         <div class="col-md-12">
             <h2 style="text-align: center;">
                 Branches for
-                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
-                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                <a class="blackLink" href="/[[ .Meta.Owner ]]" data-cy="ownerlnk">[[ .Meta.Owner ]]</a> /
+                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="dblnk">[[ .Meta.Database ]]</a>
             </h2>
         </div>
     </div>
@@ -42,18 +42,18 @@
                         <tr ng-repeat-start="row in meta.Branches">
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                 <td style="border-style: none;">
-                                    <button class="btn btn-primary" ng-click="updateBranch(row.name)">Save Changes</button>
+                                    <button class="btn btn-primary" ng-click="updateBranch(row.name)" data-cy="savebtn">Save Changes</button>
                                 </td>
                                 <td style="border-style: none;">
                                     <div>
-                                        <button ng-if="row.name != meta.DefBranch" class="btn btn-primary" ng-click="setDefaultBranch(row.name)">Set Default</button>
+                                        <button ng-if="row.name != meta.DefBranch" class="btn btn-primary" ng-click="setDefaultBranch(row.name)" data-cy="setdefaultbtn">Set Default</button>
                                         <i ng-if="row.name == meta.DefBranch">Default branch</i>
                                     </div>
                                 </td>
                             [[ end ]]
                             <td style="border-style: none;">
                                 [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-                                    <input name="{{ row.name }}_name" id="{{ row.name }}_name" size="20" maxlength="20" value="{{ row.name }}">
+                                    <input name="{{ row.name }}_name" id="{{ row.name }}_name" size="20" maxlength="20" value="{{ row.name }}" data-cy="nameinput">
                                 [[ else ]]
                                     <div style="padding-top: 8px;">
                                         <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ row.name }}">{{ row.name }}</a>
@@ -62,7 +62,7 @@
                             </td>
                             <td style="border-style: none;">
                                 <div style="padding-top: 8px;">
-                                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ row.name }}&commit={{ row.commit }}">{{ row.commit }}</a>
+                                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ row.name }}&commit={{ row.commit }}" data-cy="commitlnk">{{ row.commit }}</a>
                                 </div>
                             </td>
                         </tr>
@@ -70,15 +70,15 @@
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                 <td style="border-style: none;">
                                 <button ng-if="row.name != meta.DefBranch" class="btn btn-default" ng-click="viewChanges(row.commit)">Compare with {{ meta.DefBranch }}</button>
-                                    <button ng-if="row.name != meta.DefBranch" class="btn btn-danger" ng-click="deleteBranch(row.name)">Delete</button>
+                                    <button ng-if="row.name != meta.DefBranch" class="btn btn-danger" ng-click="deleteBranch(row.name)" data-cy="delbtn">Delete</button>
                                 </td>
                                 <td style="border-style: none; padding: 0;" colspan="3">
                                     <uib-tabset>
-                                        <uib-tab index="0" heading="Description" select="getMarkdown(row.name)">
-                                            <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;" id="{{ row.name }}_mkdn"><span ng-bind-html="row.mkdowndesc"></span></div>
+                                        <uib-tab index="0" heading="Description" select="getMarkdown(row.name)" data-cy="renderedtab">
+                                            <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;" id="{{ row.name }}_mkdn"><span ng-bind-html="row.mkdowndesc" data-cy="rendereddiv"></span></div>
                                         </uib-tab>
-                                        <uib-tab index="1" heading="Edit">
-                                            <textarea id="{{ row.name }}_desc" name="{{ row.name }}_desc" rows="10" ng-attr-placeholder="A description for this branch">{{ row.description }}</textarea>
+                                        <uib-tab index="1" heading="Edit" data-cy="edittab">
+                                            <textarea id="{{ row.name }}_desc" name="{{ row.name }}_desc" rows="10" ng-attr-placeholder="A description for this branch" data-cy="desctext">{{ row.description }}</textarea>
                                         </uib-tab>
                                     </uib-tabset>
                                 </td>
@@ -99,7 +99,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('branchesView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
             DefBranch: "[[ .DefaultBranch ]]",
@@ -107,11 +107,11 @@
 
         // Reorder the branches with the default branch first, then the remainder alphabetically
         $scope.unsortedBranches = [[ .Branches ]];
-        var numBranches = $scope.unsortedBranches.length;
+        let numBranches = $scope.unsortedBranches.length;
 
         // Create the list of branch names, for sorting into alphabetical order
-        var nameList = [];
-        for (var i = 0; i < numBranches; i++) {
+        let nameList = [];
+        for (let i = 0; i < numBranches; i++) {
             // Skip the default branch, as we don't want it in the sorted list
             if ($scope.unsortedBranches[i].name !== $scope.meta.DefBranch) {
                 nameList.push($scope.unsortedBranches[i].name);
@@ -119,12 +119,12 @@
         }
 
         // Sort the branch names alphabetically
-        var sortedNames = nameList.sort();
+        let sortedNames = nameList.sort();
 
         // Add the default branch as the first entry to a list of sorted branches.  Put the rest into an array for
         // easy retrieval in the next step
         $scope.meta.Branches = [];
-        var remainingBranches = {};
+        let remainingBranches = {};
         for (i = 0; i < numBranches; i++) {
             if ($scope.unsortedBranches[i].name === $scope.meta.DefBranch) {
                 $scope.meta.Branches.push($scope.unsortedBranches[i]);
@@ -135,7 +135,7 @@
 
         // Add the remaining branch entries to the list, in sorted order
         for (i = 0; i < sortedNames.length; i++) {
-            var nm = sortedNames[i];
+            let nm = sortedNames[i];
             $scope.meta.Branches.push(remainingBranches[nm]);
         }
 
@@ -160,8 +160,8 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // If successful, reload the page
-                var status = response.status;
-                if (status == 200) {
+                let status = response.status;
+                if (status === 200) {
                     window.location = '/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
                 }
             }, function failure(response) {
@@ -177,14 +177,14 @@
 
         // Retrieve and render markdown text
         $scope.getMarkdown = function(rowDesc) {
-            var txtID = document.getElementById(rowDesc + "_desc");
+            let txtID = document.getElementById(rowDesc + "_desc");
             if (txtID === null) {
                 // txtID is null when the page first renders (and we don't need it then anyway).  It's correctly set
                 // afterwards.
                 return;
             }
-            var rawTxt = txtID.value;
-            var mkdnID = document.getElementById(rowDesc + "_mkdn");
+            let rawTxt = txtID.value;
+            let mkdnID = document.getElementById(rowDesc + "_mkdn");
 
             // Call the server, asking for a rendered version of the markdown
             $http({
@@ -215,8 +215,8 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // If successful, reload the page
-                var status = response.status;
-                if (status == 200) {
+                let status = response.status;
+                if (status === 200) {
                     window.location = '/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
                 }
             });
@@ -224,10 +224,10 @@
 
         // Send the update details to the server
         $scope.updateBranch = function(branchName){
-            var descID = document.getElementById(branchName + "_desc");
-            var nameID = document.getElementById(branchName + "_name");
-            var newDesc = descID.value;
-            var newName = nameID.value;
+            let descID = document.getElementById(branchName + "_desc");
+            let nameID = document.getElementById(branchName + "_name");
+            let newDesc = descID.value;
+            let newName = nameID.value;
             $http({
                 method: "POST",
                 url: "/x/updatebranch/",
@@ -242,8 +242,8 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // If the update succeeded, let the user know
-                var status = response.status;
-                if (status == 200) {
+                let status = response.status;
+                if (status === 200) {
                     $scope.statusMessageColour = "Green";
                     $scope.statusMessage = "Branch Updated";
                 }
@@ -254,13 +254,16 @@
             });
         };
 
-        // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
     });
 </script>
 </body>

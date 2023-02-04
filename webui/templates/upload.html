@@ -102,22 +102,22 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('uploadView', function($scope, $http, $httpParamSerializerJQLike) {
         // Sort the licence list into the desired display order
-        var rawLicences = [[ .Licences ]];
-        var numLicences = [[ .NumLicences ]];
-        var numList = [];
-        for (var lic in rawLicences) {
+        let rawLicences = [[ .Licences ]];
+        let numLicences = [[ .NumLicences ]];
+        let numList = [];
+        for (let lic in rawLicences) {
             numList.push(rawLicences[lic]["order"]);
         }
-        var sortedNums = numList.sort();
-        var i = 0;
+        let sortedNums = numList.sort();
+        let i = 0;
         $scope.Licences = [];
         while (i < numLicences) {
-            for (var lic in rawLicences) {
-                if (sortedNums[i] == rawLicences[lic]["order"]) {
-                    var l = {name: lic, url: rawLicences[lic]["url"]};
+            for (let lic in rawLicences) {
+                if (sortedNums[i] === rawLicences[lic]["order"]) {
+                    let l = {name: lic, url: rawLicences[lic]["url"]};
                     $scope.Licences.push(l);
                     i++;
                 }
@@ -134,7 +134,7 @@
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
             // Retrieve latest markdown text from the text area
-            var txt = document.getElementById("commitmsg").value;
+            let txt = document.getElementById("commitmsg").value;
 
             // Call the server, asking for a rendered version of the markdown
             $http({
@@ -156,13 +156,16 @@
             }
         };
 
-        // Auth0 pieces
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
     });
 </script>
 </body>

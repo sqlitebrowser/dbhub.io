@@ -351,13 +351,14 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err error) {
 	// Retrieve session data (if any)
 	var u interface{}
-	if com.Conf.Environment.Environment != "docker" {
+	if com.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			return "", false, err
 		}
 		u = sess.Values["UserName"]
 	} else {
+		// Non-production environments (eg dev, test) can directly set the logged in user
 		u = com.Conf.Environment.UserOverride
 	}
 	if u != nil {
@@ -440,6 +441,7 @@ func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool,
 		meta.Database = dbName
 		meta.Owner = usr.Username
 		meta.Folder = "/"
+		meta.Environment = com.Conf.Environment.Environment
 
 		// Retrieve the "forked from" information
 		meta.ForkOwner, meta.ForkFolder, meta.ForkDatabase, meta.ForkDeleted, err = com.ForkedFrom(meta.Owner, meta.Folder, meta.Database)
@@ -2982,7 +2984,7 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 			loggedInUser = "-"
 		}
 
-		if com.Conf.Environment.Environment == "docker" {
+		if com.Conf.Environment.Environment != "production" {
 			loggedInUser = "default"
 		}
 
@@ -3137,6 +3139,11 @@ func main() {
 	http.Handle("/x/vissave/", gz.GzipHandler(logReq(visSave)))
 	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
+	// Add a route for test runs to reset the database to a known state
+	if com.Conf.Environment.Environment == "test" {
+		http.Handle("/x/test/seed", gz.GzipHandler(logReq(com.CypressSeed)))
+	}
+
 	// CSS
 	http.Handle("/css/bootstrap-3.3.7.min.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "bootstrap-3.3.7.min.css"))
@@ -3192,12 +3199,6 @@ func main() {
 	})))
 	http.Handle("/js/local.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "local.js"))
-	})))
-	http.Handle("/js/lock-11.24.1.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-11.24.1.min.js"))
-	})))
-	http.Handle("/js/lock.min.js.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "lock-11.24.1.min.js.map"))
 	})))
 
 	http.Handle("/js/plotly-1.53.0.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {

@@ -18,8 +18,8 @@
     <div class="row" style="margin-bottom: 10px">
         <div class="col-md-12">
             <div class="dropdown">
-                <button class="btn btn-success" ng-click="uploadForm()">Upload database</button>
-                <button class="btn btn-primary" ng-click="genCert()">Generate client certificate</button>
+                <button class="btn btn-success" ng-click="uploadForm()" data-cy="uploadbtn">Upload database</button>
+                <button class="btn btn-primary" ng-click="genCert()" data-cy="gencertbtn">Generate client certificate</button>
             </div>
         </div>
     </div>
@@ -30,36 +30,36 @@
                 <h3 style="display: inline; vertical-align: middle;">Public databases</h3>
             </div>
             <div class="pull-right" style="padding-bottom: 8px;">
-                <button type="button" class="btn btn-default" ng-click="toggleCollapsedPub()">{{ titleCollapsedPub }}</button>
+                <button type="button" class="btn btn-default" ng-click="toggleCollapsedPub()" data-cy="pubexpand">{{ titleCollapsedPub }}</button>
             </div>
             [[ if .PublicDBs ]]
-                <table class="table table-striped table-responsive profileTable">
+                <table class="table table-striped table-responsive profileTable" data-cy="pubdbs">
                     <tr ng-repeat="row in pubdb.Databases">
                         <td><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
                             {{ row.OneLineDesc }}
                             <div uib-collapse="isCollapsedPub" style="padding-top: 5px;">
                                 <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
                                 <b>Updated:</b> <span title="{{ row.RepoModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.RepoModified, false) }}</span> &nbsp;
-                                <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
+                                <b>Size:</b><span> {{ row.Size / 1024 | number : 0 }} KB &nbsp;</span>
                                 <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }} &nbsp;</a>
                                 <b>Discussions:</b> <a class="blackLink" href="/discuss/{{ meta.Owner + '/' + row.Database }}">{{ row. Discussions }}</a><br />
-                                <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
+                                <b>Commit ID:</b><span> {{ row.CommitID | limitTo: 8 }} &nbsp;</span>
                                 <b>Licence:</b> <a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}">{{ row.Licence }}</a> &nbsp;
-                                <b>Watchers:</b> {{ row.Watchers }} &nbsp;
+                                <b>Watchers:</b><span> {{ row.Watchers }} &nbsp;</span>
                                 <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
                                 <br />
                                 <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
-                                <b>MRs:</b> {{ row.MRs }} &nbsp;
+                                <b>MRs:</b><span> {{ row.MRs }} &nbsp;</span>
                                 <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
                                 <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
                                 <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
-                                <b>Downloads:</b> {{ row.Downloads }} &nbsp; <b>Views:</b> {{ row.Views }} &nbsp;
+                                <b>Downloads:</b><span> {{ row.Downloads }} &nbsp; </span><b>Views:</b><span> {{ row.Views }} &nbsp;</span>
                             </div>
                         </td>
                     </tr>
                 </table>
             [[ else ]]
-                <table class="table table-striped table-responsive profileTable">
+                <table class="table table-striped table-responsive profileTable" data-cy="pubdbs">
                     <tr>
                         <td>
                             <h4>No public databases yet</h4>
@@ -73,36 +73,36 @@
                 <h3 style="display: inline; vertical-align: middle;">Private databases</h3>
             </div>
             <div class="pull-right" style="padding-bottom: 8px;">
-                <button type="button" class="btn btn-default" ng-click="toggleCollapsedPriv()">{{ titleCollapsedPriv }}</button>
+                <button type="button" class="btn btn-default" ng-click="toggleCollapsedPriv()" data-cy="privexpand">{{ titleCollapsedPriv }}</button>
             </div>
             [[ if .PrivateDBs ]]
-                <table class="table table-striped table-responsive profileTable">
+                <table class="table table-striped table-responsive profileTable" data-cy="privdbs">
                     <tr ng-repeat="row in privdb.Databases">
                         <td><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner + '/' + row.Database }}">{{ row.Database }}</a></h4>
                             {{ row.OneLineDesc }}
                             <div uib-collapse="isCollapsedPriv" style="padding-top: 5px;">
                                 <span ng-if="row.SourceURL != ''"><b>Source:</b> <a class="blackLink" href="{{ row.SourceURL }}" ng-bind="row.SourceURL"></a><br /></span>
                                 <b>Updated:</b> <span title="{{ row.RepoModified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.RepoModified, false) }}</span> &nbsp;
-                                <b>Size:</b> {{ row.Size / 1024 | number : 0 }} KB &nbsp;
+                                <b>Size:</b><span> {{ row.Size / 1024 | number : 0 }} KB &nbsp;</span>
                                 <b>Contributors:</b> <a class="blackLink" href="/contributors/{{ meta.Owner }}/{{ row.Database }}">{{ row.Contributors }}</a> &nbsp;
                                 <b>Discussions:</b> <a class="blackLink" href="/discuss/{{ meta.Owner + '/' + row.Database }}">{{ row. Discussions }}</a><br />
-                                <b>Commit ID:</b> {{ row.CommitID | limitTo: 8 }} &nbsp;
+                                <b>Commit ID:</b><span> {{ row.CommitID | limitTo: 8 }} &nbsp;</span>
                                 <b>Licence:</b> <a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.Database }}">{{ row.Licence }}</a> &nbsp;
-                                <b>Watchers:</b> {{ row.Watchers }} &nbsp;
+                                <b>Watchers:</b><span> {{ row.Watchers }} &nbsp;</span>
                                 <b>Stars:</b> <a class="blackLink" href="/stars/{{ meta.Owner + '/' + row.Database }}">{{ row.Stars }}</a> &nbsp;
                                 <br />
                                 <b>Forks:</b> <a class="blackLink" href="/forks/{{ meta.Owner + '/' + row.Database }}">{{ row.Forks }}</a> &nbsp;
-                                <b>MRs:</b> {{ row.MRs }} &nbsp;
+                                <b>MRs:</b><span> {{ row.MRs }} &nbsp;</span>
                                 <b>Branches:</b> <a class="blackLink" href="/branches/{{ meta.Owner + '/' + row.Database }}">{{ row.Branches }}</a> &nbsp;
                                 <b>Releases:</b> <a class="blackLink" href="/releases/{{ meta.Owner + '/' + row.Database }}">{{ row.Releases }}</a> &nbsp;
                                 <b>Tags:</b> <a class="blackLink" href="/tags/{{ meta.Owner + '/' + row.Database }}">{{ row.Tags }}</a> &nbsp;
-                                <b>Downloads:</b> {{ row.Downloads }} &nbsp; <b>Views:</b> {{ row.Views }} &nbsp;
+                                <b>Downloads:</b><span> {{ row.Downloads }} &nbsp; <b>Views:</b> {{ row.Views }} &nbsp;</span>
                             </div>
                         </td>
                     </tr>
                 </table>
             [[ else ]]
-                <table class="table table-striped table-responsive profileTable">
+                <table class="table table-striped table-responsive profileTable" data-cy="privdbs">
                     <tr>
                         <td>
                             <h4>No private databases yet</h4>
@@ -122,7 +122,7 @@
                 <button type="button" class="btn btn-default" ng-click="toggleCollapsedStar()">{{ titleCollapsedStar }}</button>
             </div>
             [[ if .Stars ]]
-                <table class="table table-striped table-responsive profileTable">
+                <table class="table table-striped table-responsive profileTable" data-cy="stars">
                     <tr ng-repeat="row in stars.Stars">
                         <td>
                             <h4>
@@ -136,7 +136,7 @@
                     </tr>
                 </table>
             [[ else ]]
-                <table class="table table-striped table-responsive profileTable">
+                <table class="table table-striped table-responsive profileTable" data-cy="stars">
                     <tr>
                         <td>
                             <h4>No starred databases yet</h4>
@@ -153,7 +153,7 @@
                 <button type="button" class="btn btn-default" ng-click="toggleCollapsedWatch()">{{ titleCollapsedWatch }}</button>
             </div>
             [[ if .Watching ]]
-                <table class="table table-striped table-responsive profileTable">
+                <table class="table table-striped table-responsive profileTable" data-cy="watches">
                     <tr ng-repeat="row in watching">
                         <td>
                             <h4>
@@ -167,7 +167,7 @@
                     </tr>
                 </table>
             [[ else ]]
-                <table class="table table-striped table-responsive profileTable">
+                <table class="table table-striped table-responsive profileTable" data-cy="watches">
                     <tr>
                         <td>
                             <h4>Not watching any databases yet</h4>
@@ -181,7 +181,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('profileView', function($scope) {
         $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
         $scope.pubdb = { Databases: [[ .PublicDBs ]] };
@@ -254,14 +254,16 @@
             window.location = '/x/gencert'
         };
 
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
 
         $scope.showLock = function() {
             lock.show();
         };
-
+        [[ end ]]
     });
 </script>
 </body>

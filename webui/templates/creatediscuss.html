@@ -55,7 +55,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('createDiscussionView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
             [[ if .Meta.LoggedInUser ]]
@@ -74,7 +74,7 @@
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
             // Retrieve latest markdown text from the text area
-            var txt = document.getElementById("disctxt").value;
+            let txt = document.getElementById("disctxt").value;
 
             // Call the server, asking for a rendered version of the markdown
             $http({
@@ -85,14 +85,16 @@
             }).then(function (response) { $scope.markDownPreview = response.data; });
         };
 
-        // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
-
+        [[ end ]]
         [[ template "script_headerdatabase" . ]]
     });
 </script>

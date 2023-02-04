@@ -16,11 +16,11 @@
                 <table class="table table-striped table-responsive settingsTable">
                     <tr>
                         <th width="25%">Full Name</th>
-                        <td><input name="fullname" style="width: 100%;" value="{{ FullName }}" ng-attr-placeholder="{{ NamePlaceholder }}" maxlength="80"></td>
+                        <td><input name="fullname" style="width: 100%;" value="{{ FullName }}" ng-attr-placeholder="{{ NamePlaceholder }}" maxlength="80" data-cy="fullname"></td>
                     </tr>
                     <tr>
                         <th>Email address</th>
-                        <td><input name="email" style="width: 100%;" value="{{ EmailAddr }}" ng-attr-placeholder="{{ EmailPlaceholder }}" maxlength="80"><br />
+                        <td><input name="email" style="width: 100%;" value="{{ EmailAddr }}" ng-attr-placeholder="{{ EmailPlaceholder }}" maxlength="80" data-cy="email"><br />
                             <i>If you don't want to use your real email address, use
                                 "[[ .Meta.LoggedInUser ]]@[[ .Meta.Server ]]".</i></td>
                     </tr>
@@ -29,12 +29,12 @@
                 <table class="table table-striped table-responsive settingsTable" style="margin-bottom: 20px;">
                     <tr>
                         <th>Maximum number of database rows to display</th>
-                        <td><input type="number" name="maxrows" value="[[ .MaxRows ]]" min="1" max="500"></td>
+                        <td><input type="number" name="maxrows" value="[[ .MaxRows ]]" min="1" max="500" data-cy="numrows"></td>
                     </tr>
                     <tr>
                         <td style="border-left: none;" colspan="2">
                             <div style="text-align: center;">
-                                <input type="submit" class="btn btn-primary" value="Update">
+                                <input type="submit" class="btn btn-primary" value="Update" data-cy="updatebtn">
                             </div>
                         </td>
                     </tr>
@@ -46,14 +46,14 @@
             <h3 style="text-align: center;"><a href="https://sqlitebrowser.org/" target="_blank">DB4S Integration</a></h3>
             <div style="text-align: center; font-style: italic; font-size: large;">This is needed for easily making changes to your uploaded databases.</div>
             <div style="text-align: center;">
-                <input type="submit" class="btn btn-primary" value="Generate new client certificate" ng-click="genCert()">
+                <input type="submit" class="btn btn-primary" value="Generate new client certificate" ng-click="genCert()" data-cy="gencertbtn">
             </div>
 
             <hr />
 
             <h3 style="text-align: center;"><a href="https://api.dbhub.io" target="_blank">API keys</a></h3>
             <div style="text-align: center; font-style: italic; font-size: large;">(In early development, but you're welcome to use it.)</div>
-            <table class="table table-striped table-responsive settingsTable" style="margin-bottom: 20px;">
+            <table class="table table-striped table-responsive settingsTable" style="margin-bottom: 20px;" data-cy="apikeystbl">
                 <tr>
                     <th>Key</th>
                     <th>Generation date</th>
@@ -75,7 +75,7 @@
                             </div>
                         </div>
                         <div style="text-align: center;">
-                            <input type="submit" class="btn btn-primary" value="Generate new API key" ng-click="apiKeyGen()">
+                            <input type="submit" class="btn btn-primary" value="Generate new API key" ng-click="apiKeyGen()" data-cy="genapibtn">
                         </div>
                     </td>
                 </tr>
@@ -88,7 +88,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
         // API Keys
         $scope.apiKeys = [[ .APIKeys ]];
@@ -96,7 +96,7 @@
         // If the supplied display name is blank, we set a placeholder value instead
         $scope.FullName = "";
         $scope.NamePlaceholder = "";
-        if ("[[ .DisplayName ]]" == "") {
+        if ("[[ .DisplayName ]]" === "") {
             $scope.NamePlaceholder = "Jane Doe";
         } else {
             $scope.FullName = "[[ .DisplayName ]]";
@@ -105,7 +105,7 @@
         // Same thing, but for email address
         $scope.EmailAddr = "";
         $scope.EmailPlaceholder = "";
-        if ("[[ .Email ]]" == "") {
+        if ("[[ .Email ]]" === "") {
             $scope.EmailPlaceholder = "[[ .Meta.LoggedInUser ]]@[[ .Meta.Server ]]";
         } else {
             $scope.EmailAddr = "[[ .Email ]]";
@@ -116,14 +116,16 @@
             window.location = '/x/gencert'
         };
 
-        // Auth0
-        let lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
 
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
 
         // Generate a new API key
         $scope.statusMessage = "";

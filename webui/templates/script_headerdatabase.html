@@ -14,7 +14,7 @@ $scope.meta["Stars"]         = "[[ .DB.Info.Stars ]]";
 $scope.meta["Watchers"]      = "[[ .DB.Info.Watchers ]]";
 
 // Set the displayed public/private value
-if ("[[ .DB.Info.Public ]]" == "true") {
+if ("[[ .DB.Info.Public ]]" === "true") {
     $scope.meta["Public"] = "Public";
 } else {
     $scope.meta["Public"] = "Private";
@@ -23,14 +23,14 @@ if ("[[ .DB.Info.Public ]]" == "true") {
 // Fork the database
 $scope.forkDB = function() {
     // Check if the user is logged in
-    if ($scope.meta.Loggedin != "true") {
+    if ($scope.meta.Loggedin !== "true") {
         // User needs to be logged in
         lock.show();
         return;
     }
 
     // Only proceed if the database being forked doesn't already belong to the user
-    if ("[[ .Meta.LoggedInUser ]]" != "[[ .Meta.Owner ]]") {
+    if ("[[ .Meta.LoggedInUser ]]" !== "[[ .Meta.Owner ]]") {
         // Call the fork database code, which should bounce us to the forked database
         window.location = "/x/forkdb/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]";
     }
@@ -48,16 +48,16 @@ $scope.starsPage = function() {
 
 // Sends the user to the login page (if not logged in), else toggles starring of the database for the user
 $scope.toggleStars = function() {
-    if ($scope.meta.Loggedin != "true") {
+    if ($scope.meta.Loggedin !== "true") {
         // User needs to be logged in
         lock.show();
     } else {
         $http.get("/x/star/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
             .then(function (response) {
-                var tempval = response.data;
-                if (tempval != "-1") {
+                let tempval = response.data;
+                if (tempval !== "-1") {
                     // Update star button text
-                    if ($scope.meta.MyStar != "true") {
+                    if ($scope.meta.MyStar !== "true") {
                         $scope.meta.MyStar = "true";
                     } else {
                         $scope.meta.MyStar = "false";
@@ -73,7 +73,7 @@ $scope.toggleStars = function() {
 
 // Turns on watching for a database
 $scope.toggleWatchers = function() {
-    if ($scope.meta.Loggedin != "true") {
+    if ($scope.meta.Loggedin !== "true") {
         // User needs to be logged in
         lock.show();
         return;
@@ -83,7 +83,7 @@ $scope.toggleWatchers = function() {
     $http.get("/x/watch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]")
         .then(function (response) {
             // Update watch button text
-            if ($scope.meta.MyWatch != "true") {
+            if ($scope.meta.MyWatch !== "true") {
                 $scope.meta.MyWatch = "true";
             } else {
                 $scope.meta.MyWatch = "false";
@@ -98,7 +98,7 @@ $scope.toggleWatchers = function() {
 // Update star button text to say "Stars" or "Unstar"
 $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
 $scope.updateStarsText = function() {
-    if ($scope.meta.MyStar != "true") {
+    if ($scope.meta.MyStar !== "true") {
         $scope.starsText = "<i class=\"fa fa-star\"></i> Star";
     } else {
         $scope.starsText = "<i class=\"fa fa-star\"></i> Unstar";
@@ -109,7 +109,7 @@ $scope.updateStarsText();
 // Update watchers button text to say "Watch" or "Unwatch"
 $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
 $scope.updateWatchersText = function() {
-    if ($scope.meta.MyWatch != "true") {
+    if ($scope.meta.MyWatch !== "true") {
         $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
     } else {
         $scope.watchersText = "<i class=\"fa fa-eye\"></i> Unwatch";

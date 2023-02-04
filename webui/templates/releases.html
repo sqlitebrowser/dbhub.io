@@ -9,8 +9,8 @@
         <div class="col-md-12">
             <h2 style="text-align: center;">
                 Releases for
-                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
-                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                <a class="blackLink" href="/[[ .Meta.Owner ]]" data-cy="ownerlnk">[[ .Meta.Owner ]]</a> /
+                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="dblnk">[[ .Meta.Database ]]</a>
             </h2>
         </div>
     </div>
@@ -45,10 +45,10 @@
                         </td>
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <td style="border: none; border-left: 1px solid #DDD; padding: 10px;">
-                                <button class="btn btn-primary" ng-click="updateRelease(key)">Update</button>
+                                <button class="btn btn-primary" ng-click="updateRelease(key)" data-cy="updatebtn">Update</button>
                             </td>
                             <td style="border: none;">
-                                <input name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}">
+                                <input name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}" data-cy="nameinput">
                             </td>
                         [[ else ]]
                             <td style="border: none; border-left: 1px solid #DDD;">
@@ -60,14 +60,14 @@
                         <td style="border: none;">
                             <div style="padding-top: 4px;">
                                 <img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="28" width="28" style="border: 1px solid #8c8c8c;"/>
-                                <a class="blackLink" href="/{{ row.releaser_user_name }}" style="vertical-align: middle;">{{ row.releaser_display_name }}</a></div>
+                                <a class="blackLink" href="/{{ row.releaser_user_name }}" style="vertical-align: middle;" data-cy="releaserlnk">{{ row.releaser_display_name }}</a></div>
                         </td>
                         <td style="border: none;">
                             <div style="padding-top: 8px;" title="{{ row.date | date : 'medium' }}">{{ getTimePeriodTxt(row.date, false) }}</div>
                         </td>
                         <td style="border: none; border-right: 1px solid #DDD;">
                             <div style="padding-top: 8px;">
-                                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}">{{ row.commit }}</a>
+                                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}" data-cy="commitlnk">{{ row.commit }}</a>
                             </div>
                         </td>
                     </tr>
@@ -77,7 +77,7 @@
                         </td>
                         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <td style="border: 1px solid #DDD; border-top: none; border-right: none;">
-                                <button class="btn btn-primary" ng-click="deleteRelease(key)">Delete</button>
+                                <button class="btn btn-primary" ng-click="deleteRelease(key)" data-cy="delbtn">Delete</button>
                             </td>
                             <td style="border: 1px solid #DDD; border-left: none; border-top: none; padding: 0;" colspan="4">
                         [[ else ]]
@@ -85,11 +85,11 @@
                         [[ end ]]
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                             <uib-tabset>
-                                <uib-tab index="0" heading="Description" select="getMarkdown(key)">
-                                    <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;"><span ng-bind-html="RelRendered[key]"></span></div>
+                                <uib-tab index="0" heading="Description" select="getMarkdown(key)" data-cy="renderedtab">
+                                    <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;"><span ng-bind-html="RelRendered[key]" data-cy="rendereddiv"></span></div>
                                 </uib-tab>
-                                <uib-tab index="1" heading="Edit">
-                                    <textarea rows="10" ng-attr-placeholder="A description for this release" ng-model="RelText[key]"></textarea>
+                                <uib-tab index="1" heading="Edit" data-cy="edittab">
+                                    <textarea rows="10" ng-attr-placeholder="A description for this release" ng-model="RelText[key]" data-cy="desctext"></textarea>
                                 </uib-tab>
                             </uib-tabset>
                             [[ else ]]
@@ -99,13 +99,13 @@
                     </tr>
                 </tbody>
             </table>
-            <div ng-if="numRels == 0" style="text-align: center; padding-bottom: 10px;"><h3>This database doesn't have any releases yet</h3></div>
+            <div ng-if="numRels == 0" style="text-align: center; padding-bottom: 10px;" data-cy="norelstxt"><h3>This database doesn't have any releases yet</h3></div>
         </div>
     </div>
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('releasesView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.Releases = [[ .ReleaseList ]];
 
@@ -144,8 +144,8 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // If successful, reload the page
-                var status = response.status;
-                if (status == 200) {
+                let status = response.status;
+                if (status === 200) {
                     window.location = '/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
                 }
             });
@@ -175,8 +175,8 @@
 
         // Send the update details to the server
         $scope.updateRelease = function(relName){
-            var nameID = document.getElementById(relName + "_name");
-            var newName = nameID.value;
+            let nameID = document.getElementById(relName + "_name");
+            let newName = nameID.value;
             $http({
                 method: "POST",
                 url: "/x/updaterelease/",
@@ -191,8 +191,8 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // Upon return, indicate success or failure
-                var status = response.status;
-                if (status == 200) {
+                let status = response.status;
+                if (status === 200) {
                     $scope.statusMessageColour = "Green";
                     $scope.statusMessage = "Release updated";
                 } else {
@@ -206,13 +206,16 @@
             });
         };
 
-        // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
     });
 </script>
 </body>

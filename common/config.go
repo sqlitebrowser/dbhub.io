@@ -93,10 +93,10 @@ func ReadConfig() error {
 	if Conf.Minio.Server == "" {
 		missingConfig = append(missingConfig, "Minio server:port string")
 	}
-	if Conf.Minio.AccessKey == "" && Conf.Environment.Environment != "docker" {
+	if Conf.Minio.AccessKey == "" && Conf.Environment.Environment == "production" {
 		missingConfig = append(missingConfig, "Minio access key string")
 	}
-	if Conf.Minio.Secret == "" && Conf.Environment.Environment != "docker" {
+	if Conf.Minio.Secret == "" && Conf.Environment.Environment == "production" {
 		missingConfig = append(missingConfig, "Minio secret string")
 	}
 	if Conf.Pg.Server == "" {
@@ -170,6 +170,12 @@ func ReadConfig() error {
 	}
 
 	// TODO: Add environment variable overrides for memcached
+
+	// Environment variable override for non-production logged-in user
+	tempString = os.Getenv("DBHUB_USERNAME")
+	if tempString != "" {
+		Conf.Environment.UserOverride = tempString
+	}
 
 	// The configuration file seems good
 	return nil

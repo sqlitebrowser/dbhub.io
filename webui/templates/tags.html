@@ -9,8 +9,8 @@
         <div class="col-md-12">
             <h2 style="text-align: center;">
                 Tags for
-                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
-                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                <a class="blackLink" href="/[[ .Meta.Owner ]]" data-cy="ownerlnk">[[ .Meta.Owner ]]</a> /
+                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="dblnk">[[ .Meta.Database ]]</a>
             </h2>
         </div>
     </div>
@@ -37,10 +37,10 @@
                         <tr ng-repeat-start="(key, row) in Tags" style="border-style: none;">
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                 <td style="border-style: none;">
-                                    <button class="btn btn-primary" ng-click="updateTag(key)">Update</button>
+                                    <button class="btn btn-primary" ng-click="updateTag(key)" data-cy="updatebtn">Update</button>
                                 </td>
                                 <td style="border-style: none;">
-                                    <input name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}">
+                                    <input name="{{ key }}_name" id="{{ key }}_name" size="20" maxlength="20" value="{{ key }}" data-cy="nameinput">
                                 </td>
                             [[ else ]]
                                 <td style="border-style: none;">
@@ -52,31 +52,31 @@
                             <td style="border-style: none;">
                                 <div style="padding-top: 4px;">
                                     <img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="28" width="28" style="border: 1px solid #8c8c8c;"/>
-                                    <a class="blackLink" href="/{{ row.tagger_user_name }}" style="vertical-align: middle;">{{ row.tagger_display_name }}</a></div>
+                                    <a class="blackLink" href="/{{ row.tagger_user_name }}" style="vertical-align: middle;" data-cy="taggerlnk">{{ row.tagger_display_name }}</a></div>
                             </td>
                             <td style="border-style: none;">
                                 <div style="padding-top: 8px;" title="{{ row.date | date : 'medium' }}">{{ getTimePeriodTxt(row.date, false) }}</div>
                             </td>
                             <td style="border-style: none;">
                                 <div style="padding-top: 8px;">
-                                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}">{{ row.commit }}</a>
+                                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}" data-cy="commitlnk">{{ row.commit }}</a>
                                 </div>
                             </td>
                         </tr>
                         <tr ng-repeat-end class="tableRow">
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                 <td style="border-style: none;">
-                                    <button class="btn btn-primary" ng-click="deleteTag(key)">Delete</button>
+                                    <button class="btn btn-primary" ng-click="deleteTag(key)" data-cy="delbtn">Delete</button>
                                 </td>
                             [[ end ]]
                             <td style="border-style: none; padding: 0;" colspan="4">
                                 [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                     <uib-tabset>
-                                        <uib-tab index="0" heading="Description" select="getMarkdown(key)">
-                                            <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;"><span ng-bind-html="TagRendered[key]"></span></div>
+                                        <uib-tab index="0" heading="Description" select="getMarkdown(key)" data-cy="renderedtab">
+                                            <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;"><span ng-bind-html="TagRendered[key]" data-cy="rendereddiv"></span></div>
                                         </uib-tab>
-                                        <uib-tab index="1" heading="Edit">
-                                            <textarea rows="10" ng-attr-placeholder="A description for this tag" ng-model="TagText[key]"></textarea>
+                                        <uib-tab index="1" heading="Edit" data-cy="edittab">
+                                            <textarea rows="10" ng-attr-placeholder="A description for this tag" ng-model="TagText[key]" data-cy="desctext"></textarea>
                                         </uib-tab>
                                     </uib-tabset>
                                 [[ else ]]
@@ -87,13 +87,13 @@
                     </tbody>
                 </table>
             </div>
-            <div ng-if="numTags == 0" style="text-align: center; padding-bottom: 10px;"><h3>This database doesn't have any tags yet</h3></div>
+            <div ng-if="numTags == 0" style="text-align: center; padding-bottom: 10px;" data-cy="notagstxt"><h3>This database doesn't have any tags yet</h3></div>
         </div>
     </div>
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('tagsView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.Tags = [[ .TagList ]];
 
@@ -132,8 +132,8 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // If successful, reload the page
-                var status = response.status;
-                if (status == 200) {
+                let status = response.status;
+                if (status === 200) {
                     window.location = '/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
                 }
             });
@@ -163,8 +163,8 @@
 
         // Send the update details to the server
         $scope.updateTag = function(tagName) {
-            var nameID = document.getElementById(tagName + "_name");
-            var newName = nameID.value;
+            let nameID = document.getElementById(tagName + "_name");
+            let newName = nameID.value;
             $http({
                 method: "POST",
                 url: "/x/updatetag/",
@@ -179,8 +179,8 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // Upon return, indicate success or failure
-                var status = response.status;
-                if (status == 200) {
+                let status = response.status;
+                if (status === 200) {
                     $scope.statusMessageColour = "Green";
                     $scope.statusMessage = "Tag updated";
                 } else {
@@ -194,13 +194,16 @@
             });
         };
 
-        // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
     });
 </script>
 </body>

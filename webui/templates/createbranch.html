@@ -17,7 +17,7 @@
                     <tr>
                         <th style="vertical-align: middle;" width="25%">Name for the new branch:</th>
                         <td>
-                            <input type="text" id="branch" name="branch" size="50" maxlength="80"/>
+                            <input type="text" id="branch" name="branch" size="50" maxlength="80" data-cy="nameinput"/>
                         </td>
                     </tr>
                     <tr>
@@ -27,13 +27,13 @@
                         <td>
                             <div>
                                 <uib-tabset active="active">
-                                    <uib-tab index="0">
+                                    <uib-tab index="0" data-cy="edittab">
                                         <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                        <textarea id="branchdesc" name="branchdesc" rows="10" ng-attr-placeholder="A description for this branch"></textarea>
+                                        <textarea id="branchdesc" name="branchdesc" rows="10" ng-attr-placeholder="A description for this branch" data-cy="desctext"></textarea>
                                     </uib-tab>
-                                    <uib-tab index="1" select="getMarkdown()">
+                                    <uib-tab index="1" select="getMarkdown()" data-cy="previewtab">
                                         <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
-                                        <div class="rendered minHeight" ng-bind-html="markDownPreview"></div>
+                                        <div class="rendered minHeight" ng-bind-html="markDownPreview" data-cy="previewdiv"></div>
                                     </uib-tab>
                                 </uib-tabset>
                             </div>
@@ -45,7 +45,7 @@
                                 <input type="hidden" name="commit" value="[[ .Commit ]]">
                                 <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
                                 <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
-                                <input type="submit" class="btn btn-success" value="Create it">
+                                <input type="submit" class="btn btn-success" value="Create it" data-cy="createbtn">
                             </div>
                         </td>
                     </tr>
@@ -59,13 +59,13 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('createbranchView', function($scope, $http, $httpParamSerializerJQLike) {
         // Get rendered markdown from the server, for display in the Commit Message preview tab
         $scope.markDownPreview = "";
         $scope.getMarkdown = function() {
             // Retrieve latest markdown text from the text area
-            var txt = document.getElementById("branchdesc").value;
+            let txt = document.getElementById("branchdesc").value;
 
             // Call the server, asking for a rendered version of the markdown
             $http({
@@ -76,13 +76,16 @@
             }).then(function (response) { $scope.markDownPreview = response.data; });
         };
 
-        // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
-            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+                redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
     });
 </script>
 </body>

@@ -56,7 +56,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('mergeRequestListView', function($scope, $http) {
         // Pre-filled data
         $scope.meta = {
@@ -76,8 +76,8 @@
         // 0 (eg no open MRs, or no closed MRs)
         $scope.MRCount = {"open": 0, "closed": 0};
         if ($scope.MRList !== null) {
-            var numDisc = $scope.MRList.length;
-            for (var i = 0; i < numDisc; i++) {
+            let numDisc = $scope.MRList.length;
+            for (let i = 0; i < numDisc; i++) {
                 if ($scope.MRList[i].open) {
                     $scope.MRCount.open += 1;
                 } else {
@@ -88,7 +88,7 @@
 
         // Switch to the create MR page
         $scope.createMR = function() {
-            if ($scope.meta.Loggedin != "true") {
+            if ($scope.meta.Loggedin !== "true") {
                 // User needs to be logged in
                 lock.show();
             } else {
@@ -118,14 +118,16 @@
             }
         };
 
-        // Auth0
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
-
+        [[ end ]]
         [[ template "script_headerdatabase" . ]]
     });
 </script>

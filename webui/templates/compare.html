@@ -177,7 +177,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('compareView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
             DestBranch:     [[ .DestDBDefaultBranch ]],
@@ -317,7 +317,7 @@
 
         // Sends the merge request creation details, and if successful then bounces to the newly created MR for it
         $scope.createMR = function() {
-            if ($scope.meta.Loggedin != "true") {
+            if ($scope.meta.Loggedin !== "true") {
                 // User needs to be logged in
                 lock.show();
                 return;
@@ -343,7 +343,7 @@
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // MR creation succeeded.  The response should include the MR # we'll bounce to
-                var mrID = response.data.mr_id;
+                let mrID = response.data.mr_id;
                 window.location = "/merge/" + $scope.destDB + "?id=" + mrID;
 
             }, function failure(response) {
@@ -401,14 +401,16 @@
             });
         };
 
-        // Auth0 popup
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
+
         $scope.showLock = function() {
             lock.show();
         };
-
+        [[ end ]]
         [[ template "script_headerdatabase" . ]]
     });
 </script>

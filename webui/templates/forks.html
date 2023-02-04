@@ -12,8 +12,8 @@
         <div class="col-md-10">
             <h2 style="text-align: center;">
                 Forks of
-                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
-                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                <a class="blackLink" href="/[[ .Meta.Owner ]]" data-cy="ownerlnk">[[ .Meta.Owner ]]</a> /
+                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="dblnk">[[ .Meta.Database ]]</a>
             </h2>
         </div>
         <div class="col-md-1">
@@ -41,21 +41,24 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    var app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('forksView', function($scope) {
         $scope.forks = { Forks: [[ .Forks ]] }
 
-        var lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+        [[ if eq .Meta.Environment "production" ]]
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
             redirectUrl: "[[ .Auth0.CallbackURL]]"
         }});
 
         $scope.showLock = function() {
             lock.show();
         };
+        [[ end ]]
 
         // Display the appropriate fork icons for a database row
         $scope.rowIcons = function(rowData) {
-            var returnList = "";
+            let returnList = "";
             rowData.icon_list.forEach(function(item, index, array) {
                 switch (item) {
                     case 0:
@@ -91,7 +94,7 @@
             if (row.public === true) {
                 return '<a class="blackLink" href="/'+ row.database_owner + row.database_folder + row.database_name +
                     '">' + row.database_name + '</a>';
-            } else if (row.database_owner == "[[ .Meta.LoggedInUser ]]") {
+            } else if (row.database_owner === "[[ .Meta.LoggedInUser ]]") {
                 // The logged in user should see their own private databases. Make sure it's not mistaken as public though.
                 return '<a class="blackLink" href="/'+ row.database_owner + row.database_folder + row.database_name +
                     '">' + row.database_name + '</a> (private database)';
