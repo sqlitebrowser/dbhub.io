@@ -39,6 +39,7 @@
         <div class="col-md-6" style="text-align: center; padding-bottom: 6px;"><a href="https://digitalocean.com"><img alt="Digital Ocean" height="60" src="/images/digitalocean.svg"/></a></div>
     </div>
 </div>
+[[ if eq .Meta.Environment "production" ]]
 <!-- Fathom - simple website analytics - https://github.com/usefathom/fathom -->
 <script type="application/javascript">
     (function(f, a, t, h, o, m){
@@ -70,4 +71,5 @@
     })(document,"script");
 </script>
 <!-- Chatwoot end -->
+[[ end ]]
 [[ end ]]
