@@ -90,6 +90,9 @@ ENV CONFIG_FILE ${DBHUB_SOURCE}/docker/config.toml
 RUN curl -L -o /usr/local/bin/minio https://dl.minio.io/server/minio/release/linux-amd64/minio && \
     chmod +x /usr/local/bin/minio
 
+# Build the Go debugger (Delve)
+RUN GOBIN=/usr/local/bin go install github.com/go-delve/delve/cmd/dlv@latest
+
 # Add script pieces for starting DBHub.io services
 # Note that we only background the webui and api daemons.  The db4s daemon is left running, to prevent start.sh from exiting
 RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/local/bin/start.sh && \
@@ -110,6 +113,7 @@ RUN echo "cd ${DBHUB_SOURCE}/api" >> /usr/local/bin/compile.sh && \
 RUN echo "# Kill the existing running daemons" >> /usr/local/bin/restart.sh && \
     echo "pkill dbhub-webui" >> /usr/local/bin/restart.sh && \
     echo "pkill dbhub-api" >> /usr/local/bin/restart.sh && \
+    echo "pkill dlv" >> /usr/local/bin/restart.sh && \
     echo "" >> /usr/local/bin/restart.sh && \
     echo "# Restart the daemons" >> /usr/local/bin/restart.sh && \
     echo "chmod o+w /dev/console" >> /usr/local/bin/restart.sh && \
@@ -119,6 +123,21 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/restart.sh && \
     echo "# Delay long enough for the DBHub.io daemons to start" >> /usr/local/bin/restart.sh && \
     echo "sleep 1" >> /usr/local/bin/restart.sh && \
     chmod +x /usr/local/bin/restart.sh
+
+# Create script to start the DBHub.io webui and api daemons using the Go debugger (Delve)
+RUN echo "# Kill the existing running daemons" >> /usr/local/bin/debug.sh && \
+    echo "pkill dbhub-webui" >> /usr/local/bin/debug.sh && \
+    echo "pkill dbhub-api" >> /usr/local/bin/debug.sh && \
+    echo "pkill dlv" >> /usr/local/bin/debug.sh && \
+    echo "" >> /usr/local/bin/debug.sh && \
+    echo "# Restart the daemons" >> /usr/local/bin/debug.sh && \
+    echo "chmod o+w /dev/console" >> /usr/local/bin/debug.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 | tail -F /home/dbhub/output.log > /dev/console &'" >> /usr/local/bin/debug.sh && \
+    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup dlv --listen=:2346 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
+    echo "" >> /usr/local/bin/debug.sh && \
+    echo "# Delay long enough for the DBHub.io daemons to start" >> /usr/local/bin/debug.sh && \
+    echo "sleep 1" >> /usr/local/bin/debug.sh && \
+    chmod +x /usr/local/bin/debug.sh
 
 # Build the DBHub.io daemons
 RUN cd / && git clone --branch master --depth 5 https://github.com/sqlitebrowser/dbhub.io
