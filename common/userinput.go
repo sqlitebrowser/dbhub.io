@@ -56,9 +56,9 @@ func CheckUnicode(rawInput string) (str string, err error) {
 }
 
 // GetDatabase extracts a database name from GET or POST/PUT data
-func GetDatabase(r *http.Request, allowGet bool) (string, error) {
+func GetDatabase(r *http.Request, allowGet bool) (dbName string, err error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var d, dbName string
+	var d string
 	if allowGet {
 		d = r.FormValue("dbname")
 	} else {
@@ -66,7 +66,7 @@ func GetDatabase(r *http.Request, allowGet bool) (string, error) {
 	}
 
 	// Unescape, then validate the database name
-	dbName, err := url.QueryUnescape(d)
+	dbName, err = url.QueryUnescape(d)
 	if err != nil {
 		return "", err
 	}
@@ -79,9 +79,9 @@ func GetDatabase(r *http.Request, allowGet bool) (string, error) {
 }
 
 // GetFolder returns the folder name (if any) present in GET or POST/PUT data
-func GetFolder(r *http.Request, allowGet bool) (string, error) {
+func GetFolder(r *http.Request, allowGet bool) (folder string, err error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var f, folder string
+	var f string
 	if allowGet {
 		f = r.FormValue("folder")
 	} else {
@@ -94,7 +94,7 @@ func GetFolder(r *http.Request, allowGet bool) (string, error) {
 	}
 
 	// Unescape, then validate the folder name
-	folder, err := url.QueryUnescape(f)
+	folder, err = url.QueryUnescape(f)
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +108,7 @@ func GetFolder(r *http.Request, allowGet bool) (string, error) {
 }
 
 // GetFormBranch return the requested branch name, from get or post data
-func GetFormBranch(r *http.Request) (string, error) {
+func GetFormBranch(r *http.Request) (branch string, err error) {
 	// If no branch was given in the input, returns an empty string
 	a := r.FormValue("branch")
 	if a == "" {
@@ -116,29 +116,29 @@ func GetFormBranch(r *http.Request) (string, error) {
 	}
 
 	// Unescape, then validate the branch name
-	b, err := url.QueryUnescape(a)
+	branch, err = url.QueryUnescape(a)
 	if err != nil {
 		return "", err
 	}
-	err = ValidateBranchName(b)
+	err = ValidateBranchName(branch)
 	if err != nil {
-		return "", fmt.Errorf("Invalid branch name: '%v'", b)
+		return "", fmt.Errorf("Invalid branch name: '%v'", branch)
 	}
-	return b, nil
+	return branch, nil
 }
 
 // GetFormCommit returns the requested database commit, from form data
-func GetFormCommit(r *http.Request) (string, error) {
+func GetFormCommit(r *http.Request) (commitID string, err error) {
 	// If no commit was given in the input, returns an empty string
-	c := r.FormValue("commit")
-	if c == "" {
+	commitID = r.FormValue("commit")
+	if commitID == "" {
 		return "", nil
 	}
-	err := ValidateCommitID(c)
+	err = ValidateCommitID(commitID)
 	if err != nil {
-		return "", fmt.Errorf("Invalid database commit: '%v'", c)
+		return "", fmt.Errorf("Invalid database commit: '%v'", commitID)
 	}
-	return c, nil
+	return commitID, nil
 }
 
 // GetFormLicence returns the licence name (if any) present in the form data
@@ -161,21 +161,21 @@ func GetFormLicence(r *http.Request) (licenceName string, err error) {
 }
 
 // GetFormODC returns the database owner, database name, and commit (if any) present in the form data
-func GetFormODC(r *http.Request) (string, string, string, error) {
+func GetFormODC(r *http.Request) (userName string, dbName string, commitID string, err error) {
 	// Extract the database owner name
-	userName, err := GetFormOwner(r, false)
+	userName, err = GetFormOwner(r, false)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// Extract the database name
-	dbName, err := GetDatabase(r, false)
+	dbName, err = GetDatabase(r, false)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// Extract the commit string
-	commitID, err := GetFormCommit(r)
+	commitID, err = GetFormCommit(r)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -184,9 +184,9 @@ func GetFormODC(r *http.Request) (string, string, string, error) {
 }
 
 // GetFormOwner returns the database owner present in the GET or POST/PUT data
-func GetFormOwner(r *http.Request, allowGet bool) (string, error) {
+func GetFormOwner(r *http.Request, allowGet bool) (dbOwner string, err error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var o, dbOwner string
+	var o string
 	if allowGet {
 		o = r.FormValue("dbowner")
 	} else {
@@ -199,7 +199,7 @@ func GetFormOwner(r *http.Request, allowGet bool) (string, error) {
 	}
 
 	// Unescape, then validate the owner name
-	dbOwner, err := url.QueryUnescape(o)
+	dbOwner, err = url.QueryUnescape(o)
 	if err != nil {
 		return "", err
 	}
@@ -268,9 +268,9 @@ func GetFormTag(r *http.Request) (tag string, err error) {
 }
 
 // GetFormTable returns the table name present in the GET or POST/PUT data
-func GetFormTable(r *http.Request, allowGet bool) (string, error) {
+func GetFormTable(r *http.Request, allowGet bool) (table string, err error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var t, table string
+	var t string
 	if allowGet {
 		t = r.FormValue("table")
 	} else {
@@ -283,7 +283,7 @@ func GetFormTable(r *http.Request, allowGet bool) (string, error) {
 	}
 
 	// Unescape, then validate the owner name
-	table, err := url.QueryUnescape(t)
+	table, err = url.QueryUnescape(t)
 	if err != nil {
 		return "", err
 	}
@@ -319,7 +319,7 @@ func GetFormUDC(r *http.Request) (string, string, string, error) {
 }
 
 // GetOD returns the requested database owner and database name
-func GetOD(ignoreLeading int, r *http.Request) (string, string, error) {
+func GetOD(ignoreLeading int, r *http.Request) (dbOwner string, dbName string, err error) {
 	// Split the request URL into path components
 	pathStrings := strings.Split(r.URL.Path, "/")
 
@@ -328,11 +328,11 @@ func GetOD(ignoreLeading int, r *http.Request) (string, string, error) {
 		log.Printf("Something wrong with the requested URL: %v\n", r.URL.Path)
 		return "", "", errors.New("Invalid URL")
 	}
-	dbOwner := pathStrings[1+ignoreLeading]
-	dbName := pathStrings[2+ignoreLeading]
+	dbOwner = pathStrings[1+ignoreLeading]
+	dbName = pathStrings[2+ignoreLeading]
 
 	// Validate the user supplied owner and database name
-	err := ValidateUserDB(dbOwner, dbName)
+	err = ValidateUserDB(dbOwner, dbName)
 	if err != nil {
 		// Don't bother logging the fairly common case of a bot using an AngularJS phrase in a request
 		if (dbOwner == "{{ meta.Owner + '" && dbName == "' + row.Database }}") ||
@@ -350,15 +350,15 @@ func GetOD(ignoreLeading int, r *http.Request) (string, string, error) {
 }
 
 // GetODC returns the requested database owner, database name, and commit revision
-func GetODC(ignoreLeading int, r *http.Request) (string, string, string, error) {
+func GetODC(ignoreLeading int, r *http.Request) (dbOwner string, dbName string, commitID string, err error) {
 	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignoreLeading, r)
+	dbOwner, dbName, err = GetOD(ignoreLeading, r)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// Extract the commit revision
-	commitID, err := GetFormCommit(r)
+	commitID, err = GetFormCommit(r)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -368,15 +368,15 @@ func GetODC(ignoreLeading int, r *http.Request) (string, string, string, error) 
 }
 
 // GetODT returns the requested database owner, database name, and table name
-func GetODT(ignoreLeading int, r *http.Request) (string, string, string, error) {
+func GetODT(ignoreLeading int, r *http.Request) (dbOwner string, dbName string, requestedTable string, err error) {
 	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignoreLeading, r)
+	dbOwner, dbName, err = GetOD(ignoreLeading, r)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// If a specific table was requested, get that info too
-	requestedTable, err := GetTable(r)
+	requestedTable, err = GetTable(r)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -386,21 +386,21 @@ func GetODT(ignoreLeading int, r *http.Request) (string, string, string, error) 
 }
 
 // GetODTC returns the requested database owner, database name, table name, and commit string
-func GetODTC(ignoreLeading int, r *http.Request) (string, string, string, string, error) {
+func GetODTC(ignoreLeading int, r *http.Request) (dbOwner string, dbName string, requestedTable string, commitID string, err error) {
 	// Grab owner and database name
-	dbOwner, dbName, err := GetOD(ignoreLeading, r)
+	dbOwner, dbName, err = GetOD(ignoreLeading, r)
 	if err != nil {
 		return "", "", "", "", err
 	}
 
 	// If a specific table was requested, get that info too
-	requestedTable, err := GetTable(r)
+	requestedTable, err = GetTable(r)
 	if err != nil {
 		return "", "", "", "", err
 	}
 
 	// Extract the commit string
-	commitID, err := GetFormCommit(r)
+	commitID, err = GetFormCommit(r)
 	if err != nil {
 		return "", "", "", "", err
 	}
@@ -411,24 +411,23 @@ func GetODTC(ignoreLeading int, r *http.Request) (string, string, string, string
 
 // GetPub returns the requested "public" variable, if present in the form data
 // If something goes wrong, it defaults to "false".
-func GetPub(r *http.Request) (bool, error) {
-	val := r.PostFormValue("public")
-	if val == "" {
+func GetPub(r *http.Request) (public bool, err error) {
+	p := r.PostFormValue("public")
+	if p == "" {
 		// No public/private variable found
 		return false, errors.New("No public/private value present")
 	}
-	pub, err := strconv.ParseBool(val)
+	public, err = strconv.ParseBool(p)
 	if err != nil {
 		log.Printf("Error when converting public value to boolean: %v\n", err)
 		return false, err
 	}
 
-	return pub, nil
+	return public, nil
 }
 
 // GetTable returns the requested table name (if any)
-func GetTable(r *http.Request) (string, error) {
-	var requestedTable string
+func GetTable(r *http.Request) (requestedTable string, err error) {
 	requestedTable = r.FormValue("table")
 
 	// If a table name was supplied, validate it
@@ -473,9 +472,9 @@ func GetUFD(r *http.Request, allowGet bool) (string, string, string, error) {
 }
 
 // GetUsername returns the username (if any) present in the GET or POST/PUT data
-func GetUsername(r *http.Request, allowGet bool) (string, error) {
+func GetUsername(r *http.Request, allowGet bool) (userName string, err error) {
 	// Retrieve the variable from the GET or POST/PUT data
-	var u, userName string
+	var u string
 	if allowGet {
 		u = r.FormValue("username")
 	} else {
@@ -488,7 +487,7 @@ func GetUsername(r *http.Request, allowGet bool) (string, error) {
 	}
 
 	// Unescape, then validate the user name
-	userName, err := url.QueryUnescape(u)
+	userName, err = url.QueryUnescape(u)
 	if err != nil {
 		return "", err
 	}
