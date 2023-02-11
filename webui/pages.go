@@ -134,8 +134,12 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		DB       com.SQLiteDBinfo
 		History  []HistEntry
 		Meta     com.MetaInfo
+		MyStar         bool
+		MyWatch        bool
 	}
-	pageData.Meta.Title = "Commits settings"
+
+	pageData.Meta.Title = "Commits"
+	pageData.Meta.PageSection = "db_data"
 
 	// Get all meta information
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
@@ -151,10 +155,24 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the user has access to the requested database (and get it's details if available)
+	// Check if the user has access to the requested database (and get its details if available)
 	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 

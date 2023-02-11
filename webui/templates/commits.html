@@ -5,19 +5,27 @@
 <body>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    [[ template "headerdatabase" . ]]
     <div class="row">
-        <div class="col-md-1">
-            &nbsp;
-        </div>
-        <div class="col-md-10">
-            <h2 style="text-align: center;">
-                Commit history for
-                <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
-                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
-            </h2>
-        </div>
-        <div class="col-md-1">
-            &nbsp;
+        <div class="col-md-12">
+            <div class="pull-left">
+                Commit history for branch
+                <span class="dropdown">
+                    <span class="btn-group" uib-dropdown keyboard-nav="true">
+                        <button id="branchname" type="button" class="btn" data-cy="branchdropdown">{{ meta.Branch }}</button>
+
+                        <button type="button" uib-dropdown-toggle class="btn btn-default">
+                            <span class="caret"></span>
+                        </button>
+                        <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                            <li ng-repeat="row in meta.Branches" role="menuitem" ng-click="changeBranch(row)" data-cy="commit-{{ row }}">
+                                <a href="">{{ row }}</a>
+                            </li>
+                        </ul>
+                    </span>
+                </span>
+            </div>
+            <br /><br />
         </div>
     </div>
     <div class="row" ng-if="statusMessage != ''">
@@ -25,25 +33,6 @@
             <div style="text-align: center; padding-bottom: 8px;">
                 <h4 style="color: red;">&nbsp;{{ statusMessage }}</h4>
             </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12" style="text-align: center;">
-            Branch:
-            <span class="dropdown">
-                <span class="btn-group" uib-dropdown keyboard-nav="true">
-                    <button id="branchname" type="button" class="btn" data-cy="branchdropdown">{{ meta.Branch }}</button>
-
-                    <button type="button" uib-dropdown-toggle class="btn btn-default">
-                        <span class="caret"></span>
-                    </button>
-                    <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                        <li ng-repeat="row in meta.Branches" role="menuitem" ng-click="changeBranch(row)" data-cy="commit-{{ row }}">
-                            <a href="">{{ row }}</a>
-                        </li>
-                    </ul>
-                </span>
-            </span><br /><br />
         </div>
     </div>
     <div class="row">
@@ -183,6 +172,7 @@
             lock.show();
         };
         [[ end ]]
+        [[ template "script_headerdatabase" . ]]
     });
 </script>
 </body>
