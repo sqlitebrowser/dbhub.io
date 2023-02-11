@@ -41,36 +41,24 @@
 </div>
 <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
     <div class="col-md-6">
-        [[ if eq .Meta.PageSection "db_data" ]]
-            <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-database"></i> Data</label>
-        [[ else ]]
-            <label id="viewdata" style="font-weight: 600; font-family: 'arial black';"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data" data-cy="datalink"><i class="fa fa-database"></i> Data</a></label>
-        [[ end ]]
+        <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_data" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data" data-cy="datalink"><i class="fa fa-database"></i> Data</a></label>
+
         &nbsp; &nbsp; &nbsp;
-        [[ if eq .Meta.PageSection "db_vis" ]]
-            <label id="viewvis" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-database"></i> Visualise</label>
-        [[ else ]]
-            <label id="viewvis" style="font-weight: 600; font-family: 'arial black';"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise" data-cy="vislink"><i class="fa fa-bar-chart"></i> Visualise</a></label>
-        [[ end ]]
+
+        <label id="viewvis" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_vis" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise" data-cy="vislink"><i class="fa fa-bar-chart"></i> Visualise</a></label>
+
         &nbsp; &nbsp; &nbsp;
-        [[ if eq .Meta.PageSection "db_disc" ]]
-            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-commenting"></i> Discussions: {{ meta.Discussions }}</label>
-        [[ else ]]
-            <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black';"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions" data-cy="discusslink"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label>
-        [[ end ]]
+
+        <label id="viewdiscuss" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_disc" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Discussions" data-cy="discusslink"><i class="fa fa-commenting"></i> Discussions:</a> {{ meta.Discussions }}</label>
+
         &nbsp; &nbsp; &nbsp;
-        [[ if eq .Meta.PageSection "db_merge" ]]
-            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-clone"></i> Merge Requests: {{ meta.MRs }}</label>
-        [[ else ]]
-            <label id="viewmrs" style="font-weight: 600; font-family: 'arial black';"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests" data-cy="mrlink"><i class="fa fa-clone"></i> Merge Requests:</a> {{ meta.MRs }}</label>
-        [[ end ]]
+
+        <label id="viewmrs" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_merge" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Merge Requests" data-cy="mrlink"><i class="fa fa-clone"></i> Merge Requests:</a> {{ meta.MRs }}</label>
+
         &nbsp; &nbsp; &nbsp;
+
         [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-            [[ if eq .Meta.PageSection "db_settings" ]]
-                <label id="settings" style="font-weight: 600; font-family: 'arial black'; border-bottom: 1px grey dashed;"><i class="fa fa-cog"></i> Settings</label> &nbsp; &nbsp; &nbsp;
-            [[ else ]]
-                <label id="settings" style="font-weight: 600; font-family: 'arial black';"><a href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Settings" data-cy="settingslink"><i class="fa fa-cog"></i> Settings</a></label>
-            [[ end ]]
+            <label id="settings" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_settings" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Settings" data-cy="settingslink"><i class="fa fa-cog"></i> Settings</a></label>
         [[ end ]]
     </div>
     <div class="col-md-6">
