@@ -156,6 +156,13 @@ func ReadConfig() error {
 		Conf.Event.EmailQueueDir = "/tmp"
 	}
 
+	// Check cache directory exists
+	if _, err := os.Stat(Conf.DiskCache.Directory); os.IsNotExist(err) {
+		if os.MkdirAll(Conf.DiskCache.Directory, 0775) != nil {
+			log.Fatal(err)
+		}
+	}
+
 	// Set the PostgreSQL configuration values
 	pgConfig.Host = Conf.Pg.Server
 	pgConfig.Port = uint16(Conf.Pg.Port)

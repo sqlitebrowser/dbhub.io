@@ -116,6 +116,7 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/restart.sh && \
     echo "pkill dlv" >> /usr/local/bin/restart.sh && \
     echo "" >> /usr/local/bin/restart.sh && \
     echo "# Restart the daemons" >> /usr/local/bin/restart.sh && \
+    echo "chown dbhub: /home/dbhub/.dbhub" >> /usr/local/bin/restart.sh && \
     echo "chmod o+w /dev/console" >> /usr/local/bin/restart.sh && \
     echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 | tail -F /home/dbhub/output.log > /dev/console &'" >> /usr/local/bin/restart.sh && \
     echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
