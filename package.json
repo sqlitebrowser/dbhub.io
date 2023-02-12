@@ -20,10 +20,9 @@
     "docker:psql": "docker exec -it dbhub-build psql -U postgres dbhub",
     "docker:recompile": "docker exec -it dbhub-build /bin/sh /usr/local/bin/compile.sh",
     "docker:restart": "docker exec -it dbhub-build /bin/sh /usr/local/bin/restart.sh",
-    "docker:start": "docker run -itd --rm --name dbhub-build -p 9443:9443/tcp -p 9444:9444/tcp dbhub-build:latest",
-    "docker:startdebug": "docker run -itd --rm --name dbhub-build -p 2345:2345/tcp -p 2346:2346/tcp -p 9443:9443/tcp -p 9444:9444/tcp --mount type=bind,src=\"$(pwd)\",target=/dbhub.io dbhub-build:latest",
-    "docker:startlive": "docker run -it --rm --name dbhub-build -p 9443:9443/tcp -p 9444:9444/tcp dbhub-build:latest",
-    "docker:startlocal": "docker run -itd --rm --name dbhub-build -p 9443:9443/tcp -p 9444:9444/tcp --mount type=bind,src=\"$(pwd)\",target=/dbhub.io dbhub-build:latest",
+    "docker:start": "docker run -itd --rm --name dbhub-build -p 9443-9445:9443-9445/tcp dbhub-build:latest",
+    "docker:startdebug": "docker run -itd --rm --name dbhub-build -p 2345-2347:2345-2347/tcp -p 9443-9445:9443-9445/tcp --mount type=bind,src=\"$(pwd)\",target=/dbhub.io dbhub-build:latest",
+    "docker:startlocal": "docker run -itd --rm --name dbhub-build -p 9443-9445:9443-9445/tcp --mount type=bind,src=\"$(pwd)\",target=/dbhub.io dbhub-build:latest",
     "docker:stop": "docker container stop dbhub-build",
     "docker:tail": "docker exec -it dbhub-build tail -F /home/dbhub/output.log"
   },

@@ -1,6 +1,6 @@
 [db4s]
 server = "docker-dev.dbhub.io"
-port = 5550
+port = 9445
 certificate = "/dbhub.io/docker/certs/docker-dev.dbhub.io.cert.pem"
 certificate_key = "/dbhub.io/docker/certs/docker-dev.dbhub.io.key.pem"
 ca_chain = "/dbhub.io/docker/certs/ca-chain-docker.cert.pem"
