@@ -36,3 +36,6 @@ request.log
 api/api
 db4s/db4s
 webui/webui
+
+# Cypress generated files
+cypress/videos
