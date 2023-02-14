@@ -296,21 +296,21 @@ func GetFormTable(r *http.Request, allowGet bool) (table string, err error) {
 }
 
 // GetFormUDC returns the username, database, and commit (if any) present in the form data
-func GetFormUDC(r *http.Request) (string, string, string, error) {
+func GetFormUDC(r *http.Request) (userName string, dbName string, commitID string, err error) {
 	// Extract the username
-	userName, err := GetUsername(r, false)
+	userName, err = GetUsername(r, false)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// Extract the database name
-	dbName, err := GetDatabase(r, false)
+	dbName, err = GetDatabase(r, false)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// Extract the commit string
-	commitID, err := GetFormCommit(r)
+	commitID, err = GetFormCommit(r)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -449,21 +449,21 @@ func GetTable(r *http.Request) (requestedTable string, err error) {
 }
 
 // GetUFD returns the username, folder, and database name (if any) present in the form data
-func GetUFD(r *http.Request, allowGet bool) (string, string, string, error) {
+func GetUFD(r *http.Request, allowGet bool) (userName string, dbFolder string, dbName string, err error) {
 	// Extract the username
-	userName, err := GetUsername(r, allowGet)
+	userName, err = GetUsername(r, allowGet)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// Extract the folder
-	dbFolder, err := GetFolder(r, allowGet)
+	dbFolder, err = GetFolder(r, allowGet)
 	if err != nil {
 		return "", "", "", err
 	}
 
 	// Extract the database name
-	dbName, err := GetDatabase(r, allowGet)
+	dbName, err = GetDatabase(r, allowGet)
 	if err != nil {
 		return "", "", "", err
 	}

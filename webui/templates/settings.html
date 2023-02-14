@@ -165,21 +165,21 @@
                     <tbody>
                         <tr ng-repeat="(user, access) in meta.Shares">
                             <td style="vertical-align: middle; border-style: none;" width="50%">
-                                <div style="text-align: center;" data-cy="shareusername">{{ user }}</div>
+                                <div style="text-align: center;" data-cy="shareuser-{{ user }}">{{ user }}</div>
                             </td>
                             <td style="vertical-align: middle; text-align: center; border-style: none;">
                                 <div class="dropdown">
                                     <div class="btn-group" uib-dropdown keyboard-nav="true">
-                                        <button id="share" type="button" class="btn" data-cy="sharedropdown">{{ getShare(user) }}</button>
+                                        <button id="share" type="button" class="btn" data-cy="shareperm-{{ user }}">{{ getShare(user) }}</button>
 
-                                        <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                        <button type="button" uib-dropdown-toggle class="btn btn-default" data-cy="sharedropdown-{{ user }}">
                                             <span class="caret"></span>
                                         </button>
                                         <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                            <li role="menuitem" ng-click="changeShare(user, 'r')" data-cy="sharero">
+                                            <li role="menuitem" ng-click="changeShare(user, 'r')" data-cy="sharero-{{ user }}">
                                                 <span>&nbsp; <a class="blackLink" href="">Read only</a></span></span>
                                             </li>
-                                            <li role="menuitem" ng-click="changeShare(user, 'rw')" data-cy="sharerw">
+                                            <li role="menuitem" ng-click="changeShare(user, 'rw')" data-cy="sharerw-{{ user }}">
                                                 <span>&nbsp; <a class="blackLink" href="">Read and write</a></span></span>
                                             </li>
                                         </ul>
@@ -187,7 +187,7 @@
                                 </div>
                             </td>
                             <td style="vertical-align: middle; text-align: center; border-style: none;">
-                                <input type="button" class="btn btn-danger btn-sm" ng-click="removeShare(user)" value="Remove" data-cy="shareremovebtn">
+                                <input type="button" class="btn btn-danger btn-sm" ng-click="removeShare(user)" value="Remove" data-cy="shareremovebtn-{{ user }}">
                             </td>
                         </tr>
                     </tbody>

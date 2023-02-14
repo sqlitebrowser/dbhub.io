@@ -68,7 +68,7 @@
         </div>
     </div>
     <div class="row" style="padding-bottom: 10px;">
-        <div class="col-md-7">
+        <div class="col-md-8">
             <span class="pull-left">
                 <div class="dropdown">
                     <div class="btn-group" uib-dropdown keyboard-nav="true">
@@ -98,12 +98,12 @@
                     [[ if .Meta.LoggedInUser ]]
                         <a href="/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="btn btn-primary" data-cy="newmrbtn">New Merge Request</a>
                     [[ end ]]
+                    <button class="btn btn-primary" ng-click="uploadForm()" data-cy="uploadbtn">Upload database</button>
                 </div>
             </span>
         </div>
-        <div class="col-md-5">
+        <div class="col-md-4">
             <span class="pull-right">
-                <!-- <button class="btn btn-primary" ng-click="uploadForm()">Upload database</button> -->
                 <div class="btn-group" uib-dropdown keyboard-nav="true">
                     <button type="button" class="btn btn-success" uib-dropdown-toggle>
                         Clone database in DB4S <span class="caret"></span>
@@ -194,7 +194,7 @@
         e.select();
         e.setSelectionRange(0, 99999);
         document.execCommand("copy");
-    };
+    }
 
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
 
@@ -467,6 +467,16 @@
             }
         };
         $scope.updateTableArrows();
+
+        // Switch to the upload database page
+        $scope.uploadForm = function() {
+            if ($scope.meta.Loggedin !== "true") {
+                // User needs to be logged in
+                lock.show();
+            } else {
+                window.location = '/upload/?username=[[ .Meta.Owner ]]&dbname=[[ .Meta.Database ]]&branch=' + $scope.meta.Branch;
+            }
+        };
 
         [[ if eq .Meta.Environment "production" ]]
         // Only invoke the Auth0 pieces in the production environment

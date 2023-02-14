@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +21,7 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -57,7 +58,7 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Branch list"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -134,15 +135,15 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		DB       com.SQLiteDBinfo
 		History  []HistEntry
 		Meta     com.MetaInfo
-		MyStar         bool
-		MyWatch        bool
+		MyStar   bool
+		MyWatch  bool
 	}
 
 	pageData.Meta.Title = "Commits"
 	pageData.Meta.PageSection = "db_data"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -341,7 +342,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Create a Merge Request"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -515,7 +516,7 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Confirm database deletion"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -557,7 +558,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Branch list"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -637,7 +638,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Create new branch"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -688,7 +689,7 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.PageSection = "db_disc"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -740,7 +741,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -787,7 +788,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.Meta.PageSection = "db_data"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1035,80 +1036,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		pageData.DB.MaxRows = tempMaxRows
 	}
 
-	// Generate predictable cache keys for the metadata and sqlite table rows
-	// TODO: The cache approach needs redoing, taking into account the life cycle of each info piece
-	mdataCacheKey := com.MetadataCacheKey("dwndb-meta", pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName,
-		commitID)
-	rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-		pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
-
-	// If a cached version of the page data exists, use it
-	ok, err := com.GetCachedData(mdataCacheKey, &pageData)
-	if err != nil {
-		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
-	}
-	if ok {
-		// Grab the cached table data as well
-		ok, err := com.GetCachedData(rowCacheKey, &pageData.Data)
-		if err != nil {
-			log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
-		}
-
-		// Restore the correct MaxRow value
-		pageData.DB.MaxRows = tempMaxRows
-
-		// Restore the correct discussion and MR count
-		pageData.DB.Info.Discussions = currentDisc
-		pageData.DB.Info.MRs = currentMRs
-
-		// Set the selected branch name
-		if branchName != "" {
-			pageData.DB.Info.Branch = branchName
-		}
-
-		// Fill out the branch info
-		pageData.DB.Info.BranchList = []string{}
-		if branchName != "" {
-			// If a specific branch was requested, ensure it's the first entry of the drop down
-			pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, branchName)
-		}
-		for i := range branchHeads {
-			if i != branchName {
-				err = com.ValidateBranchName(i)
-				if err == nil {
-					pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
-				}
-			}
-		}
-
-		// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
-		bCheck := map[string]struct{}{}
-		for _, j := range pageData.DB.Info.BranchList {
-			_, ok := bCheck[j]
-			if !ok {
-				// The branch name value isn't in the map already, so add it
-				bCheck[j] = struct{}{}
-			} else {
-				// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
-				log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
-					"logged in user '%s'", j, dbOwner, dbFolder, dbName, pageData.Meta.LoggedInUser)
-			}
-		}
-
-		// Render the page (using the caches)
-		if ok {
-			t := tmpl.Lookup("databasePage")
-			err = t.Execute(w, pageData)
-			if err != nil {
-				log.Printf("Error: %s", err)
-			}
-			return
-		}
-
-		// Note - If the row data wasn't found in cache, we fall through and continue on with the rest of this
-		//        function, which grabs it and caches it for future use
-	}
-
 	// Get a handle from Minio for the database object
 	sdb, err := com.OpenSQLiteDatabase(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
 		pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:])
@@ -1230,12 +1157,12 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
-	bCheck := map[string]struct{}{}
+	bCheck2 := map[string]struct{}{}
 	for _, j := range pageData.DB.Info.BranchList {
-		_, ok := bCheck[j]
+		_, ok := bCheck2[j]
 		if !ok {
 			// The branch name value isn't in the map already, so add it
-			bCheck[j] = struct{}{}
+			bCheck2[j] = struct{}{}
 		} else {
 			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
 			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
@@ -1260,14 +1187,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.DB.Info.Discussions = currentDisc
 	pageData.DB.Info.MRs = currentMRs
 
-	// Cache the page metadata
-	err = com.CacheData(mdataCacheKey, pageData, com.Conf.Memcache.DefaultCacheTime)
-	if err != nil {
-		log.Printf("%s: Error when caching page data: %v\n", pageName, err)
-	}
-
 	// Grab the cached table data if it's available
-	ok, err = com.GetCachedData(rowCacheKey, &pageData.Data)
+	rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
+		pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
+	ok, err := com.GetCachedData(rowCacheKey, &pageData.Data)
 	if err != nil {
 		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
 	}
@@ -1310,7 +1233,7 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1421,7 +1344,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.PageSection = "db_disc"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1532,7 +1455,7 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 	pageData.Meta.Title = "Error"
 
 	// Get all meta information
-	_, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
+	_, err := collectPageMetaInfo(r, &pageData.Meta, false, false, false)
 	if err != nil {
 		// We can't use errorPage() here, as it can lead to a recursive loop (which crashes)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -1562,7 +1485,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Forks"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1609,7 +1532,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1674,7 +1597,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1920,7 +1843,7 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 		Meta        com.MetaInfo
 	}
 	pageData.Meta.Title = "Settings"
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1968,14 +1891,17 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 
 func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	var pageData struct {
-		Auth0      com.Auth0Set
-		Meta       com.MetaInfo
-		PrivateDBs []com.DBInfo
-		PublicDBs  []com.DBInfo
-		Stars      []com.DBEntry
-		Watching   []com.DBEntry
+		Auth0            com.Auth0Set
+		Meta             com.MetaInfo
+		PrivateDBs       []com.DBInfo
+		PublicDBs        []com.DBInfo
+		SharedWithOthers []com.ShareDatabasePermissionsOthers
+		SharedWithYou    []com.ShareDatabasePermissionsUser
+		Stars            []com.DBEntry
+		Watching         []com.DBEntry
 	}
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
+
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2023,6 +1949,45 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
+	// For each of the databases owned by the user, retrieve any share information
+	var rawList []com.ShareDatabasePermissionsOthers
+	for _, db := range pageData.PublicDBs {
+		var z com.ShareDatabasePermissionsOthers
+		z.DBName = db.Database
+		z.Perms, err = com.GetShares(userName, "/", z.DBName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if len(z.Perms) > 0 {
+			rawList = append(rawList, z)
+		}
+	}
+	for _, db := range pageData.PrivateDBs {
+		var z com.ShareDatabasePermissionsOthers
+		z.DBName = db.Database
+		z.Perms, err = com.GetShares(userName, "/", z.DBName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if len(z.Perms) > 0 {
+			rawList = append(rawList, z)
+		}
+	}
+	// Sort the entries
+	sort.SliceStable(rawList, func(i, j int) bool {
+		return rawList[i].DBName < rawList[j].DBName
+	})
+	pageData.SharedWithOthers = rawList
+
+	// Retrieve the list of all databases shared with the user
+	pageData.SharedWithYou, err = com.GetSharesForUser(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	// Retrieve the details for the user
 	usr, err := com.User(userName)
 	if err != nil {
@@ -2066,7 +2031,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Release list"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2211,7 +2176,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Database settings"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2349,7 +2314,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Stars"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2405,7 +2370,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Tag list"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2490,7 +2455,7 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, false, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2521,19 +2486,53 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 func uploadPage(w http.ResponseWriter, r *http.Request) {
 	// Data to pass to the upload form
 	var pageData struct {
-		Auth0         com.Auth0Set
-		Branches      []string
-		DefaultBranch string
-		Licences      map[string]com.LicenceEntry
-		Meta          com.MetaInfo
-		NumLicences   int
+		Auth0          com.Auth0Set
+		Branches       []string
+		DefaultBranch  string
+		Licences       map[string]com.LicenceEntry
+		Meta           com.MetaInfo
+		NumLicences    int
+		Public         bool
+		SelectedBranch string
 	}
 
-	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, false)
+	// Get meta information
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, true, false, true)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
+	}
+
+	// Check if the user has write access to this database, also set the public/private button to the existing value
+	if pageData.Meta.Owner != "" && pageData.Meta.Database != "" {
+		writeAccess, err := com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, "/", pageData.Meta.Database, true)
+		if err != nil {
+			errorPage(w, r, errCode, err.Error())
+			return
+		}
+		if !writeAccess {
+			errorPage(w, r, http.StatusUnauthorized, "You don't have write access to that database")
+			return
+		}
+
+		// Pre-populate the public/private selection to match the existing setting
+		var tmp com.SQLiteDBinfo
+		err = com.DBDetails(&tmp, pageData.Meta.LoggedInUser, pageData.Meta.Owner, "/", pageData.Meta.Database, "")
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, err.Error())
+			return
+		}
+		pageData.Public = tmp.Info.Public
+	}
+
+	// Get branch name, if it was passed.  Otherwise, default to master
+	pageData.SelectedBranch, err = com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	if pageData.SelectedBranch == "" {
+		pageData.SelectedBranch = "master"
 	}
 
 	// Ensure the user has set their display name and email address
@@ -2581,7 +2580,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, false, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2647,7 +2646,7 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	pageData.Meta.Title = "Watchers"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return

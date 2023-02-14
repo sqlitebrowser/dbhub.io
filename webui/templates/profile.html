@@ -177,6 +177,71 @@
             [[ end ]]
         </div>
     </div>
+    <div class="row">
+        <div class="col-md-6">
+            <div class="pull-left" style="padding-top: 8px;">
+                <h3 style="display: inline; vertical-align: middle;">Databases shared with you</h3>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="pull-left" style="padding-top: 8px;">
+                <h3 style="display: inline; vertical-align: middle;">Databases shared with others</h3>
+            </div>
+            <div class="pull-right" style="padding-bottom: 8px;">
+                <button type="button" class="btn btn-default" ng-click="toggleCollapsedSharedWithOthers()">{{ titleCollapsedSharedWithOthers }}</button>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            [[ if .SharedWithYou ]]
+                <table class="table table-striped table-responsive profileTable" data-cy="sharedwithyoutbl">
+                    <tr ng-repeat="row in sharedWithYou">
+                        <td>
+                            <h4><a class="blackLink" href="/{{ row.owner_name + '/' + row.database_name }}" data-cy="swudb-{{ row.owner_name }}-{{ row.database_name }}">{{ row.owner_name }}/{{ row.database_name }}</a> : <span data-cy="swuperm-{{ row.owner_name }}-{{ row.database_name }}">{{ permText(row.permission) }}</span></h4>
+                        </td>
+                    </tr>
+                </table>
+            [[ else ]]
+                <table class="table table-striped table-responsive profileTable" data-cy="sharedwithyoutbl">
+                    <tr>
+                        <td>
+                            <h4 data-cy="swudb-none">No databases shared with you yet</h4>
+                        </td>
+                    </tr>
+                </table>
+            [[ end ]]
+        </div>
+        <div class="col-md-6">
+            [[ if .SharedWithOthers ]]
+                <table class="table table-striped table-responsive profileTable" data-cy="sharedwithotherstbl">
+                    <tr ng-repeat="row in sharedWithOthers">
+                        <td><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.database_name }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner }}/{{ row.database_name }}">{{ row.database_name }}</a></h4>
+                            <div uib-collapse="isCollapsedSharedWithOthers" style="padding-top: 5px;">
+
+                                <div class="row">
+                                    <div class="col-md-4" style="text-decoration: underline;"><b>User</b></div>
+                                    <div class="col-md-8" style="text-decoration: underline;"><b>Permission</b></div>
+                                </div>
+                                <div class="row" ng-repeat="(user, perm) in row.user_permissions">
+                                    <div class="col-md-4"><a class="blackLink" href="/{{ user }}">{{ user }}</a></div>
+                                    <div class="col-md-8">{{ permText(perm) }}</div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            [[ else ]]
+                <table class="table table-striped table-responsive profileTable" data-cy="sharedwithotherstbl">
+                    <tr>
+                        <td>
+                            <h4>No databases shared with others yet</h4>
+                        </td>
+                    </tr>
+                </table>
+            [[ end ]]
+        </div>
+    </div>
 
 </div>
 [[ template "footer" . ]]
@@ -186,6 +251,8 @@
         $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
         $scope.pubdb = { Databases: [[ .PublicDBs ]] };
         $scope.privdb = { Databases: [[ .PrivateDBs ]] };
+        $scope.sharedWithOthers = [[ .SharedWithOthers ]];
+        $scope.sharedWithYou = [[ .SharedWithYou ]];
         $scope.stars = { Stars: [[ .Stars ]] };
         $scope.watching = [[ .Watching ]];
 
@@ -193,6 +260,17 @@
         $scope.getTimePeriodTxt = function(date1, includeOn) {
             return getTimePeriod(date1, includeOn)
         };
+
+        // Returns a database permission string as text
+        $scope.permText = function(dbperm) {
+          if (dbperm === "r") {
+            return "Read Only"
+          } else if (dbperm === "rw") {
+            return "Read Write"
+          } else {
+            return "Unknown permission"
+          }
+        }
 
         // Toggle whether to show starred databases collapsed or not
         $scope.isCollapsedStar = true;
@@ -243,6 +321,19 @@
             } else {
                 $scope.isCollapsedWatch = true;
                 $scope.titleCollapsedWatch = "Expand all";
+            }
+        };
+
+        // Toggle whether to show databases shared with others collapsed or not
+        $scope.isCollapsedSharedWithOthers = true;
+        $scope.titleCollapsedSharedWithOthers = "Expand all";
+        $scope.toggleCollapsedSharedWithOthers = function() {
+            if ($scope.isCollapsedSharedWithOthers === true) {
+                $scope.isCollapsedSharedWithOthers = false;
+                $scope.titleCollapsedSharedWithOthers = "Collapse all";
+            } else {
+                $scope.isCollapsedSharedWithOthers = true;
+                $scope.titleCollapsedSharedWithOthers = "Expand all";
             }
         };
 

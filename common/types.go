@@ -490,6 +490,19 @@ const (
 	MayReadAndWrite ShareDatabasePermissions = "rw"
 )
 
+// ShareDatabasePermissionsOthers contains a list of user permissions for a given database
+type ShareDatabasePermissionsOthers struct {
+	DBName string                              `json:"database_name"`
+	Perms  map[string]ShareDatabasePermissions `json:"user_permissions"`
+}
+
+// ShareDatabasePermissionsUser contains a list of shared database permissions for a given user
+type ShareDatabasePermissionsUser struct {
+	OwnerName  string                   `json:"owner_name"`
+	DBName     string                   `json:"database_name"`
+	Permission ShareDatabasePermissions `json:"permission"`
+}
+
 type SQLiteDBinfo struct {
 	Info     DBInfo
 	MaxRows  int

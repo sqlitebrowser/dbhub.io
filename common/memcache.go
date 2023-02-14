@@ -35,8 +35,14 @@ func CacheData(cacheKey string, cacheData interface{}, cacheSeconds int) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
+}
+
+// ClearCache removes all items currently cached by Memcached, so it's like a newly started server
+func ClearCache() (err error) {
+	err = memCache.FlushAll()
+	log.Println("Memcached cleared")
+	return
 }
 
 // ConnectCache connects to the Memcached server
@@ -165,29 +171,9 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 
 	// Loop around, invalidating the now outdated entries
 	for _, c := range commitList {
-		// Invalidate the meta info, for private database versions
-		cacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, c)
-		err := memCache.Delete(cacheKey)
-		if err != nil {
-			if err != memcache.ErrCacheMiss {
-				// Cache miss is not an error we care about
-				return err
-			}
-		}
-
-		// Invalidate the meta info for public database versions
-		cacheKey = MetadataCacheKey("meta", "", dbOwner, dbFolder, dbName, c)
-		err = memCache.Delete(cacheKey)
-		if err != nil {
-			if err != memcache.ErrCacheMiss {
-				// Cache miss is not an error we care about
-				return err
-			}
-		}
-
 		// Invalidate the download page data, for private database versions
-		cacheKey = MetadataCacheKey("dwndb-meta", dbOwner, dbOwner, dbFolder, dbName, c)
-		err = memCache.Delete(cacheKey)
+		cacheKey := MetadataCacheKey("dwndb-meta", dbOwner, dbOwner, dbFolder, dbName, c)
+		err := memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
 				// Cache miss is not an error we care about

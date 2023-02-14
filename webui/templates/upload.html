@@ -10,38 +10,53 @@
             &nbsp;
         </div>
         <div class="col-md-10">
-            <h2 style="text-align: center;">Upload a database</h2>
-            <h4 style="text-align: center;">
-                The public/private setting is ignored when uploading new versions to an existing database.<br />
-                To change it, visit the "Settings" page for the database after uploading.</h4>
+            [[ if and (ne .Meta.Owner "") (ne .Meta.Database "") ]]
+                <h2 style="text-align: center;">Upload a new commit</h2>
+            [[ else ]]
+                <h2 style="text-align: center;">Upload a database</h2>
+                <h4 style="text-align: center;">
+                    The public/private setting is ignored when uploading new versions to an existing database.<br />
+                    To change it, visit the "Settings" page for the database after uploading.
+                </h4>
+            [[ end ]]
             <form action="/x/uploaddata/" enctype="multipart/form-data" method="POST">
                 <table class="table table-striped table-responsive settingsTable">
                     <tr>
-                        <th style="vertical-align: middle;" width="25%">Database file</th>
-                        <td style="vertical-align: middle;"><input type="file" name="database"></td>
+                        <th style="vertical-align: middle; width: 25%">Database file</th>
+                        <td style="vertical-align: middle;"><input type="file" name="database" data-cy="dbfile"></td>
                     </tr>
+                    [[ if and (ne .Meta.Owner "") (ne .Meta.Database "") ]]
+                    <tr>
+                        <td>&nbsp;</td>
+                        <th style="vertical-align: middle;" colspan="1">
+                            As a new commit into the <a class="blackLink" href="/[[ .Meta.Owner ]]" data-cy="ownerlabel">[[ .Meta.Owner ]]</a> /
+                            <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="dbnamelabel">[[ .Meta.Database ]]</a> database,
+                            in the <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ branchName }}" data-cy="branchlabel">{{ branchName }}</a> branch
+                        </th>
+                    </tr>
+                    [[ else ]]
                     <tr>
                         <th style="vertical-align: middle;">Public?</th>
                         <td>
                             <div class="btn-group">
-                                <label class="btn btn-default" ng-model="radioPublic" ng-click="publicClick('true')" uib-btn-radio="'true'">Public</label>
-                                <label class="btn btn-default" ng-model="radioPublic" ng-click="publicClick('false')" uib-btn-radio="'false'">Private</label>
+                                <label class="btn btn-default" ng-model="radioPublic" ng-click="publicClick('true')" uib-btn-radio="'true'" data-cy="pubbtn">Public</label>
+                                <label class="btn btn-default" ng-model="radioPublic" ng-click="publicClick('false')" uib-btn-radio="'false'" data-cy="privbtn">Private</label>
                             </div>
                             <span ng-bind-html="publicDesc"></span>
                         </td>
                     </tr>
                     <tr>
-                        <th style="vertical-align: middle;" width="25%">Licence</th>
+                        <th style="vertical-align: middle; width: 25%">Licence</th>
                         <td style="vertical-align: middle;">
                             <div class="dropdown">
                                 <div class="btn-group" uib-dropdown keyboard-nav="true">
-                                    <button id="licence" type="button" class="btn">{{ Licence }}</button>
+                                    <button id="licence" type="button" class="btn" data-cy="licname">{{ Licence }}</button>
 
-                                    <button type="button" uib-dropdown-toggle class="btn btn-default">
+                                    <button type="button" uib-dropdown-toggle class="btn btn-default" data-cy="licdropdown">
                                         <span class="caret"></span>
                                     </button>
                                     <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                                        <li ng-repeat="row in Licences" role="menuitem" ng-click="changeLicence(row.name)">
+                                        <li ng-repeat="row in Licences" role="menuitem" ng-click="changeLicence(row.name)" data-cy="lic-{{ row.name }}">
                                             <span>&nbsp; <a class="blackLink" href="">{{ row.name }}</a><span ng-if="row.url != ''"> - <a href="{{ row.url }}">info</a></span></span>
                                         </li>
                                     </ul>
@@ -49,6 +64,7 @@
                             </div>
                         </td>
                     </tr>
+                    [[ end ]]
                 </table>
                 <uib-accordion>
                     <div uib-accordion-group class="panel-default" heading="Advanced" is-open="false">
@@ -60,37 +76,41 @@
                                 <td>
                                     <div>
                                         <uib-tabset active="active">
-                                            <uib-tab index="0">
+                                            <uib-tab index="0" data-cy="edittab">
                                                 <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                                <textarea id="commitmsg" name="commitmsg" rows="18" ng-attr-placeholder="A description for this specific commit"></textarea>
+                                                <textarea id="commitmsg" name="commitmsg" rows="18" ng-attr-placeholder="A description for this specific commit" data-cy="desctext"></textarea>
                                             </uib-tab>
-                                            <uib-tab index="1" select="getMarkdown()">
+                                            <uib-tab index="1" select="getMarkdown()" data-cy="renderedtab">
                                                 <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
-                                                <div class="rendered minHeight" ng-bind-html="markDownPreview"></div>
+                                                <div class="rendered minHeight" ng-bind-html="markDownPreview" data-cy="rendereddiv"></div>
                                             </uib-tab>
                                         </uib-tabset>
                                     </div>
                                 </td>
                             </tr>
+                            [[ if and (eq .Meta.Owner "") (eq .Meta.Database "") ]]
                             <tr>
                                 <th style="vertical-align: middle;">Source URL:</th>
                                 <td>
-                                    <input type="text" name="sourceurl" maxlength="240" style="width: 100%;">
+                                    <input type="text" name="sourceurl" maxlength="240" style="width: 100%;" data-cy="srcurlinput">
                                 </td>
                             </tr>
+                            [[ end ]]
                             <tr>
                                 <th style="vertical-align: middle;">Branch:</th>
                                 <td>
-                                    <input type="text" name="branch" maxlength="60" style="width: 100%;">
+                                     <input type="text" id="branch" name="branch" ng-change="updateBranchName()" ng-model="branchName" maxlength="60" style="width: 100%;" data-cy="branchinput">
                                 </td>
                             </tr>
                         </table>
                     </div>
                 </uib-accordion>
                 <div style="text-align: center;">
-                    <input type="hidden" name="public" value="{{ radioPublic }}">
-                    <input type="hidden" name="licence" value="{{ Licence }}">
-                    <input type="submit" class="btn btn-success" value="Upload">
+                    <input type="hidden" name="public" value="{{ radioPublic }}" data-cy="hidpub">
+                    <input type="hidden" name="licence" value="{{ Licence }}" data-cy="hidlic">
+                    <input type="hidden" name="username" value="[[ .Meta.Owner ]]" data-cy="hidowner">
+                    <input type="hidden" name="dbname" value="[[ .Meta.Database ]]" data-cy="hiddbname">
+                    <input type="submit" class="btn btn-success" value="Upload" data-cy="uploadbtn">
                 </div>
             </form>
             <br />
@@ -104,6 +124,12 @@
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('uploadView', function($scope, $http, $httpParamSerializerJQLike) {
+        // Branch name variable
+        $scope.branchName = "[[ .SelectedBranch ]]";
+        $scope.updateBranchName = function() {
+            $scope.branchName = document.getElementById("branch").value;
+        };
+
         // Sort the licence list into the desired display order
         let rawLicences = [[ .Licences ]];
         let numLicences = [[ .NumLicences ]];
@@ -146,8 +172,8 @@
         };
 
         // Set the public radio buttons state when the page first loads
-        $scope.publicDesc = "&nbsp; Database will be <b>private</b>. Only you have access to it.";
-        $scope.radioPublic = "false";
+        $scope.publicDesc = "";
+        $scope.radioPublic = "[[ .Public ]]";
         $scope.publicClick = function(newValue) {
             if (newValue === "true") {
                 $scope.publicDesc = "&nbsp; Database will be <b>public</b>. Everyone has read access to it.";
@@ -155,6 +181,7 @@
                 $scope.publicDesc = "&nbsp; Database will be <b>private</b>. Only you have access to it.";
             }
         };
+        $scope.publicClick($scope.radioPublic);
 
         [[ if eq .Meta.Environment "production" ]]
         // Only invoke the Auth0 pieces in the production environment

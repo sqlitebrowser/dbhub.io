@@ -4,8 +4,8 @@
         <h2 id="viewdb" style="margin-top: 10px;">
             <div class="pull-left">
                 <div>
-                    <a class="blackLink" href="/[[ .Meta.Owner ]]">[[ .Meta.Owner ]]</a> /
-                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]">[[ .Meta.Database ]]</a>
+                    <a class="blackLink" href="/[[ .Meta.Owner ]]" data-cy="headerownerlnk">[[ .Meta.Owner ]]</a> /
+                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="headerdblnk">[[ .Meta.Database ]]</a>
                 </div>
                 [[ if .Meta.ForkOwner ]]
                 <div style="font-size: small">
@@ -66,7 +66,7 @@
             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                 <b>Visibility:</b> <a class="blackLink" href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="vis">{{ meta.Public }}</a> &nbsp;
             [[ else ]]
-                <b>Visibility:</b><span> {{ meta.Public }} &nbsp;</span>
+                <b>Visibility:</b> <span data-cy="vis">{{ meta.Public }}</span> &nbsp;
             [[ end ]]
             <b>Last Commit:</b> {{ meta.CommitID | limitTo: 8 }} ({{ getTimePeriodTxt(meta.RepoModified, false) }}) &nbsp;
             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
@@ -75,10 +75,10 @@
                 [[ if ne .DB.Info.LicenceURL "" ]]
                     <b>Licence:</b> <a class="blackLink" href="{{ meta.LicenceURL }}" data-cy="licurl">{{ meta.Licence }}</a> &nbsp;
                 [[ else ]]
-                    <b>Licence:</b><span data-cy="licurl"> {{ meta.Licence }} &nbsp;</span>
+                    <b>Licence:</b> <span data-cy="licurl">{{ meta.Licence }}</span> &nbsp;
                 [[ end ]]
             [[ end ]]
-            <b>Size:</b><span data-cy="size"> {{ meta.Size / 1024 | number : 0 }} KB</span>
+            <b>Size:</b> <span data-cy="size">{{ meta.Size / 1024 | number : 0 }} KB</span>
         </div>
     </div>
 </div>

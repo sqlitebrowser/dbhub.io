@@ -37,10 +37,22 @@ describe('database page', () => {
   })
 
   // Fork count
-  // TODO - will need a 2nd user created in the seeding process
-  // it('Fork count', () => {
-  //   cy.get('[data-cy="???"]').should('have.attr', 'value', 'TBD')
-  // })
+  it('Fork count', () => {
+    // Switch to a different user
+    cy.request('/x/test/switchfirst')
+
+    // Fork the database
+    cy.visit('default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="forksbtn"]').click()
+    cy.location('pathname').should('equal', '/first/Assembly%20Election%202017.sqlite')
+
+    // Switch back to the default user
+    cy.request('/x/test/switchdefault')
+
+    // Ensure the fork count shows the new fork
+    cy.visit('default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="forkspagebtn"]').should('contain', '1')
+  })
 
   // Change tabs
   it('Change tabs', () => {

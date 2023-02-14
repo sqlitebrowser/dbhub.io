@@ -412,7 +412,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	}
 
 	// Invalidate any memcached entries for the previous highest version # of the database
-	err = InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, c.ID) // And empty string indicates "for all commits"
+	err = InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, c.ID) // An empty string indicates "for all commits"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for any previous database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())

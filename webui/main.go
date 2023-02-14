@@ -376,7 +376,7 @@ func collectPageAuth0Info() (auth0 com.Auth0Set) {
 	return
 }
 
-func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool, getOwnerAndDatabaseFromUrl bool) (errCode int, err error) {
+func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool, getOwnerAndDatabaseFromUrl bool, getOwnerAndDatabaseFromData bool) (errCode int, err error) {
 	// Server name
 	meta.Server = com.Conf.Web.ServerName
 
@@ -410,11 +410,24 @@ func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool,
 	}
 
 	// Retrieve the database owner & name
-	if getOwnerAndDatabaseFromUrl {
+	if getOwnerAndDatabaseFromUrl || getOwnerAndDatabaseFromData {
 		// TODO: Add folder and branch name support
-		dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
-		if err != nil {
-			return http.StatusBadRequest, err
+		var dbOwner, dbName string
+		if getOwnerAndDatabaseFromUrl {
+			dbOwner, dbName, err = com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
+			if err != nil {
+				return http.StatusBadRequest, err
+			}
+		} else {
+			// Get owner + dbname combination from post data
+			dbOwner, _, dbName, err = com.GetUFD(r, true)
+			if dbOwner == "" || dbName == "" {
+				err = nil
+				return
+			}
+			if err != nil {
+				return http.StatusBadRequest, err
+			}
 		}
 
 		// Validate the supplied information
@@ -3139,9 +3152,13 @@ func main() {
 	http.Handle("/x/vissave/", gz.GzipHandler(logReq(visSave)))
 	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
-	// Add a route for test runs to reset the database to a known state
+	// Add routes which are only useful during testing
 	if com.Conf.Environment.Environment == "test" {
 		http.Handle("/x/test/seed", gz.GzipHandler(logReq(com.CypressSeed)))
+		http.Handle("/x/test/switchdefault", gz.GzipHandler(logReq(com.SwitchDefault)))
+		http.Handle("/x/test/switchfirst", gz.GzipHandler(logReq(com.SwitchFirst)))
+		http.Handle("/x/test/switchsecond", gz.GzipHandler(logReq(com.SwitchSecond)))
+		http.Handle("/x/test/switchthird", gz.GzipHandler(logReq(com.SwitchThird)))
 	}
 
 	// CSS
@@ -3720,6 +3737,8 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the share information
+	// TODO - Probably need to add some logic here so that the user submitting the change can't
+	//        make changes for themselves
 	shares := make(map[string]com.ShareDatabasePermissions)
 	err = json.Unmarshal([]byte(sharesRaw), &shares)
 	if err != nil {
@@ -5147,7 +5166,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Prepare the form data
-	r.ParseMultipartForm(32 << 20) // 64MB of ram max
+	r.ParseMultipartForm(32 << 21) // 128MB of ram max
 	if err := r.ParseForm(); err != nil {
 		log.Printf("%s: ParseForm() error: %v\n", pageName, err)
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -5156,10 +5175,12 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Grab and validate the supplied "public" form field
 	var accessType com.SetAccessType
-	public, err := com.GetPub(r)
+	var public bool
+	val := r.PostFormValue("public")
+	public, err = com.GetPub(r)
 	if err != nil {
 		log.Printf("%s: Error when converting public value to boolean: %v\n", pageName, err)
-		errorPage(w, r, http.StatusBadRequest, "Public value incorrect")
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Public value '%v' incorrect", val))
 		return
 	}
 	if public {
@@ -5203,6 +5224,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Add support for folders and sub-folders
+	var dbOwner, dbName string
 	dbFolder := "/"
 
 	tempFile, handler, err := r.FormFile("database")
@@ -5211,8 +5233,25 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, "Database file missing from upload data?")
 		return
 	}
-	dbName := handler.Filename
+	dbName = handler.Filename
 	defer tempFile.Close()
+
+	// If a database owner and name was passed in separately, we use that instead of the filename
+	{
+		usr, _, db, err := com.GetUFD(r, true)
+		if err != nil {
+			if db != "" {
+				errorPage(w, r, http.StatusInternalServerError, "Something seems to be wrong with the owner name or database name")
+			}
+		}
+		if usr != "" || db != "" {
+			dbOwner = usr
+			dbName = db
+		}
+	}
+	if dbOwner == "" {
+		dbOwner = loggedInUser
+	}
 
 	// Validate the database name
 	err = com.ValidateDB(dbName)
@@ -5223,7 +5262,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists already
-	exists, err := com.CheckDBPermissions(loggedInUser, loggedInUser, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -5233,7 +5272,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	var commitID string
 	createBranch := false
 	if exists {
-		branchList, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+		branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -5245,7 +5284,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 			createBranch = true
 
 			// We also need a commit ID to branch from, so we use the head commit of the default branch
-			defBranch, err := com.GetDefaultBranchName(loggedInUser, dbFolder, dbName)
+			defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -5260,7 +5299,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Sanity check the uploaded database, and if ok then add it to the system
-	numBytes, _, sha, err := com.AddDatabase(loggedInUser, loggedInUser, dbFolder, dbName, createBranch, branchName,
+	numBytes, _, sha, err := com.AddDatabase(loggedInUser, dbOwner, dbFolder, dbName, createBranch, branchName,
 		commitID, accessType, licenceName, commitMsg, sourceURL, tempFile, time.Now(), time.Time{},
 		"", "", "", "", nil, "")
 	if err != nil {
@@ -5276,7 +5315,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make a record of the upload
-	err = com.LogUpload(loggedInUser, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
+	err = com.LogUpload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -5284,10 +5323,10 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Log the successful database upload
 	log.Printf("%s: Username: '%s', database '%s%s%s' uploaded', bytes: %v\n", pageName, loggedInUser,
-		loggedInUser, dbFolder, dbName, numBytes)
+		dbOwner, dbFolder, dbName, numBytes)
 
-	// Database upload succeeded.  Bounce the user to the page for their new database
-	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, "/", dbName), http.StatusSeeOther)
+	// Database upload succeeded.  Bounce the user to the page for the new upload
+	http.Redirect(w, r, fmt.Sprintf("/%s/%s?branch=%s", dbOwner, dbName, branchName), http.StatusSeeOther)
 }
 
 // Handles JSON requests from the front end to toggle watching of a database.

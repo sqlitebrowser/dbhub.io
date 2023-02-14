@@ -561,7 +561,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 		return fmt.Errorf("The requested database doesn't exist")
 	}
 
-	// If no commit ID was supplied, we retrieve the latest commit one from the default branch
+	// If no commit ID was supplied, we retrieve the latest one from the default branch
 	if commitID == "" {
 		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
 		if err != nil {
@@ -569,18 +569,8 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 		}
 	}
 
-	// Generate a predictable cache key for this functions' metadata.  Probably not sharable with other functions
-	// cached metadata
-	mdataCacheKey := MetadataCacheKey("meta", loggedInUser, dbOwner, dbFolder, dbName, commitID)
-
-	// Only query database if there is no cached version of the response
-	ok, err := GetCachedData(mdataCacheKey, &DB)
-	if err != nil {
-		log.Printf("Error retrieving data from cache: %v\n", err)
-	}
-	if !ok {
-		// Retrieve the database details
-		dbQuery := `
+	// Retrieve the database details
+	dbQuery := `
 			SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
 				$4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
 				db.branches, db.release_count, db.contributors, db.one_line_description, db.full_description,
@@ -595,61 +585,54 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 				AND db.db_name = $3
 				AND db.is_deleted = false`
 
-		// Retrieve the requested database details
-		var defTable, fullDesc, oneLineDesc, sourceURL pgx.NullString
-		err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
-			&DB.Info.RepoModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
-			&DB.Info.CommitID,
-			&DB.Info.DBEntry,
-			&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
-			&DB.Info.Public, &sourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch)
+	// Retrieve the requested database details
+	var defTable, fullDesc, oneLineDesc, sourceURL pgx.NullString
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
+		&DB.Info.RepoModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
+		&DB.Info.CommitID,
+		&DB.Info.DBEntry,
+		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
+		&DB.Info.Public, &sourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch)
 
-		if err != nil {
-			log.Printf("Error when retrieving database details: %v\n", err.Error())
-			return errors.New("The requested database doesn't exist")
-		}
-		if !oneLineDesc.Valid {
-			DB.Info.OneLineDesc = "No description"
-		} else {
-			DB.Info.OneLineDesc = oneLineDesc.String
-		}
-		if !fullDesc.Valid {
-			DB.Info.FullDesc = "No full description"
-		} else {
-			DB.Info.FullDesc = fullDesc.String
-		}
-		if !defTable.Valid {
-			DB.Info.DefaultTable = ""
-		} else {
-			DB.Info.DefaultTable = defTable.String
-		}
-		if !sourceURL.Valid {
-			DB.Info.SourceURL = ""
-		} else {
-			DB.Info.SourceURL = sourceURL.String
-		}
-
-		// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
-		licSHA := DB.Info.DBEntry.LicenceSHA
-		if licSHA != "" {
-			DB.Info.Licence, DB.Info.LicenceURL, err = GetLicenceInfoFromSha256(dbOwner, licSHA)
-			if err != nil {
-				return err
-			}
-		} else {
-			DB.Info.Licence = "Not specified"
-		}
-
-		// Fill out the fields we already have data for
-		DB.Info.Database = dbName
-		DB.Info.Folder = dbFolder
-
-		// Cache the database details
-		err = CacheData(mdataCacheKey, DB, Conf.Memcache.DefaultCacheTime)
-		if err != nil {
-			log.Printf("Error when caching page data: %v\n", err)
-		}
+	if err != nil {
+		log.Printf("Error when retrieving database details: %v\n", err.Error())
+		return errors.New("The requested database doesn't exist")
 	}
+	if !oneLineDesc.Valid {
+		DB.Info.OneLineDesc = "No description"
+	} else {
+		DB.Info.OneLineDesc = oneLineDesc.String
+	}
+	if !fullDesc.Valid {
+		DB.Info.FullDesc = "No full description"
+	} else {
+		DB.Info.FullDesc = fullDesc.String
+	}
+	if !defTable.Valid {
+		DB.Info.DefaultTable = ""
+	} else {
+		DB.Info.DefaultTable = defTable.String
+	}
+	if !sourceURL.Valid {
+		DB.Info.SourceURL = ""
+	} else {
+		DB.Info.SourceURL = sourceURL.String
+	}
+
+	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
+	licSHA := DB.Info.DBEntry.LicenceSHA
+	if licSHA != "" {
+		DB.Info.Licence, DB.Info.LicenceURL, err = GetLicenceInfoFromSha256(dbOwner, licSHA)
+		if err != nil {
+			return err
+		}
+	} else {
+		DB.Info.Licence = "Not specified"
+	}
+
+	// Fill out the fields we already have data for
+	DB.Info.Database = dbName
+	DB.Info.Folder = dbFolder
 
 	// The social stats are always updated because they could change without the cache being updated
 	DB.Info.Watchers, DB.Info.Stars, DB.Info.Forks, err = SocialStats(dbOwner, dbFolder, dbName)
@@ -2293,6 +2276,36 @@ func GetShares(dbOwner, dbFolder, dbName string) (shares map[string]ShareDatabas
 			return
 		}
 		shares[name] = access
+	}
+	return
+}
+
+// GetSharesForUser returns a list of all the databases shared with the given user, and their permissions.
+func GetSharesForUser(userName string) (shares []ShareDatabasePermissionsUser, err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		SELECT users.user_name, db.db_name, shares.access
+		FROM database_shares AS shares, sqlite_databases AS db, u, users
+		WHERE shares.user_id = u.user_id
+			AND shares.db_id = db.db_id
+			AND db.user_id = users.user_id
+		ORDER by users.user_name, db.db_name`
+	rows, e := pdb.Query(dbQuery, userName)
+	if e != nil && e != pgx.ErrNoRows {
+		return nil, e
+	}
+	defer rows.Close()
+	var x ShareDatabasePermissionsUser
+	for rows.Next() {
+		err = rows.Scan(&x.OwnerName, &x.DBName, &x.Permission)
+		if err != nil {
+			return
+		}
+		shares = append(shares, x)
 	}
 	return
 }
