@@ -97,8 +97,8 @@
                     </div>
                     [[ if .Meta.LoggedInUser ]]
                         <a href="/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="btn btn-primary" data-cy="newmrbtn">New Merge Request</a>
+                        <button class="btn btn-primary" ng-click="uploadForm()" data-cy="uploadbtn">Upload database</button>
                     [[ end ]]
-                    <button class="btn btn-primary" ng-click="uploadForm()" data-cy="uploadbtn">Upload database</button>
                 </div>
             </span>
         </div>
