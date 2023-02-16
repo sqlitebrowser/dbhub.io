@@ -360,6 +360,9 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 	} else {
 		// Non-production environments (eg dev, test) can directly set the logged in user
 		u = com.Conf.Environment.UserOverride
+		if u == "" {
+			u = nil
+		}
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -2959,6 +2962,11 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Simulate logout for the test environment
+	if com.Conf.Environment.Environment == "test" {
+		com.Conf.Environment.UserOverride = ""
+	}
+
 	// Bounce to the front page
 	// TODO: This should probably reload the existing page instead
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -3163,6 +3171,7 @@ func main() {
 		http.Handle("/x/test/switchfirst", gz.GzipHandler(logReq(com.SwitchFirst)))
 		http.Handle("/x/test/switchsecond", gz.GzipHandler(logReq(com.SwitchSecond)))
 		http.Handle("/x/test/switchthird", gz.GzipHandler(logReq(com.SwitchThird)))
+		http.Handle("/x/test/logout", gz.GzipHandler(logReq(com.TestLogout)))
 	}
 
 	// CSS

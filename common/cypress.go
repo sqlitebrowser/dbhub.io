@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"time"
 )
 
@@ -27,7 +28,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	Conf.Environment.UserOverride = "default"
 
 	// Add test SQLite database
-	testDB, err := os.Open("/dbhub.io/cypress/test_data/Assembly Election 2017.sqlite")
+	testDB, err := os.Open(path.Join(Conf.Web.BaseDir, "cypress", "test_data", "Assembly Election 2017.sqlite"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -99,5 +100,11 @@ func SwitchSecond(w http.ResponseWriter, r *http.Request) {
 // SwitchThird changes the logged in user to be the test user "third"
 func SwitchThird(w http.ResponseWriter, r *http.Request) {
 	Conf.Environment.UserOverride = "third"
+	return
+}
+
+// TestLogout logs out the user for test runs
+func TestLogout(w http.ResponseWriter, r *http.Request) {
+	Conf.Environment.UserOverride = ""
 	return
 }
