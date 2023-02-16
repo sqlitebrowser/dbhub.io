@@ -13,6 +13,7 @@
     "cypress:install": "./node_modules/.bin/cypress install",
     "cypress:open": "./node_modules/.bin/cypress open >/dev/null 2>&1 &",
     "cypress:test": "./node_modules/.bin/cypress run",
+    "cypress:testff": "./node_modules/.bin/cypress run -b firefox",
     "docker:attach": "docker attach dbhub-build",
     "docker:build": "docker build --tag dbhub-build docker",
     "docker:debug": "docker exec -it dbhub-build /bin/sh /usr/local/bin/debug.sh",
