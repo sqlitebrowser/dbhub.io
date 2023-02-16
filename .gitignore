@@ -38,5 +38,6 @@ db4s/db4s
 webui/webui
 
 # Cypress generated files
+cypress/downloads
 cypress/screenshots
 cypress/videos
