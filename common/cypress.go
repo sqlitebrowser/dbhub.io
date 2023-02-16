@@ -64,6 +64,20 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// EnvProd changes the running environment to be "production"
+// NOTE - This route to call this is only available when the server is _started_ in the "test" environment
+func EnvProd(w http.ResponseWriter, r *http.Request) {
+	Conf.Environment.Environment = "production"
+	return
+}
+
+// EnvTest changes the running environment to be "test"
+// NOTE - This route to call this is only available when the server is _started_ in the "test" environment
+func EnvTest(w http.ResponseWriter, r *http.Request) {
+	Conf.Environment.Environment = "test"
+	return
+}
+
 // SwitchDefault changes the logged in user to be the user "default"
 func SwitchDefault(w http.ResponseWriter, r *http.Request) {
 	Conf.Environment.UserOverride = "default"

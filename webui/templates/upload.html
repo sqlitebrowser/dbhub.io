@@ -11,9 +11,9 @@
         </div>
         <div class="col-md-10">
             [[ if and (ne .Meta.Owner "") (ne .Meta.Database "") ]]
-                <h2 style="text-align: center;">Upload a new commit</h2>
+                <h2 style="text-align: center;" data-cy="uptitle">Upload a new commit</h2>
             [[ else ]]
-                <h2 style="text-align: center;">Upload a database</h2>
+                <h2 style="text-align: center;" data-cy="uptitle">Upload a database</h2>
                 <h4 style="text-align: center;">
                     The public/private setting is ignored when uploading new versions to an existing database.<br />
                     To change it, visit the "Settings" page for the database after uploading.

@@ -46,7 +46,7 @@
                 <!-- User defined SQL tab -->
                 <uib-tab index="0">
                     <uib-tab-heading><span style="color: #555;">SQL</span></uib-tab-heading>
-                    <textarea id="usersql" rows="8" ng-attr-placeholder="Your SQL statement here...">[[ .SQL ]]</textarea>
+                    <textarea id="usersql" rows="8" ng-attr-placeholder="Your SQL statement here..." data-cy="usersqltext">[[ .SQL ]]</textarea>
 
                     <button type="button" class="btn btn-default" ng-click="toggleResultTable()">{{ toggleLabel }}</button>
                     <div uib-collapse="isCollapsed">
@@ -160,7 +160,7 @@
     <div style="text-align: center; margin-top: 1%">
         <input type="submit" class="btn" value="Download as CSV" ng-click="downloadResults()">
         <input type="submit" class="btn" value="Format SQL" ng-click="formatSQL()">
-        <input type="submit" class="btn btn-success" value="Run SQL" ng-click="execSQL()">
+        <input type="submit" class="btn btn-success" value="Run SQL" ng-click="execSQL()" data-cy="runsqlbtn">
         <input type="submit" class="btn btn-primary" value="Save as:" ng-click="saveAs()">
         <input type="text" id="savename" value="default">
         <input type="submit" class="btn btn-danger" value="Delete" ng-click="deleteVis()">

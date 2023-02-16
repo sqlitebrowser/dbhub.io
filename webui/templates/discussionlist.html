@@ -14,7 +14,6 @@
                     <label class="btn btn-default" ng-model="radioOpen" ng-click="openClick('true')" uib-btn-radio="true">Open</label>
                     <label class="btn btn-default" ng-model="radioOpen" ng-click="openClick('false')" uib-btn-radio="false">Closed</label>
                 </div>
-
             </div>
             <br /><br />
         </div>
@@ -48,7 +47,7 @@
                     </tr>
                 </tbody>
             </table>
-            <div ng-if="DiscussionList === null" style="text-align: center; font-size:large;"><i>This database doesn't have any discussions yet</i></div>
+            <div ng-if="DiscussionList === null" style="text-align: center; font-size:large;" data-cy="nodisc"><i>This database doesn't have any discussions yet</i></div>
             <div ng-if="(radioOpen === false) && (DiscussionList !== null) && (discussionCount.closed === 0)" style="text-align: center; font-size:large;"><i>This database doesn't have any closed discussions</i></div>
             <div ng-if="(radioOpen === true) && (DiscussionList !== null) && (discussionCount.open === 0)" style="text-align: center; font-size:large;"><i>This database doesn't have any open discussions</i></div>
         </div>

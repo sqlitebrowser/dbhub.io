@@ -454,7 +454,6 @@ func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool,
 		meta.Database = dbName
 		meta.Owner = usr.Username
 		meta.Folder = "/"
-		meta.Environment = com.Conf.Environment.Environment
 
 		// Retrieve the "forked from" information
 		meta.ForkOwner, meta.ForkFolder, meta.ForkDatabase, meta.ForkDeleted, err = com.ForkedFrom(meta.Owner, meta.Folder, meta.Database)
@@ -462,6 +461,9 @@ func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool,
 			return http.StatusBadRequest, err
 		}
 	}
+
+	// Pass along the environment setting
+	meta.Environment = com.Conf.Environment.Environment
 
 	return
 }
@@ -3155,6 +3157,8 @@ func main() {
 	// Add routes which are only useful during testing
 	if com.Conf.Environment.Environment == "test" {
 		http.Handle("/x/test/seed", gz.GzipHandler(logReq(com.CypressSeed)))
+		http.Handle("/x/test/envprod", gz.GzipHandler(logReq(com.EnvProd)))
+		http.Handle("/x/test/envtest", gz.GzipHandler(logReq(com.EnvTest)))
 		http.Handle("/x/test/switchdefault", gz.GzipHandler(logReq(com.SwitchDefault)))
 		http.Handle("/x/test/switchfirst", gz.GzipHandler(logReq(com.SwitchFirst)))
 		http.Handle("/x/test/switchsecond", gz.GzipHandler(logReq(com.SwitchSecond)))
