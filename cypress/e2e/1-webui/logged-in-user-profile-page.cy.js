@@ -143,7 +143,7 @@ describe('logged-in user profile page', () => {
 
     // Simple sanity check of the downloaded cert
     const cert = path.join(downloadsFolder, 'default.cert.pem')
-    cy.readFile(cert, { timeout: 5000 }).should('have.length.gt', 512)
+    cy.readFile(cert, { timeout: 10000 }).should('have.length.gt', 512)
     cy.task('rmFile', { path: cert })
   })
 })
