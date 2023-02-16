@@ -311,6 +311,9 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 	pageData.DB.Info.Branch = branchName
 
+	// Add Auth0 info to the page data
+	pageData.Auth0 = collectPageAuth0Info()
+
 	// Update database star and watch status for the logged in user
 	pageData.MyStar = myStar
 	pageData.MyWatch = myWatch
