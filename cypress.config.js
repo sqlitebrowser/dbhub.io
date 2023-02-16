@@ -15,5 +15,6 @@ module.exports = defineConfig({
     },
     baseUrl: 'https://localhost:9443',
     supportFile: false,
+    video: false,
   },
 });
