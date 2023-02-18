@@ -5,13 +5,14 @@ github.com/BurntSushi/toml
 ## explicit
 github.com/Freeaqingme/dkim
 # github.com/NYTimes/gziphandler v1.1.1
-## explicit
+## explicit; go 1.11
 github.com/NYTimes/gziphandler
 # github.com/aymerick/douceur v0.2.0
+## explicit
 github.com/aymerick/douceur/css
 github.com/aymerick/douceur/parser
 # github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
-## explicit
+## explicit; go 1.12
 github.com/bradfitz/gomemcache/memcache
 # github.com/bradleypeabody/gorilla-sessions-memcache v0.0.0-20181103040241-659414f458e1
 ## explicit
@@ -20,33 +21,37 @@ github.com/bradleypeabody/gorilla-sessions-memcache
 ## explicit
 github.com/go-ini/ini
 # github.com/go-playground/locales v0.13.0
+## explicit; go 1.13
 github.com/go-playground/locales
 github.com/go-playground/locales/currency
 # github.com/go-playground/universal-translator v0.17.0
+## explicit; go 1.13
 github.com/go-playground/universal-translator
 # github.com/go-playground/validator/v10 v10.3.0
-## explicit
+## explicit; go 1.13
 github.com/go-playground/validator/v10
 # github.com/go-stack/stack v1.8.0
 ## explicit
 # github.com/golang/protobuf v1.4.2
-## explicit
+## explicit; go 1.9
 github.com/golang/protobuf/proto
 # github.com/google/uuid v1.1.1
 ## explicit
 github.com/google/uuid
 # github.com/gorilla/css v1.0.0
+## explicit
 github.com/gorilla/css/scanner
 # github.com/gorilla/securecookie v1.1.1
+## explicit
 github.com/gorilla/securecookie
 # github.com/gorilla/sessions v1.2.0
 ## explicit
 github.com/gorilla/sessions
 # github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237
-## explicit
+## explicit; go 1.13
 github.com/gwenn/gosqlite
 # github.com/gwenn/yacr v0.0.0-20200112083327-bbe82c1f4d60
-## explicit
+## explicit; go 1.13
 github.com/gwenn/yacr
 # github.com/hectane/go-attest v0.1.2
 ## explicit
@@ -66,15 +71,19 @@ github.com/jackc/pgx
 ## explicit
 github.com/kennygrant/sanitize
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
+## explicit
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/leodido/go-urn v1.2.0
+## explicit; go 1.13
 github.com/leodido/go-urn
 # github.com/mattn/go-colorable v0.1.6
-## explicit
+## explicit; go 1.13
+# github.com/mattn/go-isatty v0.0.12
+## explicit; go 1.12
 # github.com/memcachier/mc v2.0.1+incompatible
 ## explicit
 # github.com/microcosm-cc/bluemonday v1.0.16
-## explicit
+## explicit; go 1.16
 github.com/microcosm-cc/bluemonday
 github.com/microcosm-cc/bluemonday/css
 # github.com/minio/minio-go v6.0.14+incompatible
@@ -97,10 +106,10 @@ github.com/pkg/errors
 # github.com/russross/blackfriday v2.0.0+incompatible
 ## explicit
 # github.com/segmentio/ksuid v1.0.3
-## explicit
+## explicit; go 1.12
 github.com/segmentio/ksuid
 # github.com/sergi/go-diff v1.1.0
-## explicit
+## explicit; go 1.12
 github.com/sergi/go-diff/diffmatchpatch
 # github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24
 ## explicit
@@ -123,7 +132,7 @@ github.com/shurcooL/octicon
 ## explicit
 github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.6.0
-## explicit
+## explicit; go 1.13
 github.com/sirupsen/logrus
 # github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337
 ## explicit
@@ -140,12 +149,13 @@ github.com/sqlitebrowser/blackfriday
 ## explicit
 github.com/sqlitebrowser/github_flavored_markdown
 # golang.org/x/crypto v0.0.0-20220314234659-1baeb1ce4c0b
-## explicit
+## explicit; go 1.17
 golang.org/x/crypto/argon2
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
-# golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
+# golang.org/x/net v0.7.0
+## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -154,20 +164,21 @@ golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/publicsuffix
 # golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-## explicit
+## explicit; go 1.11
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+# golang.org/x/sys v0.5.0
+## explicit; go 1.17
 golang.org/x/sys/cpu
-golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.6
+# golang.org/x/text v0.7.0
+## explicit; go 1.17
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 # google.golang.org/appengine v1.6.6
-## explicit
+## explicit; go 1.11
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
@@ -176,6 +187,7 @@ google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/protobuf v1.23.0
+## explicit; go 1.9
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
