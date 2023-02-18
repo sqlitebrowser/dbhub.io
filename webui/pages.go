@@ -2525,14 +2525,14 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 		pageData.Public = tmp.Info.Public
 	}
 
-	// Get branch name, if it was passed.  Otherwise, default to master
+	// Get branch name, if it was passed.  Otherwise, default to "main"
 	pageData.SelectedBranch, err = com.GetFormBranch(r)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
 	if pageData.SelectedBranch == "" {
-		pageData.SelectedBranch = "master"
+		pageData.SelectedBranch = "main"
 	}
 
 	// Ensure the user has set their display name and email address

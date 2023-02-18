@@ -128,7 +128,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 
 		// Set the default branch name for the database
 		if branchName == "" {
-			branchName = "master"
+			branchName = "main"
 		}
 		needDefaultBranchCreated = true
 	}

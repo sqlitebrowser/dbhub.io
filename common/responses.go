@@ -375,8 +375,8 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 
 	// Check if the database exists already
 	if !exists && branchName == "" {
-		// If the database doesn't already exist, and no branch name was provided, then default to master
-		branchName = "master"
+		// If the database doesn't already exist, and no branch name was provided, then default to "main"
+		branchName = "main"
 	}
 
 	// If the database already exists, we need to do collision detection, check for forking, and check for force pushes

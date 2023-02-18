@@ -649,7 +649,7 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 // uploadHandler creates a new database in your account, or adds a new commit to an existing database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbname="Join Testing.sqlite" -F file=@someupload.sqlite \
-//       -F "branch=master" -F "commitmsg=stuff" -F "sourceurl=https://example.org" \
+//       -F "branch=main" -F "commitmsg=stuff" -F "sourceurl=https://example.org" \
 //       -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" \
 //       -F "commit=51d494f2c5eb6734ddaa204eccb9597b426091c79c951924ac83c72038f22b55" https://api.dbhub.io/v1/upload
 //   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in

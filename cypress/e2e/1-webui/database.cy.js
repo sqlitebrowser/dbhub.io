@@ -130,7 +130,7 @@ describe('database page', () => {
 
   // Branch dropdown
   it('Branch dropdown', () => {
-    cy.get('[data-cy="branchname"]').should('contain.text', 'master')
+    cy.get('[data-cy="branchname"]').should('contain.text', 'main')
     cy.get('[data-cy="branchdropdown"]').click()
     cy.get('[data-cy="branch-stuff"]').click()
     cy.get('[data-cy="branchname"]').should('contain.text', 'stuff')

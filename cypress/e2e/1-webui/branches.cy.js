@@ -24,7 +24,7 @@ describe('branches', () => {
     cy.visit('branches/default/Assembly%20Election%202017.sqlite')
 
     // Name
-    cy.get('[data-cy="nameinput"]').first().should('have.value', 'master')
+    cy.get('[data-cy="nameinput"]').first().should('have.value', 'main')
 
     // Description
     cy.get('[data-cy="rendereddiv"]').first().should('contain', 'No description')
@@ -34,13 +34,13 @@ describe('branches', () => {
     cy.get('[data-cy="desctext"]').first().should('be.empty')
 
     // URL for commit id
-    cy.get('[data-cy="commitlnk"]').first().should('have.attr', 'href').and('match', /^\/default\/Assembly%20Election%202017.sqlite\?branch=master&commit=.*$/)
+    cy.get('[data-cy="commitlnk"]').first().should('have.attr', 'href').and('match', /^\/default\/Assembly%20Election%202017.sqlite\?branch=main&commit=.*$/)
   })
 
   // Rename branch
   it('rename branch', () => {
     cy.visit('branches/default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="nameinput"]').first().should('have.value', 'master')
+    cy.get('[data-cy="nameinput"]').first().should('have.value', 'main')
     cy.get('[data-cy="nameinput"]').first().type('{selectall}{backspace}').type('Some other name').should('have.value', 'Some other name')
     cy.get('[data-cy="savebtn"]').first().click()
     cy.reload()

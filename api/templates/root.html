@@ -168,7 +168,7 @@
             <div class="row indent">
                 <div class="col-md-3 paramname">default_branch</div>
                 <div class="col-md-1 type">string</div>
-                <div class="col-md-8">The name of the default branch for the database.  eg: "master"</div>
+                <div class="col-md-8">The name of the default branch for the database.  eg: "main"</div>
             </div>
             <div class="row indent">
                 <div class="col-md-3 paramname">branches</div>
@@ -178,7 +178,7 @@
             <div class="row indent">
                 <div class="col-md-3 paramname">branches → [branch name]</div>
                 <div class="col-md-1 type">string</div>
-                <div class="col-md-8">The name of a branch in the database.  eg: "master"</div>
+                <div class="col-md-8">The name of a branch in the database.  eg: "main"</div>
             </div>
             <div class="row indent">
                 <div class="col-md-3 paramname">branches → [branch object] → commit</div>
@@ -205,13 +205,13 @@
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/branches</pre>
                     Output: <pre>{
   "branches": {
-    "master": {
+    "main": {
       "commit": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
       "commit_count": 2,
       "description": "Our main development branch"
     }
   },
-  "default_branch": "master"
+  "default_branch": "main"
 }</pre>
                 </div>
             </div>
@@ -951,7 +951,7 @@
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/metadata</pre>
                     Output: <pre>{
   "branches": {
-    "master": {
+    "main": {
       "commit": "cb70855613d30019055a4d907b832c10014b0393556fc282e6b7d2803e2e9d59",
       "commit_count": 2,
       "description": ""
@@ -1007,7 +1007,7 @@
       }
     }
   },
-  "default_branch": "master",
+  "default_branch": "main",
   "releases": {
     "v0.0.1": {
       "commit": "ee752d746655cf141971a5db011aec2f395213cf76d8aa9c613a6c16902df521",
@@ -1578,11 +1578,11 @@ ORDER BY table1.id;</pre>
                 <div class="col-md-12">
                     To upload a new database using <a href="https://curl.haxx.se">curl</a>, you could use:
                     <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbname="Join Testing.sqlite" \
-    -F file=@someupload.sqlite -F "branch=master" -F "commitmsg=stuff" -F "sourceurl=https://example.org" \
+    -F file=@someupload.sqlite -F "branch=main" -F "commitmsg=stuff" -F "sourceurl=https://example.org" \
     -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" https://api.dbhub.io/v1/upload</pre>
                     Output: <pre>{
   "commit": "e6ab7a2afbb5537d9e57d54c0a2a5d9e4033e1aa6db810cb9a63642a04e3813d",
-  "url": "https://dbhub.io/justinclift/Join Testing.sqlite?branch=master\u0026commit=e6ab7a2afbb5537d9e57d54c0a2a5d9e4033e1aa6db810cb9a63642a04e3813d"
+  "url": "https://dbhub.io/justinclift/Join Testing.sqlite?branch=main\u0026commit=e6ab7a2afbb5537d9e57d54c0a2a5d9e4033e1aa6db810cb9a63642a04e3813d"
 }</pre>
                 </div>
             </div>
