@@ -24,7 +24,7 @@ describe('001 - shared database cache invalidation bug - pub/priv setting', () =
     cy.get('[data-cy="private"]').click()
     cy.get('[data-cy="savebtn"]').click()
 
-    // 4. The bug is that when the user "first" now visits they page, they are still shown the database setting of "public"
+    // 4. The bug is that when the user "first" now visits the page, they are still shown the database setting of "public"
     //    even though the database has actually been set to private
     cy.request("/x/test/switchfirst")
     cy.visit("default/Assembly Election 2017.sqlite")
