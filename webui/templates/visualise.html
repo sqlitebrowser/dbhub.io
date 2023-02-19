@@ -546,6 +546,11 @@
 
                         // Remove the visualisation from the drop down list
                         $scope.visNames.splice(arrIdx, 1);
+
+                        // If the currently selected visualisation is the deleted one, set the current visualisation name back to default
+                        if($scope.visName == name) {
+                            $scope.visName = "default"
+                        }
                     }, function failure(response) {
                         // The deletion failed, so display the returned error message
                         $scope.statusMessageColour = "red";
@@ -709,6 +714,9 @@
                     if ($scope.visNames.indexOf(name) === -1) {
                         $scope.visNames.push(name);
                     }
+
+                    // Set current visualisation name
+                    $scope.visName = name
                 }, function failure(response) {
                     // The save failed, so display the returned error message
                     $scope.statusMessageColour = "red";
