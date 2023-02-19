@@ -3227,6 +3227,14 @@ func main() {
 	http.Handle("/js/angular-bootstrap-lightbox.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-bootstrap-lightbox.min.js"))
 	})))
+
+	http.Handle("/js/react.production.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "react.production.min.js"))
+	})))
+	http.Handle("/js/react-dom.production.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "react-dom.production.min.js"))
+	})))
+
 	http.Handle("/js/local.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "local.js"))
 	})))
