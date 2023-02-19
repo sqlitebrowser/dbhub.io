@@ -39,19 +39,19 @@ if [ ! -e "${DEST}/lib/libsqlite3.so" ]; then
 fi
 
 # Builds the Go binaries
-if [ ! -x "${GOBIN}/api" ]; then
+if [ -d "${GOBIN}" ]; then
   echo "Compiling DBHub.io API executable"
   cd api
   go install .
   cd ..
 fi
-if [ ! -x "${GOBIN}/db4s" ]; then
+if [ -d "${GOBIN}" ]; then
   echo "Compiling DBHub.io DB4S API executable"
   cd db4s
   go install .
   cd ..
 fi
-if [ ! -x "${GOBIN}/webui" ]; then
+if [ -d "${GOBIN}" ]; then
   echo "Compiling DBHub.io web User Interface executable"
   cd webui
   go install .
