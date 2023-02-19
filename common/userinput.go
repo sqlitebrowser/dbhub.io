@@ -100,7 +100,7 @@ func GetFolder(r *http.Request, allowGet bool) (folder string, err error) {
 	}
 	err = ValidateFolder(folder)
 	if err != nil {
-		log.Printf("Validation failed for folder: '%s': %s", folder, err)
+		log.Printf("Validation failed for folder: '%s': %s", SanitiseLogString(folder), err)
 		return "", err
 	}
 
@@ -122,7 +122,7 @@ func GetFormBranch(r *http.Request) (branch string, err error) {
 	}
 	err = ValidateBranchName(branch)
 	if err != nil {
-		return "", fmt.Errorf("Invalid branch name: '%v'", branch)
+		return "", fmt.Errorf("Invalid branch name: '%v'", SanitiseLogString(branch))
 	}
 	return branch, nil
 }
@@ -136,7 +136,7 @@ func GetFormCommit(r *http.Request) (commitID string, err error) {
 	}
 	err = ValidateCommitID(commitID)
 	if err != nil {
-		return "", fmt.Errorf("Invalid database commit: '%v'", commitID)
+		return "", fmt.Errorf("Invalid database commit: '%v'", SanitiseLogString(commitID))
 	}
 	return commitID, nil
 }
@@ -152,7 +152,7 @@ func GetFormLicence(r *http.Request) (licenceName string, err error) {
 	// Validate the licence name
 	err = ValidateLicence(l)
 	if err != nil {
-		log.Printf("Validation failed for licence: '%s': %s", l, err)
+		log.Printf("Validation failed for licence: '%s': %s", SanitiseLogString(l), err)
 		return "", err
 	}
 	licenceName = l
@@ -262,7 +262,7 @@ func GetFormTag(r *http.Request) (tag string, err error) {
 	}
 	err = ValidateBranchName(c)
 	if err != nil {
-		return "", fmt.Errorf("Invalid tag name: '%v'", c)
+		return "", fmt.Errorf("Invalid tag name: '%v'", SanitiseLogString(c))
 	}
 	return c, nil
 }
@@ -341,7 +341,7 @@ func GetOD(ignoreLeading int, r *http.Request) (dbOwner string, dbName string, e
 		}
 
 		log.Printf("Validation failed for owner or database name. Owner '%s', DB name '%s': %s",
-			dbOwner, dbName, err)
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return "", "", errors.New("Invalid owner or database name")
 	}
 
@@ -438,7 +438,7 @@ func GetTable(r *http.Request) (requestedTable string, err error) {
 			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a
 			// search bot picking up the AngularJS string then doing a request with it
 			if requestedTable != "{{ db.Tablename }}" {
-				log.Printf("Validation failed for table name: '%s': %s", requestedTable, err)
+				log.Printf("Validation failed for table name: '%s': %s", SanitiseLogString(requestedTable), err)
 			}
 			return "", errors.New("Invalid table name")
 		}
@@ -498,4 +498,12 @@ func GetUsername(r *http.Request, allowGet bool) (userName string, err error) {
 	}
 
 	return userName, nil
+}
+
+func SanitiseLogString(v string) (result string) {
+	result = strings.Replace(v, "\n", "", -1)
+	result = strings.Replace(result, "\r", "", -1)
+	result = strings.Replace(result, "'", "\\'", -1)
+
+	return result
 }
