@@ -264,6 +264,11 @@
             $scope.radioYAxisShowLabels = false;
         }
 
+        // Change the branch being viewed
+        $scope.changeBranch = function(branchName){
+            window.location = "/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch=" + branchName;
+        };
+
         // Display a Plotly chart
         $scope.doChart = function(updateData) {
             // Figure out the column indexes in $scope.db.Records for the X and Y columns
