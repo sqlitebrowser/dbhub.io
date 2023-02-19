@@ -268,6 +268,12 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// If there are no visualisations, indicate that using an empty slice instead of a null value. This makes sure the array of
+	// visualisation names in the resulting JavaScript code is encoded correctly.
+	if pageData.VisNames == nil {
+		pageData.VisNames = make([]string, 0)
+	}
+
 	// Fill out various metadata fields
 	pageData.Meta.Title = fmt.Sprintf("vis - %s %s %s", pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 
