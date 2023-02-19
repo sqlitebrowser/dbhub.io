@@ -1,0 +1,30 @@
+name: "Cypress"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "master" ]
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-20.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Cypress run
+      uses: cypress-io/github-action@v5
+      with:
+        wait-on: 'https://localhost:9443'
+        wait-on-timeout: 120
+        build: yarn docker:build
+        start: yarn docker:startlocal
+        command: yarn cypress:test
+      env:
+        NODE_TLS_REJECT_UNAUTHORIZED: 0

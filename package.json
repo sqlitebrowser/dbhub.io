@@ -28,7 +28,7 @@
     "docker:tail": "docker exec -it dbhub-build tail -F /home/dbhub/output.log"
   },
   "engines": {
-    "node": "^14.21.2",
+    "node": "^18.14.1",
     "yarn": "^1.22.19"
   },
   "repository": "https://github.com/sqlitebrowser/dbhub.io",
