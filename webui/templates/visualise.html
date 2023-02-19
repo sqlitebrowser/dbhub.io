@@ -454,6 +454,9 @@
                                     plotData[0].type = "pie";
                             }
 
+                            // Set chart title to the visualisation name
+                            chartData.Title = newVis
+
                             // Try displaying the chart
                             dataReceived = true;
                             if ($scope.db.ColNames.length > 1) {
@@ -717,6 +720,9 @@
 
                     // Set current visualisation name
                     $scope.visName = name
+
+                    // Set chart title to visualisation name
+                    chartData.Title = name
                 }, function failure(response) {
                     // The save failed, so display the returned error message
                     $scope.statusMessageColour = "red";
@@ -784,6 +790,11 @@
             $scope.updateYAxisColumnList();
             $scope.YAxisColumn = "[[ .YAxisCol ]]";
             chartData.YAxisLabel = $scope.YAxisColumn;
+
+            // Set chart title to visualisation name if there is one
+            if($scope.visName != "default") {
+                chartData.Title = $scope.visName;
+            }
         }
 
         // If the data points for visualisation were provided, set the flag to indicate this
