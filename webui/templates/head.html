@@ -12,5 +12,13 @@
     <link href="/css/local.css" rel="stylesheet">
     <script src="//cdn.auth0.com/js/lock/11.35.0/lock.min.js"></script>
     <script src="/js/local.js" type="application/javascript"></script>
+    [[ if eq .Meta.Environment "production" ]]
+        <script type="application/javascript">
+        // Only invoke the Auth0 pieces in the production environment
+        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        }});
+        </script>
+    [[ end ]]
 </head>
 [[ end ]]

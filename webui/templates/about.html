@@ -74,21 +74,6 @@
     </div>
 </div>
 [[ template "footer" . ]]
-<script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('aboutView', function($scope) {
-        [[ if eq .Meta.Environment "production" ]]
-        // Only invoke the Auth0 pieces in the production environment
-        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
-            redirectUrl: "[[ .Auth0.CallbackURL]]"
-        }});
-
-        $scope.showLock = function() {
-            lock.show();
-        };
-        [[ end ]]
-    });
-</script>
 </body>
 </html>
 [[ end ]]

@@ -7,7 +7,7 @@ function ToggleButton({icon, textSet, textUnset, redirectUrl, updateUrl, pageUrl
 	}
 
 	function toggleState() {
-		if (meta.loggedIn !== true) {
+		if (authInfo.loggedIn !== true) {
 			// User needs to be logged in
 			lock.show();
 			return;
@@ -50,7 +50,7 @@ function DbHeader() {
 	}
 
 	let settings = null;
-	if (meta.loggedIn) {
+	if (authInfo.loggedIn) {
 		settings = <label id="settings" class={meta.pageSection == "db_settings" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/settings/" + meta.owner + "/" + meta.database} class="blackLink" title="Settings" data-cy="settingslink"><i class="fa fa-cog"></i> Settings</a></label>;
 	}
 
@@ -60,14 +60,14 @@ function DbHeader() {
 	}
 
 	let visibility = null;
-	if (meta.owner == meta.loggedInUser) {
+	if (meta.owner == authInfo.loggedInUser) {
 		visibility = <><b>Visibility:</b> <a class="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="vis">{publicString}</a></>;
 	} else {
 		visibility = <><b>Visibility:</b> <span data-cy="vis">{publicString}</span></>;
 	}
 
 	let licence = null;
-	if (meta.owner == meta.loggedInUser) {
+	if (meta.owner == authInfo.loggedInUser) {
 		licence = <><b>Licence:</b> <a class="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="lic">{ meta.licence }</a></>;
 	} else {
 		if (meta.licenceUrl != "") {
@@ -124,7 +124,7 @@ function DbHeader() {
 							count={meta.numForks}
 							cyToggle="forksbtn"
 							cyPage="forkspagebtn"
-							disabled={meta.owner == meta.loggedInUser}
+							disabled={meta.owner == authInfo.loggedInUser}
 						/>
 					</div>
 				</h2>

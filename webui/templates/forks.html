@@ -45,17 +45,6 @@
     app.controller('forksView', function($scope) {
         $scope.forks = { Forks: [[ .Forks ]] }
 
-        [[ if eq .Meta.Environment "production" ]]
-        // Only invoke the Auth0 pieces in the production environment
-        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
-            redirectUrl: "[[ .Auth0.CallbackURL]]"
-        }});
-
-        $scope.showLock = function() {
-            lock.show();
-        };
-        [[ end ]]
-
         // Display the appropriate fork icons for a database row
         $scope.rowIcons = function(rowData) {
             let returnList = "";

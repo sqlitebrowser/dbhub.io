@@ -30,7 +30,7 @@ function ToggleButton(_ref) {
     window.location = pageUrl;
   }
   function toggleState() {
-    if (meta.loggedIn !== true) {
+    if (authInfo.loggedIn !== true) {
       // User needs to be logged in
       lock.show();
       return;
@@ -82,7 +82,7 @@ function DbHeader() {
     }, meta.forkDatabase));
   }
   var settings = null;
-  if (meta.loggedIn) {
+  if (authInfo.loggedIn) {
     settings = /*#__PURE__*/React.createElement("label", {
       id: "settings",
       "class": meta.pageSection == "db_settings" ? "dbMenuLinkActive" : "dbMenuLink"
@@ -100,7 +100,7 @@ function DbHeader() {
     publicString = "Public";
   }
   var visibility = null;
-  if (meta.owner == meta.loggedInUser) {
+  if (meta.owner == authInfo.loggedInUser) {
     visibility = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", null, "Visibility:"), " ", /*#__PURE__*/React.createElement("a", {
       "class": "blackLink",
       href: "/settings/" + meta.owner + "/" + meta.database,
@@ -112,7 +112,7 @@ function DbHeader() {
     }, publicString));
   }
   var licence = null;
-  if (meta.owner == meta.loggedInUser) {
+  if (meta.owner == authInfo.loggedInUser) {
     licence = /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("b", null, "Licence:"), " ", /*#__PURE__*/React.createElement("a", {
       "class": "blackLink",
       href: "/settings/" + meta.owner + "/" + meta.database,
@@ -182,7 +182,7 @@ function DbHeader() {
     count: meta.numForks,
     cyToggle: "forksbtn",
     cyPage: "forkspagebtn",
-    disabled: meta.owner == meta.loggedInUser
+    disabled: meta.owner == authInfo.loggedInUser
   }))))), /*#__PURE__*/React.createElement("div", {
     "class": "row",
     style: {

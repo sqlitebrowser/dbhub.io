@@ -245,17 +245,6 @@
                 $scope.statusMessage = "Branch update failed";
             });
         };
-
-        [[ if eq .Meta.Environment "production" ]]
-        // Only invoke the Auth0 pieces in the production environment
-        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
-            redirectUrl: "[[ .Auth0.CallbackURL]]"
-        }});
-
-        $scope.showLock = function() {
-            lock.show();
-        };
-        [[ end ]]
     });
 </script>
 [[ template "script_db_header" . ]]

@@ -72,4 +72,18 @@
 </script>
 <!-- Chatwoot end -->
 [[ end ]]
+
+<script type="application/javascript">
+    const authInfo = {
+        [[ if .Meta.LoggedInUser ]]
+            loggedIn: true,
+        [[ else ]]
+            loggedIn: false,
+        [[ end ]]
+        loggedInUser: "[[ .Meta.LoggedInUser ]]",
+        avatarUrl: "[[ .Meta.AvatarURL ]]",
+        numStatusUpdates: [[ .Meta.NumStatusUpdates ]]
+    };
+</script>
+<script src="/js/auth.js"></script>
 [[ end ]]
