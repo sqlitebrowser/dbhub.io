@@ -6,7 +6,7 @@
 <script src="/js/plotly-basic-2.18.2.min.js"></script>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
-    [[ template "headerdatabase" . ]]
+    <div id="db-header-root"></div>
     <div class="row" style="padding-bottom: 10px;">
         <div class="col-md-10">
             <span class="pull-left">
@@ -818,9 +818,10 @@
             lock.show();
         };
         [[ end ]]
-        [[ template "script_headerdatabase" . ]]
     });
 </script>
+[[ template "script_db_header" . ]]
+<script src="/js/db-header.js"></script>
 </body>
 </html>
 [[ end ]]
