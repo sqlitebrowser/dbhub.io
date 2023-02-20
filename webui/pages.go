@@ -54,8 +54,11 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 		DB            com.SQLiteDBinfo
 		DefaultBranch string
 		Meta          com.MetaInfo
+		MyStar        bool
+		MyWatch       bool
 	}
 	pageData.Meta.Title = "Branch list"
+	pageData.Meta.PageSection = "db_data"
 
 	// Get all meta information
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
@@ -68,6 +71,20 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -554,8 +571,11 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		Contributors map[string]AuthorEntry
 		DB           com.SQLiteDBinfo
 		Meta         com.MetaInfo
+		MyStar       bool
+		MyWatch      bool
 	}
-	pageData.Meta.Title = "Branch list"
+	pageData.Meta.Title = "Contributors"
+	pageData.Meta.PageSection = "db_data"
 
 	// Get all meta information
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
@@ -568,6 +588,20 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -2026,9 +2060,12 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		Auth0       com.Auth0Set
 		DB          com.SQLiteDBinfo
 		Meta        com.MetaInfo
+		MyStar      bool
+		MyWatch     bool
 		ReleaseList map[string]relEntry
 	}
 	pageData.Meta.Title = "Release list"
+	pageData.Meta.PageSection = "db_data"
 
 	// Get all meta information
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
@@ -2041,6 +2078,20 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -2365,9 +2416,12 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		Auth0   com.Auth0Set
 		DB      com.SQLiteDBinfo
 		Meta    com.MetaInfo
+		MyStar  bool
+		MyWatch bool
 		TagList map[string]tgEntry
 	}
 	pageData.Meta.Title = "Tag list"
+	pageData.Meta.PageSection = "db_data"
 
 	// Get all meta information
 	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
@@ -2380,6 +2434,20 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if the database was starred by the logged in user
+	pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
+		return
+	}
+
+	// Check if the database is being watched by the logged in user
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 

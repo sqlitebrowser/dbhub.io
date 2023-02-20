@@ -5,15 +5,7 @@
 <body>
 [[ template "header" . ]]
 <div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
-    <div class="row">
-        <div class="col-md-12">
-            <h2 style="text-align: center;">
-                <span data-cy="tagsfor">Tags for</span>
-                <a class="blackLink" href="/[[ .Meta.Owner ]]" data-cy="ownerlnk">[[ .Meta.Owner ]]</a> /
-                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="dblnk">[[ .Meta.Database ]]</a>
-            </h2>
-        </div>
-    </div>
+    <div id="db-header-root"></div>
     <div class="row" ng-if="statusMessage != ''">
         <div class="col-md-12">
             <div style="text-align: center; padding-bottom: 8px;">
@@ -206,6 +198,8 @@
         [[ end ]]
     });
 </script>
+[[ template "script_db_header" . ]]
+<script src="/js/db-header.js"></script>
 </body>
 </html>
 [[ end ]]

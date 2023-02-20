@@ -84,8 +84,9 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 
 // auth0CallbackHandler is called at the end of the Auth0 authentication process, whether successful or not.
 // If the authentication process was successful:
-//  * if the user already has an account on our system then this function creates a login session for them.
-//  * if the user doesn't yet have an account on our system, they're bounced to the username selection page.
+//   - if the user already has an account on our system then this function creates a login session for them.
+//   - if the user doesn't yet have an account on our system, they're bounced to the username selection page.
+//
 // If the authentication process wasn't successful, an error message is displayed.
 func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Auth0 login part, mostly copied from https://github.com/auth0-samples/auth0-golang-web-app (MIT License)
