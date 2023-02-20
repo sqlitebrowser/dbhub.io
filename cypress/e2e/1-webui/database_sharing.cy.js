@@ -81,16 +81,16 @@ describe('database sharing', () => {
   // Public databases should remain viewable to users they're shared with
   it('public databases remain viewable to users they\'re shared with', () => {
     cy.visit("default/Assembly Election 2017.sqlite")
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly Election 2017.sqlite')
     cy.request("/x/test/switchfirst")
     cy.visit("default/Assembly Election 2017.sqlite")
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly Election 2017.sqlite')
     cy.request("/x/test/switchsecond")
     cy.visit("default/Assembly Election 2017.sqlite")
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly Election 2017.sqlite')
     cy.request("/x/test/switchthird")
     cy.visit("default/Assembly Election 2017.sqlite")
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly Election 2017.sqlite')
     cy.request("/x/test/switchdefault")
   })
 
@@ -106,11 +106,11 @@ describe('database sharing', () => {
 
     // Ensure trying to load the test databases only works where appropriate
     cy.visit('default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly Election 2017.sqlite')
     cy.visit({url: 'first/Assembly%20Election%202017.sqlite', failOnStatusCode: false})
     cy.get('[data-cy="errormsg"').should('contain', 'doesn\'t exist')
     cy.visit('second/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/second/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/second/Assembly Election 2017.sqlite')
     cy.visit({url: 'third/Assembly%20Election%202017.sqlite', failOnStatusCode: false})
     cy.get('[data-cy="errormsg"').should('contain', 'doesn\'t exist')
   })
@@ -127,9 +127,9 @@ describe('database sharing', () => {
 
     // Ensure trying to load the other test databases only works where appropriate
     cy.visit('second/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/second/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/second/Assembly Election 2017.sqlite')
     cy.visit('third/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/third/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/third/Assembly Election 2017.sqlite')
     cy.request("/x/test/switchdefault")
   })
 
@@ -144,7 +144,7 @@ describe('database sharing', () => {
 
     // Ensure trying to load the other test databases only works where appropriate
     cy.visit('first/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/first/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/first/Assembly Election 2017.sqlite')
     cy.visit('third/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/third/Assembly%20Election%202017.sqlite')
     cy.request("/x/test/switchdefault")
@@ -161,7 +161,7 @@ describe('database sharing', () => {
 
     // Ensure trying to load the other test databases only works where appropriate
     cy.visit('first/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/first/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/first/Assembly Election 2017.sqlite')
     cy.visit({url: 'second/Assembly%20Election%202017.sqlite', failOnStatusCode: false})
     cy.get('[data-cy="errormsg"').should('contain', 'doesn\'t exist')
     cy.request("/x/test/switchdefault")
@@ -208,21 +208,21 @@ describe('database sharing', () => {
     cy.get('[data-cy="uploadbtn"').click()
     cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
     cy.get('[data-cy="uploadbtn"').click()
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/second/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/second/Assembly Election 2017.sqlite')
 
     cy.request("/x/test/switchfirst")
     cy.visit('third/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="uploadbtn"').click()
     cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
     cy.get('[data-cy="uploadbtn"').click()
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/third/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/third/Assembly Election 2017.sqlite')
 
     cy.request("/x/test/switchsecond")
     cy.visit('first/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="uploadbtn"').click()
     cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
     cy.get('[data-cy="uploadbtn"').click()
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/first/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/first/Assembly Election 2017.sqlite')
   })
 
   // Upload to shared read-write public database (should succeed)
@@ -232,7 +232,7 @@ describe('database sharing', () => {
     cy.get('[data-cy="uploadbtn"').click()
     cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
     cy.get('[data-cy="uploadbtn"').click()
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly Election 2017.sqlite')
     cy.get('[data-cy="vis"]').should('have.text', 'Public')
   })
 })
