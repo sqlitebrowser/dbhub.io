@@ -1,6 +1,7 @@
 function Auth() {
 	function login() {
 		lock.show();
+		return false;
 	}
 
 	if (authInfo.loggedInUser) {
@@ -26,7 +27,7 @@ function Auth() {
 			</>
 		);
 	} else {
-		return <a href="" onClick={login} style={{color: "black"}} data-cy="loginlnk">Login / Register</a>;
+		return <a onClick={() => {return login()}} class="blackLink" data-cy="loginlnk">Login / Register</a>;
 	}
 }
 

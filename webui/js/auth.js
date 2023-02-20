@@ -3,6 +3,7 @@
 function Auth() {
   function login() {
     lock.show();
+    return false;
   }
   if (authInfo.loggedInUser) {
     var avatar = null;
@@ -66,11 +67,10 @@ function Auth() {
     }, "Log out"));
   } else {
     return /*#__PURE__*/React.createElement("a", {
-      href: "",
-      onClick: login,
-      style: {
-        color: "black"
+      onClick: function onClick() {
+        return login();
       },
+      "class": "blackLink",
       "data-cy": "loginlnk"
     }, "Login / Register");
   }
