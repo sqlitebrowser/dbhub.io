@@ -1,0 +1,39 @@
+[[ define "script_db_header" ]]
+
+<script>
+    const meta = {
+        [[ if .Meta.LoggedInUser ]]
+            loggedIn: true,
+        [[ else ]]
+            loggedIn: false,
+        [[ end ]]
+        loggedInUser: "[[ .Meta.LoggedInUser ]]",
+        pageSection: "[[ .Meta.PageSection ]]",
+
+        owner: "[[ .Meta.Owner ]]",
+        database: "[[ .Meta.Database ]]",
+
+        publicDb: [[ .DB.Info.Public ]],
+        repoModified: [[ .DB.Info.RepoModified ]],
+        licence: "[[ .DB.Info.Licence ]]",
+        licenceURL: "[[ .DB.Info.LicenceURL ]]",
+        size: [[ .DB.Info.DBEntry.Size ]],
+
+        forkOwner: "[[ .Meta.ForkOwner ]]",
+        forkDatabase: "[[ .Meta.ForkDatabase ]]",
+        forkDeleted: [[ .Meta.ForkDeleted ]],
+        numForks: [[ .DB.Info.Forks ]],
+        
+        commitID: "[[ .DB.Info.CommitID ]]",
+
+        isWatching: [[ .MyWatch ]],
+        numWatchers: [[ .DB.Info.Watchers ]],
+        isStarred: [[ .MyStar ]],
+        numStars: [[ .DB.Info.Stars ]],
+
+        numDiscussions: [[ .DB.Info.Discussions ]],
+        numMRs: [[ .DB.Info.MRs ]]
+    };
+</script>
+
+[[ end ]]

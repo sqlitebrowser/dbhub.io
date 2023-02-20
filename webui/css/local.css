@@ -12,6 +12,15 @@
     text-decoration: underline;
 }
 
+.dbMenu {
+    font-weight: 600;
+    font-family: 'arial black'
+}
+
+.dbMenuLinkActive {
+    border-bottom: 1px grey dashed;
+}
+
 .inBox {
     color: #181818;
     cursor: pointer;
