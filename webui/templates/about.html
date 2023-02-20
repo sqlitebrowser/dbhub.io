@@ -74,6 +74,11 @@
     </div>
 </div>
 [[ template "footer" . ]]
+<script>
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    app.controller('aboutView', function($scope) {
+    });
+</script>
 </body>
 </html>
 [[ end ]]
