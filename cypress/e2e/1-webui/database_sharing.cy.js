@@ -146,7 +146,7 @@ describe('database sharing', () => {
     cy.visit('first/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/first/Assembly Election 2017.sqlite')
     cy.visit('third/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/third/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/third/Assembly Election 2017.sqlite')
     cy.request("/x/test/switchdefault")
   })
 
