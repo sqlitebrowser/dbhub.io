@@ -44,14 +44,10 @@ if [ -d "${GOBIN}" ]; then
   cd api
   go install .
   cd ..
-fi
-if [ -d "${GOBIN}" ]; then
   echo "Compiling DBHub.io DB4S API executable"
   cd db4s
   go install .
   cd ..
-fi
-if [ -d "${GOBIN}" ]; then
   echo "Compiling DBHub.io web User Interface executable"
   cd webui
   go install .
