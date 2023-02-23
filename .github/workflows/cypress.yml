@@ -23,7 +23,7 @@ jobs:
       with:
         wait-on: 'https://localhost:9443'
         wait-on-timeout: 120
-        build: yarn docker:build
+        build: yarn docker:build && yarn build
         start: yarn docker:startlocal
         command: yarn cypress:test
       env:
