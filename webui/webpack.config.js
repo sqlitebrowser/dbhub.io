@@ -5,6 +5,6 @@ module.exports = {
 	entry: "./webui/js/app.js",
 	output: {
 		filename: "dbhub.js",
-		path: path.resolve(__dirname, "webui/js")
+		path: path.resolve(__dirname, "js")
 	}
 };
