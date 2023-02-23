@@ -7,7 +7,7 @@ LABEL maintainer="Justin Clift <justin@postgresql.org>"
 RUN  \
     apk update && \
     apk upgrade && \
-    apk add --no-cache ca-certificates 'curl>7.61.0' git go libc-dev memcached postgresql sqlite-dev
+    apk add --no-cache ca-certificates 'curl>7.61.0' git go libc-dev memcached postgresql sqlite-dev yarn
 
 # Create the DBHub.io OS user
 RUN addgroup dbhub && \
@@ -104,7 +104,11 @@ RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/l
     echo "done" >> /usr/local/bin/start.sh
 
 # Create script to compile DBHub.io daemons
-RUN echo "cd ${DBHUB_SOURCE}/api" >> /usr/local/bin/compile.sh && \
+RUN echo "cd ${DBHUB_SOURCE}" >> /usr/local/bin/compile.sh && \
+    echo "yarn" >> /usr/local/bin/compile.sh && \
+    echo "yarn run babel ${DBHUB_SOURCE}/webui/jsx --out-dir ${DBHUB_SOURCE}/webui/js --presets babel-preset-react-app/prod" >> /usr/local/bin/compile.sh && \
+    echo "yarn run webpack -c ${DBHUB_SOURCE}/webui/webpack.config.js" >> /usr/local/bin/compile.sh && \
+    echo "cd ${DBHUB_SOURCE}/api" >> /usr/local/bin/compile.sh && \
     echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-api ." >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/db4s" >> /usr/local/bin/compile.sh && \
     echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-db4s ." >> /usr/local/bin/compile.sh && \
@@ -155,7 +159,6 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/debug.sh && \
 
 # Build the DBHub.io daemons
 RUN cd / && git clone --branch master --depth 5 https://github.com/sqlitebrowser/dbhub.io
-VOLUME ${DBHUB_SOURCE}
 RUN /usr/local/bin/compile.sh
 
 # Initialise PostgreSQL and Minio

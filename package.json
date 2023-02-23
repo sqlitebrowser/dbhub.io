@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "@babel/cli": "^7.20.7",
     "babel-preset-react": "^6.24.1",
     "babel-preset-react-app": "^10.0.1",
     "cypress": "^12.3.0",
@@ -41,6 +40,7 @@
   "license": "AGPL-3.0-or-later",
   "private": false,
   "devDependencies": {
+    "@babel/cli": "^7.20.7",
     "webpack": "^5.75.0",
     "webpack-cli": "^5.0.1"
   }
