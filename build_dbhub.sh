@@ -38,6 +38,12 @@ if [ ! -e "${DEST}/lib/libsqlite3.so" ]; then
   cd ../..
 fi
 
+# Compile JSX files and build webpack bundle
+cd webui
+npx babel jsx --out-dir js --presets babel-preset-react-app/prod
+npx webpack
+cd ..
+
 # Builds the Go binaries
 if [ -d "${GOBIN}" ]; then
   echo "Compiling DBHub.io API executable"

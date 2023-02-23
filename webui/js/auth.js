@@ -1,5 +1,11 @@
 "use strict";
 
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports["default"] = Auth;
+var React = require("react");
+var ReactDOM = require("react-dom");
 function Auth() {
   function login() {
     lock.show();
@@ -21,12 +27,12 @@ function Auth() {
     if (authInfo.numStatusUpdates === 0) {
       updates = /*#__PURE__*/React.createElement("a", {
         href: "/updates",
-        "class": "inBox",
+        className: "inBox",
         style: {
           verticalAlign: "middle"
         }
       }, /*#__PURE__*/React.createElement("i", {
-        "class": "fa fa-inbox fa-fw",
+        className: "fa fa-inbox fa-fw",
         style: {
           fontSize: "large"
         }
@@ -34,13 +40,13 @@ function Auth() {
     } else {
       updates = /*#__PURE__*/React.createElement("a", {
         href: "/updates",
-        "class": "inBox",
+        className: "inBox",
         style: {
           verticalAlign: "middle",
           borderBottom: "1px grey dotted"
         }
       }, /*#__PURE__*/React.createElement("i", {
-        "class": "fa fa-inbox fa-fw",
+        className: "fa fa-inbox fa-fw",
         style: {
           fontSize: "large"
         }
@@ -70,11 +76,8 @@ function Auth() {
       onClick: function onClick() {
         return login();
       },
-      "class": "blackLink",
+      className: "blackLink",
       "data-cy": "loginlnk"
     }, "Login / Register");
   }
 }
-var rootNode = document.getElementById('authcontrol');
-var root = ReactDOM.createRoot(rootNode);
-root.render(React.createElement(Auth));

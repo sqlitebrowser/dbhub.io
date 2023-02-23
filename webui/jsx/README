@@ -1,5 +1,0 @@
-When changing the jsx files in here, please rerun this command from the webui directory:
-
-$ npx babel --watch jsx --out-dir js --presets babel-preset-react-app/prod
-
-This requires node.js to be installed on your system.

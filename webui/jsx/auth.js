@@ -1,4 +1,7 @@
-function Auth() {
+const React = require("react");
+const ReactDOM = require("react-dom");
+
+export default function Auth() {
 	function login() {
 		lock.show();
 		return false;
@@ -12,9 +15,9 @@ function Auth() {
 
 		let updates = null;
 		if (authInfo.numStatusUpdates === 0) {
-			updates = <a href="/updates" class="inBox" style={{verticalAlign: "middle"}}><i class="fa fa-inbox fa-fw" style={{fontSize: "large"}}></i></a>;
+			updates = <a href="/updates" className="inBox" style={{verticalAlign: "middle"}}><i className="fa fa-inbox fa-fw" style={{fontSize: "large"}}></i></a>;
 		} else {
-			updates = <a href="/updates" class="inBox" style={{verticalAlign: "middle", borderBottom: "1px grey dotted"}}><i class="fa fa-inbox fa-fw" style={{fontSize: "large"}}></i>{authInfo.numStatusUpdates}</a>;
+			updates = <a href="/updates" className="inBox" style={{verticalAlign: "middle", borderBottom: "1px grey dotted"}}><i className="fa fa-inbox fa-fw" style={{fontSize: "large"}}></i>{authInfo.numStatusUpdates}</a>;
 		}
 
 		return (
@@ -27,10 +30,6 @@ function Auth() {
 			</>
 		);
 	} else {
-		return <a onClick={() => {return login()}} class="blackLink" data-cy="loginlnk">Login / Register</a>;
+		return <a onClick={() => {return login()}} className="blackLink" data-cy="loginlnk">Login / Register</a>;
 	}
 }
-
-const rootNode = document.getElementById('authcontrol');
-const root = ReactDOM.createRoot(rootNode);
-root.render(React.createElement(Auth));

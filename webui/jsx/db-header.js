@@ -1,3 +1,6 @@
+const React = require("react");
+const ReactDOM = require("react-dom");
+
 function ToggleButton({icon, textSet, textUnset, redirectUrl, updateUrl, pageUrl, isSet, count, cyToggle, cyPage, disabled}) {
 	const [state, setState] = React.useState(isSet);
 	const [number, setNumber] = React.useState(count);
@@ -31,14 +34,14 @@ function ToggleButton({icon, textSet, textUnset, redirectUrl, updateUrl, pageUrl
 	}
 
 	return (
-		<div class="btn-group">
-			<button type="button" class="btn btn-default" onClick={toggleState} data-cy={cyToggle} disabled={disabled}><i class={"fa " + icon}></i> {state ? textSet : textUnset}</button>
-			<button type="button" class="btn btn-default" onClick={gotoPage} data-cy={cyPage}>{number}</button>
+		<div className="btn-group">
+			<button type="button" className="btn btn-default" onClick={toggleState} data-cy={cyToggle} disabled={disabled}><i className={"fa " + icon}></i> {state ? textSet : textUnset}</button>
+			<button type="button" className="btn btn-default" onClick={gotoPage} data-cy={cyPage}>{number}</button>
 		</div>
 	);
 }
 
-function DbHeader() {
+export default function DbHeader() {
 	let forkedFrom = null;
 	if (meta.forkOwner) {
 		forkedFrom = (
@@ -51,7 +54,7 @@ function DbHeader() {
 
 	let settings = null;
 	if (authInfo.loggedIn) {
-		settings = <label id="settings" class={meta.pageSection == "db_settings" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/settings/" + meta.owner + "/" + meta.database} class="blackLink" title="Settings" data-cy="settingslink"><i class="fa fa-cog"></i> Settings</a></label>;
+		settings = <label id="settings" className={meta.pageSection == "db_settings" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/settings/" + meta.owner + "/" + meta.database} className="blackLink" title="Settings" data-cy="settingslink"><i className="fa fa-cog"></i> Settings</a></label>;
 	}
 
 	let publicString = "Private";
@@ -61,17 +64,17 @@ function DbHeader() {
 
 	let visibility = null;
 	if (meta.owner == authInfo.loggedInUser) {
-		visibility = <><b>Visibility:</b> <a class="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="vis">{publicString}</a></>;
+		visibility = <><b>Visibility:</b> <a className="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="vis">{publicString}</a></>;
 	} else {
 		visibility = <><b>Visibility:</b> <span data-cy="vis">{publicString}</span></>;
 	}
 
 	let licence = null;
 	if (meta.owner == authInfo.loggedInUser) {
-		licence = <><b>Licence:</b> <a class="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="lic">{ meta.licence }</a></>;
+		licence = <><b>Licence:</b> <a className="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="lic">{ meta.licence }</a></>;
 	} else {
 		if (meta.licenceUrl != "") {
-			licence = <><b>Licence:</b> <a class="blackLink" href={ meta.licenceURL } data-cy="licurl">{ meta.licence }</a></>;
+			licence = <><b>Licence:</b> <a className="blackLink" href={ meta.licenceURL } data-cy="licurl">{ meta.licence }</a></>;
 		} else {
 			licence = <><b>Licence:</b> <span data-cy="licurl">{ meta.licence }</span></>;
 		}
@@ -79,17 +82,17 @@ function DbHeader() {
 
 	return (
 	<>
-		<div class="row">
-			<div class="col-md-12">
+		<div className="row">
+			<div className="col-md-12">
 				<h2 id="viewdb" style={{marginTop: "10px"}}>
-					<div class="pull-left">
+					<div className="pull-left">
 						<div>
-							<a class="blackLink" href={"/" + meta.owner} data-cy="headerownerlnk">{meta.owner}</a> /&nbsp;
-							<a class="blackLink" href={"/" + meta.owner + "/" + meta.database} data-cy="headerdblnk">{meta.database}</a>
+							<a className="blackLink" href={"/" + meta.owner} data-cy="headerownerlnk">{meta.owner}</a> /&nbsp;
+							<a className="blackLink" href={"/" + meta.owner + "/" + meta.database} data-cy="headerdblnk">{meta.database}</a>
 						</div>
 						{forkedFrom}
 					</div>
-					<div class="pull-right">
+					<div className="pull-right">
 						<ToggleButton
 							icon="fa-eye"
 							textSet="Unwatch"
@@ -130,28 +133,28 @@ function DbHeader() {
 				</h2>
 			</div>
 		</div>
-		<div class="row" style={{paddingBottom: "5px", paddingTop: "10px"}}>
-		    <div class="col-md-6">
-			<label id="viewdata" class={meta.pageSection == "db_data" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/" + meta.owner + "/" + meta.database} class="blackLink" title="Data" data-cy="datalink"><i class="fa fa-database"></i> Data</a></label>
+		<div className="row" style={{paddingBottom: "5px", paddingTop: "10px"}}>
+		    <div className="col-md-6">
+			<label id="viewdata" className={meta.pageSection == "db_data" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/" + meta.owner + "/" + meta.database} className="blackLink" title="Data" data-cy="datalink"><i className="fa fa-database"></i> Data</a></label>
 
 			&nbsp; &nbsp; &nbsp;
 
-			<label id="viewvis" class={meta.pageSection == "db_vis" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/vis/" + meta.owner + "/" + meta.database} class="blackLink" title="Visualise" data-cy="vislink"><i class="fa fa-bar-chart"></i> Visualise</a></label>
+			<label id="viewvis" className={meta.pageSection == "db_vis" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/vis/" + meta.owner + "/" + meta.database} className="blackLink" title="Visualise" data-cy="vislink"><i className="fa fa-bar-chart"></i> Visualise</a></label>
 
 			&nbsp; &nbsp; &nbsp;
 
-			<label id="viewdiscuss" class={meta.pageSection == "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} class="blackLink" title="Discussions" data-cy="discusslink"><i class="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>
+			<label id="viewdiscuss" className={meta.pageSection == "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} className="blackLink" title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>
 
 			&nbsp; &nbsp; &nbsp;
 
-			<label id="viewmrs" class={meta.pageSection == "db_merge" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/merge/" + meta.owner + "/" + meta.database} class="blackLink" title="Merge Requests" data-cy="mrlink"><i class="fa fa-clone"></i> Merge Requests:</a> {meta.numMRs}</label>
+			<label id="viewmrs" className={meta.pageSection == "db_merge" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/merge/" + meta.owner + "/" + meta.database} className="blackLink" title="Merge Requests" data-cy="mrlink"><i className="fa fa-clone"></i> Merge Requests:</a> {meta.numMRs}</label>
 
 			&nbsp; &nbsp; &nbsp;
 
 			{settings}
 		    </div>
-		    <div class="col-md-6">
-			<div class="pull-right">
+		    <div className="col-md-6">
+			<div className="pull-right">
 				{visibility} &nbsp;
 				<b>Last Commit:</b> {meta.commitID.substring(0, 8)} ({getTimePeriod(meta.repoModified, false)}) &nbsp;
 				{licence} &nbsp;
@@ -162,7 +165,3 @@ function DbHeader() {
 		</>
 	)
 }
-
-const rootNode = document.getElementById('db-header-root');
-const root = ReactDOM.createRoot(rootNode);
-root.render(React.createElement(DbHeader));

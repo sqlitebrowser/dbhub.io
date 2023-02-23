@@ -4,6 +4,8 @@
     "babel-preset-react": "^6.24.1",
     "babel-preset-react-app": "^10.0.1",
     "cypress": "^12.3.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "yarn": "^1.22.19"
   },
   "name": "dbhub.io",
@@ -37,5 +39,9 @@
   "repository": "https://github.com/sqlitebrowser/dbhub.io",
   "author": "Justin Clift <justin@postgresql.org>",
   "license": "AGPL-3.0-or-later",
-  "private": false
+  "private": false,
+  "devDependencies": {
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.1"
+  }
 }
