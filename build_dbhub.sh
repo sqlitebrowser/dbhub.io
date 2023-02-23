@@ -39,9 +39,10 @@ if [ ! -e "${DEST}/lib/libsqlite3.so" ]; then
 fi
 
 # Compile JSX files and build webpack bundle
+npm install
 cd webui
-npx babel jsx --out-dir js --presets babel-preset-react-app/prod
-npx webpack
+yarn run babel jsx --out-dir js --presets babel-preset-react-app/prod
+yarn run webpack
 cd ..
 
 # Builds the Go binaries

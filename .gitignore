@@ -41,3 +41,14 @@ webui/webui
 cypress/downloads
 cypress/screenshots
 cypress/videos
+
+# Go package cache
+vendor
+
+# Node package cache
+node_modules
+
+# Generated JavaScript code
+webui/js/dbhub.js*
+webui/js/auth.js
+webui/js/db-header.js
