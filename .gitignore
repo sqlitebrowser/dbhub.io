@@ -52,3 +52,4 @@ node_modules
 webui/js/dbhub.js*
 webui/js/auth.js
 webui/js/db-header.js
+webui/js/markdown-editor.js

@@ -25,18 +25,7 @@
                             <b>Branch description</b><br /><br />
                             <i>Markdown (<a href="http://commonmark.org" target="_blank">CommonMark</a> format) is supported</i></td>
                         <td>
-                            <div>
-                                <uib-tabset active="active">
-                                    <uib-tab index="0" data-cy="edittab">
-                                        <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                        <textarea id="branchdesc" name="branchdesc" rows="10" ng-attr-placeholder="A description for this branch" data-cy="desctext"></textarea>
-                                    </uib-tab>
-                                    <uib-tab index="1" select="getMarkdown()" data-cy="previewtab">
-                                        <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
-                                        <div class="rendered minHeight" ng-bind-html="markDownPreview" data-cy="previewdiv"></div>
-                                    </uib-tab>
-                                </uib-tabset>
-                            </div>
+                            <div class="markdown-editor" data-id="branchdesc" data-rows="10" data-placeholder="A description for this branch" />
                         </td>
                     </tr>
                     <tr>
@@ -61,20 +50,6 @@
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('createbranchView', function($scope, $http, $httpParamSerializerJQLike) {
-        // Get rendered markdown from the server, for display in the Commit Message preview tab
-        $scope.markDownPreview = "";
-        $scope.getMarkdown = function() {
-            // Retrieve latest markdown text from the text area
-            let txt = document.getElementById("branchdesc").value;
-
-            // Call the server, asking for a rendered version of the markdown
-            $http({
-                method: "POST",
-                url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
-                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
-            }).then(function (response) { $scope.markDownPreview = response.data; });
-        };
     });
 </script>
 </body>
