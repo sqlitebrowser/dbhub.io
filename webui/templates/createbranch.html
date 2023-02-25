@@ -1,6 +1,6 @@
 [[ define "createBranchPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="createbranchView">
+<html>
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -47,11 +47,6 @@
     </div>
 </div>
 [[ template "footer" . ]]
-<script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('createbranchView', function($scope, $http, $httpParamSerializerJQLike) {
-    });
-</script>
 </body>
 </html>
 [[ end ]]

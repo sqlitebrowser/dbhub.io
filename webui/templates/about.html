@@ -1,6 +1,6 @@
 [[ define "aboutPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="aboutView">
+<html>
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
@@ -74,11 +74,6 @@
     </div>
 </div>
 [[ template "footer" . ]]
-<script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('aboutView', function($scope) {
-    });
-</script>
 </body>
 </html>
 [[ end ]]
