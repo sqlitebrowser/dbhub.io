@@ -14,11 +14,11 @@ or run it locally for your own users.
 
 ### Requirements
 
-* [Golang](https://golang.org) - version 1.8 or above is required, with 1.9 highly recommended.
+* [Golang](https://golang.org) - version 1.17 or above is required.
 * [Memcached](https://memcached.org) - version 1.4.33 and above are known to work.
 * [Minio](https://minio.io) - release 2016-11-26T02:23:47Z and later are known to work.
-* [NodeJS](https://nodejs.org) - version 14.x ONLY. Not less than 14, not greater than 14.x.
-* [PostgreSQL](https://www.postgresql.org) - version 9.6 or above is required.
+* [NodeJS](https://nodejs.org) - version 18.x is known to work, others are untested.
+* [PostgreSQL](https://www.postgresql.org) - version 13 and above are known to work.
 * [Yarn](https://classic.yarnpkg.com) - version 1.22.x.  Not Yarn 2.x or greater.
 
 ### Subdirectories
