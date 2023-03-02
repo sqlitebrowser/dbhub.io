@@ -389,8 +389,8 @@ func CheckLicenceExists(userName, licenceName string) (exists bool, err error) {
 	var count int
 	err = pdb.QueryRow(dbQuery, userName, licenceName).Scan(&count)
 	if err != nil {
-		log.Printf("Error checking if licence '%s' exists for user '%s' in database: %v\n", licenceName,
-			userName, err)
+		log.Printf("Error checking if licence '%s' exists for user '%s' in database: %v\n",
+			SanitiseLogString(licenceName), userName, err)
 		return false, err
 	}
 	if count == 0 {
