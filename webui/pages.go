@@ -906,7 +906,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		// careful than usual
 		err = com.ValidateFieldName(sortCol)
 		if err != nil {
-			log.Printf("Validation failed on requested sort field name '%v': %v\n", sortCol,
+			log.Printf("Validation failed on requested sort field name '%v': %v\n", com.SanitiseLogString(sortCol),
 				err.Error())
 			errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
 			return
@@ -1130,7 +1130,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	if sortCol != "" {
 		colList, err := sdb.Columns("", dbTable)
 		if err != nil {
-			log.Printf("Error when reading column names for table '%s': %v\n", dbTable,
+			log.Printf("Error when reading column names for table '%s': %v\n", com.SanitiseLogString(dbTable),
 				err.Error())
 			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
 			return
@@ -1156,7 +1156,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
 			// bot picking up AngularJS in a string and doing a request with it
 			if dbTable != "{{ db.Tablename }}" {
-				log.Printf("%s: Validation failed for table name: '%s': %s", pageName, dbTable, err)
+				log.Printf("%s: Validation failed for table name: '%s': %s", pageName, com.SanitiseLogString(dbTable), err)
 			}
 			errorPage(w, r, http.StatusBadRequest, "Validation failed for table name")
 			return
@@ -1200,7 +1200,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		} else {
 			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
 			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
-				"logged in user '%s'", j, dbOwner, dbFolder, dbName, pageData.Meta.LoggedInUser)
+				"logged in user '%s'", com.SanitiseLogString(j), com.SanitiseLogString(dbOwner), dbFolder, com.SanitiseLogString(dbName), pageData.Meta.LoggedInUser)
 		}
 	}
 
@@ -1389,7 +1389,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	if a != "" && a != "{{ row.disc_id }}" { // Search engines have a habit of passing AngularJS tags, so we ignore when the field has the AngularJS tag in it
 		pageData.SelectedID, err = strconv.Atoi(a)
 		if err != nil {
-			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
 				com.GetCurrentFunctionName(), err)
 			errorPage(w, r, http.StatusBadRequest, "Error when parsing discussion id value")
 			return
@@ -1623,7 +1623,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		var err error
 		pageData.SelectedID, err = strconv.Atoi(a)
 		if err != nil {
-			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", a,
+			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
 				com.GetCurrentFunctionName(), err)
 			errorPage(w, r, http.StatusBadRequest, "Error when parsing discussion id value")
 			return

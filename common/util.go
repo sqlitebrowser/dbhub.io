@@ -48,7 +48,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	tempDB, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-upload-")
 	if err != nil {
 		log.Printf("Error creating temporary file. User: '%s', Database: '%s%s%s', Error: %v\n", loggedInUser,
-			dbOwner, dbFolder, dbName, err)
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return
 	}
 	tempDBName := tempDB.Name()
@@ -62,7 +62,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	numBytes, err = io.CopyBuffer(tempDB, newDB, buf)
 	if err != nil {
 		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
-			"Error: %v\n", loggedInUser, dbOwner, dbFolder, dbName, err)
+			"Error: %v\n", loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return
 	}
 	if numBytes == 0 {
@@ -329,7 +329,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 			if !ok {
 				m := fmt.Sprintf("Error when counting commits in branch '%s' of database '%s%s%s'\n", branchName,
 					dbOwner, dbFolder, dbName)
-				log.Print(m)
+				log.Print(SanitiseLogString(m))
 				return 0, "", "", errors.New(m)
 			}
 		}
@@ -761,7 +761,7 @@ func DeleteBranchHistory(dbOwner, dbFolder, dbName, branchName, commitID string)
 		c, ok = commitList[c.Parent]
 		if !ok {
 			log.Printf("Error when counting # of commits while rewriting branch '%s' of database '%s%s%s'\n",
-				branchName, dbOwner, dbFolder, dbName)
+				SanitiseLogString(branchName), SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 			err = fmt.Errorf("Error when counting commits during branch history rewrite")
 			return
 		}
@@ -1008,7 +1008,7 @@ func IsCommitInBranchHistory(dbOwner, dbFolder, dbName, branchName, commitID str
 		c, ok = commitList[c.Parent]
 		if !ok {
 			log.Printf("Broken commit history encountered for branch '%s' in '%s%s%s', when looking for "+
-				"commit '%s'\n", branchName, dbOwner, dbFolder, dbName, c.Parent)
+				"commit '%s'\n", SanitiseLogString(branchName), SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), c.Parent)
 			return false, fmt.Errorf("Broken commit history encountered for branch '%s' when looking up "+
 				"commit details", branchName)
 		}

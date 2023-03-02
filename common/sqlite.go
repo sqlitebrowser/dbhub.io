@@ -241,7 +241,7 @@ func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
 	var rowCount int
 	err := sdb.OneValue(dbQuery, &rowCount)
 	if err != nil {
-		log.Printf("Error occurred when counting total rows for table '%s'.  Error: %s\n", dbTable, err)
+		log.Printf("Error occurred when counting total rows for table '%s'.  Error: %s\n", SanitiseLogString(dbTable), err)
 		return 0, errors.New("Database query failure")
 	}
 	return rowCount, nil
@@ -287,7 +287,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	if id == "" {
 		// The requested database wasn't found, or the user doesn't have permission to access it
 		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found. Owner: '%s%s%s'", dbOwner, dbFolder, dbName)
+		log.Printf("Requested database not found. Owner: '%s%s%s'", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
@@ -921,7 +921,7 @@ func TablesAndViews(sdb *sqlite.Conn, dbName string) (list []string, err error) 
 	}
 	if len(list) == 0 {
 		// No table names were returned, so abort
-		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", dbName)
+		log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", SanitiseLogString(dbName))
 		return
 	}
 

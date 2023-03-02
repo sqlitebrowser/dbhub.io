@@ -440,7 +440,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = com.ValidateLicence(l)
 	if err != nil {
-		log.Printf("Validation failed for licence ID: '%s': %s", l, err)
+		log.Printf("Validation failed for licence ID: '%s': %s", com.SanitiseLogString(l), err)
 		http.Error(w, "Validation of licence ID failed", http.StatusBadRequest)
 		return
 	}
@@ -451,7 +451,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 	if z := r.FormValue("licence_name"); z != "" {
 		err = com.ValidateLicenceFullName(z)
 		if err != nil {
-			log.Printf("Validation failed for licence full name: '%s': %s", z, err)
+			log.Printf("Validation failed for licence full name: '%s': %s", com.SanitiseLogString(z), err)
 			http.Error(w, "Validation of licence full name failed", http.StatusBadRequest)
 			return
 		}
@@ -554,7 +554,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, "Success")
 
 	// Log the new license addition
-	log.Printf("New licence '%s' added to the server by user '%v'\n", licID, userAcc)
+	log.Printf("New licence '%s' added to the server by user '%v'\n", com.SanitiseLogString(licID), userAcc)
 	return
 }
 
@@ -577,7 +577,7 @@ func licenceGetHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate the licence name
 	err = com.ValidateLicence(l)
 	if err != nil {
-		log.Printf("Validation failed for licence name: '%s': %s", l, err)
+		log.Printf("Validation failed for licence name: '%s': %s", com.SanitiseLogString(l), err)
 		http.Error(w, "Validation of licence name failed", http.StatusBadRequest)
 		return
 	}
@@ -621,7 +621,7 @@ func licenceGetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the transfer
-	log.Printf("Licence '%s' downloaded by user '%v', %d bytes\n", licenceName, userAcc, bytesWritten)
+	log.Printf("Licence '%s' downloaded by user '%v', %d bytes\n", com.SanitiseLogString(licenceName), userAcc, bytesWritten)
 	return
 }
 
@@ -674,7 +674,7 @@ func licenceRemoveHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate the licence name
 	err = com.ValidateLicence(l)
 	if err != nil {
-		log.Printf("Validation failed for licence name: '%s': %s", l, err)
+		log.Printf("Validation failed for licence name: '%s': %s", com.SanitiseLogString(l), err)
 		http.Error(w, "Validation of licence name failed", http.StatusBadRequest)
 		return
 	}
@@ -703,7 +703,7 @@ func licenceRemoveHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Success")
 
 	// Log the transfer
-	log.Printf("Licence '%s' removed by user '%v'\n", licenceName, userAcc)
+	log.Printf("Licence '%s' removed by user '%v'\n", com.SanitiseLogString(licenceName), userAcc)
 	return
 }
 
@@ -907,7 +907,7 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 	}
 
 	// Log the transfer
-	log.Printf("'%s%s%s' downloaded by user '%v', %v bytes", dbOwner, dbFolder, dbName, userAcc, bytesWritten)
+	log.Printf("'%s%s%s' downloaded by user '%v', %v bytes", com.SanitiseLogString(dbOwner), dbFolder, dbName, userAcc, bytesWritten)
 	return nil
 }
 

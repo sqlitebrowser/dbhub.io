@@ -506,7 +506,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	}
 
 	// Log the successful database upload
-	log.Printf("Database uploaded: '%s%s%s', bytes: %v\n", loggedInUser, targetFolder, targetDB, numBytes)
+	log.Printf("Database uploaded: '%s%s%s', bytes: %v\n", loggedInUser, targetFolder, SanitiseLogString(targetDB), numBytes)
 
 	// Generate the formatted server string
 	var server string

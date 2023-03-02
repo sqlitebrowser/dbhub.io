@@ -311,7 +311,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
 			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
-				"logged in user '%s'", j, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.Meta.LoggedInUser)
+				"logged in user '%s'", com.SanitiseLogString(j), pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.Meta.LoggedInUser)
 		}
 	}
 
@@ -650,7 +650,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	// Validate the X axis field name
 	err = com.ValidateFieldName(xAxis)
 	if err != nil {
-		log.Printf("Validation failed on requested X axis field name '%v': %v\n", xAxis, err.Error())
+		log.Printf("Validation failed on requested X axis field name '%v': %v\n", com.SanitiseLogString(xAxis), err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -658,7 +658,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	// Validate the Y axis field name
 	err = com.ValidateFieldName(yAxis)
 	if err != nil {
-		log.Printf("Validation failed on requested Y axis field name '%v': %v\n", yAxis, err.Error())
+		log.Printf("Validation failed on requested Y axis field name '%v': %v\n", com.SanitiseLogString(yAxis), err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -745,8 +745,8 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	// Save the SQLite visualisation parameters
 	err = com.VisualisationSaveParams(dbOwner, dbFolder, dbName, visName, vParams)
 	if err != nil {
-		log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", visName,
-			dbOwner, dbFolder, dbName, commitID, err.Error())
+		log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", com.SanitiseLogString(visName),
+			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

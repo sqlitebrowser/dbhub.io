@@ -72,7 +72,7 @@ func GetDatabase(r *http.Request, allowGet bool) (dbName string, err error) {
 	}
 	err = ValidateDB(dbName)
 	if err != nil {
-		log.Printf("Validation failed for database name '%s': %s", dbName, err)
+		log.Printf("Validation failed for database name '%s': %s", SanitiseLogString(dbName), err)
 		return "", errors.New("Invalid database name")
 	}
 	return dbName, nil
@@ -325,7 +325,7 @@ func GetOD(ignoreLeading int, r *http.Request) (dbOwner string, dbName string, e
 
 	// Check that at least an owner/database combination was requested
 	if len(pathStrings) < (3 + ignoreLeading) {
-		log.Printf("Something wrong with the requested URL: %v\n", r.URL.Path)
+		log.Printf("Something wrong with the requested URL: %v\n", SanitiseLogString(r.URL.Path))
 		return "", "", errors.New("Invalid URL")
 	}
 	dbOwner = pathStrings[1+ignoreLeading]
