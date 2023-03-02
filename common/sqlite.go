@@ -225,6 +225,10 @@ func AuthorizerSelect(d interface{}, action sqlite.Action, tableName, funcName, 
 			// Only known functions are allowed
 			return sqlite.AuthOk
 		}
+	case sqlite.Update:
+		if tableName == "sqlite_master" {
+			return sqlite.AuthOk
+		}
 	}
 
 	// All other action types, functions, etc are denied
