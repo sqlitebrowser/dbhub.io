@@ -5,6 +5,10 @@ DEST=${PWD}/local
 export PKG_CONFIG_PATH=${DEST}/lib/pkgconfig
 export GOBIN=${DEST}/bin
 
+# Load NVM (shouldn't be needed, but is. Ugh.)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
 # If this script is passed an argument of "clean", then delete the
 # locally compiled pieces
 if [ "$1" = "clean" ]; then
