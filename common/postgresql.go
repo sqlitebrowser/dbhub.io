@@ -52,7 +52,7 @@ func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) 
 	// Hash the user's password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("Failed to hash user password. User: '%v', error: %v.\n", userName, err)
+		log.Printf("Failed to hash user password. User: '%v', error: %v.\n", SanitiseLogString(userName), err)
 		return err
 	}
 
@@ -61,7 +61,7 @@ func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) 
 	if Conf.Sign.Enabled {
 		cert, err = GenerateClientCert(userName)
 		if err != nil {
-			log.Printf("Error when generating client certificate for '%s': %v\n", userName, err)
+			log.Printf("Error when generating client certificate for '%s': %v\n", SanitiseLogString(userName), err)
 			return err
 		}
 	}
@@ -87,11 +87,11 @@ func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) 
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows affected when creating user: %v, username: %v\n", numRows, userName)
+		log.Printf("Wrong number of rows affected when creating user: %v, username: %v\n", numRows, SanitiseLogString(userName))
 	}
 
 	// Log the user registration
-	log.Printf("User registered: '%s' Email: '%s'\n", userName, email)
+	log.Printf("User registered: '%s' Email: '%s'\n", SanitiseLogString(userName), email)
 
 	return nil
 }
@@ -294,8 +294,8 @@ func CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error
 	var starCount int
 	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser).Scan(&starCount)
 	if err != nil {
-		log.Printf("Error looking up star count for database. User: '%s' DB: '%s/%s'. Error: %v\n",
-			loggedInUser, dbOwner, dbName, err)
+		log.Printf("Error looking up star count for database. User: '%s' DB: '%s%s%s'. Error: %v\n",
+			loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return true, err
 	}
 	if starCount == 0 {
@@ -333,7 +333,7 @@ func CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error
 	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser).Scan(&watchCount)
 	if err != nil {
 		log.Printf("Error looking up watchers count for database. User: '%s' DB: '%s%s%s'. Error: %v\n",
-			loggedInUser, dbOwner, dbFolder, dbName, err)
+			loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return true, err
 	}
 	if watchCount == 0 {
@@ -450,8 +450,8 @@ func databaseID(dbOwner, dbFolder, dbName string) (dbID int, err error) {
 			AND is_deleted = false`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID)
 	if err != nil {
-		log.Printf("Error looking up database id. Owner: '%s', Database: '%s'. Error: %v\n", dbOwner, dbName,
-			err)
+		log.Printf("Error looking up database id. Owner: '%s', Database: '%s'. Error: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 	}
 	return
 }
@@ -665,7 +665,8 @@ func DBStars(dbOwner, dbFolder, dbName string) (starCount int, err error) {
 			AND is_deleted = false`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&starCount)
 	if err != nil {
-		log.Printf("Error looking up star count for database '%s/%s'. Error: %v\n", dbOwner, dbName, err)
+		log.Printf("Error looking up star count for database '%s%s%s'. Error: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return -1, err
 	}
 	return starCount, nil
@@ -687,8 +688,8 @@ func DBWatchers(dbOwner, dbFolder, dbName string) (watcherCount int, err error) 
 			AND is_deleted = false`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&watcherCount)
 	if err != nil {
-		log.Printf("Error looking up watcher count for database '%s%s%s'. Error: %v\n", dbOwner, dbFolder,
-			dbName, err)
+		log.Printf("Error looking up watcher count for database '%s%s%s'. Error: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return -1, err
 	}
 	return watcherCount, nil
@@ -751,13 +752,13 @@ func DeleteComment(dbOwner, dbFolder, dbName string, discID, comID int) error {
 			AND com_id = $5`
 	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID)
 	if err != nil {
-		log.Printf("Deleting comment '%d' from '%s%s%s', discussion '%d' failed: %v\n", comID, dbOwner,
-			dbFolder, dbName, discID, err)
+		log.Printf("Deleting comment '%d' from '%s%s%s', discussion '%d' failed: %v\n", comID,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when deleting comment '%d' from database '%s%s%s, discussion '%d''\n",
-			numRows, comID, dbOwner, dbFolder, dbName, discID)
+			numRows, comID, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID)
 	}
 
 	// Update the comment count and last modified date for the discussion
@@ -790,12 +791,12 @@ func DeleteComment(dbOwner, dbFolder, dbName string, discID, comID int) error {
 	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID)
 	if err != nil {
 		log.Printf("Updating comment count for discussion '%v' of '%s%s%s' in PostgreSQL failed: %v\n",
-			discID, dbOwner, dbFolder, dbName, err)
+			discID, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when updating comment count for discussion '%v' in "+
-			"'%s%s%s'\n", numRows, discID, dbOwner, dbFolder, dbName)
+			"'%s%s%s'\n", numRows, discID, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 	}
 
 	// Commit the transaction
@@ -839,7 +840,8 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 	var numForks int
 	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&numForks)
 	if err != nil {
-		log.Printf("Retrieving fork list failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Retrieving fork list failed for database '%s%s%s': %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return err
 	}
 	if numForks == 0 {
@@ -871,13 +873,13 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 			WHERE sqlite_databases.db_id = root_db.id`
 		commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
 		if err != nil {
-			log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", dbOwner, dbFolder, dbName,
-				err)
+			log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", SanitiseLogString(dbOwner),
+				SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf("Wrong number of rows (%v) affected (spot 1) when updating fork count for database '%s%s%s'\n",
-				numRows, dbOwner, dbFolder, dbName)
+				numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 		}
 
 		// Do the database deletion in PostgreSQL (needs to come after the above fork count update, else the fork count
@@ -894,14 +896,14 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 				AND db_name = $3`
 		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
 		if err != nil {
-			log.Printf("Deleting database entry failed for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
-				err)
+			log.Printf("Deleting database entry failed for database '%s%s%s': %v\n", SanitiseLogString(dbOwner),
+				SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
-				"Wrong number of rows (%v) affected when deleting database '%s%s%s'\n", numRows, dbOwner,
-				dbFolder, dbName)
+				"Wrong number of rows (%v) affected when deleting database '%s%s%s'\n", numRows,
+				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 		}
 
 		// Commit the transaction
@@ -911,7 +913,7 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 		}
 
 		// Log the database deletion
-		log.Printf("Database '%s%s%s' deleted\n", dbOwner, dbFolder, dbName)
+		log.Printf("Database '%s%s%s' deleted\n", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 		return nil
 	}
 
@@ -935,8 +937,8 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 			)`
 	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
 	if err != nil {
-		log.Printf("Deleting (forked) database stars failed for database '%s%s%s': %v\n", dbOwner, dbFolder,
-			dbName, err)
+		log.Printf("Deleting (forked) database stars failed for database '%s%s%s': %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return err
 	}
 
@@ -957,14 +959,14 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 			AND db_name = $3`
 	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, newName)
 	if err != nil {
-		log.Printf("Deleting (forked) database entry failed for database '%s%s%s': %v\n", dbOwner, dbFolder,
-			dbName, err)
+		log.Printf("Deleting (forked) database entry failed for database '%s%s%s': %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when deleting (forked) database '%s%s%s'\n", numRows, dbOwner,
-			dbFolder, dbName)
+			"Wrong number of rows (%v) affected when deleting (forked) database '%s%s%s'\n", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 	}
 
 	// Update the fork count for the root database
@@ -991,13 +993,13 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 		WHERE sqlite_databases.db_id = root_db.id`
 	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, newName)
 	if err != nil {
-		log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", dbOwner, dbFolder, dbName,
-			err)
+		log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected (spot 2) when updating fork count for database '%s%s%s'\n",
-			numRows, dbOwner, dbFolder, dbName)
+			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 	}
 
 	// Commit the transaction
@@ -1007,7 +1009,8 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 	}
 
 	// Log the database deletion
-	log.Printf("(Forked) database '%s%s%s' deleted\n", dbOwner, dbFolder, dbName)
+	log.Printf("(Forked) database '%s%s%s' deleted\n", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder),
+		SanitiseLogString(dbName))
 	return nil
 }
 
@@ -1119,13 +1122,13 @@ func DeleteLicence(userName, licenceName string) (err error) {
 			))`
 	commandTag, err := tx.Exec(dbQuery, userName, licSHA, licenceName)
 	if err != nil {
-		log.Printf("Error when retrieving sha256 for licence '%s', user '%s' from database: %v\n", licenceName,
-			userName, err)
+		log.Printf("Error when retrieving sha256 for licence '%s', user '%s' from database: %v\n",
+			SanitiseLogString(licenceName), userName, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when deleting licence '%s' for user '%s'\n",
-			numRows, licenceName, userName)
+			numRows, SanitiseLogString(licenceName), userName)
 	}
 
 	// Commit the transaction
@@ -1191,8 +1194,8 @@ func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, disc
 			&oneRow.Body, &oneRow.LastModified, &oneRow.CommentCount, &sdb, &sb, &db, &oneRow.MRDetails.State,
 			&oneRow.MRDetails.Commits)
 		if err != nil {
-			log.Printf("Error retrieving discussion/MR list for database '%s%s%s': %v\n", dbOwner, dbFolder,
-				dbName, err)
+			log.Printf("Error retrieving discussion/MR list for database '%s%s%s': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 			rows.Close()
 			return
 		}
@@ -1295,8 +1298,8 @@ func DiscussionComments(dbOwner, dbFolder, dbName string, discID, comID int) (li
 		var oneRow DiscussionCommentEntry
 		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &em, &av, &oneRow.DateCreated, &oneRow.Body, &oneRow.EntryType)
 		if err != nil {
-			log.Printf("Error retrieving comment list for database '%s%s%s', discussion '%d': %v\n", dbOwner,
-				dbFolder, dbName, discID, err)
+			log.Printf("Error retrieving comment list for database '%s%s%s', discussion '%d': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
 			rows.Close()
 			return
 		}
@@ -1429,12 +1432,14 @@ func ForkDatabase(srcOwner, dbFolder, dbName, dstOwner string) (newForkCount int
 			AND db_name = $4`
 	commandTag, err := pdb.Exec(dbQuery, dstOwner, srcOwner, dbFolder, dbName)
 	if err != nil {
-		log.Printf("Forking database '%s%s%s' in PostgreSQL failed: %v\n", srcOwner, dbFolder, dbName, err)
+		log.Printf("Forking database '%s%s%s' in PostgreSQL failed: %v\n", SanitiseLogString(srcOwner), dbFolder,
+			SanitiseLogString(dbName), err)
 		return 0, err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows affected (%d) when forking main database entry: "+
-			"'%s%s%s' to '%s%s%s'\n", numRows, srcOwner, dbFolder, dbName, dstOwner, dbFolder, dbName)
+			"'%s%s%s' to '%s%s%s'\n", numRows, SanitiseLogString(srcOwner), dbFolder, SanitiseLogString(dbName),
+			dstOwner, dbFolder, SanitiseLogString(dbName))
 	}
 
 	// Update the fork count for the root database
@@ -1484,8 +1489,8 @@ func ForkedFrom(dbOwner, dbFolder, dbName string) (forkOwn, forkFol, forkDB stri
 			AND db_name = $3`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID, &forkedFrom)
 	if err != nil {
-		log.Printf("Error checking if database was forked from another '%s%s%s'. Error: %v\n", dbOwner,
-			dbFolder, dbName, err)
+		log.Printf("Error checking if database was forked from another '%s%s%s'. Error: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return "", "", "", false, err
 	}
 	if !forkedFrom.Valid {
@@ -1501,8 +1506,8 @@ func ForkedFrom(dbOwner, dbFolder, dbName string) (forkOwn, forkFol, forkDB stri
 			AND u.user_id = db.user_id`
 	err = pdb.QueryRow(dbQuery, forkedFrom).Scan(&forkOwn, &forkFol, &forkDB, &forkDel)
 	if err != nil {
-		log.Printf("Error retrieving forked database information for '%s%s%s'. Error: %v\n", dbOwner,
-			dbFolder, dbName, err)
+		log.Printf("Error retrieving forked database information for '%s%s%s'. Error: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return "", "", "", false, err
 	}
 
@@ -1882,8 +1887,8 @@ func GetBranches(dbOwner, dbFolder, dbName string) (branches map[string]BranchEn
 			AND db.db_name = $3`
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&branches)
 	if err != nil {
-		log.Printf("Error when retrieving branch heads for database '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
-			err)
+		log.Printf("Error when retrieving branch heads for database '%s%s%s': %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return nil, err
 	}
 	return branches, nil
@@ -1928,7 +1933,7 @@ func GetAPIKeyUser(key string) (user string, err error) {
 			AND api.user_id = users.user_id`
 	err = pdb.QueryRow(dbQuery, key).Scan(&user)
 	if err != nil {
-		log.Printf("Looking up owner for API key '%s' failed: %v\n", key, err)
+		log.Printf("Looking up owner for API key '%s' failed: %v\n", SanitiseLogString(key), err)
 		return
 	}
 	return
@@ -1951,7 +1956,8 @@ func GetCommitList(dbOwner, dbFolder, dbName string) (map[string]CommitEntry, er
 	var l map[string]CommitEntry
 	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&l)
 	if err != nil {
-		log.Printf("Retrieving commit list for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+		log.Printf("Retrieving commit list for '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		return map[string]CommitEntry{}, err
 	}
 	return l, nil
@@ -1974,11 +1980,11 @@ func GetDefaultBranchName(dbOwner, dbFolder, dbName string) (branchName string, 
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&b)
 	if err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("Error when retrieving default branch name for database '%s%s%s': %v\n", dbOwner,
-				dbFolder, dbName, err)
+			log.Printf("Error when retrieving default branch name for database '%s%s%s': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		} else {
-			log.Printf("No default branch name exists for database '%s%s%s'. This shouldn't happen\n", dbOwner,
-				dbFolder, dbName)
+			log.Printf("No default branch name exists for database '%s%s%s'. This shouldn't happen\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 		}
 		return
 	}
@@ -2005,8 +2011,8 @@ func GetDefaultTableName(dbOwner, dbFolder, dbName string) (tableName string, er
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&t)
 	if err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("Error when retrieving default table name for database '%s%s%s': %v\n", dbOwner,
-				dbFolder, dbName, err)
+			log.Printf("Error when retrieving default table name for database '%s%s%s': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 			return
 		}
 	}
@@ -2035,11 +2041,11 @@ func GetDiscussionAndMRCount(dbOwner, dbFolder, dbName string) (discCount, mrCou
 	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&discCount, &mrCount)
 	if err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("Error when retrieving discussion and MR count for database '%s%s%s': %v\n", dbOwner,
-				dbFolder, dbName, err)
+			log.Printf("Error when retrieving discussion and MR count for database '%s%s%s': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 		} else {
 			log.Printf("Database '%s%s%s' not found when attempting to retrieve discussion and MR count. This"+
-				"shouldn't happen\n", dbOwner, dbFolder, dbName)
+				"shouldn't happen\n", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 		}
 		return
 	}
@@ -2070,7 +2076,7 @@ func GetLicence(userName, licenceName string) (txt, format string, err error) {
 			// The requested licence text wasn't found
 			return "", "", errors.New("unknown licence")
 		}
-		log.Printf("Error when retrieving licence '%s', user '%s': %v\n", licenceName, userName, err)
+		log.Printf("Error when retrieving licence '%s', user '%s': %v\n", SanitiseLogString(licenceName), userName, err)
 		return "", "", err
 	}
 	return txt, format, nil
@@ -2133,7 +2139,7 @@ func GetLicenceInfoFromSha256(userName, sha256 string) (lName, lURL string, err 
 	rows, err := pdb.Query(dbQuery, userName, sha256)
 	if err != nil {
 		log.Printf("Error when retrieving friendly name for licence sha256 '%s', user '%s': %v\n", sha256,
-			userName, err)
+			SanitiseLogString(userName), err)
 		return "", "", err
 	}
 	defer rows.Close()

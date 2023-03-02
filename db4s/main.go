@@ -907,7 +907,8 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 	}
 
 	// Log the transfer
-	log.Printf("'%s%s%s' downloaded by user '%v', %v bytes", com.SanitiseLogString(dbOwner), dbFolder, dbName, userAcc, bytesWritten)
+	log.Printf("'%s%s%s' downloaded by user '%v', %v bytes", com.SanitiseLogString(dbOwner),
+		com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName), userAcc, bytesWritten)
 	return nil
 }
 

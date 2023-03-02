@@ -113,7 +113,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 		return
 	}
 
-	log.Printf("New client cert generated for user '%s'", userName)
+	log.Printf("New client cert generated for user '%s'", SanitiseLogString(userName))
 
 	return buf.Bytes(), nil
 }

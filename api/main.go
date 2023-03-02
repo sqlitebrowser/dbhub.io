@@ -242,7 +242,8 @@ func collectInfoAndOpen(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Con
 	if id == "" {
 		// The requested database wasn't found, or the user doesn't have permission to access it
 		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found. Owner: '%s%s%s'", dbOwner, dbFolder, dbName)
+		log.Printf("Requested database not found. Owner: '%s%s%s'", com.SanitiseLogString(dbOwner),
+			com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
 		httpStatus = http.StatusNotFound
 		return
 	}

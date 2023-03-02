@@ -90,13 +90,15 @@ func Diff(ownerA string, folderA string, nameA string, commitA string, ownerB st
 	if idA == "" {
 		// The requested database wasn't found, or the user doesn't have permission to access it
 		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found: '%s%s%s'", ownerA, folderA, nameA)
+		log.Printf("Requested database not found: '%s%s%s'", SanitiseLogString(ownerA),
+			SanitiseLogString(folderA), SanitiseLogString(nameA))
 		return Diffs{}, err
 	}
 	if idB == "" {
 		// The requested database wasn't found, or the user doesn't have permission to access it
 		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found: '%s%s%s'", ownerB, folderB, nameB)
+		log.Printf("Requested database not found: '%s%s%s'", SanitiseLogString(ownerB),
+			SanitiseLogString(folderB), SanitiseLogString(nameB))
 		return Diffs{}, err
 	}
 
