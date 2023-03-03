@@ -118,7 +118,7 @@
                                         </button>
                                         <ul uib-dropdown-menu class="dropdown-menu" role="menu">
                                             <li ng-repeat="row in Licences" role="menuitem" ng-click="changeLicence(bname, row.name)" data-cy="lic-{{ bname }}-{{ row.name }}">
-                                                <span>&nbsp; <a class="blackLink" href="">{{ row.name }}</a><span ng-if="row.url != ''"> - <a href="{{ row.url }}" target="_blank">info</a></span></span>
+                                                <span>&nbsp; <a class="blackLink" href="">{{ row.name }}</a><span ng-if="row.url != ''"> - <a href="{{ row.url }}" target="_blank" rel="noopener noreferrer">info</a></span></span>
                                             </li>
                                         </ul>
                                     </div>
