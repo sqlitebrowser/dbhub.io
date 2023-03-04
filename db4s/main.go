@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -492,7 +493,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 	case "html":
 		fileFormat = "html"
 	default:
-		http.Error(w, fmt.Sprintf("Unknown file format: %s", ff), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Unknown file format: %s", html.EscapeString(ff)), http.StatusBadRequest)
 		return
 	}
 
