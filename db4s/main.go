@@ -283,7 +283,14 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		}
 
 		// The request was for a user directory, so return that list
-		dbList, err := userDatabaseList(userAcc, pathStrings[1])
+		desiredUserDir := pathStrings[1]
+		err := com.ValidateUser(desiredUserDir)
+		if err != nil {
+			log.Printf("db4s: Validation failed for username: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dbList, err := userDatabaseList(userAcc, desiredUserDir)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -296,7 +303,14 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// TODO: Refactor this and the above identical code.  Doing it this way is non-optimal
 	if pathStrings[2] == "" {
 		// The request was for a user directory, so return that list
-		dbList, err := userDatabaseList(userAcc, pathStrings[1])
+		desiredUserDir := pathStrings[1]
+		err := com.ValidateUser(desiredUserDir)
+		if err != nil {
+			log.Printf("db4s: Validation failed for username: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dbList, err := userDatabaseList(userAcc, desiredUserDir)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -331,8 +345,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		return
 	}
 	if !exists {
-		http.Error(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName),
-			http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName), http.StatusNotFound)
 		return
 	}
 
