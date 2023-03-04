@@ -462,7 +462,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 	do := r.FormValue("display_order")
 	dispOrder, err := strconv.Atoi(do)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Invalid display order: %v", do), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Invalid display order: %v", html.EscapeString(do)), http.StatusBadRequest)
 		return
 	}
 
