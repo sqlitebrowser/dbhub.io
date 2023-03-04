@@ -169,7 +169,12 @@ func ReadConfig() error {
 	pgConfig.User = Conf.Pg.Username
 	pgConfig.Password = Conf.Pg.Password
 	pgConfig.Database = Conf.Pg.Database
-	clientTLSConfig := tls.Config{InsecureSkipVerify: true}
+	clientTLSConfig := tls.Config{}
+	if Conf.Environment.Environment == "production" {
+		clientTLSConfig.InsecureSkipVerify = false
+	} else {
+		clientTLSConfig.InsecureSkipVerify = true
+	}
 	if Conf.Pg.SSL {
 		pgConfig.TLSConfig = &clientTLSConfig
 	} else {
