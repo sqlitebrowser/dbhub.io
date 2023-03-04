@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -121,7 +121,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	raw, err := ioutil.ReadAll(userInfo.Body)
+	raw, err := io.ReadAll(userInfo.Body)
 	defer userInfo.Body.Close()
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())

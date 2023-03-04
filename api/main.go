@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -85,7 +84,7 @@ func main() {
 
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
-	certFile, err := ioutil.ReadFile(com.Conf.DB4S.CAChain)
+	certFile, err := os.ReadFile(com.Conf.DB4S.CAChain)
 	if err != nil {
 		fmt.Printf("Error opening Certificate Authority chain file: %v\n", err)
 		return

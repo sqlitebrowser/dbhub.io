@@ -1,8 +1,8 @@
 package common
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 )
 
@@ -73,7 +73,7 @@ func AddDefaultLicences() (err error) {
 		txt := []byte{}
 		if l.Path != "" {
 			// Read the file contents
-			txt, err = ioutil.ReadFile(filepath.Join(Conf.Licence.LicenceDir, l.Path))
+			txt, err = os.ReadFile(filepath.Join(Conf.Licence.LicenceDir, l.Path))
 			if err != nil {
 				return err
 			}

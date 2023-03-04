@@ -8,9 +8,9 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
+	"os"
 	"time"
 )
 
@@ -43,7 +43,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 	}
 
 	// Load the certificate used for signing (the intermediate certificate)
-	certFile, err := ioutil.ReadFile(Conf.Sign.IntermediateCert)
+	certFile, err := os.ReadFile(Conf.Sign.IntermediateCert)
 	if err != nil {
 		log.Printf("%s: Error opening intermediate certificate file: %v\n", pageName, err)
 		return
@@ -60,7 +60,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 	}
 
 	// Load the private key for the intermediate certificate
-	intKeyFile, err := ioutil.ReadFile(Conf.Sign.IntermediateKey)
+	intKeyFile, err := os.ReadFile(Conf.Sign.IntermediateKey)
 	if err != nil {
 		log.Printf("%s: Error opening intermediate certificate key: %v\n", pageName, err)
 		return

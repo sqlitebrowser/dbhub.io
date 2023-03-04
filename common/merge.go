@@ -3,7 +3,6 @@ package common
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -184,7 +183,7 @@ func performMerge(destOwner, destFolder, destName, destBranch, destCommitID, src
 	}
 
 	// Create a temporary file for the new database
-	tmpFile, err := ioutil.TempFile(Conf.DiskCache.Directory, "dbhub-merge-*.db")
+	tmpFile, err := os.CreateTemp(Conf.DiskCache.Directory, "dbhub-merge-*.db")
 	if err != nil {
 		return
 	}

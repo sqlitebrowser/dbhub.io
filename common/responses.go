@@ -111,7 +111,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	}
 	if err != nil {
 		if err.Error() == "http: no such file" {
-			// Check for a 'file1' FormFile too, as the some clients can't use 'file' (without a number) due to a design bug
+			// Check for a 'file1' FormFile too, as some clients can't use 'file' (without a number) due to a design bug
 			tempFile, handler, err = r.FormFile("file1")
 			if err != nil {
 				log.Printf("Uploading file failed: %v\n", err)
