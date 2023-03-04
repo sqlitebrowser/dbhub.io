@@ -60,6 +60,24 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Add some API keys
+	keys := map[string]string{
+		"2MXwA5jGZkIQ3UNEcKsuDNSPMlx": "default",
+		"2MXw0cd7IBAGR6mm0JX6O5BdySJ": "default",
+		"2MXwB8hvXgUHlCkXq5odLe4L05j": "default",
+		"2MXwGkD0il29I0e98rptPlfnABr": "first",
+		"2MXwIsi2wUIqvzN6lNkpxqmsDQK": "second",
+		"2MXwJkTQVonjJqNlpIFyA9BNtE6": "third",
+	}
+	for key, user := range keys {
+		err = APIKeySave(key, user, time.Now())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	log.Println("API keys added to database")
+
 	// Log the database reset
 	log.Println("Test data added to database")
 	return

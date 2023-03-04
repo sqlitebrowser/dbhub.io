@@ -64,6 +64,10 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Save the API key in PG database
 	err = com.APIKeySave(key, loggedInUser, creationTime)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Log the key creation
 	log.Printf("New API key created for user '%s', key: '%s'\n", loggedInUser, key)
