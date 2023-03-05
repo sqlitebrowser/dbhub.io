@@ -170,7 +170,7 @@ describe('database page', () => {
     // Simple sanity check of the downloaded file
     // TODO - Implement a better check.   Maybe create a task that diffs the database to the original test data file?
     const db = path.join(downloadsFolder, 'Assembly Election 2017.sqlite')
-    cy.readFile(db, { timeout: 5000 }).should('have.length.gt', 512)
+    cy.readFile(db, 'binary', { timeout: 5000 }).should('have.length', 57344)
     cy.task('rmFile', { path: db })
   })
 
@@ -201,7 +201,7 @@ describe('database page', () => {
     // Simple sanity check of the downloaded file
     // TODO - Implement a better check.   Maybe keep the "correct" csv in the repo as test data too, and compare against it?
     const csv = path.join(downloadsFolder, 'Candidate_Information.csv')
-    cy.readFile(csv, { timeout: 5000 }).should('have.length.gt', 512)
+    cy.readFile(csv, 'binary', { timeout: 5000 }).should('have.length', 30773)
     cy.task('rmFile', { path: csv })
   })
 
