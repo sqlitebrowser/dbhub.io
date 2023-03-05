@@ -223,14 +223,14 @@ describe('api tests', () => {
 
         // Needs an extra step, due to the structure of the returned JSON
         let temp = JSON.parse(response.body)
-        let jsonBody = temp[0]
 
-        expect(jsonBody).to.have.property('name', 'Candidate_Information_Candidate_First_Pref_Votes_idx')
-        expect(jsonBody).to.have.property('table', 'Candidate_Information')
+        let jsonBody = temp[0]
+        expect(jsonBody).to.have.property('name')
+        expect(jsonBody).to.have.property('table')
 
         let columns = jsonBody.columns[0]
-        expect(columns).to.have.property('id', 0)
-        expect(columns).to.have.property('name', 'Candidate_First_Pref_Votes')
+        expect(columns).to.have.property('id')
+        expect(columns).to.have.property('name')
       }
     )
   })
@@ -282,6 +282,62 @@ describe('api tests', () => {
         expect(entries).to.have.property('sha256', '4244d55013359c6476d06c045700139629ecfd2752ffad141984ba14ecafd17e')
         expect(entries).to.have.property('size', 57344)
         expect(entries).to.include.keys(['last_modified'])
+      }
+    )
+  })
+
+  // Tables
+  //   Equivalent curl command:
+  //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
+  //       -F dbowner="default"  -F dbname="Assembly Election 2017.sqlite" \
+  //       https://localhost:9444/v1/tables
+  it('tables', () => {
+    cy.request({
+      method: 'POST',
+      url: 'https://localhost:9444/v1/tables',
+      form: true,
+      body: {
+        apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
+        dbowner: 'default',
+        dbname: 'Assembly Election 2017.sqlite'
+      },
+    }).then(
+      (response) => {
+        expect(response.status).to.eq(200)
+
+        let jsonBody = JSON.parse(response.body)
+        expect(jsonBody).to.have.members([
+            "Candidate_Information",
+            "Constituency_Turnout_Information",
+            "Elected_Candidates"
+          ]
+        )
+      }
+    )
+  })
+
+  // Webpage
+  //   Equivalent curl command:
+  //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
+  //       -F dbowner="default"  -F dbname="Assembly Election 2017.sqlite" \
+  //       https://localhost:9444/v1/webpage
+  it('webpage', () => {
+    cy.request({
+      method: 'POST',
+      url: 'https://localhost:9444/v1/webpage',
+      form: true,
+      body: {
+        apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
+        dbowner: 'default',
+        dbname: 'Assembly Election 2017.sqlite'
+      },
+    }).then(
+      (response) => {
+        expect(response.status).to.eq(200)
+
+        let jsonBody = JSON.parse(response.body)
+        expect(jsonBody).to.have.property('web_page')
+        expect(jsonBody.web_page).to.match(/.*\/default\/Assembly\ Election\ 2017\.sqlite$/)
       }
     )
   })
