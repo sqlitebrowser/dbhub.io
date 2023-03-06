@@ -258,6 +258,7 @@ describe('api tests', () => {
       method: 'POST',
       url: 'https://localhost:9444/v1/download',
       form: true,
+      encoding: "binary",
       body: {
         apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
         dbowner: 'default',
@@ -269,14 +270,10 @@ describe('api tests', () => {
 
         // Save the database to local disk
         const db = path.join(downloadsFolder, 'Assembly Election 2017.sqlite')
-        // FIXME: cy.writeFile() isn't writing the full file out to disk, even though the server
-        //        is definitely sending it (as evidenced by curl having no issues).  It would be
-        //        good to figure out wtf is causing this problem, then fix it and write a more
-        //        thorough cy.readFile() test.
         cy.writeFile(db, response.body, 'binary')
 
         // Verify the downloaded file is ok
-        cy.readFile(db, 'binary', { timeout: 5000 }).should('have.length.gt', 512)
+        cy.readFile(db, 'binary', { timeout: 5000 }).should('have.length', 73728)
 
         // Remove the downloaded file
         cy.task('rmFile', { path: db })
