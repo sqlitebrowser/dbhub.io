@@ -1,5 +1,7 @@
 ## DBHub.io
 
+[![Cypress](https://github.com/sqlitebrowser/dbhub.io/actions/workflows/cypress.yml/badge.svg)](https://github.com/sqlitebrowser/dbhub.io/actions/workflows/cypress.yml)
+
 ### What it is
 
 An early stage (in development) "Cloud" for SQLite databases, with special
