@@ -1,5 +1,8 @@
 import path from "path";
 
+// TODO: Looks like we don't have API functions yet to create branches, tags, or releases
+//       Those could be useful to add
+
 describe('api tests', () => {
   before(() => {
     // Seed data
@@ -286,6 +289,87 @@ describe('api tests', () => {
     )
   })
 
+  // Query
+  //   Equivalent curl command:
+  //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
+  //       -F dbowner="default"  -F dbname="Assembly Election 2017.sqlite" \
+  //       -F sql="U0VMRUNUIGNvdW50KCopIEZST00gQ2FuZGlkYXRlX0luZm9ybWF0aW9u" \
+  //       https://localhost:9444/v1/query
+  //     Note: the sql argument above is the base64 encoding of "SELECT count(*) FROM Candidate_Information"
+  //     Another useful sql is:
+  //       text: 'SELECT Firstname, Surname FROM Candidate_Information ORDER BY Surname, Firstname LIMIT 1'
+  //       base64: U0VMRUNUIEZpcnN0bmFtZSwgU3VybmFtZSBGUk9NIENhbmRpZGF0ZV9JbmZvcm1hdGlvbiBPUkRFUiBCWSBTdXJuYW1lLCBGaXJzdG5hbWUgTElNSVQgMQ==
+  it('query', () => {
+    cy.request({
+      method: 'POST',
+      url: 'https://localhost:9444/v1/query',
+      form: true,
+      body: {
+        apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
+        dbowner: 'default',
+        dbname: 'Assembly Election 2017.sqlite',
+        sql: btoa('SELECT Firstname, Surname FROM Candidate_Information ORDER BY Surname, Firstname LIMIT 1')
+      },
+    }).then(
+      (response) => {
+        expect(response.status).to.eq(200)
+
+        let jsonBody = JSON.parse(response.body)
+        expect(jsonBody[0][0]).to.have.property('Name', 'Firstname')
+        expect(jsonBody[0][0]).to.have.property('Type', 3)
+        expect(jsonBody[0][0]).to.have.property('Value', 'Steven')
+        expect(jsonBody[0][1]).to.have.property('Name', 'Surname')
+        expect(jsonBody[0][1]).to.have.property('Type', 3)
+        expect(jsonBody[0][1]).to.have.property('Value', 'Agnew')
+      }
+    )
+  })
+
+  // Releases
+  //   Equivalent curl command:
+  //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
+  //       -F dbowner="default"  -F dbname="Assembly Election 2017.sqlite" \
+  //       https://localhost:9444/v1/releases
+  it('releases', () => {
+    // Create a release, so we can test it using the API
+    cy.visit('default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="rlscnt"]').should('contain', '0')
+    cy.get('[data-cy="commitslnk"]').click()
+    cy.get('[data-cy="createtagrelbtn"]').click()
+    cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('Some release name').should('have.value', 'Some release name')
+    cy.get('[data-cy="relradio"]').click()
+    cy.get('[data-cy="desctext"]').type('{selectall}{backspace}').type('Some release description').should('have.value', 'Some release description')
+    cy.get('[data-cy="previewtab"]').click()
+    cy.get('[data-cy="previewdiv"]').should('contain', 'Some release description')
+    cy.get('[data-cy="createbtn"]').click()
+    cy.visit('default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="rlscnt"]').should('contain', '1')
+
+    // Test the release details via the api
+    cy.request({
+      method: 'POST',
+      url: 'https://localhost:9444/v1/releases',
+      form: true,
+      body: {
+        apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
+        dbowner: 'default',
+        dbname: 'Assembly Election 2017.sqlite'
+      },
+    }).then(
+      (response) => {
+        expect(response.status).to.eq(200)
+
+        let jsonBody = JSON.parse(response.body)
+        expect(jsonBody).to.have.property('Some release name')
+        expect(jsonBody['Some release name']).to.include.keys(['commit', 'date'])
+        expect(jsonBody['Some release name']).to.have.property('description', 'Some release description')
+        expect(jsonBody['Some release name']).to.have.property('email', 'default@dbhub.io')
+        expect(jsonBody['Some release name']).to.have.property('name', 'Default system user')
+        expect(jsonBody['Some release name']).to.have.property('size', 73728)
+      }
+    )
+  })
+
   // Tables
   //   Equivalent curl command:
   //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
@@ -312,6 +396,49 @@ describe('api tests', () => {
             "Elected_Candidates"
           ]
         )
+      }
+    )
+  })
+
+  // Tags
+  //   Equivalent curl command:
+  //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
+  //       -F dbowner="default"  -F dbname="Assembly Election 2017.sqlite" \
+  //       https://localhost:9444/v1/tags
+  it('tags', () => {
+    // Create a tag for us to test with
+    cy.visit('default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="tagscnt"]').should('contain', '0')
+    cy.get('[data-cy="commitslnk"]').click()
+    cy.get('[data-cy="createtagrelbtn"]').click()
+    cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('Some tag name').should('have.value', 'Some tag name')
+    cy.get('[data-cy="desctext"]').type('{selectall}{backspace}').type('Some tag description').should('have.value', 'Some tag description')
+    cy.get('[data-cy="previewtab"]').click()
+    cy.get('[data-cy="previewdiv"]').should('contain', 'Some tag description')
+    cy.get('[data-cy="createbtn"]').click()
+    cy.visit('default/Assembly%20Election%202017.sqlite')
+    cy.get('[data-cy="tagscnt"]').should('contain', '1')
+
+    // Test the tag details using the API
+    cy.request({
+      method: 'POST',
+      url: 'https://localhost:9444/v1/tags',
+      form: true,
+      body: {
+        apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
+        dbowner: 'default',
+        dbname: 'Assembly Election 2017.sqlite'
+      },
+    }).then(
+      (response) => {
+        expect(response.status).to.eq(200)
+
+        let jsonBody = JSON.parse(response.body)
+        expect(jsonBody).to.have.property('Some tag name')
+        expect(jsonBody['Some tag name']).to.include.keys(['commit', 'date'])
+        expect(jsonBody['Some tag name']).to.have.property('description', 'Some tag description')
+        expect(jsonBody['Some tag name']).to.have.property('email', 'default@dbhub.io')
+        expect(jsonBody['Some tag name']).to.have.property('name', 'Default system user')
       }
     )
   })
