@@ -443,6 +443,46 @@ describe('api tests', () => {
     )
   })
 
+  // Upload
+  //   Equivalent curl command:
+  //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
+  //       -F dbname="Assembly Election 2017v2.sqlite" \
+  //       -F file=@../../test_data/Assembly\ Election\ 2017.sqlite \
+  //       https://localhost:9444/v1/upload
+  it('upload', () => {
+    cy.readFile('cypress/test_data/Assembly Election 2017.sqlite', 'binary').then((dbData) => {
+      const blob = Cypress.Blob.binaryStringToBlob(dbData)
+
+      // Manually construct a form data object, as cy.request() doesn't yet have proper support
+      // for form data
+      const z = new FormData()
+      z.set('apikey', '2MXwA5jGZkIQ3UNEcKsuDNSPMlx')
+      z.set('dbname', 'Assembly Election 2017v2.sqlite')
+      z.set('file', blob)
+
+      // Send the request
+      cy.request({
+        method: 'POST',
+        url: 'https://localhost:9444/v1/upload',
+        body: z
+      }).then(
+        (response) => {
+          expect(response.status).to.eq(201)
+
+          // For some unknown reason Cypress thinks the response.body is an ArrayBuffer (wtf?), when it's just standard
+          // json.  It's *probably* some side effect of using Cypress.Blob.binaryStringToBlob() above, but that seems
+          // pretty silly.
+          // Anyway, we manually convert it to something that JSON.parse() can operate on, then proceed as per normal
+          let fixedBody = Cypress.Blob.arrayBufferToBinaryString(response.body)
+          let jsonBody = JSON.parse(fixedBody)
+
+          expect(jsonBody).to.have.keys(['commit', 'url'])
+          expect(jsonBody.url).to.match(/.*\/default\/Assembly\ Election\ 2017v2\.sqlite/)
+        }
+      )
+    })
+  })
+
   // Webpage
   //   Equivalent curl command:
   //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
