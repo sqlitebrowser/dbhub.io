@@ -96,8 +96,8 @@ describe('api tests', () => {
         expect(entries).to.have.property('entry_type', 'db')
         expect(entries).to.have.property('licence', '9348ddfd44da5a127c59141981954746a860ec8e03e0412cf3af7134af0f97e2')
         expect(entries).to.have.property('name', 'Assembly Election 2017.sqlite')
-        expect(entries).to.have.property('sha256', '4244d55013359c6476d06c045700139629ecfd2752ffad141984ba14ecafd17e')
-        expect(entries).to.have.property('size', 57344)
+        expect(entries).to.have.property('sha256', '32e0815554a6fe4e3c17bda3c4abcddc47c0fa3e9291bdefd18effef08a16db8')
+        expect(entries).to.have.property('size', 73728)
         expect(entries).to.include.keys(['last_modified'])
       }
     )
@@ -279,8 +279,8 @@ describe('api tests', () => {
         expect(entries).to.have.property('entry_type', 'db')
         expect(entries).to.have.property('licence', '9348ddfd44da5a127c59141981954746a860ec8e03e0412cf3af7134af0f97e2')
         expect(entries).to.have.property('name', 'Assembly Election 2017.sqlite')
-        expect(entries).to.have.property('sha256', '4244d55013359c6476d06c045700139629ecfd2752ffad141984ba14ecafd17e')
-        expect(entries).to.have.property('size', 57344)
+        expect(entries).to.have.property('sha256', '32e0815554a6fe4e3c17bda3c4abcddc47c0fa3e9291bdefd18effef08a16db8')
+        expect(entries).to.have.property('size', 73728)
         expect(entries).to.include.keys(['last_modified'])
       }
     )

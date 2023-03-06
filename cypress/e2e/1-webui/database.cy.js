@@ -88,7 +88,7 @@ describe('database page', () => {
 
   // Size field
   it('Size field', () => {
-    cy.get('[data-cy="size"]').should('contain', '56 KB')
+    cy.get('[data-cy="size"]').should('contain', '72 KB')
   })
 
   // Source URL
@@ -170,7 +170,7 @@ describe('database page', () => {
     // Simple sanity check of the downloaded file
     // TODO - Implement a better check.   Maybe create a task that diffs the database to the original test data file?
     const db = path.join(downloadsFolder, 'Assembly Election 2017.sqlite')
-    cy.readFile(db, 'binary', { timeout: 5000 }).should('have.length', 57344)
+    cy.readFile(db, 'binary', { timeout: 5000 }).should('have.length', 73728)
     cy.task('rmFile', { path: db })
   })
 
