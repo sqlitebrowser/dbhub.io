@@ -27,7 +27,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	// Switch to the default user
 	Conf.Environment.UserOverride = "default"
 
-	// Add test SQLite database
+	// Add test SQLite databases
 	testDB, err := os.Open(path.Join(Conf.Web.BaseDir, "cypress", "test_data", "Assembly Election 2017.sqlite"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -37,6 +37,20 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	_, _, _, err = AddDatabase("default", "default", "/", "Assembly Election 2017.sqlite",
 		false, "", "", SetToPublic, "CC-BY-SA-4.0", "Initial commit",
 		"http://data.nicva.org/dataset/assembly-election-2017", testDB, time.Now(), time.Time{},
+		"", "", "", "", nil, "")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	testDB2, err := os.Open(path.Join(Conf.Web.BaseDir, "cypress", "test_data", "Assembly Election 2017 with view.sqlite"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer testDB2.Close()
+	_, _, _, err = AddDatabase("default", "default", "/", "Assembly Election 2017 with view.sqlite",
+		false, "", "", SetToPrivate, "CC-BY-SA-4.0", "Initial commit",
+		"http://data.nicva.org/dataset/assembly-election-2017", testDB2, time.Now(), time.Time{},
 		"", "", "", "", nil, "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -122,7 +122,7 @@ describe('api tests', () => {
       (response) => {
         expect(response.status).to.eq(200)
         let jsonBody = JSON.parse(response.body)
-        expect(jsonBody).to.include.members(["Assembly Election 2017.sqlite"])
+        expect(jsonBody).to.include.members(["Assembly Election 2017.sqlite", 'Assembly Election 2017 with view.sqlite'])
       }
     )
   })
@@ -158,10 +158,89 @@ describe('api tests', () => {
         }).then(
           (response) => {
             expect(response.status).to.eq(200)
-            expect(response.body).to.eq('null')
+            let jsonBody = JSON.parse(response.body)
+            expect(jsonBody).to.include.members(['Assembly Election 2017 with view.sqlite'])
 
             // Restore the contents of the database
             cy.request('/x/test/seed')
+          }
+        )
+      }
+    )
+  })
+
+  // Diff
+  //   Equivalent curl command:
+  //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
+  //       -F dbowner_a="default" -F dbname_a="Assembly Election 2017.sqlite" -F commit_a="SOME_COMMIT_ID_HERE" \
+  //       -F dbowner_b="default" -F dbname_b="Assembly Election 2017 with view.sqlite" -F commit_b="SOME_OTHER_COMMIT_ID_HERE" \
+  //       https://localhost:9444/v1/diff
+  it('diff', () => {
+    // *** Retrieve the required commit IDs for both databases first, then call the api diff function to test it ***
+    let commitA, commitB;
+
+    // Retrieve the latest commit ID from the first test database
+    cy.request({
+      method: 'POST',
+      url: 'https://localhost:9444/v1/commits',
+      form: true,
+      body: {
+        apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
+        dbowner: 'default',
+        dbname: 'Assembly Election 2017.sqlite',
+      },
+    }).then(
+      (response) => {
+        expect(response.status).to.eq(200)
+        commitA = Object.keys(JSON.parse(response.body))[0]
+      }
+    ).then(
+      (response) => {
+        // Retrieve the latest commit ID from the second test database
+        cy.request({
+          method: 'POST',
+          url: 'https://localhost:9444/v1/commits',
+          form: true,
+          body: {
+            apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
+            dbowner: 'default',
+            dbname: 'Assembly Election 2017 with view.sqlite',
+          },
+        }).then(
+          (response) => {
+            expect(response.status).to.eq(200)
+            commitB = Object.keys(JSON.parse(response.body))[0]
+          }
+        ).then(
+          (response) => {
+
+            // Now that we have the required commit IDs for each database, we call the API server diff() function to test it
+            cy.request({
+              method: 'POST',
+              url: 'https://localhost:9444/v1/diff',
+              form: true,
+              body: {
+                apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
+                dbowner_a: 'default',
+                dbname_a: 'Assembly Election 2017.sqlite',
+                commit_a: commitA,
+                dbowner_b: 'default',
+                dbname_b: 'Assembly Election 2017 with view.sqlite',
+                commit_b: commitB
+              },
+            }).then(
+              (response) => {
+                expect(response.status).to.eq(200)
+                let jsonBody = JSON.parse(response.body)
+                let diff = jsonBody["diff"][0]
+                expect(diff).to.have.property('object_name', 'Candidate_Names')
+                expect(diff).to.have.property('object_type', 'view')
+                expect(diff).to.have.property('schema')
+                expect(diff.schema).to.have.property('action_type', 'add')
+                expect(diff.schema).to.have.property('before', '')
+                expect(diff.schema).to.have.property('after', 'CREATE VIEW "Candidate_Names" AS\n  SELECT Firstname, Surname\n  FROM "Candidate_Information"\n  ORDER BY Surname, Firstname\n  DESC')
+              }
+            )
           }
         )
       }
@@ -313,7 +392,6 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-
         let jsonBody = JSON.parse(response.body)
         expect(jsonBody[0][0]).to.have.property('Name', 'Firstname')
         expect(jsonBody[0][0]).to.have.property('Type', 3)
@@ -358,7 +436,6 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-
         let jsonBody = JSON.parse(response.body)
         expect(jsonBody).to.have.property('Some release name')
         expect(jsonBody['Some release name']).to.include.keys(['commit', 'date'])
@@ -388,7 +465,6 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-
         let jsonBody = JSON.parse(response.body)
         expect(jsonBody).to.have.members([
             "Candidate_Information",
@@ -432,7 +508,6 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-
         let jsonBody = JSON.parse(response.body)
         expect(jsonBody).to.have.property('Some tag name')
         expect(jsonBody['Some tag name']).to.include.keys(['commit', 'date'])
@@ -483,6 +558,33 @@ describe('api tests', () => {
     })
   })
 
+  // Views
+  //   Equivalent curl command:
+  //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
+  //       -F dbowner="default"  -F dbname="Assembly Election 2017.sqlite" \
+  //       https://localhost:9444/v1/views
+  it('views', () => {
+    cy.request({
+      method: 'POST',
+      url: 'https://localhost:9444/v1/views',
+      form: true,
+      body: {
+        apikey: '2MXwA5jGZkIQ3UNEcKsuDNSPMlx',
+        dbowner: 'default',
+        dbname: 'Assembly Election 2017 with view.sqlite'
+      },
+    }).then(
+      (response) => {
+        expect(response.status).to.eq(200)
+        let jsonBody = JSON.parse(response.body)
+        expect(jsonBody).to.have.members([
+          "Candidate_Names"
+          ]
+        )
+      }
+    )
+  })
+
   // Webpage
   //   Equivalent curl command:
   //     curl -k -F apikey="2MXwA5jGZkIQ3UNEcKsuDNSPMlx" \
@@ -501,7 +603,6 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-
         let jsonBody = JSON.parse(response.body)
         expect(jsonBody).to.have.property('web_page')
         expect(jsonBody.web_page).to.match(/.*\/default\/Assembly\ Election\ 2017\.sqlite$/)
