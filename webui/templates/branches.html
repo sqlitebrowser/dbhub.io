@@ -61,7 +61,7 @@
                         <tr ng-repeat-end class="tableRow">
                             [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                                 <td style="border-style: none;">
-                                <button ng-if="row.name != meta.DefBranch" class="btn btn-default" ng-click="viewChanges(row.commit)">Compare with {{ meta.DefBranch }}</button>
+                                <button ng-if="row.name != meta.DefBranch" class="btn btn-default" ng-click="viewChanges(row.commit)" data-cy="comparebtn">Compare with {{ meta.DefBranch }}</button>
                                     <button ng-if="row.name != meta.DefBranch" class="btn btn-danger" ng-click="deleteBranch(row.name)" data-cy="delbtn">Delete</button>
                                 </td>
                                 <td style="border-style: none; padding: 0;" colspan="3">

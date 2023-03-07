@@ -16,29 +16,29 @@
     <div class="row">
         <div class="col-md-12" style="padding-bottom: 10px;">
         [[ if .Diffs.Diff ]]
-            <table ng-if="Diffs != null" class="table table-striped table-responsive settingsTable">
+            <table ng-if="Diffs != null" class="table table-striped table-responsive settingsTable" data-cy="difftbl">
                 <tbody>
                     <tr ng-repeat="row in Diffs">
-                        <td style="border-style: none;">
-                            <span style="font-size: x-large; color: #333;">{{ row.object_name }}</span><br />
-                            <span style="color: #333;">{{ row.object_type }}</span>
+                        <td style="border-style: none;" data-cy="objhdr">
+                            <span style="font-size: x-large; color: #333;" data-cy="objname">{{ row.object_name }}</span><br />
+                            <span style="color: #333;" data-cy="objtype">{{ row.object_type }}</span>
                             <div>
                             </div>
                         </td>
                         <td style="border-style: none;">
-                            <div class="pull-left" style="padding-top: 6px;">
+                            <div class="pull-left" style="padding-top: 6px;" data-cy="objdetail">
                                 <span ng-if="row.schema != null && row.schema.action_type=='add'">
-                                    <span style="font-weight: bold;">Created {{ row.object_type }}</span><br />
-                                    <span style="background-color: #e6ffed;">{{ row.schema.after }}</span><br/>
+                                    <span style="font-weight: bold;" data-cy="addtype">Created {{ row.object_type }}</span><br />
+                                    <span style="background-color: #e6ffed;" data-cy="adddetail">{{ row.schema.after }}</span><br/>
                                 </span>
                                 <span ng-if="row.schema != null && row.schema.action_type=='delete'">
-                                    <span style="font-weight: bold;">Dropped {{ row.object_type }}</span><br />
-                                    <span style="background-color: #fdb8c0;">{{ row.schema.before }}</span><br/>
+                                    <span style="font-weight: bold;" data-cy="droptype">Dropped {{ row.object_type }}</span><br />
+                                    <span style="background-color: #fdb8c0;" data-cy="dropdetail">{{ row.schema.before }}</span><br/>
                                 </span>
                                 <span ng-if="row.schema != null && row.schema.action_type=='modify'">
-                                    <span style="font-weight: bold;">Schema changed</span><br />
-                                    <span style="background-color: #fdb8c0;">{{ row.schema.before }}</span><br/>
-                                    <span style="background-color: #e6ffed;">{{ row.schema.after }}</span><br/>
+                                    <span style="font-weight: bold;" data-cy="mod">Schema changed</span><br />
+                                    <span style="background-color: #fdb8c0;" data-cy="modbefore">{{ row.schema.before }}</span><br/>
+                                    <span style="background-color: #e6ffed;" data-cy="modafter">{{ row.schema.after }}</span><br/>
                                 </span>
                                 <span ng-if="row.data.length">{{ row.data.length }} rows changed:</span>
                             </div>

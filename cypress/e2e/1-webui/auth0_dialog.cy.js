@@ -2,7 +2,6 @@ describe('ensure auth0 dialog is available on all pages', () => {
 
   /*
     TODO - These pages still need to be considered, and/or have tests added for
-    diffs.html
     discussioncomments.html
     mergerequestcomments.html
     mergerequestlist.html
