@@ -1,10 +1,13 @@
 [[ define "rootPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="rootView">
-[[ template "headlightbox" . ]]
+<html>
+[[ template "head" . ]]
 <body>
 <style>
-    .iborder {
+    .lightbox-image, .lightbox-image > div {
+        display: inline;
+    }
+    .lightbox-image > div > img {
         border-width: 1px;
         border-color: black;
         border-radius: 7px;
@@ -33,7 +36,7 @@
                 <h2>Visualise it</h2>
                 <h2>Improve it with others</h2>
                 <br />
-                <button class="btn btn-success" ng-click="uploadForm()">Get Started</button>
+                <button class="btn btn-success" onClick="uploadForm()">Get Started</button>
                 <br /><br />
             </div><div class="col-md-6 vcenter" style="text-align: left;">
                 <video autoplay="" loop="" muted="" width="100%" height="100%">
@@ -48,28 +51,28 @@
         <div class="col-md-12" style="text-align: center;"><h1 data-cy="features">Features</h1></div>
     </div>
     <div class="row" style="background-color: #e7e7e7; padding: 10px; border-radius: 5px; border-style: dotted; border-width: 1px; border-color: #9d9d9d;">
-        <div class="col-md-6 vtop"  style="text-align: center;">
+        <div class="col-md-6 vtop" style="text-align: center;">
             <h3>Public and private databases</h3>
             <h5>The databases you upload can be set to public access, for<br />
                 anyone to download, or private, so they're only for you.</h5>
-            <a href="#" ng-click="openLightboxModal(0)"><img class="iborder" src="/images/pub_priv1-50px.png"/></a>
+            <div class="lightbox-image" data-small="/images/pub_priv1-50px.png" data-large="/images/pub_priv1.png" data-alt="You choose whether your data is just for you, or accessible to everyone"></div>
         </div><div class="col-md-6 vtop" style="text-align: center;">
             <h3>Integration with <a href="https://sqlitebrowser.org">DB Browser for SQLite</a></h3>
             <h5>We're the people behind DB Browser for SQLite,<br />
                 so naturally they're integrated.</h5>
-            <a href="#" ng-click="openLightboxModal(1)"><img class="iborder" src="/images/db4s_screenshot1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(2)"><img class="iborder" src="/images/db4s_screenshot2-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(3)"><img class="iborder" src="/images/db4s_screenshot3-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(4)"><img class="iborder" src="/images/db4s_screenshot4-50px.png" height="50px" /></a>
+            <div class="lightbox-image" data-small="/images/db4s_screenshot1-50px.png" data-large="/images/db4s_screenshot1.png" data-alt="DB Browser for SQLite is a popular Open Source GUI for SQLite databases"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/db4s_screenshot2-50px.png" data-large="/images/db4s_screenshot2.png" data-alt="DB Browser for SQLite includes basic plotting capabilities"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/db4s_screenshot3-50px.png" data-large="/images/db4s_screenshot3.png" data-alt="When configured, DB Browser for SQLite can access your databases on DBHub.io"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/db4s_screenshot4-50px.png" data-large="/images/db4s_screenshot4.png" data-alt="DB Browser for SQLite can download databases from DBHub.io, and upload your changes"></div>
         </div>
     </div>
     <div class="row" style="padding: 10px;">
         <div class="col-md-6 vtop" style="text-align: center;">
             <h3>Visualise your data</h3>
             <h5>Chart it using Plotly.js. (<a href="/vis/justinclift/Marine%20Litter%20Survey%20%28Keep%20Northern%20Ireland%20Beautiful%29.sqlite" target="_blank">example</a>)</h5>
-            <a href="#" ng-click="openLightboxModal(5)"><img class="iborder" src="/images/plotly1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(6)"><img class="iborder" src="/images/plotly2-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(7)"><img class="iborder" src="/images/plotly3-50px.png" height="50px" /></a> &nbsp;
+            <div class="lightbox-image" data-small="/images/plotly1-50px.png" data-large="/images/plotly1.png" data-alt="You can run SQL queries on your data, and visualise the results with Plotly.js charts"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/plotly2-50px.png" data-large="/images/plotly2.png" data-alt="Plotly.js offers many useful visualisation capabilities for your data"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/plotly3-50px.png" data-large="/images/plotly3.png" data-alt="With further chart types being added over time..."></div>
         </div><div class="col-md-6 vtop" style="text-align: center;">
             <h3>A powerful <a href="https://github.com/sqlitebrowser/dio" target="_blank">command line interface</a></h3>
             <h5 style="padding-bottom: 5px;">Push (upload), pull (download), create tags, releases, and<br />
@@ -85,30 +88,30 @@
             <h3>Automatic alerts on data changes</h3>
             <h5>You can easily "watch" any public database,<br />
                 to alert you by email any time its changed.</h5>
-            <a href="#" ng-click="openLightboxModal(8)"><img class="iborder" src="/images/watch1-46px.png"/></a> &nbsp;
+            <div class="lightbox-image" data-small="/images/watch1-46px.png" data-large="/images/watch1.png" data-alt="You can set a &quot;Watch&quot; on databases, so you're alerted to changes"></div>
         </div><div class="col-md-6 vtop" style="text-align: center;">
             <h3>Open discussions, or report problems in data</h3>
             <h5>Every database has a <i>discussion</i> area, useful for asking questions,<br />
                 making suggestions, and pointing out potential problems.</h5>
-            <a href="#" ng-click="openLightboxModal(9)"><img class="iborder" src="/images/discussions1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(10)"><img class="iborder" src="/images/discussions2-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(11)"><img class="iborder" src="/images/discussions3-50px.png" height="50px" /></a>
+            <div class="lightbox-image" data-small="/images/discussions1-50px.png" data-large="/images/discussions1.png" data-alt="You can start discussions on your own databases, and any public database"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/discussions2-50px.png" data-large="/images/discussions2.png" data-alt="Anyone watching the database will be notified of the discussion, and can join in"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/discussions3-50px.png" data-large="/images/discussions3.png" data-alt="Discussions are useful for suggesting ideas, asking about the data, and pointing out problems"></div>
         </div>
     </div>
     <div class="row" style="padding: 10px;">
         <div class="col-md-6 vtop" style="text-align: center;">
             <h3>Collaborative development</h3>
             <h5>Submit changes to public databases, for collaborative development.</h5>
-            <a href="#" ng-click="openLightboxModal(12)"><img class="iborder" src="/images/merge1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(13)"><img class="iborder" src="/images/merge2-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(14)"><img class="iborder" src="/images/merge3-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(15)"><img class="iborder" src="/images/merge4-50px.png" height="50px" /></a>
+            <div class="lightbox-image" data-small="/images/merge1-50px.png" data-large="/images/merge1.png" data-alt="Submitting new data to public databases is done through Merge Requests"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/merge2-50px.png" data-large="/images/merge2.png" data-alt="The Merge Request creation page"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/merge3-50px.png" data-large="/images/merge3.png" data-alt="Merge Requests have a title, discussion area, and list of the proposed changes"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/merge4-50px.png" data-large="/images/merge4.png" data-alt="A completed Merge Request.  The database has been updated with the new data"></div>
         </div><div class="col-md-6 vtop" style="text-align: center;">
             <h3>Full version control history, for traceability</h3>
             <h5>All data changes are recorded and<br />
                 checksummed, for full traceability.</h5>
-            <a href="#" ng-click="openLightboxModal(16)"><img class="iborder" src="/images/version_control_history1-50px.png" height="50px" /></a> &nbsp;
-            <a href="#" ng-click="openLightboxModal(17)"><img class="iborder" src="/images/version_control_history2-50px.png" height="50px" /></a>
+            <div class="lightbox-image" data-small="/images/version_control_history1-50px.png" data-large="/images/version_control_history1.png" data-alt="All data is SHA256 checksummed, and every database maintains a complete version history"></div> &nbsp;
+            <div class="lightbox-image" data-small="/images/version_control_history2-50px.png" data-large="/images/version_control_history2.png" data-alt="The version history can be useful for traceability of important data"></div>
         </div>
     </div>
     <div class="row" style="padding: 10px;">
@@ -116,117 +119,15 @@
     </div>
 </div>
 [[ template "footer" . ]]
-<script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize', 'bootstrapLightbox']);
-    app.controller('rootView', function($scope, Lightbox) {
-        // Activity stats
-        $scope.stats = {
-            Stats: [[ .Stats ]],
-        };
-        $scope.radioPublic = "true";
-        $scope.watchersText = "<i class=\"fa fa-eye\"></i> Watch";
-        $scope.Watchers = "50";
-
-        // Lightbox images
-        $scope.images = [
-            {
-                'url': '/images/pub_priv1.png', 'thumbUrl': '/images/pub_priv1-50px.png',
-                'caption': 'You choose whether your data is just for you, or accessible to everyone'
-            },
-            {
-                'url': '/images/db4s_screenshot1.png', 'thumbUrl': '/images/db4s_screenshot1-50px.png',
-                'caption': 'DB Browser for SQLite is a popular Open Source GUI for SQLite databases'
-            },
-            {
-                'url': '/images/db4s_screenshot2.png', 'thumbUrl': '/images/db4s_screenshot2-50px.png',
-                'caption': 'DB Browser for SQLite includes basic plotting capabilities'
-            },
-            {
-                'url': '/images/db4s_screenshot3.png', 'thumbUrl': '/images/db4s_screenshot3-50px.png',
-                'caption': 'When configured, DB Browser for SQLite can access your databases on DBHub.io'
-            },
-            {
-                'url': '/images/db4s_screenshot4.png', 'thumbUrl': '/images/db4s_screenshot4-50px.png',
-                'caption': 'DB Browser for SQLite can download databases from DBHub.io, and upload your changes'
-            },
-            {
-                'url': '/images/plotly1.png', 'thumbUrl': '/images/plotly1-50px.png',
-                'caption': 'You can run SQL queries on your data, and visualise the results with Plotly.js charts'
-            },
-            {
-                'url': '/images/plotly2.png', 'thumbUrl': '/images/plotly2-50px.png',
-                'caption': 'Plotly.js offers many useful visualisation capabilities for your data'
-            },
-            {
-                'url': '/images/plotly3.png', 'thumbUrl': '/images/plotly3-50px.png',
-                'caption': 'With further chart types being added over time...'
-            },
-            {
-                'url': '/images/watch1.png', 'thumbUrl': '/images/watch1-46px.png',
-                'caption': 'You can set a "Watch" on databases, so you\'re alerted to changes'
-            },
-            {
-                'url': '/images/discussions1.png', 'thumbUrl': '/images/discussions1-50px.png',
-                'caption': 'You can start discussions on your own databases, and any public database'
-            },
-            {
-                'url': '/images/discussions2.png', 'thumbUrl': '/images/discussions2-50px.png',
-                'caption': 'Anyone watching the database will be notified of the discussion, and can join in'
-            },
-            {
-                'url': '/images/discussions3.png', 'thumbUrl': '/images/discussions3-50px.png',
-                'caption': 'Discussions are useful for suggesting ideas, asking about the data, and pointing out problems'
-            },
-            {
-                'url': '/images/merge1.png', 'thumbUrl': '/images/merge1-50px.png',
-                'caption': 'Submitting new data to public databases is done through Merge Requests'
-            },
-            {
-                'url': '/images/merge2.png', 'thumbUrl': '/images/merge2-50px.png',
-                'caption': 'The Merge Request creation page'
-            },
-            {
-                'url': '/images/merge3.png', 'thumbUrl': '/images/merge3-50px.png',
-                'caption': 'Merge Requests have a title, discussion area, and list of the proposed changes '
-            },
-            {
-                'url': '/images/merge4.png', 'thumbUrl': '/images/merge4-50px.png',
-                'caption': 'A completed Merge Request.  The database has been updated with the new data'
-            },
-            {
-                'url': '/images/version_control_history1.png', 'thumbUrl': '/images/version_control_history1-50px.png',
-                'caption': 'All data is SHA256 checksummed, and every database maintains a complete version history'
-            },
-            {
-                'url': '/images/version_control_history2.png', 'thumbUrl': '/images/version_control_history2-50px.png',
-                'caption': 'The version history can be useful for traceability of important data'
-            }
-            ];
-
-        $scope.openLightboxModal = function (index) {
-            Lightbox.openModal($scope.images, index);
-        };
-
-        // Open a window to the DB4S download page
-        $scope.downloadDB4S = function() {
-            window.open('http://sqlitebrowser.org');
-        };
-
-        // Returns a nicely presented "time elapsed" string
-        $scope.getTimePeriodTxt = function(date1, includeOn) {
-            return getTimePeriod(date1, includeOn)
-        };
-
-        // Switch to the upload database page
-        $scope.uploadForm = function() {
-            if ("[[ .Meta.LoggedInUser ]]" === "") {
-                // User needs to be logged in
-                lock.show();
-            } else {
-                window.location = '/upload/';
-            }
-        };
-    });
+<script type="application/javascript">
+    function uploadForm() {
+        if (authInfo.loggedInUser === "") {
+            // User needs to be logged in
+            lock.show();
+        } else {
+            window.location = '/upload/';
+        }
+    };
 </script>
 </body>
 </html>

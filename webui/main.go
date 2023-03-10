@@ -3192,9 +3192,6 @@ func main() {
 	http.Handle("/css/local.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "local.css"))
 	})))
-	http.Handle("/css/angular-bootstrap-lightbox.min.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "angular-bootstrap-lightbox.min.css"))
-	})))
 
 	// Fonts
 	http.Handle("/css/FontAwesome.otf", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
@@ -3228,9 +3225,6 @@ func main() {
 	})))
 	http.Handle("/js/angular-sanitize.min.js.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.8.2.min.js.map"))
-	})))
-	http.Handle("/js/angular-bootstrap-lightbox.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-bootstrap-lightbox.min.js"))
 	})))
 
 	http.Handle("/js/dbhub.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {

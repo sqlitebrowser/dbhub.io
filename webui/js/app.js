@@ -1,6 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
+import ModalImage from "react-modal-image";
+
 import Auth from "./auth";
 import DbHeader from "./db-header";
 import MarkdownEditor from "./markdown-editor";
@@ -22,7 +24,7 @@ import MarkdownEditor from "./markdown-editor";
 }
 
 {
-	document.querySelectorAll('.markdown-editor').forEach((rootNode) => {
+	document.querySelectorAll(".markdown-editor").forEach((rootNode) => {
 		const editorId = rootNode.dataset.id;
 		const rows = rootNode.dataset.rows;
 		const placeholder = rootNode.dataset.placeholder;
@@ -38,4 +40,20 @@ import MarkdownEditor from "./markdown-editor";
 			initialValue: initialValue
 		}));
 	});
+}
+
+{
+	document.querySelectorAll(".lightbox-image").forEach((rootNode) => {
+		const small = rootNode.dataset.small;
+		const large = rootNode.dataset.large;
+		const alt = rootNode.dataset.alt;
+
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(React.createElement(ModalImage, {
+			small: small,
+			large: large,
+			alt: alt
+		}));
+	});
+
 }
