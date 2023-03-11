@@ -6,15 +6,18 @@
 [[ template "header" . ]]
 <div>
     <div class="row" style="margin-bottom: 10px;">
-        <div class="col-md-12">
+        <div class="col-md-2">&nbsp;</div>
+        <div class="col-md-8">
             <h2 id="viewuser" style="margin-top: 10px;">
-                <div class="pull-left" data-cy="updates">Status updates</div>
+                <div style="text-align: center;" data-cy="updates">Status updates</div>
             </h2>
         </div>
+        <div class="col-md-2">&nbsp;</div>
     </div>
     [[ if .Updates ]]
         <div ng-repeat="(dbname, entries) in updates" class="row">
-            <div class="col-md-12">
+            <div class="col-md-2">&nbsp;</div>
+            <div class="col-md-8">
                 <table class="table table-striped table-responsive profileTable">
                     <tr>
                         <td style="background-color: #DCDCDC;"><a class="blackLink" href="/{{ dbname }}" style="font-weight: bold;" ng-bind="dbname"></a></td>
@@ -24,6 +27,7 @@
                     </tr>
                 </table>
             </div>
+            <div class="col-md-2">&nbsp;</div>
         </div>
     [[ else ]]
         <table class="table table-striped table-responsive profileTable">
