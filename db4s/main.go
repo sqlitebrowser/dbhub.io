@@ -345,7 +345,8 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		return
 	}
 	if !exists {
-		http.Error(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", com.SanitiseLogString(dbOwner),
+			com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName)), http.StatusNotFound)
 		return
 	}
 
