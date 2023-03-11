@@ -3212,6 +3212,21 @@ func main() {
 	http.Handle("/css/fontawesome-webfont.woff2", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.woff2"))
 	})))
+	http.Handle("/fonts/glyphicons-halflings-regular.eot", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "glyphicons-halflings-regular.eot"))
+	})))
+	http.Handle("/fonts/glyphicons-halflings-regular.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "glyphicons-halflings-regular.svg"))
+	})))
+	http.Handle("/fonts/glyphicons-halflings-regular.ttf", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "glyphicons-halflings-regular.ttf"))
+	})))
+	http.Handle("/fonts/glyphicons-halflings-regular.woff", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "glyphicons-halflings-regular.woff"))
+	})))
+	http.Handle("/fonts/glyphicons-halflings-regular.woff2", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "glyphicons-halflings-regular.woff2"))
+	})))
 
 	// Javascript
 	http.Handle("/js/angular-1.8.2.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
