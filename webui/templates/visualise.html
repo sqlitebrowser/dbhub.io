@@ -5,9 +5,10 @@
 <body>
 <script src="/js/plotly-basic-2.18.2.min.js"></script>
 [[ template "header" . ]]
-<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+<div>
     <div id="db-header-root"></div>
     <div class="row" style="padding-bottom: 10px;">
+        <div class="col-md-1">&nbsp;</div>
         <div class="col-md-10">
             <span class="pull-left">
                 <div class="dropdown">
@@ -38,10 +39,11 @@
                 </div>
             </span>
         </div>
+        <div class="col-md-1">&nbsp;</div>
     </div>
     <div class="row">
-        <div class="col-md-2">&nbsp;</div>
-        <div class="col-md-8">
+        <div class="col-md-1">&nbsp;</div>
+        <div class="col-md-10">
             <uib-tabset>
                 <!-- User defined SQL tab -->
                 <uib-tab index="0">
@@ -155,7 +157,7 @@
                 </uib-tab>-->
             </uib-tabset>
         </div>
-        <div class="col-md-2">&nbsp;</div>
+        <div class="col-md-1">&nbsp;</div>
     </div>
     <div style="text-align: center; margin-top: 1%">
         <input type="submit" class="btn" value="Download as CSV" ng-click="downloadResults()">

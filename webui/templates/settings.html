@@ -4,7 +4,7 @@
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+<div>
     <div id="db-header-root"></div>
     <div class="row" ng-if="statusMessage != ''">
         <div class="col-md-12">
@@ -148,9 +148,9 @@
                 <table class="table table-striped table-responsive settingsTable">
                     <thead>
                         <tr>
-                            <th style="text-align: center;" width="50%">User</th>
-                            <th style="text-align: center;" width="30%">Permissions</th>
-                            <th style="text-align: center;">
+                            <th style="text-align: center; width: 30%">User</th>
+                            <th style="text-align: center; width: 30%">Permissions</th>
+                            <th style="text-align: center; width: 40%">
                                 <div class="input-group">
                                     <span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
                                     <input id="addShareUserName" type="text" class="form-control" name="addShareUserName" placeholder="Username" data-cy="usernameinput">
@@ -164,7 +164,7 @@
                     </thead>
                     <tbody>
                         <tr ng-repeat="(user, access) in meta.Shares">
-                            <td style="vertical-align: middle; border-style: none;" width="50%">
+                            <td style="vertical-align: middle; border-style: none; width: 30%">
                                 <div style="text-align: center;" data-cy="shareuser-{{ user }}">{{ user }}</div>
                             </td>
                             <td style="vertical-align: middle; text-align: center; border-style: none;">
@@ -244,12 +244,12 @@
             <div class="col-md-2">
                 &nbsp;
             </div>
-            <div class="col-md-8">
+            <div class="col-md-8" style="border: 5px dashed #d22c29; margin-bottom: 2%; border-radius: 10px">
                 <h3 style="text-align: center;">Destructive options</h3>
                 <div style="font-size: large; text-align: center; font-style: italic;">Be careful with this...!</div>
                 <br />
                 <form action="" method="post">
-                    <div style="text-align: center;">
+                    <div style="text-align: center; margin-bottom: 3%">
                         <button type="button" class="btn btn-danger" ng-click="confirmDelete()" data-cy="delbtn">Delete database</button>
                     </div>
                 </form>

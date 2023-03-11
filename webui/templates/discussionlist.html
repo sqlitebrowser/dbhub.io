@@ -4,18 +4,17 @@
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+<div>
     <div id="db-header-root"></div>
     <div class="row">
         <div class="col-md-12">
-            <div class="pull-left">
+            <div style="text-align: center; margin-top: 1%; margin-bottom: 1%">
                 <button class="btn btn-success" ng-click="createDiscussion()">Start a new discussion</button>
                 <div class="btn-group">
                     <label class="btn btn-default" ng-model="radioOpen" ng-click="openClick('true')" uib-btn-radio="true">Open</label>
                     <label class="btn btn-default" ng-model="radioOpen" ng-click="openClick('false')" uib-btn-radio="false">Closed</label>
                 </div>
             </div>
-            <br /><br />
         </div>
     </div>
     <div class="row" ng-if="statusMessage != ''">

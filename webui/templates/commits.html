@@ -4,11 +4,11 @@
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+<div>
     <div id="db-header-root"></div>
     <div class="row">
         <div class="col-md-12">
-            <div class="pull-left">
+            <div style="text-align: center; margin: 1% 0">
                 <span data-cy="commithist">Commit history for branch</span>
                 <span class="dropdown">
                     <span class="btn-group" uib-dropdown keyboard-nav="true">
@@ -25,7 +25,6 @@
                     </span>
                 </span>
             </div>
-            <br /><br />
         </div>
     </div>
     <div class="row" ng-if="statusMessage != ''">
