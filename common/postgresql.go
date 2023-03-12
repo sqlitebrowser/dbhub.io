@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hectane/hectane/email"
-	"github.com/hectane/hectane/queue"
+	"github.com/aquilax/truncate"
 	"github.com/jackc/pgx"
+	smtp2go "github.com/smtp2go-oss/smtp2go-go"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -2981,18 +2981,10 @@ func SaveDBSettings(userName, dbFolder, dbName, oneLineDesc, fullDesc, defaultTa
 
 // SendEmails sends status update emails to people watching databases
 func SendEmails() {
-	// Create Hectane email queue
-	cfg := &queue.Config{
-		Directory:              Conf.Event.EmailQueueDir,
-		DisableSSLVerification: true,
-	}
-	q, err := queue.NewQueue(cfg)
-	if err != nil {
-		log.Printf("Couldn't start Hectane queue: %s", err.Error())
+	// If the SMTP2Go API key hasn't been configured, there's no use in trying to send emails
+	if Conf.Event.Smtp2GoKey == "" && os.Getenv("SMTP2GO_API_KEY") == "" {
 		return
 	}
-	log.Printf("Created Hectane email queue in '%s'.  Queue processing loop refreshes every %d seconds",
-		Conf.Event.EmailQueueDir, Conf.Event.EmailQueueProcessingDelay)
 
 	for {
 		// Retrieve unsent emails from the email_queue
@@ -3026,22 +3018,22 @@ func SendEmails() {
 
 		// Send emails
 		for _, j := range emailList {
-			e := &email.Email{
-				From:    "updates@dbhub.io",
-				To:      []string{j.Address},
-				Subject: j.Subject,
-				Text:    j.Body,
+			e := smtp2go.Email{
+				From:     "updates@dbhub.io",
+				To:       []string{j.Address},
+				Subject:  j.Subject,
+				TextBody: j.Body,
+				HtmlBody: j.Body,
 			}
-			msgs, err := e.Messages(q.Storage)
+			_, err = smtp2go.Send(&e)
 			if err != nil {
-				log.Printf("Queuing email in Hectane failed: %v", err.Error())
-				return // Abort, as we don't want to continuously resend the same emails
-			}
-			for _, m := range msgs {
-				q.Deliver(m)
+				log.Println(err)
 			}
 
-			// Mark message as sent
+			log.Printf("Email with subject '%v' sent to '%v'",
+				truncate.Truncate(j.Subject, 35, "...", truncate.PositionEnd), j.Address)
+
+			// We only attempt delivery via smtp2go once (retries are handled on their end), so mark message as sent
 			dbQuery := `
 				UPDATE email_queue
 				SET sent = true, sent_timestamp = now()
@@ -3199,7 +3191,7 @@ func StatusUpdatesLoop() {
 		// For each event, add a status update to the status_updates list for each watcher it's for
 		for id, ev := range evList {
 			// Retrieve the list of watchers for the database the event occurred on
-			dbQuery := `
+			dbQuery = `
 				SELECT user_id
 				FROM watchers
 				WHERE db_id = $1`
@@ -3228,16 +3220,23 @@ func StatusUpdatesLoop() {
 			for _, u := range users {
 				// Retrieve the current status updates list for the user
 				var eml pgx.NullString
-				dbQuery := `
+				dbQuery = `
 					SELECT user_name, email, status_updates
 					FROM users
 					WHERE user_id = $1`
 				userEvents := make(map[string][]StatusUpdateEntry)
 				var userName string
-				err := tx.QueryRow(dbQuery, u).Scan(&userName, &eml, &userEvents)
+				err = tx.QueryRow(dbQuery, u).Scan(&userName, &eml, &userEvents)
 				if err != nil {
 					log.Printf("Database query failed: %v\n", err)
 					tx.Rollback()
+					continue
+				}
+
+				// If the user generated this event themselves, skip them
+				if userName == ev.details.UserName {
+					log.Printf("User '%v' generated this event (id: %v), so not adding it to their event list",
+						userName, ev.eventID)
 					continue
 				}
 
@@ -3281,7 +3280,7 @@ func StatusUpdatesLoop() {
 				}
 				if numRows := commandTag.RowsAffected(); numRows != 1 {
 					log.Printf("Wrong number of rows affected (%v) when adding status update for database ID "+
-						"'%d' to user '%s'", numRows, ev.dbID, u)
+						"'%d' to user '%v'", numRows, ev.dbID, u)
 					tx.Rollback()
 					continue
 				}
@@ -3324,19 +3323,27 @@ func StatusUpdatesLoop() {
 					log.Printf("Unknown message type when creating email message")
 				}
 				if eml.Valid {
-					// TODO: Check if the email is username@thisserver, which indicates a non-functional email address
+					// If the email address is of the form username@this_server (which indicates a non-functional email address), then skip it
+					serverName := strings.Split(Conf.Web.ServerName, ":")
+					if strings.HasSuffix(eml.String, serverName[0]) {
+						log.Printf("Skipping email '%v' to destination '%v', as it ends in '%v'",
+							truncate.Truncate(subj, 35, "...", truncate.PositionEnd), eml.String, serverName[0])
+						continue
+					}
+
+					// Add the email to the queue
 					dbQuery = `
 						INSERT INTO email_queue (mail_to, subject, body)
 						VALUES ($1, $2, $3)`
 					commandTag, err = tx.Exec(dbQuery, eml.String, subj, msg)
 					if err != nil {
-						log.Printf("Adding status update to email queue for user '%s' failed: %v", u, err)
+						log.Printf("Adding status update to email queue for user '%v' failed: %v", u, err)
 						tx.Rollback()
 						continue
 					}
 					if numRows := commandTag.RowsAffected(); numRows != 1 {
 						log.Printf("Wrong number of rows affected (%v) when adding status update to email"+
-							"queue for user '%s'", numRows, u)
+							"queue for user '%v'", numRows, u)
 						tx.Rollback()
 						continue
 					}

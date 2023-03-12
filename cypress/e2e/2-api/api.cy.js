@@ -85,7 +85,7 @@ describe('api tests', () => {
         let temp = JSON.parse(response.body)
         let jsonBody = temp[Object.keys(temp)[0]]
 
-        expect(jsonBody).to.have.property('author_email', 'default@dbhub.io')
+        expect(jsonBody).to.have.property('author_email', 'default@docker-dev.dbhub.io')
         expect(jsonBody).to.have.property('author_name', 'Default system user')
         expect(jsonBody).to.have.property('committer_email', '')
         expect(jsonBody).to.have.property('committer_name', '')
@@ -344,7 +344,7 @@ describe('api tests', () => {
         // Test the "commits" structure
         let commitID = Object.keys(jsonBody.commits)
         let commitData = jsonBody.commits[commitID]
-        expect(commitData).to.have.property('author_email', 'default@dbhub.io')
+        expect(commitData).to.have.property('author_email', 'default@docker-dev.dbhub.io')
         expect(commitData).to.have.property('author_name', 'Default system user')
         expect(commitData).to.have.property('committer_email', '')
         expect(commitData).to.have.property('committer_name', '')
@@ -437,7 +437,7 @@ describe('api tests', () => {
         expect(jsonBody).to.have.property('Some release name')
         expect(jsonBody['Some release name']).to.include.keys(['commit', 'date'])
         expect(jsonBody['Some release name']).to.have.property('description', 'Some release description')
-        expect(jsonBody['Some release name']).to.have.property('email', 'default@dbhub.io')
+        expect(jsonBody['Some release name']).to.have.property('email', 'default@docker-dev.dbhub.io')
         expect(jsonBody['Some release name']).to.have.property('name', 'Default system user')
         expect(jsonBody['Some release name']).to.have.property('size', 73728)
       }
@@ -509,7 +509,7 @@ describe('api tests', () => {
         expect(jsonBody).to.have.property('Some tag name')
         expect(jsonBody['Some tag name']).to.include.keys(['commit', 'date'])
         expect(jsonBody['Some tag name']).to.have.property('description', 'Some tag description')
-        expect(jsonBody['Some tag name']).to.have.property('email', 'default@dbhub.io')
+        expect(jsonBody['Some tag name']).to.have.property('email', 'default@docker-dev.dbhub.io')
         expect(jsonBody['Some tag name']).to.have.property('name', 'Default system user')
       }
     )

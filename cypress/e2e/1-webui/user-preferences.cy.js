@@ -22,7 +22,7 @@ describe('logged-in user preferences page', () => {
 
   // Change user email address
   it('change user email address', () => {
-    cy.get('[data-cy="email"]').should('have.attr', 'value', 'default@dbhub.io')
+    cy.get('[data-cy="email"]').should('have.attr', 'value', 'default@docker-dev.dbhub.io')
     cy.get('[data-cy="email"]').type('{selectall}{backspace}').type('test@example.org').should('have.value', 'test@example.org')
     cy.get('[data-cy="updatebtn"]').click()
     cy.visit('pref')

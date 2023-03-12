@@ -15,7 +15,7 @@ user_override = "default"
 [event]
 delay = 2
 email_queue_processing_delay = 5
-email_queue_dir = "/home/dbhub/.dbhub/email_queue"
+smtp2go_key = ""
 
 [licence]
 licence_dir = "/dbhub.io/default_licences"

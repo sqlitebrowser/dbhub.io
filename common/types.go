@@ -140,8 +140,8 @@ type EnvInfo struct {
 // EventProcessingInfo hold configuration for the event processing loop
 type EventProcessingInfo struct {
 	Delay                     time.Duration `toml:"delay"`
-	EmailQueueDir             string        `toml:"email_queue_dir"`
 	EmailQueueProcessingDelay time.Duration `toml:"email_queue_processing_delay"`
+	Smtp2GoKey                string        `toml:"smtp2go_key"` // The SMTP2GO API key
 }
 
 // LicenceDir holds the path to the licence files

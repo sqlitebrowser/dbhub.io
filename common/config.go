@@ -150,10 +150,18 @@ func ReadConfig() error {
 		Conf.Event.EmailQueueProcessingDelay = 10
 	}
 
-	// Warn if the email queue directory isn't set in the config file
-	if Conf.Event.EmailQueueDir == "" {
-		log.Printf("WARN: Email queue directory isn't set in the config file. Defaulting to /tmp.")
-		Conf.Event.EmailQueueDir = "/tmp"
+	// If an SMTP2Go environment variable is already set, don't mess with it.
+	tempString = os.Getenv("SMTP2GO_API_KEY")
+	if tempString != "" {
+		Conf.Event.Smtp2GoKey = tempString
+	} else {
+		// If this is a production environment, and the SMTP2Go env variable wasn't set, we'd better
+		// warn when the key isn't in the config file either
+		if Conf.Event.Smtp2GoKey == "" && Conf.Environment.Environment == "production" {
+			log.Printf("WARN: SMTP2Go API key isn't set in the config file.  Event emails won't be sent.")
+		} else {
+			os.Setenv("SMTP2GO_API_KEY", Conf.Event.Smtp2GoKey)
+		}
 	}
 
 	// Check cache directory exists

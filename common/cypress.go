@@ -3,10 +3,12 @@ package common
 /* Shared backend code we need that is specific to testing with Cypress */
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -26,6 +28,14 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 
 	// Switch to the default user
 	Conf.Environment.UserOverride = "default"
+
+	// Change the email address of the default user to match the local server
+	serverName := strings.Split(Conf.Web.ServerName, ":")
+	err := SetUserPreferences("default", 10, "Default system user", fmt.Sprintf("default@%s", serverName[0]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Add test SQLite databases
 	testDB, err := os.Open(path.Join(Conf.Web.BaseDir, "cypress", "test_data", "Assembly Election 2017.sqlite"))
@@ -58,17 +68,17 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add some test users
-	err = AddUser("auth0first", "first", RandomString(32), "first@example.org", "First test user", "")
+	err = AddUser("auth0first", "first", RandomString(32), fmt.Sprintf("first@%s", serverName[0]), "First test user", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = AddUser("auth0second", "second", RandomString(32), "second@example.org", "Second test user", "")
+	err = AddUser("auth0second", "second", RandomString(32), fmt.Sprintf("second@%s", serverName[0]), "Second test user", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = AddUser("auth0third", "third", RandomString(32), "third@example.org", "Third test user", "")
+	err = AddUser("auth0third", "third", RandomString(32), fmt.Sprintf("third@%s", serverName[0]), "Third test user", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
