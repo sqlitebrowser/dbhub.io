@@ -96,9 +96,9 @@ RUN GOBIN=/usr/local/bin go install github.com/go-delve/delve/cmd/dlv@latest
 # Add script pieces for starting DBHub.io services
 # Note that we only background the webui and api daemons.  The db4s daemon is left running, to prevent start.sh from exiting
 RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/local/bin/start.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
     echo "while :; do" >> /usr/local/bin/start.sh && \
     echo "  sleep 5" >> /usr/local/bin/start.sh && \
     echo "done" >> /usr/local/bin/start.sh
@@ -129,9 +129,9 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/restart.sh && \
     echo "if [ -c /dev/console ]; then" >> /usr/local/bin/restart.sh && \
     echo "  chmod o+w /dev/console" >> /usr/local/bin/restart.sh && \
     echo "fi" >> /usr/local/bin/restart.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
     echo "" >> /usr/local/bin/restart.sh && \
     echo "# Delay long enough for the DBHub.io daemons to start" >> /usr/local/bin/restart.sh && \
     echo "sleep 1" >> /usr/local/bin/restart.sh && \
@@ -149,9 +149,9 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/debug.sh && \
     echo "if [ -c /dev/console ]; then" >> /usr/local/bin/debug.sh && \
     echo "  chmod o+w /dev/console" >> /usr/local/bin/debug.sh && \
     echo "fi" >> /usr/local/bin/debug.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup dlv --listen=:2346 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
-    echo "su - dbhub -c 'CONFIG_FILE=/dbhub.io/docker/config.toml nohup dlv --listen=:2347 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup dlv --listen=:2346 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup dlv --listen=:2347 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
     echo "" >> /usr/local/bin/debug.sh && \
     echo "# Delay long enough for the DBHub.io daemons to start" >> /usr/local/bin/debug.sh && \
     echo "sleep 1" >> /usr/local/bin/debug.sh && \
