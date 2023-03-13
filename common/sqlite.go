@@ -707,7 +707,6 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 	var stmt *sqlite.Stmt
 	stmt, err = sdb.Prepare(dbQuery)
 	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\n", err)
 		return 0, 0, dataRows, err
 	}
 	defer stmt.Finalize()
@@ -866,6 +865,8 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	var memUsed, memHighWater int64
 	memUsed, memHighWater, dataRows, err = SQLiteRunQuery(sdb, querySource, query, false, false)
 	if err != nil {
+		log.Printf("Error when preparing statement by '%s' for database (%s%s%s): '%s'\n",  SanitiseLogString(loggedInUser),
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), SanitiseLogString(err.Error()))
 		return SQLiteRecordSet{}, err
 	}
 
