@@ -784,7 +784,15 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 //
 func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// Set the maximum accepted database size for uploading
-	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+	oversizeAllowed := false
+	for _, user := range com.Conf.Environment.SizeOverrideUsers {
+		if userAcc == user {
+			oversizeAllowed = true
+		}
+	}
+	if !oversizeAllowed {
+		r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+	}
 
 	// The "public" user isn't allowed to make changes
 	if userAcc == "public" {
@@ -812,14 +820,15 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Check whether the uploaded database is too large
-	// TODO: Have a list of users (from the config.toml file) which don't have this check applied
-	if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
-		http.Error(w,
-			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
-				com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
-		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
-			userAcc, r.ContentLength/1024/1024, com.MaxDatabaseSize))
-		return
+	if !oversizeAllowed {
+		if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+			http.Error(w,
+				fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
+					com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
+			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
+				userAcc, r.ContentLength/1024/1024, com.MaxDatabaseSize))
+			return
+		}
 	}
 
 	// Do the remaining input validation, and add the database to the system in the appropriate spot

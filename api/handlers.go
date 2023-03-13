@@ -665,14 +665,22 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 //      should be appended to.  For new databases it's not needed, but for existing databases it's required (its used to
 //      detect out of date / conflicting uploads)
 func uploadHandler(w http.ResponseWriter, r *http.Request) {
-	// Set the maximum accepted database size for uploading
-	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
-
 	// Authenticate the request
 	loggedInUser, err := checkAuth(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusUnauthorized)
 		return
+	}
+
+	// Set the maximum accepted database size for uploading
+	oversizeAllowed := false
+	for _, user := range com.Conf.Environment.SizeOverrideUsers {
+		if loggedInUser == user {
+			oversizeAllowed = true
+		}
+	}
+	if !oversizeAllowed {
+		r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
 	}
 
 	// Extract the database name and (optional) commit ID for the database from the request
@@ -691,14 +699,15 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check whether the uploaded database is too large
-	// TODO: Have a list of users (from the config.toml file) which don't have this check applied
-	if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
-		jsonErr(w,
-			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
-				com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
-		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
-			loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
-		return
+	if !oversizeAllowed {
+		if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+			jsonErr(w,
+				fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
+					com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
+			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
+				loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
+			return
+		}
 	}
 
 	// Process the upload

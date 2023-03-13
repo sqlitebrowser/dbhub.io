@@ -11,6 +11,7 @@ directory = "/home/dbhub/.dbhub/disk_cache"
 [environment]
 environment = "test"
 user_override = "default"
+size_override_users = ["default"]
 
 [event]
 delay = 2

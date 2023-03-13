@@ -133,8 +133,9 @@ type DiskCacheInfo struct {
 // EnvInfo holds information about the purpose of the running server.  eg "is this a production, docker,
 // or development" instance?
 type EnvInfo struct {
-	Environment  string
-	UserOverride string `toml:"user_override"`
+	Environment       string
+	UserOverride      string   `toml:"user_override"`
+	SizeOverrideUsers []string `toml:"size_override_users"` // List of users allowed to override the database upload size limits
 }
 
 // EventProcessingInfo hold configuration for the event processing loop

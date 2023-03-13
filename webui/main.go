@@ -5165,9 +5165,6 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Investigate getting the last modified timestamp of the database file selected for upload
 	// TODO   * https://developer.mozilla.org/en-US/docs/Web/API/File/lastModified
 
-	// Set the maximum accepted database size for uploading
-	r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
-
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -5181,14 +5178,25 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check whether the uploaded database is too large
-	if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
-		errorPage(w, r, http.StatusBadRequest,
-			fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
-				com.MaxDatabaseSize, r.ContentLength/1024/1024))
-		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
-			loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
-		return
+	// Set the maximum accepted database size for uploading
+	oversizeAllowed := false
+	for _, user := range com.Conf.Environment.SizeOverrideUsers {
+		if loggedInUser == user {
+			oversizeAllowed = true
+		}
+	}
+	if !oversizeAllowed {
+		r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+
+		// Check whether the uploaded database is too large (except for specific users)
+		if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+			errorPage(w, r, http.StatusBadRequest,
+				fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
+					com.MaxDatabaseSize, r.ContentLength/1024/1024))
+			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
+				loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
+			return
+		}
 	}
 
 	// Prepare the form data
