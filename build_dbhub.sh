@@ -23,22 +23,22 @@ if [ ! -e "${DEST}/lib/libsqlite3.so" ]; then
     mkdir -p other/cache
   fi
   cd other/cache
-  if [ ! -f sqlite-autoconf-3400100.tar.gz ]; then
+  if [ ! -f sqlite.tar.gz ]; then
     echo "Downloading SQLite source code"
-    curl -sOL https://sqlite.org/2022/sqlite-autoconf-3400100.tar.gz
+    curl -sL -o sqlite.tar.gz https://sqlite.org/2023/sqlite-autoconf-3410100.tar.gz
   fi
-  if [ ! -f sqlite-autoconf-3400100.tar.gz ]; then
+  if [ ! -f sqlite.tar.gz ]; then
     echo "Downloading the SQLite source code did not work"
     exit 1
   fi
   echo "Compiling local SQLite"
-  tar xfz sqlite-autoconf-3400100.tar.gz
-  cd sqlite-autoconf-3400100
+  tar xfz sqlite.tar.gz
+  cd sqlite-autoconf-*
   ./configure --prefix=${DEST} --enable-dynamic-extensions=no
   make -j9
   make install
   cd ..
-  rm -rf sqlite-autoconf-3400100
+  rm -rf sqlite-autoconf-*
   cd ../..
 fi
 
