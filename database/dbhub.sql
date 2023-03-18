@@ -432,7 +432,9 @@ CREATE TABLE public.sqlite_databases (
     release_list jsonb,
     release_count integer DEFAULT 0 NOT NULL,
     download_count bigint DEFAULT 0,
-    page_views bigint DEFAULT 0
+    page_views bigint DEFAULT 0,
+    live_db boolean DEFAULT false NOT NULL,
+    live_node text
 );
 
 
