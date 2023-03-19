@@ -935,6 +935,7 @@ func TablesAndViews(sdb *sqlite.Conn, dbName string) (list []string, err error) 
 
 	// Merge the table and view lists
 	list = append(list, vw...)
+	sort.Strings(list)
 	return
 }
 
