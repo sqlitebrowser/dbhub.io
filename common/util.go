@@ -43,58 +43,15 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 		return 0, "", "", errors.New("You cannot upload a database for another user")
 	}
 
-	// Create a temporary file to store the database in
-	tempDB, err := os.CreateTemp(Conf.DiskCache.Directory, "dbhub-upload-")
-	if err != nil {
-		log.Printf("Error creating temporary file. User: '%s', Database: '%s%s%s', Error: %v\n", loggedInUser,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
-		return
-	}
-	tempDBName := tempDB.Name()
-
-	// Delete the temporary file when this function finishes
-	defer os.Remove(tempDBName)
-
-	// Write the database to the temporary file, so we can try opening it with SQLite to verify it's ok
-	bufSize := 16 << 20 // 16MB
-	buf := make([]byte, bufSize)
-	numBytes, err = io.CopyBuffer(tempDB, newDB, buf)
-	if err != nil {
-		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
-			"Error: %v\n", loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
-		return
-	}
-	if numBytes == 0 {
-		err = errors.New("Copying file failed")
-		return
-	}
-
-	// Sanity check the uploaded database, and get the list of tables in the database
-	sTbls, err := SanityCheck(tempDBName)
+	// Store the incoming database to a temporary file on disk, and sanity check it
+	var sha string
+	var sTbls []string
+	var tempDB *os.File
+	numBytes, tempDB, sha, sTbls, err = WriteDBtoDisk(loggedInUser, dbOwner, dbFolder, dbName, newDB)
 	if err != nil {
 		return
 	}
-
-	// Return to the start of the temporary file
-	newOff, err := tempDB.Seek(0, 0)
-	if err != nil {
-		log.Printf("Seeking on the temporary file failed: %v\n", err.Error())
-		return
-	}
-	if newOff != 0 {
-		err = errors.New("Seeking to the start of the temporary file failed")
-		return
-	}
-
-	// Generate sha256 of the uploaded file
-	// TODO: Using an io.MultiWriter to feed data from newDB into both the temp file and this sha256 function at the
-	// TODO  same time might be a better approach here
-	s := sha256.New()
-	_, err = io.CopyBuffer(s, tempDB, buf)
-	if err != nil {
-		return
-	}
-	sha := hex.EncodeToString(s.Sum(nil))
+	defer os.Remove(tempDB.Name())
 
 	// If we were given a SHA256 for the file, make sure it matches our calculated one
 	if dbSha != "" && dbSha != sha {
@@ -102,7 +59,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 		return
 	}
 
-	// Check if the database already exists in the system
+	// Figure out the branch structure to use
 	var defBranch string
 	needDefaultBranchCreated := false
 	var branches map[string]BranchEntry
@@ -335,12 +292,13 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 	}
 
 	// Return to the start of the temporary file again
-	newOff, err = tempDB.Seek(0, 0)
+	var newOffset int64
+	newOffset, err = tempDB.Seek(0, 0)
 	if err != nil {
 		log.Printf("Seeking on the temporary file (2nd time) failed: %v\n", err.Error())
 		return
 	}
-	if newOff != 0 {
+	if newOffset != 0 {
 		return 0, "", "", errors.New("Seeking to start of temporary database file didn't work")
 	}
 
@@ -394,7 +352,7 @@ func AddDatabase(loggedInUser, dbOwner, dbFolder, dbName string, createBranch bo
 		}
 	}
 
-	// If the database didn't previous exist, add the user to the watch list for the database
+	// If the database didn't previously exist, add the user to the watch list for the database
 	if !exists {
 		err = ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName)
 		if err != nil {
@@ -1130,5 +1088,58 @@ func StatusUpdateCheck(dbOwner, dbFolder, dbName string, thisID int, userName st
 	for _, z := range lst {
 		numStatusUpdates += len(z)
 	}
+	return
+}
+
+// WriteDBtoDisk gets an uploaded database file from the user's incoming request, and writes it to a local temporary file
+func WriteDBtoDisk(loggedInUser, dbOwner, dbFolder, dbName string, newDB io.Reader) (numBytes int64, tempDB *os.File, sha string, sTbls []string, err error) {
+	// Create a temporary file to store the database in
+	tempDB, err = os.CreateTemp(Conf.DiskCache.Directory, "dbhub-upload-")
+	if err != nil {
+		log.Printf("Error creating temporary file. User: '%s', Database: '%s%s%s', Error: %v\n", loggedInUser,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		return
+	}
+	tempDBName := tempDB.Name()
+
+	// Write the database to the temporary file, so we can try opening it with SQLite to verify it's ok
+	bufSize := 16 << 22 // 64MB
+	buf := make([]byte, bufSize)
+	numBytes, err = io.CopyBuffer(tempDB, newDB, buf)
+	if err != nil {
+		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s%s%s' "+
+			"Error: %v\n", loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		return
+	}
+	if numBytes == 0 {
+		err = errors.New("Copying file failed")
+		return
+	}
+
+	// Sanity check the uploaded database, and get the list of tables in the database
+	sTbls, err = SQLiteSanityCheck(tempDBName)
+	if err != nil {
+		return
+	}
+
+	// Return to the start of the temporary file
+	var newOffSet int64
+	newOffSet, err = tempDB.Seek(0, 0)
+	if err != nil {
+		log.Printf("Seeking on the temporary file failed: %s\n", err.Error())
+		return
+	}
+	if newOffSet != 0 {
+		err = errors.New("Seeking to the start of the temporary file failed")
+		return
+	}
+
+	// Generate sha256 of the uploaded file
+	s := sha256.New()
+	_, err = io.CopyBuffer(s, tempDB, buf)
+	if err != nil {
+		return
+	}
+	sha = hex.EncodeToString(s.Sum(nil))
 	return
 }

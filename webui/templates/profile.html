@@ -242,12 +242,43 @@
             [[ end ]]
         </div>
     </div>
-
+    [[ if .LiveDBS ]]
+    <div class="row" style="border: 5px dashed #181a9c; margin: 2%; border-radius: 10px">
+        <div class="col-md-12">
+            <div style="text-align: center; font-size: large; font-style: italic; color: #181a9c; margin-top: 1%">Experimental</div>
+            <div class="row">
+                <div class="col-md-3">&nbsp;</div>
+                <div class="col-md-6">
+                    <div style="padding-top: 8px; text-align: center">
+                        <h3 style="display: inline; vertical-align: middle;">Live databases (write enabled)</h3>
+                        <br />
+                        <h4 style="vertical-align: middle;"><a class="blackLink" href="https://api.dbhub.io">Access via API only (to start with)</a></h4>
+                    </div>
+                </div>
+                <div class="col-md-3">&nbsp;</div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">&nbsp;</div>
+                <div class="col-md-6">
+                    <table class="table table-striped table-responsive profileTable" data-cy="livedbstbl">
+                        <tr ng-repeat="row in livedbs">
+                            <td>
+                                <h4>{{ row.owner_name }}/{{ row.database_name }}</h4>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-3">&nbsp;</div>
+            </div>
+        </div>
+    </div>
+    [[ end ]]
 </div>
 [[ template "footer" . ]]
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('profileView', function($scope) {
+        $scope.livedbs = [[ .LiveDBS ]];
         $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
         $scope.pubdb = { Databases: [[ .PublicDBs ]] };
         $scope.privdb = { Databases: [[ .PrivateDBs ]] };

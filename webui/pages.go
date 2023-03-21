@@ -1927,6 +1927,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	var pageData struct {
 		Auth0            com.Auth0Set
 		Meta             com.MetaInfo
+		LiveDBS          []com.LiveDBs
 		PrivateDBs       []com.DBInfo
 		PublicDBs        []com.DBInfo
 		SharedWithOthers []com.ShareDatabasePermissionsOthers
@@ -1983,7 +1984,22 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
-	// For each of the databases owned by the user, retrieve any share information
+	// Retrieve the list of live databases created by the user
+	var l []com.DBInfo
+	l, err = com.LiveUserDBs(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+	for _, z := range l {
+		pageData.LiveDBS = append(pageData.LiveDBS, com.LiveDBs{
+			DBOwner:     userName,
+			DBName:      z.Database,
+			DateCreated: z.DateCreated,
+		})
+	}
+
+	// For each of the standard databases owned by the user, retrieve any share information
 	var rawList []com.ShareDatabasePermissionsOthers
 	for _, db := range pageData.PublicDBs {
 		var z com.ShareDatabasePermissionsOthers
@@ -2673,7 +2689,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
-	// Retrieve the details for the user who's page we're looking at
+	// Retrieve the details for the user whose page we're looking at
 	usr, err := com.User(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())

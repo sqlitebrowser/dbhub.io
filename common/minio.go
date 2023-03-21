@@ -30,6 +30,104 @@ func ConnectMinio() (err error) {
 	return nil
 }
 
+// LiveRetrieveDatabaseMinio retrieves a live SQLite database from Minio, and places it on the local filesystem
+func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName string) (dbPath string, err error) {
+	// Create the directory to hold the live database
+	// NOTE: It's probably best to use both dbOwner and dbName in the path, calling the database something like
+	//       "live.sqlite".  That should avoid any potential conflicts with creative database names having
+	//       .wal (or similar) file extension, which could otherwise happen if we put all the databases from
+	//       a given user into one directory
+	dbDir := filepath.Join(baseDir, dbOwner, dbName)
+	err = os.MkdirAll(dbDir, 0750)
+	if err != nil {
+		return
+	}
+
+	// Get a handle from Minio for the database object
+	var userDB *minio.Object
+	userDB, err = MinioHandle(fmt.Sprintf("live-%s", dbOwner), dbName)
+	if err != nil {
+		return
+	}
+
+	// Close the object handle when this function finishes
+	defer MinioHandleClose(userDB)
+
+	// Save the database file locally
+	var f *os.File
+	var bytesWritten int64
+	dbPath = filepath.Join(dbDir, "live.sqlite")
+	f, err = os.OpenFile(dbPath, os.O_CREATE|os.O_WRONLY, 0750)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	bytesWritten, err = io.Copy(f, userDB)
+	if err != nil {
+		return
+	}
+	if bytesWritten == 0 {
+		log.Printf("Error! 0 bytes written to the new SQLite database file: %s\n", dbPath)
+		err = errors.New("Internal server error")
+		return
+	}
+
+	if AmqpDebug {
+		log.Printf("Live node '%s': Database file '%s/%s' written to filesystem at: '%s'",
+			NodeName, dbOwner, dbName, dbPath)
+	}
+	return
+}
+
+// LiveStoreDatabaseMinio stores a live SQLite database in Minio
+func LiveStoreDatabaseMinio(db *os.File, dbOwner, dbName string, dbSize int64) (err error) {
+	// If a Minio bucket with the desired name doesn't already exist, create it
+	var found bool
+	var bkt = fmt.Sprintf("live-%s", dbOwner)
+	found, err = minioClient.BucketExists(bkt)
+	if err != nil {
+		return err
+	}
+	if !found {
+		err := minioClient.MakeBucket(bkt, "us-east-1")
+		if err != nil {
+			return err
+		}
+	}
+
+	// Store the SQLite database file in Minio
+	numBytes, err := minioClient.PutObject(bkt, dbName, db, dbSize, minio.PutObjectOptions{ContentType: "application/x-sqlite3"})
+	if err != nil {
+		return err
+	}
+
+	// Sanity check.  Make sure the # of bytes written is equal to the size of the database we were given
+	if dbSize != numBytes {
+		err = errors.New(fmt.Sprintf("Something went wrong storing the database file.  dbSize = %v, numBytes = %v",
+			dbSize, numBytes))
+		return err
+	}
+
+	if AmqpDebug {
+		log.Printf("Added Minio LIVE database object '%s/%s', using bucket '%s' and id '%s'", dbOwner, dbName, bkt, dbName)
+	}
+	return
+}
+
+// MinioDeleteDatabase deletes a database file from Minio
+func MinioDeleteDatabase(source, dbOwner, dbName, bucket, id string) (err error) {
+	err = minioClient.RemoveObject(bucket, id)
+	if err != nil {
+		return
+	}
+
+	if AmqpDebug {
+		log.Printf("[DELETE] '%s' removed Minio database object '%s/%s', using bucket '%s' and id '%s'",
+			source, dbOwner, dbName, bucket, id)
+	}
+	return
+}
+
 // MinioHandle gets a handle from Minio for a SQLite database object
 func MinioHandle(bucket, id string) (*minio.Object, error) {
 	userDB, err := minioClient.GetObject(bucket, id, minio.GetObjectOptions{})
@@ -138,13 +236,13 @@ func StoreDatabaseFile(db *os.File, sha string, dbSize int64) error {
 	// Store the SQLite database file in Minio
 	numBytes, err := minioClient.PutObject(bkt, id, db, dbSize, minio.PutObjectOptions{ContentType: "application/x-sqlite3"})
 	if err != nil {
-		log.Printf("Storing file in Minio failed: %v\n", err)
+		log.Printf("Storing file in Minio failed: %v", err)
 		return err
 	}
 
 	// Sanity check.  Make sure the # of bytes written is equal to the size of the buffer we were given
 	if dbSize != numBytes {
-		log.Printf("Something went wrong storing the database file.  dbSize = %v, numBytes = %v\n", dbSize,
+		log.Printf("Something went wrong storing the database file.  dbSize = %v, numBytes = %v", dbSize,
 			numBytes)
 		return err
 	}

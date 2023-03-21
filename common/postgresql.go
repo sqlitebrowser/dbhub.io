@@ -157,6 +157,32 @@ func CheckDBExists(dbOwner, dbFolder, dbName string) (bool, error) {
 	return dbCount != 0, nil
 }
 
+// CheckDBLive checks if the given database is a live database
+func CheckDBLive(dbOwner, dbFolder, dbName string) (isLive bool, liveNode string, err error) {
+	// Query matching databases
+	dbQuery := `
+		SELECT live_db, live_node
+		FROM sqlite_databases
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)
+			AND folder = $2
+			AND db_name = $3
+			AND is_deleted = false
+		LIMIT 1`
+	var n pgx.NullString
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&isLive, &n)
+	if err != nil {
+		return false, "", err
+	}
+	if n.Valid {
+		liveNode = n.String
+	}
+	return
+}
+
 // CheckDBPermissions checks if a database exists and can be accessed by the given user.
 // If an error occurred, the true/false value should be ignored, as only the error value is valid
 func CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName string, writeAccess bool) (bool, error) {
@@ -813,6 +839,12 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 	// TODO: At some point we'll need to figure out a garbage collection approach to remove databases from Minio which
 	// TODO  are no longer pointed to by anything
 
+	// Is this a live database
+	isLive, _, err := CheckDBLive(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return err
+	}
+
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -845,7 +877,7 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 		return err
 	}
 	if numForks == 0 {
-		// * There are no forks for this database, so we just remove it's entry from sqlite_databases.  The 'ON DELETE
+		// * There are no forks for this database, so we just remove its entry from sqlite_databases.  The 'ON DELETE
 		// CASCADE' definition for the database_stars table/field should automatically remove any references to the
 		// now deleted entry *
 
@@ -877,7 +909,7 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 				SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
 			return err
 		}
-		if numRows := commandTag.RowsAffected(); numRows != 1 {
+		if numRows := commandTag.RowsAffected(); numRows != 1 && !isLive { // Skip this check when deleting live databases
 			log.Printf("Wrong number of rows (%v) affected (spot 1) when updating fork count for database '%s%s%s'\n",
 				numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
 		}
@@ -2518,6 +2550,63 @@ func IncrementDownloadCount(dbOwner, dbFolder, dbName string) error {
 	return nil
 }
 
+// LiveAddDatabasePG adds the details for a live database to PostgreSQL
+func LiveAddDatabasePG(dbOwner, dbName, liveNode string) (err error) {
+	var commandTag pgx.CommandTag
+	dbQuery := `
+		WITH root AS (
+			SELECT nextval('sqlite_databases_db_id_seq') AS val
+		)
+		INSERT INTO sqlite_databases (user_id, db_id, folder, db_name, live_db, live_node)
+		SELECT (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), '/', $2, true, $3`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, liveNode)
+	if err != nil {
+		log.Printf("Storing LIVE database '%s/%s' failed: %v\n", SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%v) affected while storing LIVE database '%s/%s'\n", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
+	}
+	return nil
+}
+
+// LiveDatabasesOnNode returns the list of databases that are on a specific live backend node
+func LiveDatabasesOnNode(nodeName string) (err error) {
+	return
+}
+
+// LiveUserDBs returns the list of live databases owned by the user
+func LiveUserDBs(dbOwner string) (list []DBInfo, err error) {
+	dbQuery := `
+		SELECT db_name, date_created
+		FROM sqlite_databases AS db, users
+		WHERE users.user_id = db.user_id
+			AND lower(users.user_name) = lower($1)
+			AND is_deleted = false
+			AND live_db = true
+		ORDER BY date_created DESC`
+	rows, err := pdb.Query(dbQuery, dbOwner)
+	if err != nil {
+		log.Printf("Database query failed: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var oneRow DBInfo
+		err = rows.Scan(&oneRow.Database, &oneRow.DateCreated)
+		if err != nil {
+			log.Printf("Error when retrieving list of live databases for user '%s': %v\n", dbOwner, err)
+			return nil, err
+		}
+		list = append(list, oneRow)
+	}
+	return
+}
+
 // LogDB4SConnect creates a DB4S default browse list entry
 func LogDB4SConnect(userAcc, ipAddr, userAgent string, downloadDate time.Time) error {
 	if Conf.DB4S.Debug {
@@ -3703,7 +3792,8 @@ func StoreCommits(dbOwner, dbFolder, dbName string, commitList map[string]Commit
 
 // StoreDatabase stores database details in PostgreSQL, and the database data itself in Minio
 func StoreDatabase(dbOwner, dbFolder, dbName string, branches map[string]BranchEntry, c CommitEntry, pub bool,
-	buf *os.File, sha string, dbSize int64, oneLineDesc, fullDesc string, createDefBranch bool, branchName, sourceURL string) error {
+	buf *os.File, sha string, dbSize int64, oneLineDesc, fullDesc string, createDefBranch bool, branchName,
+	sourceURL string) error {
 	// Store the database file
 	err := StoreDatabaseFile(buf, sha, dbSize)
 	if err != nil {
@@ -4627,7 +4717,8 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 				db.download_count, db.page_views
 			FROM sqlite_databases AS db, default_commits
 			WHERE db.db_id = default_commits.db_id
-				AND db.is_deleted = false`
+				AND db.is_deleted = false
+				AND db.live_db = false`
 	switch public {
 	case DB_PUBLIC:
 		// Only public databases
@@ -4691,7 +4782,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 
 	// Get fork count for each of the databases
 	for i, j := range list {
-		// Retrieve latest fork count
+		// Retrieve the latest fork count
 		dbQuery = `
 			WITH u AS (
 				SELECT user_id

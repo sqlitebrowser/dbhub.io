@@ -317,7 +317,7 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 	query += " FROM " + EscapeId(schemaName) + "." + EscapeId(tableName)
 
 	// Retrieve data and add it to the data diff object
-	_, _, data, err := SQLiteRunQuery(sdb, Internal, query, false, false)
+	_, _, data, err := SQLiteRunQuery(sdb, QuerySourceInternal, query, false, false)
 	if err != nil {
 		log.Printf("Error getting rows in dataDiffForAllTableRows(): %s\n", err)
 		return nil, err
@@ -502,7 +502,7 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 	// the DataDiff object.
 
 	// Retrieve data and generate a new DataDiff object for each row
-	_, _, data, err := SQLiteRunQuery(sdb, Internal, query, false, false)
+	_, _, data, err := SQLiteRunQuery(sdb, QuerySourceInternal, query, false, false)
 	if err != nil {
 		log.Printf("Error getting rows in dataDiffForModifiedTableRows(): %s\n", err)
 		return nil, err

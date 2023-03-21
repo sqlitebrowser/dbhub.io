@@ -22,7 +22,7 @@ jobs:
       uses: cypress-io/github-action@v5
       with:
         wait-on: 'https://localhost:9443'
-        wait-on-timeout: 120
+        wait-on-timeout: 180
         build: sh ./build_dbhub_docker_and_local.sh
         start: yarn docker:startlocal
         command: yarn cypress:test

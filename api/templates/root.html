@@ -1,7 +1,11 @@
 [[ define "docs" ]]
 <!doctype html>
 <html>
-[[ template "head" . ]]
+<head>
+    <meta charset="UTF-8">
+    <title>DBHub.io API Documentation</title>
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+</head>
 <body>
 <style>
     * {
@@ -54,7 +58,7 @@
         <div class="col-md-12"><a href="https://dbhub.io"><h1>DBHub API (in early development)</h1></a></div>
     </div>
     <div class="row">
-        <div class="col-md-12 version">API version 0.1, last modified 2020-08-14</div>
+        <div class="col-md-12 version">API version 0.2, last modified 2023-03-20</div>
     </div>
     <div class="panel panel-primary" id="note">
         <div class="panel-heading heading">Note</div>
@@ -551,9 +555,23 @@
                 <div class="col-md-2 heading pad">Parameters (POST)</div>
                 <div class="col-md-10"></div>
             </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-2">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7">Description</div>
+            </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">apikey</div>
-                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-2">Required</div>
+                <div class="col-md-7">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname" style="color: #a01e1a">live</div>
+                <div class="col-md-1 type" style="color: #a01e1a">boolean</div>
+                <div class="col-md-2" style="color: #a01e1a">Optional</div>
+                <div class="col-md-7" style="color: #a01e1a"><div style="font-style: italic; font-weight: bold">NEW in API version 0.2</div><div>A boolean string ("true", "false") to switch between returning the list of standard databases, and the list of live databases</div><div>NOTE: This "live" parameter is experimental, and may change</div></div>
             </div>
             <div class="row">
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
@@ -1526,6 +1544,12 @@ ORDER BY table1.id;</pre>
                 <div class="col-md-1 type">string</div>
                 <div class="col-md-2">Optional</div>
                 <div class="col-md-7">The sha256 (a unique identifier) of the licence for the database (up to this commit)</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname" style="color: #a01e1a">live</div>
+                <div class="col-md-1 type" style="color: #a01e1a">boolean</div>
+                <div class="col-md-2" style="color: #a01e1a">Optional</div>
+                <div class="col-md-7" style="color: #a01e1a"><div style="font-style: italic; font-weight: bold">NEW in API version 0.2</div><div>A boolean string ("true", "false") indicating whether this upload is a live database</div><div>NOTE: This "live" parameter is experimental, and may change</div></div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">otherparents</div>

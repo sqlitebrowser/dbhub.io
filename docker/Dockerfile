@@ -1,13 +1,23 @@
 # vim:set ft=dockerfile:
 FROM alpine:3.17
+# FIXME: Consider potentially moving to one of the RabbitMQ alpine images
+#        as a base instead.  eg: https://hub.docker.com/_/rabbitmq
 
 LABEL maintainer="Justin Clift <justin@postgresql.org>"
 
-# Install Git, Go, Memcached, and PostgreSQL
+# Install Git, Go, Memcached, Minio, OpenRC, PostgreSQL, and RabbitMQ
 RUN  \
     apk update && \
     apk upgrade && \
-    apk add --no-cache ca-certificates 'curl>7.61.0' git go libc-dev memcached postgresql sqlite-dev yarn
+    apk add --no-cache ca-certificates 'curl>7.61.0' git go libc-dev memcached minio openrc postgresql sqlite-dev yarn && \
+    apk add rabbitmq-server --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ && \
+    rc-update add memcached default && \
+    rc-update add minio default && \
+    rc-update add postgresql default && \
+    rc-update add rabbitmq-server default && \
+    mkdir /etc/rabbitmq && \
+    rabbitmq-plugins enable rabbitmq_management && \
+    rabbitmq-plugins enable rabbitmq_top
 
 # Create the DBHub.io OS user
 RUN addgroup dbhub && \
@@ -16,92 +26,56 @@ RUN addgroup dbhub && \
 # Location of the DBHub.io source code
 ENV DBHUB_SOURCE /dbhub.io
 
-### Memcached
-
-# Generate script for starting Memcached
-RUN echo "/usr/bin/memcached -u memcached -d" >> /usr/local/bin/start.sh && \
-    chmod +x /usr/local/bin/start.sh
-
-### Minio (everything except downloading the server executable)
-
-# Create the Minio OS user
-RUN addgroup minio && \
-    adduser -D -S -s /bin/ash -G minio minio
-
-# Install Minio
-ENV MINIO_UPDATE off
+# Set Minio config variables
 ENV MINIO_ROOT_USER minio
 ENV MINIO_ROOT_PASSWORD minio123
-ENV MINIO_DATA /data/minio
 
-# Create Minio data directory
-RUN mkdir -p ${MINIO_DATA}
-RUN chown minio:minio ${MINIO_DATA}
+RUN sed -i "s/^MINIO_ROOT_USER=\"change-me\"/MINIO_ROOT_USER=\"${MINIO_ROOT_USER}\"/" /etc/conf.d/minio && \
+    sed -i "s/^MINIO_ROOT_PASSWORD=\"change-me\"/MINIO_ROOT_PASSWORD=\"${MINIO_ROOT_PASSWORD}\"/" /etc/conf.d/minio
 
-# Create Minio user .profile and startup script
-RUN su - minio -c "echo export MINIO_UPDATE=${MINIO_UPDATE} >> .profile" && \
-    su - minio -c "echo export MINIO_ROOT_USER=${MINIO_ROOT_USER} >> .profile" && \
-    su - minio -c "echo export MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD} >> .profile" && \
-    su - dbhub -c "echo export MINIO_ROOT_USER=${MINIO_ROOT_USER} >> .profile" && \
-    su - dbhub -c "echo export MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD} >> .profile" && \
-    echo "su - minio -c '/usr/local/bin/minio server ${MINIO_DATA} &'" >> /usr/local/bin/start.sh
-
-### PostgreSQL
-
-# Create PostgreSQL directories
-ENV PGDATA /data/postgresql
-RUN su - postgres -c "echo export PGDATA=${PGDATA} >> .profile"
-RUN su - postgres -c "echo export DBHUB_SOURCE=${DBHUB_SOURCE} >> .profile"
-RUN mkdir -p "$PGDATA" && \
-    chown -R postgres:postgres "$PGDATA" && \
-    chmod 777 "$PGDATA" # this 777 will be replaced by 700 at runtime (allows semi-arbitrary "--user" values)
-RUN mkdir /run/postgresql && \
-    chown postgres:postgres /run/postgresql
-
-# Add script pieces for initialising & starting PostgreSQL
-RUN echo "mkdir -p ${PGDATA}" >> /usr/local/bin/init.sh && \
-    echo "chown -R postgres:postgres ${PGDATA}" >> /usr/local/bin/init.sh && \
-    echo "chmod 777 ${PGDATA}" >> /usr/local/bin/init.sh && \
-    echo "su - postgres -c 'pg_ctl -D ${PGDATA} initdb'" >> /usr/local/bin/init.sh && \
-    echo "su - postgres -c 'pg_ctl -D ${PGDATA} start'" >> /usr/local/bin/init.sh && \
-    echo "su - postgres -c 'createuser -d dbhub'" >> /usr/local/bin/init.sh && \
-    echo "su - postgres -c 'createdb -O dbhub dbhub'" >> /usr/local/bin/init.sh && \
-    echo "su - dbhub -c 'psql dbhub < /${DBHUB_SOURCE}/database/dbhub.sql'" >> /usr/local/bin/init.sh && \
-    echo "su - postgres -c 'pg_ctl -D ${PGDATA} stop'" >> /usr/local/bin/init.sh && \
-    echo "su - postgres -c 'pg_ctl -D ${PGDATA} start'" >> /usr/local/bin/start.sh && \
+# Run each of our daemon dependencies at least once to ensure they initialise ok, and populate the DBHub.io database
+RUN echo "openrc nonetwork" >> /usr/local/bin/init.sh && \
+    echo "openrc default stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
+    echo "createuser -U postgres -d dbhub" >> /usr/local/bin/init.sh && \
+    echo "createdb -U postgres -O dbhub dbhub" >> /usr/local/bin/init.sh && \
+    echo "su - dbhub -c 'psql dbhub < ${DBHUB_SOURCE}/database/dbhub.sql'" >> /usr/local/bin/init.sh && \
+    echo "rc-service memcached stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
+    echo "rc-service minio stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
+    echo "rc-service postgresql stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
+    echo "rc-service rabbitmq-server stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
     chmod +x /usr/local/bin/init.sh
 
 # Set the dependencies and DBHub.io daemons to automatically start
 ENTRYPOINT /usr/local/bin/start.sh
 
-### DBHub.io (initial dir creation only)
-
 # Create directores for the DBHub daemons
-RUN mkdir -p /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue && \
-    chown -R dbhub:dbhub /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue && \
-    chmod 700 /var/log/dbhub ~dbhub/.dbhub/disk_cache ~dbhub/.dbhub/email_queue
+RUN mkdir -p /var/log/dbhub ~dbhub/.dbhub/disk_cache && \
+    chown -R dbhub:dbhub /var/log/dbhub ~dbhub/.dbhub/disk_cache && \
+    chmod 700 /var/log/dbhub ~dbhub/.dbhub/disk_cache
 
-### Other pieces
-
-# Config file
+# DBHub.io config file
 ENV CONFIG_FILE ${DBHUB_SOURCE}/docker/config.toml
-
-# Download the latest Minio server binary
-RUN curl -L -o /usr/local/bin/minio https://dl.minio.io/server/minio/release/linux-amd64/minio && \
-    chmod +x /usr/local/bin/minio
 
 # Build the Go debugger (Delve)
 RUN GOBIN=/usr/local/bin go install github.com/go-delve/delve/cmd/dlv@latest
 
 # Add script pieces for starting DBHub.io services
-# Note that we only background the webui and api daemons.  The db4s daemon is left running, to prevent start.sh from exiting
+# These don't use openrc.  Not sure if it'd be useful.  Maybe a task for a different day?
 RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/local/bin/start.sh && \
+    echo "openrc default" >> /usr/local/bin/start.sh && \
+    echo "" >> /usr/local/bin/start.sh && \
+    echo "# Wait for RabbitMQ to start before launching the DBHub.io daemons" >> /usr/local/bin/start.sh && \
+    echo "sleep 15" >> /usr/local/bin/start.sh && \
+    echo "" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-live node1 /tmp/node1 >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-live node2 /tmp/node2 >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
     echo "while :; do" >> /usr/local/bin/start.sh && \
     echo "  sleep 5" >> /usr/local/bin/start.sh && \
-    echo "done" >> /usr/local/bin/start.sh
+    echo "done" >> /usr/local/bin/start.sh && \
+    chmod +x /usr/local/bin/start.sh
 
 # Create script to compile DBHub.io daemons
 RUN echo "cd ${DBHUB_SOURCE}" >> /usr/local/bin/compile.sh && \
@@ -112,6 +86,8 @@ RUN echo "cd ${DBHUB_SOURCE}" >> /usr/local/bin/compile.sh && \
     echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-api ." >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/db4s" >> /usr/local/bin/compile.sh && \
     echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-db4s ." >> /usr/local/bin/compile.sh && \
+    echo "cd ${DBHUB_SOURCE}/live" >> /usr/local/bin/compile.sh && \
+    echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-live ." >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/webui" >> /usr/local/bin/compile.sh && \
     echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-webui ." >> /usr/local/bin/compile.sh && \
     echo "/usr/local/bin/restart.sh" >> /usr/local/bin/compile.sh && \
@@ -122,6 +98,7 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/restart.sh && \
     echo "pkill dbhub-webui" >> /usr/local/bin/restart.sh && \
     echo "pkill dbhub-api" >> /usr/local/bin/restart.sh && \
     echo "pkill dbhub-db4s" >> /usr/local/bin/restart.sh && \
+    echo "pkill dbhub-live" >> /usr/local/bin/restart.sh && \
     echo "pkill dlv" >> /usr/local/bin/restart.sh && \
     echo "" >> /usr/local/bin/restart.sh && \
     echo "# Restart the daemons" >> /usr/local/bin/restart.sh && \
@@ -132,6 +109,8 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/restart.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup /usr/local/bin/dbhub-live node1 /tmp/node1 >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup /usr/local/bin/dbhub-live node2 /tmp/node2 >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/restart.sh && \
     echo "" >> /usr/local/bin/restart.sh && \
     echo "# Delay long enough for the DBHub.io daemons to start" >> /usr/local/bin/restart.sh && \
     echo "sleep 1" >> /usr/local/bin/restart.sh && \
@@ -142,6 +121,7 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/debug.sh && \
     echo "pkill dbhub-webui" >> /usr/local/bin/debug.sh && \
     echo "pkill dbhub-api" >> /usr/local/bin/debug.sh && \
     echo "pkill dbhub-db4s" >> /usr/local/bin/debug.sh && \
+    echo "pkill dbhub-live" >> /usr/local/bin/debug.sh && \
     echo "pkill dlv" >> /usr/local/bin/debug.sh && \
     echo "" >> /usr/local/bin/debug.sh && \
     echo "# Restart the daemons" >> /usr/local/bin/debug.sh && \
@@ -152,6 +132,8 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/debug.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup dlv --listen=:2346 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup dlv --listen=:2347 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup dlv --listen=:2348 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-live node1 /tmp/node1>>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
+    echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} nohup dlv --listen=:2349 --headless=true --api-version=2 --accept-multiclient exec /usr/local/bin/dbhub-live node2 /tmp/node2>>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/debug.sh && \
     echo "" >> /usr/local/bin/debug.sh && \
     echo "# Delay long enough for the DBHub.io daemons to start" >> /usr/local/bin/debug.sh && \
     echo "sleep 1" >> /usr/local/bin/debug.sh && \
@@ -161,6 +143,6 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/debug.sh && \
 RUN cd / && git clone --branch master --depth 5 https://github.com/sqlitebrowser/dbhub.io
 RUN /usr/local/bin/compile.sh
 
-# Initialise PostgreSQL and Minio
+# Populate the DBHub.io database
 WORKDIR /usr/local/bin
 RUN init.sh

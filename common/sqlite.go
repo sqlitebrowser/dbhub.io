@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -198,6 +200,27 @@ func init() {
 	}
 }
 
+// AuthorizerLive is a SQLite authorizer callback intended to allow almost anything.  Except for loading extensions,
+// and running pragmas.
+func AuthorizerLive(d interface{}, action sqlite.Action, tableName, funcName, dbName, triggerName string) sqlite.Auth {
+	switch action {
+	case sqlite.Pragma:
+		// The "index_info"  and "table_info" Pragmas are allowed, as they're used by SQLite internally for things we need
+		if tableName == "index_info" || tableName == "table_info" {
+			return sqlite.AuthOk
+		}
+		return sqlite.AuthDeny
+	case sqlite.Function:
+		if funcName == "load_extension" {
+			// Extension loading is disabled (at least for now)
+			return sqlite.AuthDeny
+		}
+	}
+
+	// All other action types, functions, etc are allowed
+	return sqlite.AuthOk
+}
+
 // AuthorizerSelect is a SQLite authorizer callback which only allows SELECT queries and their needed
 // sub-operations to run.
 func AuthorizerSelect(d interface{}, action sqlite.Action, tableName, funcName, dbName, triggerName string) sqlite.Auth {
@@ -236,29 +259,29 @@ func AuthorizerSelect(d interface{}, action sqlite.Action, tableName, funcName, 
 }
 
 // GetSQLiteRowCount returns the number of rows in a SQLite table.
-func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (int, error) {
+func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (rowCount int, err error) {
 	dbQuery := `SELECT count(*) FROM "` + dbTable + `"`
-	var rowCount int
-	err := sdb.OneValue(dbQuery, &rowCount)
+	err = sdb.OneValue(dbQuery, &rowCount)
 	if err != nil {
 		log.Printf("Error occurred when counting total rows for table '%s'.  Error: %s\n", SanitiseLogString(dbTable), err)
 		return 0, errors.New("Database query failure")
 	}
-	return rowCount, nil
+	return
 }
 
 // OpenSQLiteDatabase retrieves a SQLite database from Minio, opens it, then returns the connection handle.
-func OpenSQLiteDatabase(bucket, id string) (*sqlite.Conn, error) {
+func OpenSQLiteDatabase(bucket, id string) (sdb *sqlite.Conn, err error) {
 	// Retrieve database file from Minio, using cached version if it's already there
-	newDB, err := RetrieveDatabaseFile(bucket, id)
+	var newDB string
+	newDB, err = RetrieveDatabaseFile(bucket, id)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	// Open database
 	// NOTE - OpenFullMutex seems like the right thing for ensuring multiple connections to a database file don't
 	// screw things up, but it wouldn't be a bad idea to keep it in mind if weirdness shows up
-	sdb, err := sqlite.Open(newDB, sqlite.OpenReadWrite|sqlite.OpenFullMutex)
+	sdb, err = sqlite.Open(newDB, sqlite.OpenReadWrite|sqlite.OpenFullMutex)
 	if err != nil {
 		log.Printf("Couldn't open database: %s", err)
 		return nil, errors.New("Internal server error")
@@ -266,9 +289,9 @@ func OpenSQLiteDatabase(bucket, id string) (*sqlite.Conn, error) {
 	err = sdb.EnableExtendedResultCodes(true)
 	if err != nil {
 		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
-		return nil, err
+		return
 	}
-	return sdb, nil
+	return
 }
 
 // OpenSQLiteDatabaseDefensive is similar to OpenSQLiteDatabase(), but opens the database Read Only and implements
@@ -433,6 +456,159 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	return sdb, nil
 }
 
+// OpenSQLiteDatabaseLive is similar to OpenSQLiteDatabase(), but opens the a live SQLite database and implements
+// the recommended defensive precautions for potentially malicious user provided SQL
+// queries: https://www.sqlite.org/security.html
+func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, err error) {
+	dbPath := filepath.Join(baseDir, dbOwner, dbName, "live.sqlite")
+	if _, err = os.Stat(dbPath); err != nil {
+		return
+	}
+
+	// Open database
+	// NOTE - OpenFullMutex seems like the right thing for ensuring multiple connections to a database file don't
+	// screw things up, but it wouldn't be a bad idea to keep it in mind if weirdness shows up
+	sdb, err = sqlite.Open(dbPath, sqlite.OpenReadWrite|sqlite.OpenFullMutex)
+	if err != nil {
+		log.Printf("Couldn't open LIVE database: %s", err)
+		return
+	}
+	if err = sdb.EnableExtendedResultCodes(true); err != nil {
+		log.Printf("Couldn't enable extended result codes for LIVE database query! Error: %v\n", err.Error())
+		return
+	}
+
+	// Enable the defensive flag
+	var enabled bool
+	if enabled, err = sdb.EnableDefensive(true); !enabled || err != nil {
+		log.Printf("Couldn't enable the defensive flag for LIVE database query: %v\n", err)
+		return
+	}
+
+	// Verify the defensive flag was enabled
+	if enabled, err = sdb.IsDefensiveEnabled(); !enabled || err != nil {
+		log.Printf("The defensive flag wasn't enabled for LIVE database query after all: %v\n", err)
+		return
+	}
+
+	// Turn off the trusted schema flag
+	if enabled, err = sdb.EnableTrustedSchema(false); enabled || err != nil {
+		log.Printf("Couldn't disable the trusted schema flag for LIVE database query: %v\n", err)
+		return
+	}
+
+	// Verify the trusted schema flag was turned off
+	if enabled, err = sdb.IsTrustedSchema(); enabled || err != nil {
+		log.Printf("The trusted schema flag wasn't disabled for LIVE database query after all: %v\n", err)
+		return
+	}
+
+	// Adjust limits for the SQLite connection
+	var newLimits = []struct {
+		name sqlite.Limit
+		val  int32
+	}{
+		{
+			name: sqlite.LimitLength,
+			val:  1000000, // 1,000,000
+		},
+		{
+			name: sqlite.LimitSQLLength,
+			val:  100000, // 100,000
+		},
+		{
+			name: sqlite.LimitColumn,
+			val:  100,
+		},
+		{
+			name: sqlite.LimitExprDepth,
+			val:  10,
+		},
+		{
+			name: sqlite.LimitCompoundSelect,
+			val:  3,
+		},
+		{
+			name: sqlite.LimitVdbeOp,
+			val:  25000,
+		},
+		{
+			name: sqlite.LimitFunctionArg,
+			val:  8,
+		},
+		{
+			name: sqlite.LimitAttached,
+			val:  0,
+		},
+		{
+			name: sqlite.LimitLikePatternLength,
+			val:  50,
+		},
+		{
+			name: sqlite.LimitVariableNumber,
+			val:  10,
+		},
+		{
+			name: sqlite.LimitTriggerLength,
+			val:  10,
+		},
+	}
+	for _, j := range newLimits {
+		sdb.SetLimit(j.name, j.val)
+		if sdb.Limit(j.name) != j.val {
+			err = fmt.Errorf("Was not able to set SQLite limit '%v' to desired value for LIVE database query", j.name)
+			return
+		}
+	}
+
+	// FIXME: There's new info in the SQLite "security" page, with some new things to potentially do: https://www.sqlite.org/security.html
+	//          * Disable triggers
+	// FIXME: Whatever improvements are made here, should probably also go into OpenSQLiteDatabaseDefensive()
+	// Turn on cell size checking
+	err = sdb.Exec("PRAGMA cell_size_check=ON")
+	if err != nil {
+		log.Printf("Error when running 'PRAGMA cell_size_check=on' on the LIVE database: %s", err)
+		return
+	}
+
+	// Turn off mmap
+	var ok bool
+	var results []string
+	err = sdb.Select("PRAGMA mmap_size=0", func(s *sqlite.Stmt) error {
+		// Retrieve a row from the pragma result
+		var a string
+		if err = s.Scan(&a); err != nil {
+			// Error when reading the row, so return failure
+			ok = false
+			return err
+		}
+
+		// If the returned row was the value 0, then we regard the change as successfully applied.  Any other return
+		// value is a failure
+		switch a {
+		case "0":
+			ok = true
+		default:
+			ok = false
+			results = append(results, a)
+		}
+		return nil
+	})
+
+	// Check for a failure
+	if !ok || err != nil {
+		log.Printf("Error when disabling mmap on the LIVE database: %s\n", err)
+		return
+	}
+
+	// Set a SQLite authorizer which only disallows pragma statements and the "load_extension" function
+	err = sdb.SetAuthorizer(AuthorizerLive, "SELECT authorizer")
+	if err != nil {
+		return
+	}
+	return sdb, nil
+}
+
 // ReadSQLiteDB reads up to maxRows number of rows from a given SQLite database table.  If maxRows < 0 (eg -1), then
 // read all rows.
 func ReadSQLiteDB(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, maxRows, rowOffset int) (SQLiteRecordSet, error) {
@@ -536,7 +712,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 	}
 
 	// Execute the query and retrieve the data
-	_, _, dataRows, err = SQLiteRunQuery(sdb, WebUI, dbQuery, ignoreBinary, ignoreNull)
+	_, _, dataRows, err = SQLiteRunQuery(sdb, QuerySourceWebUI, dbQuery, ignoreBinary, ignoreNull)
 	if err != nil {
 		return dataRows, err
 	}
@@ -638,8 +814,116 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 	return resultSet, nil
 }
 
-// SanityCheck performs basic sanity checks of an uploaded database.
-func SanityCheck(fileName string) (tables []string, err error) {
+// SQLiteGetColumnsLive is used by our AMQP backend nodes to retrieve the list of columns from a SQLite database
+func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sqlite.Column, err error) {
+	// Open the database on the local node
+	var sdb *sqlite.Conn
+	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
+	if err != nil {
+		return
+	}
+	defer sdb.Close()
+
+	// Verify the requested table or view we're about to query does exist
+	var tablesViews []string
+	tablesViews, err = TablesAndViews(sdb, dbName)
+	if err != nil {
+		return
+	}
+	tableOrViewFound := false
+	for _, t := range tablesViews {
+		if t == table {
+			tableOrViewFound = true
+		}
+	}
+	if !tableOrViewFound {
+		err = errors.New("Provided table or view name doesn't exist in this database")
+		return
+	}
+
+	// Retrieve the list of columns for the table
+	columns, err = sdb.Columns("", table)
+	return
+}
+
+// SQLiteGetIndexesLive is used by our AMQP backend nodes to retrieve the list of indexes from a SQLite database
+func SQLiteGetIndexesLive(baseDir, dbOwner, dbName string) (indexes []APIJSONIndex, err error) {
+	// Open the database on the local node
+	var sdb *sqlite.Conn
+	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
+	if err != nil {
+		return
+	}
+	defer sdb.Close()
+
+	// Retrieve the list of indexes
+	var idx map[string]string
+	idx, err = sdb.Indexes("")
+	if err != nil {
+		return
+	}
+
+	// Retrieve the details for each index
+	for nam, tab := range idx {
+		oneIndex := APIJSONIndex{
+			Name:    nam,
+			Table:   tab,
+			Columns: []APIJSONIndexColumn{},
+		}
+		var cols []sqlite.Column
+		cols, err = sdb.IndexColumns("", nam)
+		if err != nil {
+			return
+		}
+		for _, k := range cols {
+			oneIndex.Columns = append(oneIndex.Columns, APIJSONIndexColumn{
+				CID:  k.Cid,
+				Name: k.Name,
+			})
+		}
+		indexes = append(indexes, oneIndex)
+	}
+	return
+}
+
+// SQLiteGetTablesLive is used by our AMQP backend nodes to retrieve the list of tables in a SQLite database
+func SQLiteGetTablesLive(baseDir, dbOwner, dbName string) (tables []string, err error) {
+	// Open the database on the local node
+	var sdb *sqlite.Conn
+	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
+	if err != nil {
+		return
+	}
+	defer sdb.Close()
+
+	// Retrieve the list of tables
+	tables, err = Tables(sdb)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// SQLiteGetViewsLive is used by our AMQP backend nodes to retrieve the list of views in a SQLite database
+func SQLiteGetViewsLive(baseDir, dbOwner, dbName string) (views []string, err error) {
+	// Open the database on the local node
+	var sdb *sqlite.Conn
+	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
+	if err != nil {
+		return
+	}
+	defer sdb.Close()
+
+	// Retrieve the list of views
+	views, err = Views(sdb)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// SQLiteSanityCheck performs basic sanity checks of an uploaded database.
+func SQLiteSanityCheck(fileName string) (tables []string, err error) {
 	// Perform a read on the database, as a basic sanity check to ensure it's really a SQLite database
 	sqliteDB, err := sqlite.Open(fileName, sqlite.OpenReadOnly)
 	if err != nil {
@@ -656,7 +940,7 @@ func SanityCheck(fileName string) (tables []string, err error) {
 		// Retrieve a row from the integrity check result
 		var a string
 		if err = s.Scan(&a); err != nil {
-			// Error where reading the row, so ensure the integrity check returns a failure result
+			// Error when reading the row, so ensure the integrity check returns a failure result
 			ok = false
 			return err
 		}
@@ -768,10 +1052,10 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 					b, isNull = s.ScanBlob(i)
 					if !isNull {
 						switch querySource {
-						case API:
+						case QuerySourceAPI:
 							row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Binary,
 								Value: base64.StdEncoding.EncodeToString(b)})
-						case Internal:
+						case QuerySourceInternal:
 							stringVal := "x'"
 							for _, c := range b {
 								stringVal += fmt.Sprintf("%02x", c)
@@ -795,7 +1079,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 			if isNull && !ignoreNull {
 				// Different sources of the query have different requirements for the output
 				switch querySource {
-				case API, Internal:
+				case QuerySourceAPI, QuerySourceInternal:
 					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Null})
 				default:
 					row = append(row, DataValue{Name: dataRows.ColNames[i], Type: Null, Value: "<i>NULL</i>"})
@@ -848,9 +1132,9 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	var logID int64
 	var source string
 	switch querySource {
-	case API:
+	case QuerySourceAPI:
 		source = "api"
-	case Visualisation:
+	case QuerySourceVisualisation:
 		source = "vis"
 	default:
 		return SQLiteRecordSet{}, fmt.Errorf("Unknown source in SQLiteRunQueryDefensive()")
@@ -876,6 +1160,29 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 		return SQLiteRecordSet{}, err
 	}
 	return dataRows, err
+}
+
+// SQLiteRunQueryLive is used by our AMQP backend infrastructure to run a user provided SQLite query
+func SQLiteRunQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (records SQLiteRecordSet, err error) {
+	// Open the database on the local node
+	var sdb *sqlite.Conn
+	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
+	if err != nil {
+		return
+	}
+	defer sdb.Close()
+
+	// TODO: Probably add in the before and after logging info at some point (as per function above),
+	//       so we can analyse query execution times
+
+	// Execute the SQLite select query (or queries)
+	_, _, records, err = SQLiteRunQuery(sdb, QuerySourceAPI, query, false, false)
+	if err != nil {
+		log.Printf("Error when preparing statement by '%s' for LIVE database (%s/%s): '%s'\n", SanitiseLogString(loggedInUser),
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), SanitiseLogString(err.Error()))
+		return SQLiteRecordSet{}, err
+	}
+	return
 }
 
 // SQLiteVersionNumber returns the version number of the available SQLite library, in 300X00Y format.

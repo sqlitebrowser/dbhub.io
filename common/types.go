@@ -63,11 +63,11 @@ const MinioFolderChars = 6
 type QuerySource int
 
 const (
-	WebUI QuerySource = iota
-	DB4S
-	Visualisation
-	API
-	Internal
+	QuerySourceWebUI QuerySource = iota
+	QuerySourceDB4S
+	QuerySourceVisualisation
+	QuerySourceAPI
+	QuerySourceInternal
 )
 
 // SetAccessType is used for setting the public flag of a database
@@ -77,6 +77,14 @@ const (
 	SetToPublic SetAccessType = iota
 	SetToPrivate
 	KeepCurrentAccessType
+)
+
+// SetDBType is used for setting what type of database we're working with
+type SetDBType int
+
+const (
+	DBTypeStandard SetDBType = iota
+	DBTypeLive
 )
 
 // ************************
@@ -93,6 +101,7 @@ type TomlConfig struct {
 	Licence     LicenceInfo
 	Memcache    MemcacheInfo
 	Minio       MinioInfo
+	MQ          MQInfo
 	Pg          PGInfo
 	Sign        SigningInfo
 	Web         WebInfo
@@ -163,6 +172,14 @@ type MinioInfo struct {
 	HTTPS     bool
 	Secret    string
 	Server    string
+}
+
+// MQInfo contains the AMQP backend connection parameters
+type MQInfo struct {
+	Password string `toml:"password"`
+	Port     int    `toml:"port"`
+	Server   string `toml:"server"`
+	Username string `toml:"username"`
 }
 
 // PGInfo contains the PostgreSQL connection parameters

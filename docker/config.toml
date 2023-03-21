@@ -1,6 +1,6 @@
 [db4s]
 server = "docker-dev.dbhub.io"
-port = 9445
+port = 5550
 certificate = "/dbhub.io/docker/certs/docker-dev.dbhub.io.cert.pem"
 certificate_key = "/dbhub.io/docker/certs/docker-dev.dbhub.io.key.pem"
 ca_chain = "/dbhub.io/docker/certs/ca-chain-docker.cert.pem"
@@ -31,6 +31,12 @@ server = "localhost:9000"
 access_key = "minio"
 secret = "minio123"
 https = false
+
+[mq]
+password = "guest"
+port = 5672
+server = "localhost"
+username = "guest"
 
 [pg]
 database = "dbhub"

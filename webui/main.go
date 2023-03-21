@@ -4,7 +4,9 @@ import (
 	"crypto/tls"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"html"
 	"html/template"
 	"io"
 	"log"
@@ -3028,7 +3030,6 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 
 func main() {
 	// Read server configuration
-	// TODO: It might be sensible to add a config option pointing to the SQLite 3 library path for LD_LIBRARY_PATH purposes
 	var err error
 	if err = com.ReadConfig(); err != nil {
 		log.Fatalf("Configuration file problem\n\n%v", err)
@@ -3079,6 +3080,12 @@ func main() {
 	err = com.AddDefaultLicences()
 	if err != nil {
 		log.Fatalf(err.Error())
+	}
+
+	// Connect to MQ server
+	com.AmqpChan, err = com.ConnectMQ("webui server")
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Connect to the Memcached server
@@ -3403,7 +3410,11 @@ func main() {
 
 	// Shut down nicely
 	com.DisconnectPostgreSQL()
+	if err != nil {
+		log.Println(err)
+	}
 
+	err = com.CloseMQChannel(com.AmqpChan)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -5200,8 +5211,13 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Prepare the form data
-	r.ParseMultipartForm(32 << 21) // 128MB of ram max
-	if err := r.ParseForm(); err != nil {
+	err = r.ParseMultipartForm(32 << 21) // 128MB of ram max
+	if err != nil {
+		log.Printf(err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err = r.ParseForm(); err != nil {
 		log.Printf("%s: ParseForm() error: %v\n", pageName, err)
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -5210,17 +5226,25 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Grab and validate the supplied "public" form field
 	var accessType com.SetAccessType
 	var public bool
-	val := r.PostFormValue("public")
 	public, err = com.GetPub(r)
 	if err != nil {
 		log.Printf("%s: Error when converting public value to boolean: %v\n", pageName, err)
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Public value '%v' incorrect", val))
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Public value '%v' incorrect", html.EscapeString(r.PostFormValue("public"))))
 		return
 	}
 	if public {
 		accessType = com.SetToPublic
 	} else {
 		accessType = com.SetToPrivate
+	}
+
+	// Grab and validate the supplied "live" form field
+	var isLiveDB bool
+	isLiveDB, err = com.GetFormLive(r)
+	if err != nil {
+		log.Printf("%s: Error when converting live value to boolean: %v\n", pageName, err)
+		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Live value '%v' incorrect", html.EscapeString(r.PostFormValue("live"))))
+		return
 	}
 
 	// Validate the licence value
@@ -5302,45 +5326,6 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve the commit ID for the head of the specified branch
-	var commitID string
-	createBranch := false
-	if exists {
-		branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		branchEntry, ok := branchList[branchName]
-		if !ok {
-			// The specified branch name doesn't exist, so we'll need to create it
-			createBranch = true
-
-			// We also need a commit ID to branch from, so we use the head commit of the default branch
-			defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
-			if err != nil {
-				errorPage(w, r, http.StatusInternalServerError, err.Error())
-				return
-			}
-			branchEntry, ok = branchList[defBranch]
-			if !ok {
-				errorPage(w, r, http.StatusInternalServerError, "Could not retrieve commit info for default branch entry")
-				return
-			}
-		}
-		commitID = branchEntry.Commit
-	}
-
-	// Sanity check the uploaded database, and if ok then add it to the system
-	numBytes, _, sha, err := com.AddDatabase(loggedInUser, dbOwner, dbFolder, dbName, createBranch, branchName,
-		commitID, accessType, licenceName, commitMsg, sourceURL, tempFile, time.Now(), time.Time{},
-		"", "", "", "", nil, "")
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
 	// Was a user agent part of the request?
 	var userAgent string
 	ua, ok := r.Header["User-Agent"]
@@ -5348,19 +5333,115 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		userAgent = ua[0]
 	}
 
-	// Make a record of the upload
-	err = com.LogUpload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
+	// If this is supposed to be a live database, and the database already exists, error out
+	if isLiveDB && exists {
+		errorPage(w, r, http.StatusConflict, "Can't upload a live database over the top of an existing one of the same name.  If you really want to do that, then delete the old one first")
+		return
+	}
+
+	// Retrieve the commit ID for the head of the specified branch
+	var commitID, sha string
+	var numBytes int64
+	createBranch := false
+	if !isLiveDB {
+		if exists {
+			branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			branchEntry, ok := branchList[branchName]
+			if !ok {
+				// The specified branch name doesn't exist, so we'll need to create it
+				createBranch = true
+
+				// We also need a commit ID to branch from, so we use the head commit of the default branch
+				defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+				branchEntry, ok = branchList[defBranch]
+				if !ok {
+					errorPage(w, r, http.StatusInternalServerError, "Could not retrieve commit info for default branch entry")
+					return
+				}
+			}
+			commitID = branchEntry.Commit
+		}
+
+		// Sanity check the uploaded database, and if ok then add it to the system
+		numBytes, _, sha, err = com.AddDatabase(loggedInUser, dbOwner, dbFolder, dbName, createBranch, branchName,
+			commitID, accessType, licenceName, commitMsg, sourceURL, tempFile, time.Now(), time.Time{},
+			"", "", "", "", nil, "")
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Make a record of the upload
+		err = com.LogUpload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Log the successful database upload
+		log.Printf("%s: Username: '%s', database '%s%s%s' uploaded', bytes: %v\n", pageName, loggedInUser,
+			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName), numBytes)
+
+		// As the upload was for a standard database, bounce the user to the database view page for it
+		http.Redirect(w, r, fmt.Sprintf("/%s/%s?branch=%s", html.EscapeString(dbOwner), html.EscapeString(dbName), html.EscapeString(branchName)), http.StatusSeeOther)
+		return
+	}
+
+	// ** Live databases **
+
+	// Write the incoming database to a temporary file on disk, and sanity check it
+	var tempDB *os.File
+	numBytes, tempDB, sha, _, err = com.WriteDBtoDisk(loggedInUser, dbOwner, dbFolder, dbName, tempFile)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer os.Remove(tempDB.Name())
+
+	// Rewind the internal cursor in the temporary file back to the start again
+	var newOffset int64
+	newOffset, err = tempDB.Seek(0, 0)
+	if err != nil {
+		log.Printf("Seeking on the temporary file (2nd time) failed: %s", err)
+		return
+	}
+	if newOffset != 0 {
+		err = errors.New("Seeking to start of temporary database file didn't work")
+		log.Println(err)
+		return
+	}
+
+	// Store the database in Minio
+	err = com.LiveStoreDatabaseMinio(tempDB, dbOwner, dbName, numBytes)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Log the successful database upload
-	log.Printf("%s: Username: '%s', database '%s%s%s' uploaded', bytes: %v\n", pageName, loggedInUser,
-		com.SanitiseLogString(dbOwner), dbFolder, com.SanitiseLogString(dbName), numBytes)
+	log.Printf("%s: Username: '%s', LIVE database '%s%s%s' uploaded', bytes: %v\n", pageName, loggedInUser,
+		com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName), numBytes)
 
-	// Database upload succeeded.  Bounce the user to the page for the new upload
-	http.Redirect(w, r, fmt.Sprintf("/%s/%s?branch=%s", dbOwner, dbName, branchName), http.StatusSeeOther)
+	// Send a request to the AMQP backend to set up the database there, ready for querying
+	err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+	if err != nil {
+		log.Println(err)
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// As the upload was for a live database, bounce the user to their profile page
+	http.Redirect(w, r, fmt.Sprintf("/%s", html.EscapeString(dbOwner)), http.StatusSeeOther)
+	return
 }
 
 // Handles JSON requests from the front end to toggle watching of a database.

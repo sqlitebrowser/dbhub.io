@@ -56,3 +56,7 @@ webui/js/markdown-editor.js
 
 # Local secrets
 .env
+
+# Other files
+headers.out
+curl_commands.txt

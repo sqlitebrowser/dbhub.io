@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"net/url"
@@ -160,6 +161,22 @@ func GetFormLicence(r *http.Request) (licenceName string, err error) {
 	return licenceName, nil
 }
 
+// GetFormLive returns the "live" value (if any) present in the form data
+func GetFormLive(r *http.Request) (live bool, err error) {
+	l := r.PostFormValue("live")
+	if l == "" || strings.ToLower(l) == "false" {
+		return
+	}
+
+	// Check for true value
+	live, err = strconv.ParseBool(l)
+	if err != nil {
+		err = fmt.Errorf("Error when converting live value '%s' to boolean: %v", html.EscapeString(l), err)
+		return
+	}
+	return
+}
+
 // GetFormODC returns the database owner, database name, and commit (if any) present in the form data
 func GetFormODC(r *http.Request) (userName string, dbName string, commitID string, err error) {
 	// Extract the database owner name
@@ -282,7 +299,7 @@ func GetFormTable(r *http.Request, allowGet bool) (table string, err error) {
 		return "", nil
 	}
 
-	// Unescape, then validate the owner name
+	// Unescape, then validate the table name
 	table, err = url.QueryUnescape(t)
 	if err != nil {
 		return "", err

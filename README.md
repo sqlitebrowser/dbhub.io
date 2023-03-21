@@ -21,6 +21,7 @@ or run it locally for your own users.
 * [Minio](https://minio.io) - release 2016-11-26T02:23:47Z and later are known to work.
 * [NodeJS](https://nodejs.org) - version 18.x is known to work, others are untested.
 * [PostgreSQL](https://www.postgresql.org) - version 13 and above are known to work.
+* [RabbitMQ](https://www.rabbitmq.com) - version 3.10.x is known to work, others are untested.
 * [Yarn](https://classic.yarnpkg.com) - version 1.22.x.  Not Yarn 2.x or greater.
 
 ### Subdirectories
@@ -31,6 +32,7 @@ or run it locally for your own users.
 * [default_licences](default_licences/) - Useful Open Source licences suitable for databases.
 * [db4s](db4s/) - REST server which [DB Browser for SQLite](http://sqlitebrowser.org)
   and [Dio](https://github.com/sqlitebrowser/dio) use for communicating with DBHub.io.
+* [live](live/) - Internal daemon which manages live SQLite databases.
 * [webui](webui/) - The main public facing webUI.
 
 ### Libraries for accessing DBHub.io via API

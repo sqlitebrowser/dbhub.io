@@ -68,7 +68,7 @@
                 </table>
                 <uib-accordion>
                     <div uib-accordion-group class="panel-default" heading="Advanced" is-open="false">
-                        <table class="table table-striped table-responsive settingsTable" width="100%">
+                        <table class="table table-striped table-responsive settingsTable" style="width: 100%">
                             <tr>
                                 <td style="vertical-align: middle; width: 160px; border-left: none;">
                                     <b>Commit Message</b><br /><br />
@@ -103,6 +103,23 @@
                                 </td>
                             </tr>
                         </table>
+                        <div class="row" style="border: 5px dashed #181a9c; margin: 2%; border-radius: 10px">
+                            <div class="col-md-12">
+                                <div style="text-align: center; font-size: large; font-style: italic; color: #181a9c; margin-top: 1%">Experimental</div>
+                                <table class="table table-striped table-responsive settingsTable">
+                                    <tr>
+                                        <th style="vertical-align: middle; width: 33%">Live database? (not version controlled)</th>
+                                        <td>
+                                            <div class="btn-group">
+                                                <label class="btn btn-default" ng-model="radioLive" ng-click="liveClick('false')" uib-btn-radio="'false'" data-cy="livebtn">Standard</label>
+                                                <label class="btn btn-default" ng-model="radioLive" ng-click="liveClick('true')" uib-btn-radio="'true'" data-cy="livebtn">Live</label>
+                                            </div>
+                                            <span ng-bind-html="liveDesc"></span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </uib-accordion>
                 <div style="text-align: center;">
@@ -110,6 +127,7 @@
                     <input type="hidden" name="licence" value="{{ Licence }}" data-cy="hidlic">
                     <input type="hidden" name="username" value="[[ .Meta.Owner ]]" data-cy="hidowner">
                     <input type="hidden" name="dbname" value="[[ .Meta.Database ]]" data-cy="hiddbname">
+                    <input type="hidden" name="live" value="{{ radioLive }}" data-cy="hidlive">
                     <input type="submit" class="btn btn-success" value="Upload" data-cy="uploadbtn">
                 </div>
             </form>
@@ -182,6 +200,20 @@
             }
         };
         $scope.publicClick($scope.radioPublic);
+
+        // Set the "live database" radio buttons state when the page first loads
+        $scope.liveDesc = "";
+        $scope.radioLive = "false";
+        $scope.liveClick = function(newValue) {
+            if (newValue === "true") {
+                $scope.radioLive = "true";
+                $scope.liveDesc = "&nbsp; Database will be writable (not version controlled).";
+            } else {
+                $scope.radioLive = "false";
+                $scope.liveDesc = "&nbsp; Database will be standard (version controlled).";
+            }
+        };
+        $scope.liveClick($scope.radioLive);
     });
 </script>
 </body>

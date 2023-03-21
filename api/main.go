@@ -1,5 +1,21 @@
 package main
 
+// TODO: API functions that still need updating for Live databases
+//         * diff - already updated to just return an error for live databases.  needs testing though
+//         * download - Not done yet.  Maybe use the SQLite backup API (https://www.sqlite.org/backup.html) or
+//                      VACUUM INTO command to create a temp copy to send to the user?
+//                      Maybe do that backup into Minio, then send from there?  Probably need to experiment a bit.
+
+// FIXME: Update the documented Upload() function return values on the API doc page.  Currently it talks about
+//        returning the commit ID for the upload.  We'll probably return that field with a blank value for live
+//        databases though.  TBD.
+
+// FIXME: We should probably add a "changelog.html" page to the API server, and record the differences between each
+//        version of the API we release
+
+// FIXME: After the API and webui pieces are done, figure out how the DB4S end
+//        point and dio should be updated to use live databases too
+
 import (
 	"crypto/tls"
 	"crypto/x509"
@@ -62,6 +78,12 @@ func main() {
 	err = com.ConnectPostgreSQL()
 	if err != nil {
 		log.Fatalf(err.Error())
+	}
+
+	// Connect to MQ server
+	com.AmqpChan, err = com.ConnectMQ("api server")
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Connect to the Memcached server
