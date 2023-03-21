@@ -24,7 +24,7 @@ jobs:
         wait-on: 'https://localhost:9443'
         wait-on-timeout: 180
         build: sh ./build_dbhub_docker_and_local.sh
-        start: yarn docker:startlocal
+        start: yarn docker:github
         command: yarn cypress:test
       env:
         NODE_TLS_REJECT_UNAUTHORIZED: 0
