@@ -1,7 +1,5 @@
 # vim:set ft=dockerfile:
 FROM alpine:3.17
-# FIXME: Consider potentially moving to one of the RabbitMQ alpine images
-#        as a base instead.  eg: https://hub.docker.com/_/rabbitmq
 
 LABEL maintainer="Justin Clift <justin@postgresql.org>"
 
