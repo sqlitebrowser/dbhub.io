@@ -108,7 +108,13 @@ func CloseMQConnection(connection *amqp.Connection) (err error) {
 // ConnectMQ creates a connection to the backend MQ server
 func ConnectMQ(nodeName string) (channel *amqp.Channel, err error) {
 	var conn *amqp.Connection
-	conn, err = amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
+	if Conf.Environment.Environment == "production" {
+		// Force use of TLS in production
+		conn, err = amqp.Dial(fmt.Sprintf("amqps://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
+	} else {
+		// Everywhere else (eg docker container) doesn't *have* to use TLS
+		conn, err = amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
+	}
 	if err != nil {
 		return
 	}
