@@ -126,6 +126,7 @@ func main() {
 	http.Handle("/v1/delete", gz.GzipHandler(handleWrapper(deleteHandler)))
 	http.Handle("/v1/diff", gz.GzipHandler(handleWrapper(diffHandler)))
 	http.Handle("/v1/download", gz.GzipHandler(handleWrapper(downloadHandler)))
+	http.Handle("/v1/execute", gz.GzipHandler(handleWrapper(executeHandler)))
 	http.Handle("/v1/indexes", gz.GzipHandler(handleWrapper(indexesHandler)))
 	http.Handle("/v1/metadata", gz.GzipHandler(handleWrapper(metadataHandler)))
 	http.Handle("/v1/query", gz.GzipHandler(handleWrapper(queryHandler)))

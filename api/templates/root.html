@@ -58,7 +58,7 @@
         <div class="col-md-12"><a href="https://dbhub.io"><h1>DBHub API (in early development)</h1></a></div>
     </div>
     <div class="row">
-        <div class="col-md-12 version">API version 0.2, last modified 2023-03-20</div>
+        <div class="col-md-12 version">API version 0.2, last modified 2023-03-22</div>
     </div>
     <div class="panel panel-primary" id="note">
         <div class="panel-heading heading">Note</div>
@@ -98,9 +98,10 @@
             <li class="list-group-item"><a href="#delete" class="apiheading">Delete</a> - Deletes a database from the requesting users account</li>
             <li class="list-group-item"><a href="#diff" class="apiheading">Diff</a> - Generates a diff between two databases or two versions of a database</li>
             <li class="list-group-item"><a href="#download" class="apiheading">Download</a> - Returns the requested SQLite database file</li>
+            <li class="list-group-item" style="color: #a01e1a"><a href="#execute" class="apiheading" style="color: #a01e1a">Execute</a> - Executes a SQLite statement on a LIVE database <span style="font-style: italic">(new in version 0.2)</span> - <span style="font-weight: bold">EXPERIMENTAL ONLY</span></li>
             <li class="list-group-item"><a href="#indexes" class="apiheading">Indexes</a> - Returns the details of all indexes in a SQLite database</li>
             <li class="list-group-item"><a href="#metadata" class="apiheading">Metadata</a> - Returns the commit, branch, release, tag and web page information for a database</li>
-            <li class="list-group-item"><a href="#query" class="apiheading">Query</a> - Run a SQLite query on a database</li>
+            <li class="list-group-item"><a href="#query" class="apiheading">Query</a> - Runs a SQLite SELECT query on a database</li>
             <li class="list-group-item"><a href="#releases" class="apiheading">Releases</a> - Returns the details of all releases for a database</li>
             <li class="list-group-item"><a href="#tables" class="apiheading">Tables</a> - Returns the list of tables in a SQLite database</li>
             <li class="list-group-item"><a href="#tags" class="apiheading">Tags</a> - Returns the details of all tags for a database</li>
@@ -810,6 +811,85 @@
         </div>
     </div>
 
+    <!-- Execute -->
+    <div class="panel panel-default" id="execute">
+        <div class="panel-heading heading" style="color: #a01e1a;"><span style="font-size: x-large;">Execute</span> &nbsp; (new in version 0.2)</div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-md-11 heading" style="color: #a01e1a; padding-bottom: 10px;">This function is EXPERIMENTAL, and may change</div>
+                <div class="col-md-1">&nbsp;</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading">URL</div>
+                <div class="col-md-10 heading">Description</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2"><a href="/v1/execute">/v1/execute</a></div>
+                <div class="col-md-10">Executes a SQLite statement on a LIVE database.  eg INSERT, UPDATE, DELETE</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Parameters (POST)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">apikey</div>
+                <div class="col-md-10">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbowner</div>
+                <div class="col-md-10">The owner of the database</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">dbname</div>
+                <div class="col-md-10">The name of the database</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-2 paramname">sql</div>
+                <div class="col-md-10">The SQL query, <span style="font-weight: bold;">Base64</span> encoded</div>
+            </div>
+            <div class="row">
+                <div class="col-md-2 heading pad">Return values (JSON)</div>
+                <div class="col-md-10"></div>
+            </div>
+            <div class="row returndesc">
+                <div class="col-md-12">
+                    On successful execution, the returned JSON will be a simple status name/value pair
+                </div>
+            </div>
+            <div class="row indent returnhdr">
+                <div class="col-md-4">Name</div>
+                <div class="col-md-1">Type</div>
+                <div class="col-md-7">Description</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-4 paramname">status</div>
+                <div class="col-md-1 type">string</div>
+                <div class="col-md-7">Contains the string "OK" on successful execution</div>
+            </div>
+            <div class="row">
+                <div class="col-md-12 heading">Example</div>
+            </div>
+            <div class="row indent">
+                <div class="col-md-12">To execute this statement on <a href="https://dbhub.io/justinclift/Join%20Testing.sqlite">dbhub.io/justinclift/Join Testing.sqlite</a>:
+                    <pre>UPDATE table1
+SET Name = 'Testing 1'
+WHERE id = 1</pre>
+                    Using <a href="https://curl.haxx.se">curl</a>, it would be:
+                    <pre>$ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" \
+    -F sql="VVBEQVRFIHRhYmxlMSBTRVQgTmFtZSA9ICdUZXN0aW5nIDEnIFdIRVJFIGlkID0gMQ==" \
+    https://api.dbhub.io/v1/execute</pre>
+                    Output:
+                    <pre>{
+  "status": "OK"
+}</pre>
+                    <span style="color: darkred; font-size: larger; font-weight: bolder;">Note</span> - This is a newly added EXPERIMENTAL function, that only works with
+                    LIVE databases.  To try it out, <a href="https://dbhub.io/upload/">Upload</a> a new database and
+                    select the LIVE option under "Advanced".
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Indexes -->
     <div class="panel panel-default" id="indexes">
         <div class="panel-heading heading" style="font-size: x-large; color: #2e6da4;">Indexes</div>
@@ -1077,7 +1157,7 @@
             </div>
             <div class="row indent">
                 <div class="col-md-2"><a href="/v1/query">/v1/query</a></div>
-                <div class="col-md-10">Run a SQLite query on a database</div>
+                <div class="col-md-10">Run a SQLite SELECT query on a database</div>
             </div>
             <div class="row">
                 <div class="col-md-2 heading pad">Parameters (POST)</div>

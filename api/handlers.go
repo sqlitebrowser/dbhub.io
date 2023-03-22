@@ -615,6 +615,106 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// executeHandler executes a SQL query on a SQLite database.  It's used for running SQL queries which don't
+// return a result set, like `INSERT`, `UPDATE`, `DELETE`, and so forth.
+// This can be run from the command line using curl, like this:
+//   $ curl -kD headers.out -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" \
+//       -F sql="VVBEQVRFIHRhYmxlMSBTRVQgTmFtZSA9ICdUZXN0aW5nIDEnIFdIRVJFIGlkID0gMQ==" \
+//       https://api.dbhub.io/v1/execute
+//   * "apikey" is one of your API keys.  These can be generated from your Settings page once logged in
+//   * "dbowner" is the owner of the database
+//   * "dbname" is the name of the database
+//   * "sql" is the SQL query to execute, base64 encoded
+//   NOTE that the above example (base64) encoded sql is: "UPDATE table1 SET Name = 'Testing 1' WHERE id = 1"
+func executeHandler(w http.ResponseWriter, r *http.Request) {
+	loggedInUser, err := checkAuth(w, r)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	// Extract the database owner name, database name, and (optional) commit ID for the database from the request
+	dbOwner, dbName, _, err := com.GetFormODC(r)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	dbFolder := "/"
+
+	// Grab the incoming SQLite query
+	rawInput := r.FormValue("sql")
+	query, err := com.CheckUnicode(rawInput)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Check if the requested database exists
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		jsonErr(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName),
+			http.StatusNotFound)
+		return
+	}
+
+	// Check if the database is a live database, and get the node/queue to send the request to
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Reject attempts to run Exec() on non-live databases
+	if !isLive {
+		jsonErr(w, "Exec() only runs on Live databases, which this isn't.", http.StatusInternalServerError)
+		return
+	}
+
+	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
+	if isLive && liveNode == "" {
+		// Send a request to the AMQP backend to set up the database there, ready for querying
+		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+		if err != nil {
+			log.Println(err) // FIXME: Debug output while developing
+			jsonErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Send the query execution request to our AMQP backend
+	var rawResponse []byte
+	rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "exec", loggedInUser, dbOwner, dbName, query)
+	if err != nil {
+		return
+	}
+
+	// Decode the response
+	var resp com.LiveDBErrorResponse
+	err = json.Unmarshal(rawResponse, &resp)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if resp.Error != "" {
+		err = errors.New(resp.Error)
+		return
+	}
+
+	// Return a "success" message
+	z := com.StatusResponseContainer{Status: "OK"}
+	jsonData, err := json.MarshalIndent(z, "", "  ")
+	if err != nil {
+		log.Printf("Error when JSON marshalling returned data in execHandler(): %v\n", err)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, string(jsonData))
+}
+
 // indexesHandler returns the details of all indexes in a SQLite database
 // This can be run from the command line using curl, like this:
 //   $ curl -F apikey="YOUR_API_KEY_HERE" -F dbowner="justinclift" -F dbname="Join Testing.sqlite" https://api.dbhub.io/v1/indexes

@@ -814,6 +814,40 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 	return resultSet, nil
 }
 
+// SQLiteExecQueryLive is used by our AMQP backend infrastructure to execute a user provided SQLite query
+func SQLiteExecQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (err error) {
+	// Open the Live database on the local node
+	var sdb *sqlite.Conn
+	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
+	if err != nil {
+		return
+	}
+	defer sdb.Close()
+
+	// TODO: Probably add in the before and after logging info at some point (as per query function),
+	//       so we can analyse query execution times, memory use, etc
+
+	// Prepare the statement
+	// FIXME: Do we need to do this prepare step?  Am suspecting "no", as we don't (yet) have a way to
+	//        batch call the matching stmt.Exec() below.  Not remembering what else it might benefit though.
+	var stmt *sqlite.Stmt
+	stmt, err = sdb.Prepare(query)
+	if err != nil {
+		return
+	}
+	defer stmt.Finalize()
+
+	// Execute the statement
+	err = stmt.Exec()
+	if err != nil {
+		log.Printf("Error when executing query by '%s' for LIVE database (%s/%s): '%s'\n",
+			SanitiseLogString(loggedInUser), SanitiseLogString(dbOwner), SanitiseLogString(dbName),
+			SanitiseLogString(err.Error()))
+		return
+	}
+	return
+}
+
 // SQLiteGetColumnsLive is used by our AMQP backend nodes to retrieve the list of columns from a SQLite database
 func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sqlite.Column, err error) {
 	// Open the database on the local node

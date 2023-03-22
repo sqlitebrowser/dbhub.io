@@ -182,6 +182,21 @@ func main() {
 				}
 				continue
 
+			case "exec":
+				// Execute a query on the database file
+				err = com.SQLiteExecQueryLive(baseDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
+				if err != nil {
+					err = com.MQExecResponse(msg, ch, com.NodeName, err.Error())
+					continue
+				}
+
+				// Return a success message (empty string in this case) to the caller
+				err = com.MQExecResponse(msg, ch, com.NodeName, "")
+				if err != nil {
+					log.Printf("Error: occurred on '%s' in MQExecResponse() while constructing the AMQP execute query response: '%s'", com.NodeName, err)
+				}
+				continue
+
 			case "indexes":
 				var indexes []com.APIJSONIndex
 				indexes, err = com.SQLiteGetIndexesLive(baseDir, req.DBOwner, req.DBName)
