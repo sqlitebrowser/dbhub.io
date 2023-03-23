@@ -81,7 +81,8 @@ func main() {
 	}
 
 	// Connect to MQ server
-	com.AmqpChan, err = com.ConnectMQ("api server")
+	com.NodeName = "API server"
+	com.AmqpChan, err = com.ConnectMQ()
 	if err != nil {
 		log.Fatal(err)
 	}

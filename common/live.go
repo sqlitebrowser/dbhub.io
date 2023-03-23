@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -106,30 +107,46 @@ func CloseMQConnection(connection *amqp.Connection) (err error) {
 }
 
 // ConnectMQ creates a connection to the backend MQ server
-func ConnectMQ(nodeName string) (channel *amqp.Channel, err error) {
+func ConnectMQ() (channel *amqp.Channel, err error) {
 	var conn *amqp.Connection
 	if Conf.Environment.Environment == "production" {
-		// Force use of TLS in production
-		conn, err = amqp.Dial(fmt.Sprintf("amqps://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
+		// If certificate/key files have been provided, then we can use mutual TLS (mTLS)
+		// TODO: Getting mTLS working was pretty easy with Lets Encrypt certs.  Do we still need the server-only TLS
+		//       fallback below?
+		if Conf.MQ.CertFile != "" && Conf.MQ.KeyFile != "" {
+			var cert tls.Certificate
+			cert, err = tls.LoadX509KeyPair(Conf.MQ.CertFile, Conf.MQ.KeyFile)
+			if err != nil {
+				return
+			}
+			cfg := &tls.Config{Certificates: []tls.Certificate{cert}}
+			conn, err = amqp.DialTLS(fmt.Sprintf("amqps://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port), cfg)
+			if err != nil {
+				return
+			}
+			log.Printf("%s connected to AMQP server using mutual TLS (mTLS): %v:%d\n", NodeName, Conf.MQ.Server, Conf.MQ.Port)
+		} else {
+			// Fallback to just verifying the server certs for TLS
+			conn, err = amqp.Dial(fmt.Sprintf("amqps://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
+			if err != nil {
+				return
+			}
+			log.Printf("%s connected to AMQP server with server-only TLS: %v:%d\n", NodeName, Conf.MQ.Server, Conf.MQ.Port)
+		}
 	} else {
 		// Everywhere else (eg docker container) doesn't *have* to use TLS
 		conn, err = amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
-	}
-	if err != nil {
-		return
+		if err != nil {
+			return
+		}
+		log.Printf("%s connected to AMQP server without encryption: %v:%d\n", NodeName, Conf.MQ.Server, Conf.MQ.Port)
 	}
 
 	channel, err = conn.Channel()
-	if err != nil {
-		return
-	}
-
-	// Log successful connection
-	log.Printf("'%s' connected to AMQP server: %v:%d\n", nodeName, Conf.MQ.Server, Conf.MQ.Port)
 	return
 }
 
-// LiveCreateDB requests the AMQP backend to create a new live SQLite database
+// LiveCreateDB requests the AMQP backend create a new live SQLite database
 func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string) (err error) {
 	// Send the database setup request to our AMQP backend
 	var rawResponse []byte

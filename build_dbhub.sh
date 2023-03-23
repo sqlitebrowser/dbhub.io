@@ -53,8 +53,12 @@ if [ -d "${GOBIN}" ]; then
   cd api
   go install .
   cd ..
-  echo "Compiling DBHub.io DB4S API executable"
+  echo "Compiling DBHub.io DB4S end point executable"
   cd db4s
+  go install .
+  cd ..
+  echo "Compiling DBHub.io Live executable"
+  cd live
   go install .
   cd ..
   echo "Compiling DBHub.io web User Interface executable"

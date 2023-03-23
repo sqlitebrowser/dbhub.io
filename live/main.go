@@ -3,8 +3,8 @@ package main
 // Internal daemon for running SQLite queries sent by the other DBHub.io daemons
 
 // FIXME: Note that all incoming AMQP requests _other_ than for database creation
-//        get handled by the same single goroutine.  This should likely be changed
-//        to something smarter, such as using a pool of worker goroutines to handle
+//        are handled by the same single goroutine.  This should be changed to
+//        something smarter, such as using a pool of worker goroutines to handle
 //        the requests.
 
 import (
@@ -18,38 +18,31 @@ import (
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
-var (
-	baseDir string
-)
-
 func main() {
-	// Read node name and base directory from the command line
-	if len(os.Args) != 3 {
-		log.Println("You need to provide the name of this node, and the path to a directory")
-		log.Println("for storing the SQLite database files")
-		log.Println("eg:")
-		log.Fatalf("  %v node1 /some/directory", os.Args[0])
+	// Read server configuration
+	err := com.ReadConfig()
+	if err != nil {
+		log.Fatalf("Configuration file problem\n\n%v", err)
 	}
-	com.NodeName = os.Args[1]
-	baseDir = os.Args[2]
+
+	// If node name and base directory were provided on the command line, then override the config file values
+	if len(os.Args) == 3 {
+		com.NodeName = os.Args[1]
+		com.Conf.Live.StorageDir = os.Args[2]
+	}
 
 	// If it doesn't exist, create the base directory for storing SQLite files
-	_, err := os.Stat(baseDir)
+	_, err = os.Stat(com.Conf.Live.StorageDir)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			log.Fatal(err)
 		}
 
 		// The target location doesn't exist
-		err = os.MkdirAll(baseDir, 0750)
+		err = os.MkdirAll(com.Conf.Live.StorageDir, 0750)
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-
-	// Read server configuration
-	if err = com.ReadConfig(); err != nil {
-		log.Fatalf("Configuration file problem\n\n%v", err)
 	}
 
 	// Connect to Minio server
@@ -65,7 +58,7 @@ func main() {
 	}
 
 	// Connect to MQ server
-	ch, err := com.ConnectMQ(com.NodeName)
+	ch, err := com.ConnectMQ()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,7 +144,7 @@ func main() {
 			switch req.Operation {
 			case "columns":
 				var columns []sqlite.Column
-				columns, err = com.SQLiteGetColumnsLive(baseDir, req.DBOwner, req.DBName, req.Query) // We use the req.Query field to pass the table name
+				columns, err = com.SQLiteGetColumnsLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.Query) // We use the req.Query field to pass the table name
 				if err != nil {
 					err = com.MQColumnsResponse(msg, ch, com.NodeName, nil, err.Error())
 					if err != nil {
@@ -184,7 +177,7 @@ func main() {
 
 			case "exec":
 				// Execute a query on the database file
-				err = com.SQLiteExecQueryLive(baseDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
+				err = com.SQLiteExecQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
 				if err != nil {
 					err = com.MQExecResponse(msg, ch, com.NodeName, err.Error())
 					continue
@@ -199,7 +192,7 @@ func main() {
 
 			case "indexes":
 				var indexes []com.APIJSONIndex
-				indexes, err = com.SQLiteGetIndexesLive(baseDir, req.DBOwner, req.DBName)
+				indexes, err = com.SQLiteGetIndexesLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 				if err != nil {
 					err = com.MQIndexesResponse(msg, ch, com.NodeName, nil, err.Error())
 					if err != nil {
@@ -217,7 +210,7 @@ func main() {
 
 			case "query":
 				var rows com.SQLiteRecordSet
-				rows, err = com.SQLiteRunQueryLive(baseDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
+				rows, err = com.SQLiteRunQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
 				if err != nil {
 					err = com.MQQueryResponse(msg, ch, com.NodeName, com.SQLiteRecordSet{}, err.Error())
 					if err != nil {
@@ -235,7 +228,7 @@ func main() {
 
 			case "tables":
 				var tables []string
-				tables, err = com.SQLiteGetTablesLive(baseDir, req.DBOwner, req.DBName)
+				tables, err = com.SQLiteGetTablesLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 				if err != nil {
 					err = com.MQTablesResponse(msg, ch, com.NodeName, nil, err.Error())
 					if err != nil {
@@ -253,7 +246,7 @@ func main() {
 
 			case "views":
 				var views []string
-				views, err = com.SQLiteGetViewsLive(baseDir, req.DBOwner, req.DBName)
+				views, err = com.SQLiteGetViewsLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 				if err != nil {
 					err = com.MQViewsResponse(msg, ch, com.NodeName, nil, err.Error())
 					if err != nil {
@@ -291,7 +284,7 @@ func main() {
 // trying to delete that directory while other databases in their account are being worked with
 func removeLiveDB(dbOwner, dbName string) (err error) {
 	// Get the path to the database file, and it's containing directory
-	dbDir := filepath.Join(baseDir, dbOwner, dbName)
+	dbDir := filepath.Join(com.Conf.Live.StorageDir, dbOwner, dbName)
 	dbPath := filepath.Join(dbDir, "live.sqlite")
 	if _, err = os.Stat(dbPath); err != nil {
 		// Something wrong with the database file
@@ -326,6 +319,6 @@ func removeLiveDB(dbOwner, dbName string) (err error) {
 // setupLiveDB sets up a new instance of a given live database on the local node
 func setupLiveDB(dbOwner, dbName string) (err error) {
 	// Retrieve the uploaded database file from Minio, and save it to local disk
-	_, err = com.LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName)
+	_, err = com.LiveRetrieveDatabaseMinio(com.Conf.Live.StorageDir, dbOwner, dbName)
 	return
 }
