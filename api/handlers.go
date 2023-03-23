@@ -1400,10 +1400,8 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusCreated) // Signal the successful database creation
 	fmt.Fprintf(w, string(jsonData))
-
-	// Signal the successful database creation
-	http.Error(w, "", http.StatusCreated)
 }
 
 // viewsHandler returns the list of views in a SQLite database
