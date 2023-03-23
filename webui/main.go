@@ -3083,7 +3083,7 @@ func main() {
 	}
 
 	// Connect to MQ server
-	com.NodeName = "WebUI server"
+	com.Conf.Live.Nodename = "WebUI server"
 	com.AmqpChan, err = com.ConnectMQ()
 	if err != nil {
 		log.Fatal(err)

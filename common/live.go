@@ -24,9 +24,6 @@ var (
 	// AmqpDebug controls whether to output - via Log.Print*() functions -  useful messages during processing.  Mostly
 	// useful for development / debugging purposes
 	AmqpDebug = true
-
-	// NodeName holds the name of the current Live node
-	NodeName string
 )
 
 // LiveDBColumnsResponse holds the fields used for receiving column list responses from our AMQP backend
@@ -124,14 +121,14 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 			if err != nil {
 				return
 			}
-			log.Printf("%s connected to AMQP server using mutual TLS (mTLS): %v:%d\n", NodeName, Conf.MQ.Server, Conf.MQ.Port)
+			log.Printf("%s connected to AMQP server using mutual TLS (mTLS): %v:%d\n", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
 		} else {
 			// Fallback to just verifying the server certs for TLS
 			conn, err = amqp.Dial(fmt.Sprintf("amqps://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
 			if err != nil {
 				return
 			}
-			log.Printf("%s connected to AMQP server with server-only TLS: %v:%d\n", NodeName, Conf.MQ.Server, Conf.MQ.Port)
+			log.Printf("%s connected to AMQP server with server-only TLS: %v:%d\n", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
 		}
 	} else {
 		// Everywhere else (eg docker container) doesn't *have* to use TLS
@@ -139,7 +136,7 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 		if err != nil {
 			return
 		}
-		log.Printf("%s connected to AMQP server without encryption: %v:%d\n", NodeName, Conf.MQ.Server, Conf.MQ.Port)
+		log.Printf("%s connected to AMQP server without encryption: %v:%d\n", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
 	}
 
 	channel, err = conn.Channel()

@@ -61,7 +61,7 @@ if [ -d "${GOBIN}" ]; then
   cd live
   go install .
   cd ..
-  echo "Compiling DBHub.io web User Interface executable"
+  echo "Compiling DBHub.io Web User Interface executable"
   cd webui
   go install .
   cd ..

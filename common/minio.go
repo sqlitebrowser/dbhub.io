@@ -74,7 +74,7 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName string) (dbPath string, 
 
 	if AmqpDebug {
 		log.Printf("Live node '%s': Database file '%s/%s' written to filesystem at: '%s'",
-			NodeName, dbOwner, dbName, dbPath)
+			Conf.Live.Nodename, dbOwner, dbName, dbPath)
 	}
 	return
 }

@@ -27,8 +27,13 @@ func main() {
 
 	// If node name and base directory were provided on the command line, then override the config file values
 	if len(os.Args) == 3 {
-		com.NodeName = os.Args[1]
+		com.Conf.Live.Nodename = os.Args[1]
 		com.Conf.Live.StorageDir = os.Args[2]
+	}
+
+	// If we don't have the node name or storage dir after reading both the config and command line, then abort
+	if com.Conf.Live.Nodename == "" || com.Conf.Live.StorageDir == "" {
+		log.Fatal("Node name or Storage directory missing.  Aborting")
 	}
 
 	// If it doesn't exist, create the base directory for storing SQLite files
@@ -81,9 +86,9 @@ func main() {
 			err = json.Unmarshal(d.Body, &req)
 			if err != nil {
 				log.Println(err)
-				err = com.MQCreateResponse(d, ch, com.NodeName, "failure")
+				err = com.MQCreateResponse(d, ch, com.Conf.Live.Nodename, "failure")
 				if err != nil {
-					log.Printf("Error: occurred on live node '%s' in the create db code, while constructing an AMQP error message response: '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on live node '%s' in the create db code, while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 			}
@@ -92,15 +97,15 @@ func main() {
 			err = setupLiveDB(req.DBOwner, req.DBName)
 			if err != nil {
 				log.Println(err)
-				err = com.MQCreateResponse(d, ch, com.NodeName, "failure")
+				err = com.MQCreateResponse(d, ch, com.Conf.Live.Nodename, "failure")
 				if err != nil {
-					log.Printf("Error: occurred on live node '%s' in the create db code, while constructing an AMQP error message response (location 2): '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on live node '%s' in the create db code, while constructing an AMQP error message response (location 2): '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 			}
 
 			// Respond to the creation request with a success message
-			err = com.MQCreateResponse(d, ch, com.NodeName, "success")
+			err = com.MQCreateResponse(d, ch, com.Conf.Live.Nodename, "success")
 			if err != nil {
 				continue
 			}
@@ -108,7 +113,7 @@ func main() {
 	}()
 
 	// Create the queue for receiving database queries
-	queryQueue, err := com.MQCreateQueryQueue(ch, com.NodeName)
+	queryQueue, err := com.MQCreateQueryQueue(ch, com.Conf.Live.Nodename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -121,7 +126,7 @@ func main() {
 	go func() {
 		for msg := range requests {
 			if com.AmqpDebug {
-				log.Printf("'%s' received AMQP REQUEST (of not-yet-determined type)", com.NodeName)
+				log.Printf("'%s' received AMQP REQUEST (of not-yet-determined type)", com.Conf.Live.Nodename)
 			}
 
 			// Decode JSON request
@@ -129,15 +134,15 @@ func main() {
 			err = json.Unmarshal(msg.Body, &req)
 			if err != nil {
 				log.Println(err)
-				err = com.MQErrorResponse(msg, ch, com.NodeName, err.Error())
+				err = com.MQErrorResponse(msg, ch, com.Conf.Live.Nodename, err.Error())
 				if err != nil {
-					log.Printf("Error: occurred on '%s' the main live node switch{} while constructing an AMQP error message response: '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on '%s' the main live node switch{} while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 			}
 
 			if com.AmqpDebug {
-				log.Printf("Decoded request on '%s'.  Correlation ID: '%s', request operation: '%s', request query: '%s'", com.NodeName, msg.CorrelationId, req.Operation, req.Query)
+				log.Printf("Decoded request on '%s'.  Correlation ID: '%s', request operation: '%s', request query: '%s'", com.Conf.Live.Nodename, msg.CorrelationId, req.Operation, req.Query)
 			}
 
 			// Handle each operation
@@ -146,17 +151,17 @@ func main() {
 				var columns []sqlite.Column
 				columns, err = com.SQLiteGetColumnsLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.Query) // We use the req.Query field to pass the table name
 				if err != nil {
-					err = com.MQColumnsResponse(msg, ch, com.NodeName, nil, err.Error())
+					err = com.MQColumnsResponse(msg, ch, com.Conf.Live.Nodename, nil, err.Error())
 					if err != nil {
-						log.Printf("Error: occurred on '%s' in MQColumnsResponse() while constructing an AMQP error message response: '%s'", com.NodeName, err)
+						log.Printf("Error: occurred on '%s' in MQColumnsResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 					}
 					continue
 				}
 
 				// Return the columns list to the caller
-				err = com.MQColumnsResponse(msg, ch, com.NodeName, columns, "")
+				err = com.MQColumnsResponse(msg, ch, com.Conf.Live.Nodename, columns, "")
 				if err != nil {
-					log.Printf("Error: occurred on '%s' in MQColumnsResponse() while constructing the AMQP columns list response: '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on '%s' in MQColumnsResponse() while constructing the AMQP columns list response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 
@@ -164,14 +169,14 @@ func main() {
 				// Delete the database file on the node
 				err = removeLiveDB(req.DBOwner, req.DBName)
 				if err != nil {
-					err = com.MQDeleteResponse(msg, ch, com.NodeName, err.Error())
+					err = com.MQDeleteResponse(msg, ch, com.Conf.Live.Nodename, err.Error())
 					continue
 				}
 
 				// Return a success message (empty string in this case) to the caller
-				err = com.MQDeleteResponse(msg, ch, com.NodeName, "")
+				err = com.MQDeleteResponse(msg, ch, com.Conf.Live.Nodename, "")
 				if err != nil {
-					log.Printf("Error: occurred on '%s' in MQDeleteResponse() while constructing the AMQP delete database response: '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on '%s' in MQDeleteResponse() while constructing the AMQP delete database response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 
@@ -179,14 +184,14 @@ func main() {
 				// Execute a query on the database file
 				err = com.SQLiteExecQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
 				if err != nil {
-					err = com.MQExecResponse(msg, ch, com.NodeName, err.Error())
+					err = com.MQExecResponse(msg, ch, com.Conf.Live.Nodename, err.Error())
 					continue
 				}
 
 				// Return a success message (empty string in this case) to the caller
-				err = com.MQExecResponse(msg, ch, com.NodeName, "")
+				err = com.MQExecResponse(msg, ch, com.Conf.Live.Nodename, "")
 				if err != nil {
-					log.Printf("Error: occurred on '%s' in MQExecResponse() while constructing the AMQP execute query response: '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on '%s' in MQExecResponse() while constructing the AMQP execute query response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 
@@ -194,17 +199,17 @@ func main() {
 				var indexes []com.APIJSONIndex
 				indexes, err = com.SQLiteGetIndexesLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 				if err != nil {
-					err = com.MQIndexesResponse(msg, ch, com.NodeName, nil, err.Error())
+					err = com.MQIndexesResponse(msg, ch, com.Conf.Live.Nodename, nil, err.Error())
 					if err != nil {
-						log.Printf("Error: occurred on '%s' in MQIndexesResponse() while constructing an AMQP error message response: '%s'", com.NodeName, err)
+						log.Printf("Error: occurred on '%s' in MQIndexesResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 					}
 					continue
 				}
 
 				// Return the indexes list to the caller
-				err = com.MQIndexesResponse(msg, ch, com.NodeName, indexes, "")
+				err = com.MQIndexesResponse(msg, ch, com.Conf.Live.Nodename, indexes, "")
 				if err != nil {
-					log.Printf("Error: occurred on '%s' in MQIndexesResponse() while constructing the AMQP indexes list response: '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on '%s' in MQIndexesResponse() while constructing the AMQP indexes list response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 
@@ -212,17 +217,17 @@ func main() {
 				var rows com.SQLiteRecordSet
 				rows, err = com.SQLiteRunQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
 				if err != nil {
-					err = com.MQQueryResponse(msg, ch, com.NodeName, com.SQLiteRecordSet{}, err.Error())
+					err = com.MQQueryResponse(msg, ch, com.Conf.Live.Nodename, com.SQLiteRecordSet{}, err.Error())
 					if err != nil {
-						log.Printf("Error: occurred on '%s' in MQQueryResponse() while constructing an AMQP error message response: '%s'", com.NodeName, err)
+						log.Printf("Error: occurred on '%s' in MQQueryResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 					}
 					continue
 				}
 
 				// Return the query response to the caller
-				err = com.MQQueryResponse(msg, ch, com.NodeName, rows, "")
+				err = com.MQQueryResponse(msg, ch, com.Conf.Live.Nodename, rows, "")
 				if err != nil {
-					log.Printf("Error: occurred on '%s' in MQQueryResponse() while constructing the AMQP query response: '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on '%s' in MQQueryResponse() while constructing the AMQP query response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 
@@ -230,17 +235,17 @@ func main() {
 				var tables []string
 				tables, err = com.SQLiteGetTablesLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 				if err != nil {
-					err = com.MQTablesResponse(msg, ch, com.NodeName, nil, err.Error())
+					err = com.MQTablesResponse(msg, ch, com.Conf.Live.Nodename, nil, err.Error())
 					if err != nil {
-						log.Printf("Error: occurred on '%s' in MQTablesResponse() while constructing an AMQP error message response: '%s'", com.NodeName, err)
+						log.Printf("Error: occurred on '%s' in MQTablesResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 					}
 					continue
 				}
 
 				// Return the tables list to the caller
-				err = com.MQTablesResponse(msg, ch, com.NodeName, tables, "")
+				err = com.MQTablesResponse(msg, ch, com.Conf.Live.Nodename, tables, "")
 				if err != nil {
-					log.Printf("Error: occurred on '%s' in MQTablesResponse() while constructing the AMQP tables list response: '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on '%s' in MQTablesResponse() while constructing the AMQP tables list response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 
@@ -248,27 +253,27 @@ func main() {
 				var views []string
 				views, err = com.SQLiteGetViewsLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 				if err != nil {
-					err = com.MQViewsResponse(msg, ch, com.NodeName, nil, err.Error())
+					err = com.MQViewsResponse(msg, ch, com.Conf.Live.Nodename, nil, err.Error())
 					if err != nil {
-						log.Printf("Error: occurred on '%s' in MQViewsResponse() while constructing an AMQP error message response: '%s'", com.NodeName, err)
+						log.Printf("Error: occurred on '%s' in MQViewsResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 					}
 					continue
 				}
 
 				// Return the views list to the caller
-				err = com.MQViewsResponse(msg, ch, com.NodeName, views, "")
+				err = com.MQViewsResponse(msg, ch, com.Conf.Live.Nodename, views, "")
 				if err != nil {
-					log.Printf("Error: occurred on '%s' in MQViewsResponse() while constructing the AMQP views list response: '%s'", com.NodeName, err)
+					log.Printf("Error: occurred on '%s' in MQViewsResponse() while constructing the AMQP views list response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 
 			default:
-				log.Printf("'%s' received unknown '%s' request on this queue for %s/%s", com.NodeName, req.Operation, req.DBOwner, req.DBName)
+				log.Printf("'%s' received unknown '%s' request on this queue for %s/%s", com.Conf.Live.Nodename, req.Operation, req.DBOwner, req.DBName)
 			}
 		}
 	}()
 
-	log.Printf("Live server '%s' listening for requests", com.NodeName)
+	log.Printf("Live server '%s' listening for requests", com.Conf.Live.Nodename)
 
 	// Endless loop
 	var forever chan struct{}
@@ -311,7 +316,7 @@ func removeLiveDB(dbOwner, dbName string) (err error) {
 
 	if com.AmqpDebug {
 		log.Printf("Live node '%s': Database file '%s/%s' removed from filesystem path: '%s'",
-			com.NodeName, dbOwner, dbName, dbPath)
+			com.Conf.Live.Nodename, dbOwner, dbName, dbPath)
 	}
 	return
 }
