@@ -1965,7 +1965,6 @@ func GetAPIKeyUser(key string) (user string, err error) {
 			AND api.user_id = users.user_id`
 	err = pdb.QueryRow(dbQuery, key).Scan(&user)
 	if err != nil {
-		log.Printf("Looking up owner for API key '%s' failed: %v\n", SanitiseLogString(key), err)
 		return
 	}
 	return
