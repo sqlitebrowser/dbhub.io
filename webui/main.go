@@ -5192,7 +5192,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set the maximum accepted database size for uploading
 	oversizeAllowed := false
-	for _, user := range com.Conf.Environment.SizeOverrideUsers {
+	for _, user := range com.Conf.UserMgmt.SizeOverrideUsers {
 		if loggedInUser == user {
 			oversizeAllowed = true
 		}

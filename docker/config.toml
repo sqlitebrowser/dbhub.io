@@ -1,3 +1,13 @@
+[api]
+base_dir = "/dbhub.io"
+bind_address = ":9444"
+server_name = "docker-dev.dbhub.io:9444"
+certificate = "/dbhub.io/docker/certs/docker-dev.dbhub.io.cert.pem"
+certificate_key = "/dbhub.io/docker/certs/docker-dev.dbhub.io.key.pem"
+request_log = "/var/log/dbhub/api_request.log"
+session_store_password = "example2"
+website_name = "DBHub.io"
+
 [db4s]
 server = "docker-dev.dbhub.io"
 port = 5550
@@ -11,7 +21,6 @@ directory = "/home/dbhub/.dbhub/disk_cache"
 [environment]
 environment = "test"
 user_override = "default"
-size_override_users = ["default"]
 
 [event]
 delay = 2
@@ -57,6 +66,10 @@ cert_days_valid = 365
 intermediate_cert = "/dbhub.io/docker/certs/intermediate-docker.cert.pem"
 intermediate_key = "/dbhub.io/docker/certs/intermediate-docker.key.pem"
 
+[usermgmt]
+banned_users = [""]
+size_override_users = ["default"]
+
 [web]
 base_dir = "/dbhub.io"
 bind_address = ":9443"
@@ -65,13 +78,3 @@ certificate = "/dbhub.io/docker/certs/docker-dev.dbhub.io.cert.pem"
 certificate_key = "/dbhub.io/docker/certs/docker-dev.dbhub.io.key.pem"
 request_log = "/var/log/dbhub/request.log"
 session_store_password = "example"
-
-[api]
-base_dir = "/dbhub.io"
-bind_address = ":9444"
-server_name = "docker-dev.dbhub.io:9444"
-certificate = "/dbhub.io/docker/certs/docker-dev.dbhub.io.cert.pem"
-certificate_key = "/dbhub.io/docker/certs/docker-dev.dbhub.io.key.pem"
-request_log = "/var/log/dbhub/api_request.log"
-session_store_password = "example2"
-website_name = "DBHub.io"

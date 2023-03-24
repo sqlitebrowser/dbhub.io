@@ -17,6 +17,7 @@ type TomlConfig struct {
 	MQ          MQInfo
 	Pg          PGInfo
 	Sign        SigningInfo
+	UserMgmt    UserMgmtInfo
 	Web         WebInfo
 }
 
@@ -55,9 +56,8 @@ type DiskCacheInfo struct {
 // EnvInfo holds information about the purpose of the running server.  eg "is this a production, docker,
 // or development" instance?
 type EnvInfo struct {
-	Environment       string
-	UserOverride      string   `toml:"user_override"`
-	SizeOverrideUsers []string `toml:"size_override_users"` // List of users allowed to override the database upload size limits
+	Environment  string
+	UserOverride string `toml:"user_override"`
 }
 
 // EventProcessingInfo hold configuration for the event processing loop
@@ -120,6 +120,12 @@ type SigningInfo struct {
 	Enabled          bool   `toml:"enabled"`
 	IntermediateCert string `toml:"intermediate_cert"`
 	IntermediateKey  string `toml:"intermediate_key"`
+}
+
+// UserMgmtInfo contains the various settings for specific users, or groups of users
+type UserMgmtInfo struct {
+	BannedUsers       []string `toml:"banned_users"`        // List of users banned from the service
+	SizeOverrideUsers []string `toml:"size_override_users"` // List of users allowed to override the database upload size limits
 }
 
 // WebInfo contains configuration info for the webUI daemon

@@ -200,6 +200,15 @@ func extractUserAndServer(w http.ResponseWriter, r *http.Request) (userAcc strin
 		return
 	}
 
+	// If the user has been banned, reject their authentication
+	for _, u := range com.Conf.UserMgmt.BannedUsers {
+		if u == userAcc {
+			log.Printf("Banned user '%s' attempted to connect using DB4S", userAcc)
+			err = errors.New("User has been banned.  Get in contact with us if you want the ban removed.")
+			return
+		}
+	}
+
 	// Everything is ok, so return
 	return
 }
@@ -785,7 +794,7 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// Set the maximum accepted database size for uploading
 	oversizeAllowed := false
-	for _, user := range com.Conf.Environment.SizeOverrideUsers {
+	for _, user := range com.Conf.UserMgmt.SizeOverrideUsers {
 		if userAcc == user {
 			oversizeAllowed = true
 		}
