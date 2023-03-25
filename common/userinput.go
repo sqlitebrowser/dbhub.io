@@ -28,7 +28,13 @@ func CheckUnicode(rawInput string) (str string, err error) {
 	var decoded []byte
 	decoded, err = base64.StdEncoding.DecodeString(rawInput)
 	if err != nil {
-		return
+		// When base64 decoding fails, automatically try again with base64url format instead
+		var err2 error
+		decoded, err2 = base64.URLEncoding.DecodeString(rawInput)
+		if err2 != nil {
+			// We use err2, so the original error message is returned if the 2nd attempt fails
+			return
+		}
 	}
 
 	// Ensure the decoded string is valid UTF-8
