@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# TODO: Consider adding the same extensions to the SQLite compile here, that we use
+#       in our macOS, AppImage (etc) builds.  Then add the function names to the allowed
+#       list for the API Query() function
+
 # Useful variables
 DEST=${PWD}/local
 export PKG_CONFIG_PATH=${DEST}/lib/pkgconfig
@@ -22,18 +26,22 @@ if [ ! -e "${DEST}/lib/libsqlite3.so" ]; then
   if [ ! -d "other/cache" ]; then
     mkdir -p other/cache
   fi
-  cd other/cache
+  cd other/cache  || exit 1
   if [ ! -f sqlite.tar.gz ]; then
     echo "Downloading SQLite source code"
-    curl -sL -o sqlite.tar.gz https://sqlite.org/2023/sqlite-autoconf-3410100.tar.gz
+    TARBALL=$(curl -s https://sqlite.org/download.html | awk '/<!--/,/-->/ {print}' | grep 'sqlite-autoconf' | cut -d ',' -f 3)
+    SHA3=$(curl -s https://sqlite.org/download.html | awk '/<!--/,/-->/ {print}' | grep 'sqlite-autoconf' | cut -d ',' -f 5)
+    curl -LsS -o sqlite.tar.gz https://sqlite.org/${TARBALL}
+    VERIFY=$(openssl dgst -sha3-256 sqlite.tar.gz | cut -d ' ' -f 2)
+    if [ "$SHA3" != "$VERIFY" ]; then exit 2 ; fi
   fi
   if [ ! -f sqlite.tar.gz ]; then
     echo "Downloading the SQLite source code did not work"
-    exit 1
+    exit 3
   fi
   echo "Compiling local SQLite"
   tar xfz sqlite.tar.gz
-  cd sqlite-autoconf-*
+  cd sqlite-autoconf-* || exit 4
   ./configure --prefix=${DEST} --enable-dynamic-extensions=no
   make -j9
   make install
@@ -50,19 +58,19 @@ yarn run webpack -c webui/webpack.config.js
 # Builds the Go binaries
 if [ -d "${GOBIN}" ]; then
   echo "Compiling DBHub.io API executable"
-  cd api
+  cd api || exit 5
   go install .
   cd ..
   echo "Compiling DBHub.io DB4S end point executable"
-  cd db4s
+  cd db4s || exit 6
   go install .
   cd ..
   echo "Compiling DBHub.io Live executable"
-  cd live
+  cd live || exit 7
   go install .
   cd ..
   echo "Compiling DBHub.io Web User Interface executable"
-  cd webui
+  cd webui || exit 8
   go install .
   cd ..
 fi
