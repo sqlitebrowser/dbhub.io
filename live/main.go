@@ -180,18 +180,19 @@ func main() {
 				}
 				continue
 
-			case "exec":
-				// Execute a query on the database file
-				err = com.SQLiteExecQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
+			case "execute":
+				// Execute a SQL statement on the database file
+				var rowsChanged int
+				rowsChanged, err = com.SQLiteExecuteQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
 				if err != nil {
-					err = com.MQExecResponse(msg, ch, com.Conf.Live.Nodename, err.Error())
+					err = com.MQExecuteResponse(msg, ch, com.Conf.Live.Nodename, 0, err.Error())
 					continue
 				}
 
-				// Return a success message (empty string in this case) to the caller
-				err = com.MQExecResponse(msg, ch, com.Conf.Live.Nodename, "")
+				// Return a success message to the caller
+				err = com.MQExecuteResponse(msg, ch, com.Conf.Live.Nodename, rowsChanged, "")
 				if err != nil {
-					log.Printf("Error: occurred on '%s' in MQExecResponse() while constructing the AMQP execute query response: '%s'", com.Conf.Live.Nodename, err)
+					log.Printf("Error: occurred on '%s' in MQExecuteResponse() while constructing the AMQP execute query response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 

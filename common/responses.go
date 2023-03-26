@@ -36,6 +36,14 @@ func BranchListResponse(dbOwner, dbFolder, dbName string) (list BranchListRespon
 	return
 }
 
+// ExecuteResponseContainer is used by our AMQP backend, to return information in response to an
+// Execute() call on a live database.  It holds the success/failure status of the remote call,
+// and also the number of rows changed by the Execute() call (if it succeeded)
+type ExecuteResponseContainer struct {
+	RowsChanged int    `json:"rows_changed"`
+	Status      string `json:"status"`
+}
+
 // MetadataResponseContainer holds the response to a client request for database metadata. It's a temporary structure,
 // mainly so the JSON created for it is consistent between our various daemons
 type MetadataResponseContainer struct {

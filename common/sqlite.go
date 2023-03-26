@@ -814,8 +814,8 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 	return resultSet, nil
 }
 
-// SQLiteExecQueryLive is used by our AMQP backend infrastructure to execute a user provided SQLite query
-func SQLiteExecQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (err error) {
+// SQLiteExecuteQueryLive is used by our AMQP backend infrastructure to execute a user provided SQLite statement
+func SQLiteExecuteQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (rowsChanged int, err error) {
 	// Open the Live database on the local node
 	var sdb *sqlite.Conn
 	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
@@ -838,7 +838,7 @@ func SQLiteExecQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (
 	defer stmt.Finalize()
 
 	// Execute the statement
-	err = stmt.Exec()
+	rowsChanged, err = stmt.ExecDml()
 	if err != nil {
 		log.Printf("Error when executing query by '%s' for LIVE database (%s/%s): '%s'\n",
 			SanitiseLogString(loggedInUser), SanitiseLogString(dbOwner), SanitiseLogString(dbName),

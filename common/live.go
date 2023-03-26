@@ -33,18 +33,25 @@ type LiveDBColumnsResponse struct {
 	Error   string          `json:"error"`
 }
 
+// LiveDBErrorResponse holds just the node name and any error message used in responses by our AMQP backend
+// It's useful for error message, and other responses where no other fields are needed
+type LiveDBErrorResponse struct {
+	Node  string `json:"node"`
+	Error string `json:"error"`
+}
+
+// LiveDBExecuteResponse returns the number of rows changed by an Execute() call
+type LiveDBExecuteResponse struct {
+	Node        string `json:"node"`
+	RowsChanged int    `json:"rows_changed"`
+	Error       string `json:"error"`
+}
+
 // LiveDBIndexesResponse holds the fields used for receiving index list responses from our AMQP backend
 type LiveDBIndexesResponse struct {
 	Node    string         `json:"node"`
 	Indexes []APIJSONIndex `json:"indexes"`
 	Error   string         `json:"error"`
-}
-
-// LiveDBErrorResponse holds just the node name and any error message used in responsed by our AMQP backend
-// It's useful for error message, and other responses where no other fields are needed
-type LiveDBErrorResponse struct {
-	Node  string `json:"node"`
-	Error string `json:"error"`
 }
 
 // LiveDBQueryResponse holds the fields used for receiving query responses from our AMQP backend
@@ -358,12 +365,13 @@ func MQDeleteResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string,
 	return
 }
 
-// MQExecResponse sends a message in response to an AMQP database query exec request
-func MQExecResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, errMsg string) (err error) {
+// MQExecuteResponse sends a message in response to an AMQP database execute request
+func MQExecuteResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, rowsChanged int, errMsg string) (err error) {
 	// Construct the response
-	resp := LiveDBErrorResponse{ // Yep, we're reusing this super basic error response instead of creating a new one
-		Node:  nodeName,
-		Error: errMsg,
+	resp := LiveDBExecuteResponse{
+		Node:        nodeName,
+		RowsChanged: rowsChanged,
+		Error:       errMsg,
 	}
 	var z []byte
 	z, err = json.Marshal(resp)
@@ -386,7 +394,7 @@ func MQExecResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, e
 	}
 	msg.Ack(false)
 	if AmqpDebug {
-		log.Printf("[EXEC] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
+		log.Printf("[EXECUTE] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
 	}
 	return
 }

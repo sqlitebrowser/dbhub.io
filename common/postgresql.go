@@ -836,8 +836,8 @@ func DeleteComment(dbOwner, dbFolder, dbName string, discID, comID int) error {
 
 // DeleteDatabase deletes a database from PostgreSQL
 func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
-	// TODO: At some point we'll need to figure out a garbage collection approach to remove databases from Minio which
-	// TODO  are no longer pointed to by anything
+	// TODO: At some point we'll need to figure out a garbage collection approach to remove standard databases
+	//       from Minio which are no longer pointed to by anything
 
 	// Is this a live database
 	isLive, _, err := CheckDBLive(dbOwner, dbFolder, dbName)

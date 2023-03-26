@@ -58,7 +58,7 @@
         <div class="col-md-12"><a href="https://dbhub.io"><h1>DBHub API (in early development)</h1></a></div>
     </div>
     <div class="row">
-        <div class="col-md-12 version">API version 0.2, last modified 2023-03-22</div>
+        <div class="col-md-12 version">API version 0.3, last modified 2023-03-26</div>
     </div>
     <div class="panel panel-primary" id="note">
         <div class="panel-heading heading">Note</div>
@@ -98,7 +98,7 @@
             <li class="list-group-item"><a href="#delete" class="apiheading">Delete</a> - Deletes a database from the requesting users account</li>
             <li class="list-group-item"><a href="#diff" class="apiheading">Diff</a> - Generates a diff between two databases or two versions of a database</li>
             <li class="list-group-item"><a href="#download" class="apiheading">Download</a> - Returns the requested SQLite database file</li>
-            <li class="list-group-item" style="color: #a01e1a"><a href="#execute" class="apiheading" style="color: #a01e1a">Execute</a> - Executes a SQLite statement on a LIVE database <span style="font-style: italic">(new in version 0.2)</span> - <span style="font-weight: bold">EXPERIMENTAL ONLY</span></li>
+            <li class="list-group-item" style="color: #a01e1a"><a href="#execute" class="apiheading" style="color: #a01e1a">Execute</a> - Executes a SQLite statement on a LIVE database <span style="font-style: italic">(new in version 0.2, updated in version 0.3)</span> - <span style="font-weight: bold">EXPERIMENTAL ONLY</span></li>
             <li class="list-group-item"><a href="#indexes" class="apiheading">Indexes</a> - Returns the details of all indexes in a SQLite database</li>
             <li class="list-group-item"><a href="#metadata" class="apiheading">Metadata</a> - Returns the commit, branch, release, tag and web page information for a database</li>
             <li class="list-group-item"><a href="#query" class="apiheading">Query</a> - Runs a SQLite SELECT query on a database</li>
@@ -568,11 +568,11 @@
                 <div class="col-md-2">Required</div>
                 <div class="col-md-7">Your API key.  These can be generated in your <a href="https://[[ .ServerName ]]/pref">Settings</a> page, when logged in</div>
             </div>
-            <div class="row indent">
-                <div class="col-md-2 paramname" style="color: #a01e1a">live</div>
-                <div class="col-md-1 type" style="color: #a01e1a">boolean</div>
-                <div class="col-md-2" style="color: #a01e1a">Optional</div>
-                <div class="col-md-7" style="color: #a01e1a"><div style="font-style: italic; font-weight: bold">NEW in API version 0.2</div><div>A boolean string ("true", "false") to switch between returning the list of standard databases, and the list of live databases</div><div>NOTE: This "live" parameter is experimental, and may change</div></div>
+            <div class="row indent" style="color: #a01e1a">
+                <div class="col-md-2 paramname">live</div>
+                <div class="col-md-1 type">boolean</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7"><div style="font-style: italic; font-weight: bold">NEW in API version 0.2</div><div>A boolean string ("true", "false") to switch between returning the list of standard databases, and the list of live databases</div><div>NOTE: This "live" parameter is experimental, and may change</div></div>
             </div>
             <div class="row">
                 <div class="col-md-2 heading pad">Return values (JSON)</div>
@@ -813,7 +813,7 @@
 
     <!-- Execute -->
     <div class="panel panel-default" id="execute">
-        <div class="panel-heading heading" style="color: #a01e1a;"><span style="font-size: x-large;">Execute</span> &nbsp; (new in version 0.2)</div>
+        <div class="panel-heading heading" style="color: #a01e1a;"><span style="font-size: x-large;">Execute</span> &nbsp; (new in version 0.2, updated in version 0.3)</div>
         <div class="panel-body">
             <div class="row">
                 <div class="col-md-11 heading" style="color: #a01e1a; padding-bottom: 10px;">This function is EXPERIMENTAL, and may change</div>
@@ -861,6 +861,11 @@
                 <div class="col-md-1">Type</div>
                 <div class="col-md-7">Description</div>
             </div>
+            <div class="row indent" style="color: #a01e1a">
+                <div class="col-md-4 paramname">rows_changed</div>
+                <div class="col-md-1 type">integer</div>
+                <div class="col-md-7"><div style="font-style: italic; font-weight: bold">NEW in API version 0.3</div><div>Contain the number of rows changed by the Execute() call</div></div>
+            </div>
             <div class="row indent">
                 <div class="col-md-4 paramname">status</div>
                 <div class="col-md-1 type">string</div>
@@ -880,10 +885,12 @@ WHERE id = 1</pre>
     https://api.dbhub.io/v1/execute</pre>
                     Output:
                     <pre>{
+  "rows_changed": 1,
   "status": "OK"
 }</pre>
                     <span style="color: darkred; font-size: larger; font-weight: bolder;">Note</span> - This is a newly added EXPERIMENTAL function, that only works with
-                    LIVE databases.  To try it out, <a href="https://dbhub.io/upload/">Upload</a> a new database and
+                    LIVE databases.  To try it out <a href="#upload">Upload</a> a new "LIVE" database using this API,
+                    or use the <a href="https://dbhub.io/upload/">Upload</a> page on the main DBHub.io website and
                     select the LIVE option under "Advanced".
                 </div>
             </div>
@@ -1625,11 +1632,11 @@ ORDER BY table1.id;</pre>
                 <div class="col-md-2">Optional</div>
                 <div class="col-md-7">The sha256 (a unique identifier) of the licence for the database (up to this commit)</div>
             </div>
-            <div class="row indent">
-                <div class="col-md-2 paramname" style="color: #a01e1a">live</div>
-                <div class="col-md-1 type" style="color: #a01e1a">boolean</div>
-                <div class="col-md-2" style="color: #a01e1a">Optional</div>
-                <div class="col-md-7" style="color: #a01e1a"><div style="font-style: italic; font-weight: bold">NEW in API version 0.2</div><div>A boolean string ("true", "false") indicating whether this upload is a live database</div><div>NOTE: This "live" parameter is experimental, and may change</div></div>
+            <div class="row indent" style="color: #a01e1a">
+                <div class="col-md-2 paramname">live</div>
+                <div class="col-md-1 type">boolean</div>
+                <div class="col-md-2">Optional</div>
+                <div class="col-md-7"><div style="font-style: italic; font-weight: bold">NEW in API version 0.2</div><div>A boolean string ("true", "false") indicating whether this upload is a live database</div><div>NOTE: This "live" parameter is experimental, and may change</div></div>
             </div>
             <div class="row indent">
                 <div class="col-md-2 paramname">otherparents</div>

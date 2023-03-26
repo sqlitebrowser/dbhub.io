@@ -372,17 +372,18 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Delete the database from Minio too
-	bucket := fmt.Sprintf("live-%s", dbOwner)
-	id := dbName
-	err = com.MinioDeleteDatabase("API server", dbOwner, dbName, bucket, id)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// For a live database, tell our AMQP backend to delete the database file
+	// For a live database, delete it from both Minio and our AMQP backend
 	if isLive {
+		// Delete the database from Minio
+		bucket := fmt.Sprintf("live-%s", dbOwner)
+		id := dbName
+		err = com.MinioDeleteDatabase("API server", dbOwner, dbName, bucket, id)
+		if err != nil {
+			jsonErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Delete the database from our AMQP backend
 		var rawResponse []byte
 		rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "delete", loggedInUser, dbOwner, dbName, "")
 		if err != nil {
@@ -668,9 +669,9 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reject attempts to run Exec() on non-live databases
+	// Reject attempts to run Execute() on non-live databases
 	if !isLive {
-		jsonErr(w, "Exec() only runs on Live databases, which this isn't.", http.StatusInternalServerError)
+		jsonErr(w, "Execute() only runs on Live databases.  This is not a live database.", http.StatusInternalServerError)
 		return
 	}
 
@@ -687,28 +688,31 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Send the query execution request to our AMQP backend
 	var rawResponse []byte
-	rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "exec", loggedInUser, dbOwner, dbName, query)
+	rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "execute", loggedInUser, dbOwner, dbName, query)
 	if err != nil {
 		return
 	}
 
 	// Decode the response
-	var resp com.LiveDBErrorResponse
+	var resp com.LiveDBExecuteResponse
 	err = json.Unmarshal(rawResponse, &resp)
 	if err != nil {
 		log.Println(err)
-		return
-	}
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Return a "success" message
-	z := com.StatusResponseContainer{Status: "OK"}
+	// If the Execute() failed, then provide the error message to the user
+	if resp.Error != "" {
+		jsonErr(w, resp.Error, http.StatusBadRequest)
+		return
+	}
+
+	// The Execute() succeeded, so pass along the # of rows changed
+	z := com.ExecuteResponseContainer{RowsChanged: resp.RowsChanged, Status: "OK"}
 	jsonData, err := json.MarshalIndent(z, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in execHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in executeHandler(): %v\n", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
