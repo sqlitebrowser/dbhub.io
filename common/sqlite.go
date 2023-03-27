@@ -389,7 +389,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		},
 		{
 			name: sqlite.LimitExprDepth,
-			val:  10,
+			val:  20,
 		},
 		{
 			name: sqlite.LimitCompoundSelect,
@@ -413,7 +413,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		},
 		{
 			name: sqlite.LimitVariableNumber,
-			val:  10,
+			val:  15,
 		},
 		{
 			name: sqlite.LimitTriggerLength,
@@ -561,7 +561,7 @@ func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, 
 		},
 		{
 			name: sqlite.LimitExprDepth,
-			val:  10,
+			val:  20,
 		},
 		{
 			name: sqlite.LimitCompoundSelect,
@@ -585,7 +585,7 @@ func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, 
 		},
 		{
 			name: sqlite.LimitVariableNumber,
-			val:  10,
+			val:  15,
 		},
 		{
 			name: sqlite.LimitTriggerLength,
