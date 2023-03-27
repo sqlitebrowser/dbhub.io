@@ -206,9 +206,9 @@ func checkAuth(w http.ResponseWriter, r *http.Request) (loggedInUser string, err
 }
 
 // collectInfo is an internal function which:
-//   1. Authenticates incoming requests
-//   2. Extracts the database owner, name, and commit ID from the request
-//   3. Checks permissions
+//  1. Authenticates incoming requests
+//  2. Extracts the database owner, name, and commit ID from the request
+//  3. Checks permissions
 func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner, dbName, commitID string, httpStatus int, err error) {
 	// Authenticate the request
 	loggedInUser, err = checkAuth(w, r)
@@ -241,9 +241,10 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner,
 }
 
 // collectInfoAndOpen is an internal function which:
-//   1. Calls collectInfo() to authenticate the request + collect the user/database/commit/etc details
-//   2. Fetches the database from Minio
-//   3. Opens the database, returning the connection handle
+//  1. Calls collectInfo() to authenticate the request + collect the user/database/commit/etc details
+//  2. Fetches the database from Minio
+//  3. Opens the database, returning the connection handle
+//
 // This function exists purely because this code is common to most of the handlers
 func collectInfoAndOpen(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Conn, httpStatus int, err error) {
 	// Authenticate the request and collect details for the requested database

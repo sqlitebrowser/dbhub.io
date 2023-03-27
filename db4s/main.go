@@ -779,18 +779,17 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 
 // postHandler receives uploaded files from DB4S. To simulate a DB4S upload, the following curl command can be used:
 //
-//   $ curl -kE ~/my.cert.pem -D headers.out -F file=@someupload.sqlite -F "branch=main" -F "commitmsg=stuff" \
-//       -F "sourceurl=https://example.org" -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" \
-//       https://db4s.dbhub.io:5550/someuser
+//	$ curl -kE ~/my.cert.pem -D headers.out -F file=@someupload.sqlite -F "branch=main" -F "commitmsg=stuff" \
+//	    -F "sourceurl=https://example.org" -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" \
+//	    https://db4s.dbhub.io:5550/someuser
 //
 // Subsequent uploads to the same database name will need to include an additional "commit" field, with the value of
 // the commit ID last known to DB4S.  An example curl command demonstrating this:
 //
-//   $ curl -kE ~/my.cert.pem -D headers.out -F file=@someupload.sqlite -F "branch=main" -F "commitmsg=stuff" \
-//       -F "sourceurl=https://example.org" -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" \
-//       -F "commit=51d494f2c5eb6734ddaa204eccb9597b426091c79c951924ac83c72038f22b55" \
-//       https://db4s.dbhub.io:5550/someuser
-//
+//	$ curl -kE ~/my.cert.pem -D headers.out -F file=@someupload.sqlite -F "branch=main" -F "commitmsg=stuff" \
+//	    -F "sourceurl=https://example.org" -F "lastmodified=2017-01-02T03:04:05Z"  -F "licence=CC0"  -F "public=true" \
+//	    -F "commit=51d494f2c5eb6734ddaa204eccb9597b426091c79c951924ac83c72038f22b55" \
+//	    https://db4s.dbhub.io:5550/someuser
 func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// Set the maximum accepted database size for uploading
 	oversizeAllowed := false
@@ -864,8 +863,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 
 // Returns a file requested by the client.  An example curl command to simulate the request is:
 //
-//   $ curl -OL -kE ~/my.cert.pem -D headers.out -G https://db4s.dbhub.io:5550/someuser/somedb.sqlite
-//
+//	$ curl -OL -kE ~/my.cert.pem -D headers.out -G https://db4s.dbhub.io:5550/someuser/somedb.sqlite
 func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, userAcc string, dbOwner string,
 	dbFolder string, dbName string, branchName string, commit string) (err error) {
 	pageName += ":retrieveDatabase()"
@@ -970,8 +968,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 // Returns the list of databases available to the user.  To simulate, the following curl command can be used:
 //
-//   $ curl -kE ~/my.cert.pem -D headers.out -G https://db4s.dbhub.io:5550/someuser
-//
+//	$ curl -kE ~/my.cert.pem -D headers.out -G https://db4s.dbhub.io:5550/someuser
 func userDatabaseList(userAcc string, user string) (dbList []byte, err error) {
 
 	// Structure to hold the results, to apply JSON marshalling to

@@ -907,7 +907,7 @@ func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder,
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, dbName))
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", stat.Size))
 	w.Header().Set("Content-Type", "application/x-sqlite3")
-	bytesWritten, err = io.Copy(w, userDB)
+	_, err = io.Copy(w, userDB)
 	if err != nil {
 		log.Printf("Error returning DB file: %v\n", err)
 		return

@@ -1184,9 +1184,10 @@ func DisconnectPostgreSQL() {
 // If a non-0 discID value is passed, it will only return the details for that specific discussion/MR.  Otherwise it
 // will return a list of all discussions or MRs for a given database
 // Note - This returns a slice of DiscussionEntry, instead of a map.  We use a slice because it lets us use an ORDER
-//        BY clause in the SQL and preserve the returned order (maps don't preserve order).  If in future we no longer
-//        need to preserve the order, it might be useful to switch to using a map instead since they're often simpler
-//        to work with.
+//
+//	BY clause in the SQL and preserve the returned order (maps don't preserve order).  If in future we no longer
+//	need to preserve the order, it might be useful to switch to using a map instead since they're often simpler
+//	to work with.
 func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, discID int) (list []DiscussionEntry, err error) {
 	dbQuery := `
 		WITH u AS (
@@ -1288,8 +1289,9 @@ func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, disc
 // If a non-0 comID value is passed, it will only return the details for that specific comment in the discussion.
 // Otherwise it will return a list of all comments for a given discussion
 // Note - This returns a slice instead of a map.  We use a slice because it lets us use an ORDER BY clause in the SQL
-//        and preserve the returned order (maps don't preserve order).  If in future we no longer need to preserve the
-//        order, it might be useful to switch to using a map instead since they're often simpler to work with.
+//
+//	and preserve the returned order (maps don't preserve order).  If in future we no longer need to preserve the
+//	order, it might be useful to switch to using a map instead since they're often simpler to work with.
 func DiscussionComments(dbOwner, dbFolder, dbName string, discID, comID int) (list []DiscussionCommentEntry, err error) {
 	dbQuery := `
 		WITH u AS (

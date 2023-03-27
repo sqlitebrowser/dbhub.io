@@ -430,6 +430,43 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		}
 	}
 
+	// Turn on cell size checking
+	err = sdb.Exec("PRAGMA cell_size_check=ON")
+	if err != nil {
+		log.Printf("Error when running 'PRAGMA cell_size_check=on' on the LIVE database: %s", err)
+		return
+	}
+
+	// Turn off mmap
+	var ok bool
+	var results []string
+	err = sdb.Select("PRAGMA mmap_size=0", func(s *sqlite.Stmt) error {
+		// Retrieve a row from the pragma result
+		var a string
+		if err = s.Scan(&a); err != nil {
+			// Error when reading the row, so return failure
+			ok = false
+			return err
+		}
+
+		// If the returned row was the value 0, then we regard the change as successfully applied.  Any other return
+		// value is a failure
+		switch a {
+		case "0":
+			ok = true
+		default:
+			ok = false
+			results = append(results, a)
+		}
+		return nil
+	})
+
+	// Check for a failure
+	if !ok || err != nil {
+		log.Printf("Error when disabling mmap on the LIVE database: %s\n", err)
+		return
+	}
+
 	// Set a SQLite authorizer which only allows SELECT statements to run
 	err = sdb.SetAuthorizer(AuthorizerSelect, "SELECT authorizer")
 	if err != nil {
@@ -459,6 +496,8 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 // OpenSQLiteDatabaseLive is similar to OpenSQLiteDatabase(), but opens the a live SQLite database and implements
 // the recommended defensive precautions for potentially malicious user provided SQL
 // queries: https://www.sqlite.org/security.html
+// TODO: De-duplicate/refactor the common code in this function and OpenSQLiteDatabaseDefensive() above.  They're
+//       mostly the same
 func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, err error) {
 	dbPath := filepath.Join(baseDir, dbOwner, dbName, "live.sqlite")
 	if _, err = os.Stat(dbPath); err != nil {
@@ -561,9 +600,6 @@ func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, 
 		}
 	}
 
-	// FIXME: There's new info in the SQLite "security" page, with some new things to potentially do: https://www.sqlite.org/security.html
-	//          * Disable triggers
-	// FIXME: Whatever improvements are made here, should probably also go into OpenSQLiteDatabaseDefensive()
 	// Turn on cell size checking
 	err = sdb.Exec("PRAGMA cell_size_check=ON")
 	if err != nil {
@@ -812,6 +848,93 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 
 	// Return the results
 	return resultSet, nil
+}
+
+// SQLiteBackupLive is used by our AMQP backend nodes to refresh a live SQLite database back into Minio
+func SQLiteBackupLive(baseDir, dbOwner, dbName string) (err error) {
+	dbPath := filepath.Join(baseDir, dbOwner, dbName, "live.sqlite")
+	if _, err = os.Stat(dbPath); err != nil {
+		return
+	}
+
+	// Open the database on the local node
+	// NOTE - OpenFullMutex seems like the right thing for ensuring multiple connections to a database file don't
+	// screw things up, but it wouldn't be a bad idea to keep it in mind if weirdness shows up
+	var sdb *sqlite.Conn
+	sdb, err = sqlite.Open(dbPath, sqlite.OpenReadWrite|sqlite.OpenFullMutex)
+	if err != nil {
+		log.Printf("Couldn't open LIVE database: %s", err)
+		return
+	}
+	if err = sdb.EnableExtendedResultCodes(true); err != nil {
+		log.Printf("Couldn't enable extended result codes for LIVE database query! Error: %v\n", err.Error())
+		return
+	}
+	defer sdb.Close()
+
+	// Generate unique temporary file name
+	var f *os.File
+	f, err = os.CreateTemp("", "sqliteBackup*.sqlite")
+	if err != nil {
+		return
+	}
+	tmpName := f.Name()
+	err = f.Close()
+	if err != nil {
+		return
+	}
+
+	// Generate the backup file
+	err = sdb.Exec(fmt.Sprintf("VACUUM INTO '%s'", tmpName))
+	if err != nil {
+		return
+	}
+
+	// Ensure the backup file was generated, and isn't 0 bytes (just in case)
+	var fileInfo os.FileInfo
+	fileInfo, err = os.Stat(tmpName)
+	if err != nil {
+		return
+	}
+	if fileInfo.Size() == 0 {
+		err = errors.New("Generating backup live SQLite database failed.  File size is 0")
+		return
+	}
+
+	// Sanity check the backup file
+	var sdb2 *sqlite.Conn
+	sdb2, err = sqlite.Open(tmpName, sqlite.OpenReadOnly)
+	if err != nil {
+		log.Printf("Couldn't open live database backup to sanity check it: %s", err)
+		return
+	}
+	if err = sdb2.EnableExtendedResultCodes(true); err != nil {
+		log.Printf("Couldn't enable extended result codes for live database backup integrity check! Error: %v", err.Error())
+		sdb2.Close()
+		return
+	}
+	// Pretty sure the '1' parameter below isn't needed.  The SQLite docs mention "O(N)" (etc.) which is just Big O
+	// notation, rather than trying to communicate a need for a number in the parameters
+	err = sdb2.IntegrityCheck("main", 1, true )
+	if err != nil {
+		sdb2.Close()
+		return
+	}
+	sdb2.Close()
+
+	// Copy the local backup file into Minio
+	var z *os.File
+	z, err = os.Open(tmpName)
+	err = LiveStoreDatabaseMinio(z, dbOwner, dbName, fileInfo.Size())
+	if err != nil {
+		z.Close()
+		return
+	}
+	z.Close()
+
+	// Delete the backup file from local disk
+	os.Remove(tmpName)
+	return
 }
 
 // SQLiteExecuteQueryLive is used by our AMQP backend infrastructure to execute a user provided SQLite statement

@@ -134,7 +134,7 @@ func main() {
 			err = json.Unmarshal(msg.Body, &req)
 			if err != nil {
 				log.Println(err)
-				err = com.MQErrorResponse(msg, ch, com.Conf.Live.Nodename, err.Error())
+				err = com.MQErrorResponse("NOT-YET-DETERMINED", msg, ch, com.Conf.Live.Nodename, err.Error())
 				if err != nil {
 					log.Printf("Error: occurred on '%s' the main live node switch{} while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 				}
@@ -147,6 +147,23 @@ func main() {
 
 			// Handle each operation
 			switch req.Operation {
+			case "backup":
+				err = com.SQLiteBackupLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName)
+				if err != nil {
+					err = com.MQErrorResponse("BACKUP", msg, ch, com.Conf.Live.Nodename, err.Error())
+					if err != nil {
+						log.Printf("Error: occurred on '%s' in MQErrorResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
+					}
+					continue
+				}
+
+				// Return a success message to the caller
+				err = com.MQErrorResponse("BACKUP", msg, ch, com.Conf.Live.Nodename, "") // Use an empty error message to indicate success
+				if err != nil {
+					log.Printf("Error: occurred on '%s' in MQErrorResponse() while constructing the AMQP backup response: '%s'", com.Conf.Live.Nodename, err)
+				}
+				continue
+
 			case "columns":
 				var columns []sqlite.Column
 				columns, err = com.SQLiteGetColumnsLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.Query) // We use the req.Query field to pass the table name

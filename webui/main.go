@@ -5401,7 +5401,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Write the incoming database to a temporary file on disk, and sanity check it
 	var tempDB *os.File
-	numBytes, tempDB, sha, _, err = com.WriteDBtoDisk(loggedInUser, dbOwner, dbFolder, dbName, tempFile)
+	numBytes, tempDB, _, _, err = com.WriteDBtoDisk(loggedInUser, dbOwner, dbFolder, dbName, tempFile)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return

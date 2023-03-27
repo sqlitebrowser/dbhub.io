@@ -155,7 +155,7 @@ func RetrieveDatabaseFile(bucket, id string) (newDB string, err error) {
 	if _, err = os.Stat(newDB); os.IsNotExist(err) {
 		// * The database doesn't yet exist locally, so fetch it from Minio
 
-		// Check if a the database file is already being fetched from Minio by a different caller
+		// Check if the database file is already being fetched from Minio by a different caller
 		//  eg check if there is a "<filename>.new" file already in the disk cache
 		if _, err = os.Stat(newDB + ".new"); os.IsNotExist(err) {
 			// * The database isn't already being fetched, so we're ok to proceed
@@ -168,9 +168,7 @@ func RetrieveDatabaseFile(bucket, id string) (newDB string, err error) {
 			}
 
 			// Close the object handle when this function finishes
-			defer func() {
-				MinioHandleClose(userDB)
-			}()
+			defer MinioHandleClose(userDB)
 
 			// Create the needed directory path in the disk cache
 			err = os.MkdirAll(filepath.Join(Conf.DiskCache.Directory, bucket), 0750)

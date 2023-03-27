@@ -297,10 +297,10 @@ func MQCreateResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName, result
 	return
 }
 
-// MQErrorResponse sends an error message in response to an AMQP request
+// MQErrorResponse sends an error message in response to an AMQP request.
 // It is probably only useful for returning errors that occur before we've decoded the incoming AMQP
 // request to know what type it is
-func MQErrorResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, errMsg string) (err error) {
+func MQErrorResponse(requestType string, msg amqp.Delivery, channel *amqp.Channel, nodeName string, errMsg string) (err error) {
 	// Construct the response
 	resp := LiveDBErrorResponse{
 		Node:  nodeName,
@@ -327,7 +327,7 @@ func MQErrorResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, 
 	}
 	msg.Ack(false)
 	if AmqpDebug {
-		log.Printf("[NOT-YET-DETERMINED] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
+		log.Printf("[%s] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", requestType, nodeName, msg.CorrelationId, msg.ReplyTo)
 	}
 	return
 }
@@ -467,6 +467,7 @@ func MQQueryResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, 
 	return
 }
 
+// MQSendRequest is the main function used for sending requests to our AMQP backend
 func MQSendRequest(channel *amqp.Channel, queue, operation, requestingUser, dbOwner, dbName, query string) (result []byte, err error) {
 	// Create a temporary AMQP queue for receiving the response
 	var q amqp.Queue
