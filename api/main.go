@@ -120,6 +120,8 @@ func main() {
 
 	// Our pages
 	http.Handle("/", gz.GzipHandler(handleWrapper(rootHandler)))
+	http.Handle("/changelog", gz.GzipHandler(handleWrapper(changeLogHandler)))
+	http.Handle("/changelog.html", gz.GzipHandler(handleWrapper(changeLogHandler)))
 	http.Handle("/v1/branches", gz.GzipHandler(handleWrapper(branchesHandler)))
 	http.Handle("/v1/columns", gz.GzipHandler(handleWrapper(columnsHandler)))
 	http.Handle("/v1/commits", gz.GzipHandler(handleWrapper(commitsHandler)))

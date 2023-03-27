@@ -1,0 +1,102 @@
+[[ define "changelog" ]]
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>DBHub.io API Changelog</title>
+    <link href="//netdna.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<style>
+    * {
+        font-size: large;
+    }
+    .apiheading {
+        font-size: large;
+        font-weight: bold;
+    }
+    .heading {
+        font-size: large;
+        font-weight: bold;
+    }
+    .indent {
+        margin: 5px;
+    }
+    .pad {
+        padding-top: 10px;
+    }
+    .paramname {
+        font-style: italic;
+    }
+    pre {
+        margin-top: 5px;
+    }
+    .version {
+        margin-bottom: 10px;
+        font-family: monospace;
+        font-style: italic;
+    }
+</style>
+<div style="margin-left: 2%; margin-right: 2%; padding-left: 2%; padding-right: 2%;">
+    <div class="row">
+        <div class="col-md-12"><a href="https://dbhub.io"><h1>DBHub API Changelog</h1></a></div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 version">[[ template "version" . ]] (<a href="/" style="color: #333; font-weight: bold">API</a>)</div>
+    </div>
+
+    <div class="panel panel-primary">
+        <div class="panel-heading">Version 0.3 - Current release</div>
+        <div class="panel-body" style="padding: 0">
+            <div class="col-md-1" style="font-weight: bold; padding-top: 1%">2023-03-06</div>
+            <div class="col-md-11">
+                <ul class="list-group" style="padding-left: 1%; margin: 1%">
+                    <li class="list-group-item"><a href="/#execute" class="apiheading">Execute()</a> - The return data now includes the number of rows changed</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">Version 0.2 - Adds initial support for live databases</div>
+        <div class="panel-body" style="padding: 0">
+            <div class="col-md-1" style="font-weight: bold; padding-top: 1%">2023-03-20</div>
+            <div class="col-md-11">
+                <ul class="list-group" style="padding-left: 1%; margin: 1%">
+                    <li class="list-group-item"><a href="/#databases" class="apiheading">Databases()</a> - Added the optional 'live' request parameter, to return the list of Live databases in the user account</li>
+                    <li class="list-group-item"><a href="/#execute" class="apiheading">Execute()</a> - New function, allows executing a SQL statement on a live database</li>
+                    <li class="list-group-item"><a href="/#upload" class="apiheading">Upload()</a> - Added the optional 'live' request parameter, to specify the upload is a live database rather than a standard database</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">Version 0.1 - First release</div>
+        <div class="panel-body" style="padding: 0">
+            <div class="col-md-1" style="font-weight: bold; padding-top: 1%">2020-08-14</div>
+            <div class="col-md-11">
+                <ul class="list-group" style="padding-left: 1%; margin: 1%">
+                    <li class="list-group-item">Only supports standard databases</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+<script>
+    (function(f, a, t, h, o, m){
+        a[h]=a[h]||function(){
+            (a[h].q=a[h].q||[]).push(arguments)
+        };
+        o=f.createElement('script'),
+            m=f.getElementsByTagName('script')[0];
+        o.async=1; o.src=t; o.id='fathom-script';
+        m.parentNode.insertBefore(o,m)
+    })(document, window, '//stats.sqlitebrowser.org/tracker.js', 'fathom');
+    fathom('set', 'siteId', 'XTAOE');
+    fathom('trackPageview');
+</script>
+</body>
+</html>
+[[ end ]]

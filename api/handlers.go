@@ -67,6 +67,26 @@ func branchesHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// changeLogHandler handles requests for the Changelog (a html page)
+func changeLogHandler(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		ServerName string
+	}
+
+	// Log the incoming request
+	logReq(r, "-")
+
+	// Pass through some variables, useful for the generated docs
+	pageData.ServerName = com.Conf.Web.ServerName
+
+	// Display our API documentation
+	t := tmpl.Lookup("changelog")
+	err := t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 // columnsHandler returns the list of columns in a table or view
 // This can be run from the command line using curl, like this:
 //
