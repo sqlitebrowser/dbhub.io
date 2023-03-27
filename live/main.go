@@ -168,9 +168,10 @@ func main() {
 
 			case "columns":
 				var columns []sqlite.Column
-				columns, err = com.SQLiteGetColumnsLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.Query) // We use the req.Query field to pass the table name
+				var errCode com.AMQPErrorCode
+				columns, err, errCode = com.SQLiteGetColumnsLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.Query) // We use the req.Query field to pass the table name
 				if err != nil {
-					resp := com.LiveDBColumnsResponse{Node: com.Conf.Live.Nodename, Columns: []sqlite.Column{}, Error: err.Error()}
+					resp := com.LiveDBColumnsResponse{Node: com.Conf.Live.Nodename, Columns: []sqlite.Column{}, Error: err.Error(), ErrCode: errCode}
 					err = com.MQResponse("COLUMNS", msg, ch, com.Conf.Live.Nodename, resp)
 					if err != nil {
 						log.Printf("Error: occurred on '%s' in MQResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
@@ -179,7 +180,7 @@ func main() {
 				}
 
 				// Return the columns list to the caller
-				resp := com.LiveDBColumnsResponse{Node: com.Conf.Live.Nodename, Columns: columns, Error: ""} // Use an empty error message to indicate success
+				resp := com.LiveDBColumnsResponse{Node: com.Conf.Live.Nodename, Columns: columns, Error: "", ErrCode: com.AMQPNoError}
 				err = com.MQResponse("COLUMNS", msg, ch, com.Conf.Live.Nodename, resp)
 				if err != nil {
 					log.Printf("Error: occurred on '%s' in MQResponse() while constructing the AMQP columns list response: '%s'", com.Conf.Live.Nodename, err)

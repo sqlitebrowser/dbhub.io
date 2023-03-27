@@ -972,7 +972,7 @@ func SQLiteExecuteQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string
 }
 
 // SQLiteGetColumnsLive is used by our AMQP backend nodes to retrieve the list of columns from a SQLite database
-func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sqlite.Column, err error) {
+func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sqlite.Column, err error, errCode AMQPErrorCode) {
 	// Open the database on the local node
 	var sdb *sqlite.Conn
 	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
@@ -995,6 +995,7 @@ func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sql
 	}
 	if !tableOrViewFound {
 		err = errors.New("Provided table or view name doesn't exist in this database")
+		errCode = AMQPRequestedTableNotPresent
 		return
 	}
 

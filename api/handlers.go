@@ -157,7 +157,7 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if !tableOrViewFound {
-			jsonErr(w, "Provided table or view name doesn't exist in this database", http.StatusInternalServerError)
+			jsonErr(w, "Provided table or view name doesn't exist in this database", http.StatusBadRequest)
 			return
 		}
 
@@ -186,6 +186,14 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if resp.Error != "" {
+			if resp.ErrCode == com.AMQPRequestedTableNotPresent {
+				// The AMQP backend said the requested table name isn't in the database.  So, user error rather than
+				// an "internal server error"
+				jsonErr(w, com.AMQPErrorString(resp.ErrCode), http.StatusBadRequest)
+				return
+			}
+
+			// Some other error occurred, so pass it back to the user
 			err = errors.New(resp.Error)
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
