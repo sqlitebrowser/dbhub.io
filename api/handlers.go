@@ -170,7 +170,7 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Send the columns request to our AMQP backend
 		var rawResponse []byte
-		rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "columns", loggedInUser, dbOwner, dbName, table)
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "columns", loggedInUser, dbOwner, dbName, table)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			log.Println(err)
@@ -393,7 +393,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Delete the database from our AMQP backend
 		var rawResponse []byte
-		rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "delete", loggedInUser, dbOwner, dbName, "")
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "delete", loggedInUser, dbOwner, dbName, "")
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			log.Println(err)
@@ -646,7 +646,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// It's a live database, so we tell the AMQP backend to back up it up into Minio, which we then provide to the user
 	var rawResponse []byte
-	rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "backup", loggedInUser, dbOwner, dbName, "")
+	rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "backup", loggedInUser, dbOwner, dbName, "")
 	if err != nil {
 		return
 	}
@@ -683,7 +683,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make a record of the download
 	err = com.LogDownload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "api LIVE", userAgent,
-		time.Now(), fmt.Sprintf("%s/%s" ,dbOwner, dbName))
+		time.Now(), fmt.Sprintf("%s/%s", dbOwner, dbName))
 	if err != nil {
 		return
 	}
@@ -772,7 +772,7 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Send the query execution request to our AMQP backend
 	var rawResponse []byte
-	rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "execute", loggedInUser, dbOwner, dbName, query)
+	rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "execute", loggedInUser, dbOwner, dbName, query)
 	if err != nil {
 		return
 	}
@@ -893,7 +893,7 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Send the indexes request to our AMQP backend
 		var rawResponse []byte
-		rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "indexes", loggedInUser, dbOwner, dbName, "")
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "indexes", loggedInUser, dbOwner, dbName, "")
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			log.Println(err)
@@ -1206,7 +1206,7 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Send the columns request to our AMQP backend
 		var rawResponse []byte
-		rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "tables", loggedInUser, dbOwner, dbName, "")
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "tables", loggedInUser, dbOwner, dbName, "")
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			log.Println(err)
@@ -1567,7 +1567,7 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Send the columns request to our AMQP backend
 		var rawResponse []byte
-		rawResponse, err = com.MQSendRequest(com.AmqpChan, liveNode, "views", loggedInUser, dbOwner, dbName, "")
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "views", loggedInUser, dbOwner, dbName, "")
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			log.Println(err)

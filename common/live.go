@@ -115,8 +115,6 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 	var conn *amqp.Connection
 	if Conf.Environment.Environment == "production" {
 		// If certificate/key files have been provided, then we can use mutual TLS (mTLS)
-		// TODO: Getting mTLS working was pretty easy with Lets Encrypt certs.  Do we still need the server-only TLS
-		//       fallback below?
 		if Conf.MQ.CertFile != "" && Conf.MQ.KeyFile != "" {
 			var cert tls.Certificate
 			cert, err = tls.LoadX509KeyPair(Conf.MQ.CertFile, Conf.MQ.KeyFile)
@@ -130,7 +128,8 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 			}
 			log.Printf("%s connected to AMQP server using mutual TLS (mTLS): %v:%d\n", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
 		} else {
-			// Fallback to just verifying the server certs for TLS
+			// Fallback to just verifying the server certs for TLS.  This is needed by the DB4S end point, as it
+			// uses certs from our own CA, so mTLS won't easily work with it.
 			conn, err = amqp.Dial(fmt.Sprintf("amqps://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
 			if err != nil {
 				return
@@ -154,7 +153,7 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string) (err error) {
 	// Send the database setup request to our AMQP backend
 	var rawResponse []byte
-	rawResponse, err = MQSendRequest(channel, "create_queue", "createdb", "", dbOwner, dbName, "")
+	rawResponse, err = MQRequest(channel, "create_queue", "createdb", "", dbOwner, dbName, "")
 	if err != nil {
 		return
 	}
@@ -189,7 +188,7 @@ func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string) (err error) {
 func LiveQueryDB(channel *amqp.Channel, nodeName, requestingUser, dbOwner, dbName, query string) (rows SQLiteRecordSet, err error) {
 	// Send the query request to our AMQP backend
 	var rawResponse []byte
-	rawResponse, err = MQSendRequest(channel, nodeName, "query", requestingUser, dbOwner, dbName, query)
+	rawResponse, err = MQRequest(channel, nodeName, "query", requestingUser, dbOwner, dbName, query)
 	if err != nil {
 		return
 	}
@@ -209,16 +208,10 @@ func LiveQueryDB(channel *amqp.Channel, nodeName, requestingUser, dbOwner, dbNam
 	return
 }
 
-// MQColumnsResponse sends a columns list response
-func MQColumnsResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, columns []sqlite.Column, errMsg string) (err error) {
-	// Construct the response
-	resp := LiveDBColumnsResponse{
-		Node:    nodeName,
-		Columns: columns,
-		Error:   errMsg,
-	}
+// MQResponse sends an AMQP response back to its requester
+func MQResponse(requestType string, msg amqp.Delivery, channel *amqp.Channel, nodeName string, responseData interface{}) (err error) {
 	var z []byte
-	z, err = json.Marshal(resp)
+	z, err = json.Marshal(responseData)
 	if err != nil {
 		log.Println(err)
 		return
@@ -238,7 +231,7 @@ func MQColumnsResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string
 	}
 	msg.Ack(false)
 	if AmqpDebug {
-		log.Printf("[COLUMNS] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
+		log.Printf("[%s] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", requestType, nodeName, msg.CorrelationId, msg.ReplyTo)
 	}
 	return
 }
@@ -297,178 +290,8 @@ func MQCreateResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName, result
 	return
 }
 
-// MQErrorResponse sends an error message in response to an AMQP request.
-// It is probably only useful for returning errors that occur before we've decoded the incoming AMQP
-// request to know what type it is
-func MQErrorResponse(requestType string, msg amqp.Delivery, channel *amqp.Channel, nodeName string, errMsg string) (err error) {
-	// Construct the response
-	resp := LiveDBErrorResponse{
-		Node:  nodeName,
-		Error: errMsg,
-	}
-	var z []byte
-	z, err = json.Marshal(resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Send the message
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err = channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: msg.CorrelationId,
-			Body:          z,
-		})
-	if err != nil {
-		log.Println(err)
-	}
-	msg.Ack(false)
-	if AmqpDebug {
-		log.Printf("[%s] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", requestType, nodeName, msg.CorrelationId, msg.ReplyTo)
-	}
-	return
-}
-
-// MQDeleteResponse sends an error message in response to an AMQP database deletion request
-func MQDeleteResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, errMsg string) (err error) {
-	// Construct the response
-	resp := LiveDBErrorResponse{ // Yep, we're reusing this super basic error response instead of creating a new one
-		Node:  nodeName,
-		Error: errMsg,
-	}
-	var z []byte
-	z, err = json.Marshal(resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Send the message
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err = channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: msg.CorrelationId,
-			Body:          z,
-		})
-	if err != nil {
-		log.Println(err)
-	}
-	msg.Ack(false)
-	if AmqpDebug {
-		log.Printf("[DELETE] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
-	}
-	return
-}
-
-// MQExecuteResponse sends a message in response to an AMQP database execute request
-func MQExecuteResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, rowsChanged int, errMsg string) (err error) {
-	// Construct the response
-	resp := LiveDBExecuteResponse{
-		Node:        nodeName,
-		RowsChanged: rowsChanged,
-		Error:       errMsg,
-	}
-	var z []byte
-	z, err = json.Marshal(resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Send the message
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err = channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: msg.CorrelationId,
-			Body:          z,
-		})
-	if err != nil {
-		log.Println(err)
-	}
-	msg.Ack(false)
-	if AmqpDebug {
-		log.Printf("[EXECUTE] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
-	}
-	return
-}
-
-// MQIndexesResponse sends an indexes list response
-func MQIndexesResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, indexes []APIJSONIndex, errMsg string) (err error) {
-	// Construct the response
-	resp := LiveDBIndexesResponse{
-		Node:    nodeName,
-		Indexes: indexes,
-		Error:   errMsg,
-	}
-	var z []byte
-	z, err = json.Marshal(resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Send the message
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err = channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: msg.CorrelationId,
-			Body:          z,
-		})
-	if err != nil {
-		log.Println(err)
-	}
-	msg.Ack(false)
-	if AmqpDebug {
-		log.Printf("[INDEXES] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
-	}
-	return
-}
-
-// MQQueryResponse sends a successful query response back
-func MQQueryResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, results SQLiteRecordSet, errMsg string) (err error) {
-	// Construct the response
-	resp := LiveDBQueryResponse{
-		Node:    nodeName,
-		Results: results,
-		Error:   errMsg,
-	}
-	var z []byte
-	z, err = json.Marshal(resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Send the message
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err = channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: msg.CorrelationId,
-			Body:          z,
-		})
-	if err != nil {
-		log.Println(err)
-	}
-	msg.Ack(false)
-	if AmqpDebug {
-		log.Printf("[QUERY] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
-	}
-	return
-}
-
-// MQSendRequest is the main function used for sending requests to our AMQP backend
-func MQSendRequest(channel *amqp.Channel, queue, operation, requestingUser, dbOwner, dbName, query string) (result []byte, err error) {
+// MQRequest is the main function used for sending requests to our AMQP backend
+func MQRequest(channel *amqp.Channel, queue, operation, requestingUser, dbOwner, dbName, query string) (result []byte, err error) {
 	// Create a temporary AMQP queue for receiving the response
 	var q amqp.Queue
 	q, err = channel.QueueDeclare("", false, false, true, false, nil)
@@ -525,74 +348,6 @@ func MQSendRequest(channel *amqp.Channel, queue, operation, requestingUser, dbOw
 	_, err = channel.QueueDelete(q.Name, false, false, false)
 	if err != nil {
 		log.Println(err)
-	}
-	return
-}
-
-// MQTablesResponse sends a tables list response to an AMQP caller
-func MQTablesResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, tables []string, errMsg string) (err error) {
-	// Construct the response
-	resp := LiveDBTablesResponse{
-		Node:   nodeName,
-		Tables: tables,
-		Error:  errMsg,
-	}
-	var z []byte
-	z, err = json.Marshal(resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Send the message
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err = channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: msg.CorrelationId,
-			Body:          z,
-		})
-	if err != nil {
-		log.Println(err)
-	}
-	msg.Ack(false)
-	if AmqpDebug {
-		log.Printf("[TABLES] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
-	}
-	return
-}
-
-// MQViewsResponse sends a views list response to an AMQP caller
-func MQViewsResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName string, views []string, errMsg string) (err error) {
-	// Construct the response
-	resp := LiveDBViewsResponse{
-		Node:  nodeName,
-		Views: views,
-		Error: errMsg,
-	}
-	var z []byte
-	z, err = json.Marshal(resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Send the message
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err = channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: msg.CorrelationId,
-			Body:          z,
-		})
-	if err != nil {
-		log.Println(err)
-	}
-	msg.Ack(false)
-	if AmqpDebug {
-		log.Printf("[VIEWS] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
 	}
 	return
 }

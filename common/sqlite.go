@@ -496,8 +496,8 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 // OpenSQLiteDatabaseLive is similar to OpenSQLiteDatabase(), but opens the a live SQLite database and implements
 // the recommended defensive precautions for potentially malicious user provided SQL
 // queries: https://www.sqlite.org/security.html
-// TODO: De-duplicate/refactor the common code in this function and OpenSQLiteDatabaseDefensive() above.  They're
-//       mostly the same
+// TODO: De-duplicate/refactor the common code in this function and OpenSQLiteDatabaseDefensive() above, as they're
+// TODO  mostly the same
 func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, err error) {
 	dbPath := filepath.Join(baseDir, dbOwner, dbName, "live.sqlite")
 	if _, err = os.Stat(dbPath); err != nil {
@@ -915,7 +915,7 @@ func SQLiteBackupLive(baseDir, dbOwner, dbName string) (err error) {
 	}
 	// Pretty sure the '1' parameter below isn't needed.  The SQLite docs mention "O(N)" (etc.) which is just Big O
 	// notation, rather than trying to communicate a need for a number in the parameters
-	err = sdb2.IntegrityCheck("main", 1, true )
+	err = sdb2.IntegrityCheck("main", 1, true)
 	if err != nil {
 		sdb2.Close()
 		return
