@@ -262,8 +262,11 @@
                 <div class="col-md-6">
                     <table class="table table-striped table-responsive profileTable" data-cy="livedbstbl">
                         <tr ng-repeat="row in livedbs">
-                            <td>
+                            <td style="border: 1px solid #ddd">
                                 <h4>{{ row.owner_name }}/{{ row.database_name }}</h4>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-danger" ng-click="confirmDelete(row.database_name)" data-cy="delbtn">Delete database</button>
                             </td>
                         </tr>
                     </table>
@@ -286,6 +289,12 @@
         $scope.sharedWithYou = [[ .SharedWithYou ]];
         $scope.stars = { Stars: [[ .Stars ]] };
         $scope.watching = [[ .Watching ]];
+
+        // Bounce to the database deletion page
+        $scope.confirmDelete = function(path) {
+          //console.log(path);
+          window.location = '/confirmdelete/[[ .Meta.Owner ]]/' + path;
+        };
 
         // Returns a nicely presented "time elapsed" string
         $scope.getTimePeriodTxt = function(date1, includeOn) {
