@@ -2261,16 +2261,27 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Invalidate the memcache data for the database, so the new branch count gets picked up
-	// Note - on one hand this is a race condition, as new cache data could get into memcache between this invalidation
-	// call and the delete.  On the other hand, once it's deleted the invalidation function would itself fail due to
-	// needing the database to be present so it can look up the commit list.  At least doing the invalidation here lets
-	// us clear stale data (hopefully) for the vast majority of the time
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	// If this is a standard database, then invalidate it's memcache data
+	var isLive bool
+	var liveNode string
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
 	if err != nil {
-		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Internal server error")
 		return
+	}
+	if !isLive {
+		// Invalidate the memcache data for the database, so the new branch count gets picked up
+		// Note - on one hand this is a race condition, as new cache data could get into memcache between this invalidation
+		// call and the delete.  On the other hand, once it's deleted the invalidation function would itself fail due to
+		// needing the database to be present so it can look up the commit list.  At least doing the invalidation here lets
+		// us clear stale data (hopefully) for the vast majority of the time
+		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+		if err != nil {
+			// Something went wrong when invalidating memcached entries for the database
+			log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+			return
+		}
 	}
 
 	// Delete the database
@@ -2279,6 +2290,53 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
 		return
+	}
+
+	// For a live database, delete it from both Minio and our AMQP backend
+	// FIXME: This code to delete the live database from the AMQP backend was directly copied from
+	// FIXME  api/main.go.  Move the code into a shared function at some point
+	if isLive {
+		// Delete the database from Minio
+		bucket := fmt.Sprintf("live-%s", dbOwner)
+		id := dbName
+		err = com.MinioDeleteDatabase("webUI", dbOwner, dbName, bucket, id)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			log.Println(err)
+			return
+		}
+
+		// Delete the database from our AMQP backend
+		var rawResponse []byte
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "delete", loggedInUser, dbOwner, dbName, "")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			log.Println(err)
+			return
+		}
+
+		// Decode the response
+		var resp com.LiveDBErrorResponse
+		err = json.Unmarshal(rawResponse, &resp)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			log.Println(err)
+			return
+		}
+		if resp.Error != "" {
+			err = errors.New(resp.Error)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			log.Println(err)
+			return
+		}
+		if resp.Node == "" {
+			log.Printf("In webUI (Live) deleteDatabaseHandler().  A node responded, but didn't identify itself.")
+			return
+		}
 	}
 
 	// Update succeeded
