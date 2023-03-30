@@ -10,6 +10,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -142,7 +143,7 @@ func main() {
 			}
 
 			if com.AmqpDebug {
-				log.Printf("Decoded request on '%s'.  Correlation ID: '%s', request operation: '%s', request query: '%s'", com.Conf.Live.Nodename, msg.CorrelationId, req.Operation, req.Query)
+				log.Printf("Decoded request on '%s'.  Correlation ID: '%s', request operation: '%s', request query: '%v'", com.Conf.Live.Nodename, msg.CorrelationId, req.Operation, req.Data)
 			}
 
 			// Handle each operation
@@ -169,7 +170,7 @@ func main() {
 			case "columns":
 				var columns []sqlite.Column
 				var errCode com.AMQPErrorCode
-				columns, err, errCode = com.SQLiteGetColumnsLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.Query) // We use the req.Query field to pass the table name
+				columns, err, errCode = com.SQLiteGetColumnsLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, fmt.Sprintf("%s", req.Data))
 				if err != nil {
 					resp := com.LiveDBColumnsResponse{Node: com.Conf.Live.Nodename, Columns: []sqlite.Column{}, Error: err.Error(), ErrCode: errCode}
 					err = com.MQResponse("COLUMNS", msg, ch, com.Conf.Live.Nodename, resp)
@@ -210,7 +211,7 @@ func main() {
 			case "execute":
 				// Execute a SQL statement on the database file
 				var rowsChanged int
-				rowsChanged, err = com.SQLiteExecuteQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
+				rowsChanged, err = com.SQLiteExecuteQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, fmt.Sprintf("%s", req.Data))
 				if err != nil {
 					resp := com.LiveDBExecuteResponse{Node: com.Conf.Live.Nodename, RowsChanged: 0, Error: err.Error()}
 					err = com.MQResponse("EXECUTE", msg, ch, com.Conf.Live.Nodename, resp)
@@ -250,7 +251,7 @@ func main() {
 
 			case "query":
 				var rows com.SQLiteRecordSet
-				rows, err = com.SQLiteRunQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, req.Query)
+				rows, err = com.SQLiteRunQueryLive(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, fmt.Sprintf("%s", req.Data))
 				if err != nil {
 					resp := com.LiveDBQueryResponse{Node: com.Conf.Live.Nodename, Results: com.SQLiteRecordSet{}, Error: err.Error()}
 					err = com.MQResponse("QUERY", msg, ch, com.Conf.Live.Nodename, resp)
@@ -263,6 +264,38 @@ func main() {
 				// Return the query response to the caller
 				resp := com.LiveDBQueryResponse{Node: com.Conf.Live.Nodename, Results: rows, Error: ""}
 				err = com.MQResponse("QUERY", msg, ch, com.Conf.Live.Nodename, resp)
+				if err != nil {
+					log.Printf("Error: occurred on '%s' in MQResponse() while constructing the AMQP query response: '%s'", com.Conf.Live.Nodename, err)
+				}
+				continue
+
+			case "rowdata":
+				// Extract the request information
+				// FIXME: Add type checks for safety instead of blind coercing
+				var reqData = make(map[string]interface{})
+				reqData = req.Data.(map[string]interface{})
+				dbTable := reqData["db_table"].(string)
+				sortCol := reqData["sort_col"].(string)
+				sortDir := reqData["sort_dir"].(string)
+				commitID := reqData["commit_id"].(string)
+				maxRows := int(reqData["max_rows"].(float64))
+				rowOffset := int(reqData["row_offset"].(float64))
+
+				// Open the SQLite database and read the row data
+				resp := com.LiveDBRowsResponse{Node: com.Conf.Live.Nodename, RowData: com.SQLiteRecordSet{}}
+				resp.Tables, resp.DefaultTable, resp.RowData, resp.DatabaseSize, err =
+					com.SQLiteReadDatabasePage(fmt.Sprintf("live-%s", req.DBOwner), req.DBName, req.RequestingUser, req.DBOwner, req.DBName, dbTable, sortCol, sortDir, commitID, rowOffset, maxRows, true)
+				if err != nil {
+					resp := com.LiveDBErrorResponse{Node: com.Conf.Live.Nodename, Error: err.Error()}
+					err = com.MQResponse("ROWDATA", msg, ch, com.Conf.Live.Nodename, resp)
+					if err != nil {
+						log.Printf("Error: occurred on '%s' in MQResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
+					}
+					continue
+				}
+
+				// Return the row data to the caller
+				err = com.MQResponse("ROWDATA", msg, ch, com.Conf.Live.Nodename, resp)
 				if err != nil {
 					log.Printf("Error: occurred on '%s' in MQResponse() while constructing the AMQP query response: '%s'", com.Conf.Live.Nodename, err)
 				}

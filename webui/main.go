@@ -4477,23 +4477,21 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	loggedInUser, _, err := checkLogin(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Check if the user has access to the requested database
-	bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	var loggedInUser string
+	loggedInUser, _, err = checkLogin(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	// Sanity check
-	if id == "" {
-		// The requested database wasn't found
-		log.Printf("%s: Requested database not found. Owner: '%s%s%s'", pageName, com.SanitiseLogString(dbOwner), dbFolder, com.SanitiseLogString(dbName))
+	// Make sure the database exists in the system, and the user has access to it
+	var exists bool
+	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -4508,129 +4506,202 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		maxRows = com.DefaultNumDisplayRows
 	}
 
-	// If the data is available from memcached, use that instead of reading from the SQLite database itself
-	dataCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-		loggedInUser, dbOwner, dbFolder, dbName, commitID, requestedTable, maxRows)
-
-	// If a cached version of the page data exists, use it
-	var dataRows com.SQLiteRecordSet
-	ok, err := com.GetCachedData(dataCacheKey, &dataRows)
+	// Check if this is a live database
+	var isLive bool
+	var liveNode string
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
 	if err != nil {
-		log.Printf("%s: Error retrieving table data from cache: %v\n", pageName, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	if !ok {
-		// * Data wasn't in cache, so we gather it from the SQLite database *
 
-		// Open the Minio database
-		sdb, err := com.OpenSQLiteDatabase(bucket, id)
+	// Retrieve the SQLite row data
+	var dataRows com.SQLiteRecordSet
+	if !isLive {
+		// Standard database, so we read the data locally
+
+		// If a cached version of the page data exists, use it
+		var ok bool
+		dataCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
+			loggedInUser, dbOwner, dbFolder, dbName, commitID, requestedTable, maxRows)
+		ok, err = com.GetCachedData(dataCacheKey, &dataRows)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+			log.Printf("%s: Error retrieving table data from cache: %v", pageName, err)
+			ok = false // Fall through to retrieving the data from the database
 		}
+		if !ok {
+			// * Data wasn't in cache, so we gather it from the local SQLite database *
 
-		// Automatically close the SQLite database when this function finishes
-		defer sdb.Close()
+			// Get the Minio details
+			var bucket, id string
+			bucket, id, _, err = com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 
-		// Retrieve the list of tables in the database
-		tables, err := sdb.Tables("")
-		if err != nil {
-			// An error occurred, so get the extended error code
-			if cerr, ok := err.(sqlite.ConnError); ok {
-				// Check if the error was due to the table being locked
-				extCode := cerr.ExtendedCode()
-				if extCode == 5 { // Magic number which (in this case) means "database is locked"
-					// Wait 3 seconds then try again
-					time.Sleep(3 * time.Second)
-					tables, err = sdb.Tables("")
-					if err != nil {
+			// Sanity check
+			if bucket == "" || id == "" {
+				log.Printf("%s: Couldn't retrieve Minio details for a database. Owner: '%s%s%s'", pageName, com.SanitiseLogString(dbOwner), dbFolder, com.SanitiseLogString(dbName))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			// Open the Minio database
+			var sdb *sqlite.Conn
+			sdb, err = com.OpenSQLiteDatabase(bucket, id)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			defer sdb.Close()
+
+			// Retrieve the list of tables in the database
+			var tables []string
+			tables, err = sdb.Tables("")
+			if err != nil {
+				// An error occurred, so get the extended error code
+				if cerr, ok := err.(sqlite.ConnError); ok {
+					// Check if the error was due to the table being locked
+					extCode := cerr.ExtendedCode()
+					if extCode == 5 { // Magic number which (in this case) means "database is locked"
+						// Wait 3 seconds then try again
+						time.Sleep(3 * time.Second)
+						tables, err = sdb.Tables("")
+						if err != nil {
+							log.Printf("Error retrieving table names: %s", err)
+							w.WriteHeader(http.StatusLocked)
+							return
+						}
+					} else {
 						log.Printf("Error retrieving table names: %s", err)
+						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
 				} else {
 					log.Printf("Error retrieving table names: %s", err)
+					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-			} else {
-				log.Printf("Error retrieving table names: %s", err)
+			}
+			if len(tables) == 0 {
+				// No table names were returned, so abort
+				log.Printf("The database '%s/%s' doesn't seem to have any tables. Aborting.",
+					com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
+				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-		}
-		if len(tables) == 0 {
-			// No table names were returned, so abort
-			log.Printf("The database '%s' doesn't seem to have any tables. Aborting.", com.SanitiseLogString(dbName))
-			return
-		}
-		vw, err := sdb.Views("")
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		tables = append(tables, vw...)
-
-		// If a specific table was requested, check it exists
-		if requestedTable != "" {
-			tablePresent := false
-			for _, tableName := range tables {
-				if requestedTable == tableName {
-					tablePresent = true
-				}
-			}
-			if tablePresent == false {
-				// The requested table doesn't exist
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		}
-
-		// If no specific table was requested, use the first one
-		if requestedTable == "" {
-			requestedTable = tables[0]
-		}
-
-		// If a sort column was requested, verify it exists
-		if sortCol != "" {
-			colList, err := sdb.Columns("", requestedTable)
+			var vw []string
+			vw, err = sdb.Views("")
 			if err != nil {
-				log.Printf("Error when reading column names for table '%s': %v\n", com.SanitiseLogString(requestedTable),
-					err.Error())
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			colExists := false
-			for _, j := range colList {
-				if j.Name == sortCol {
-					colExists = true
+			tables = append(tables, vw...)
+
+			// If a specific table was requested, check it exists
+			if requestedTable != "" {
+				tablePresent := false
+				for _, tableName := range tables {
+					if requestedTable == tableName {
+						tablePresent = true
+					}
+				}
+				if tablePresent == false {
+					// The requested table doesn't exist
+					w.WriteHeader(http.StatusBadRequest)
+					return
 				}
 			}
-			if colExists == false {
-				// The requested sort column doesn't exist, so we fall back to no sorting
-				sortCol = ""
+
+			// If no specific table was requested, use the first one
+			if requestedTable == "" {
+				requestedTable = tables[0]
+			}
+
+			// If a sort column was requested, verify it exists
+			if sortCol != "" {
+				var colList []sqlite.Column
+				colList, err = sdb.Columns("", requestedTable)
+				if err != nil {
+					log.Printf("Error when reading column names for table '%s': %v\n", com.SanitiseLogString(requestedTable),
+						err.Error())
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				colExists := false
+				for _, j := range colList {
+					if j.Name == sortCol {
+						colExists = true
+					}
+				}
+				if colExists == false {
+					// The requested sort column doesn't exist, so we fall back to no sorting
+					sortCol = ""
+				}
+			}
+
+			// Read the data from the database
+			dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, sortCol, sortDir, maxRows, rowOffset)
+			if err != nil {
+				// Some kind of error when reading the database data
+				log.Printf("Error occurred when reading table data for '%s%s%s', commit '%s': %s\n", com.SanitiseLogString(dbOwner),
+					dbFolder, com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			// Count the total number of rows in the requested table
+			dataRows.TotalRows, err = com.GetSQLiteRowCount(sdb, requestedTable)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			// Cache the data in memcache
+			err = com.CacheData(dataCacheKey, dataRows, com.Conf.Memcache.DefaultCacheTime)
+			if err != nil {
+				log.Printf("%s: Error when caching table data for '%s%s%s': %v\n", pageName, com.SanitiseLogString(dbOwner), dbFolder,
+					com.SanitiseLogString(dbName), err)
 			}
 		}
-
-		// Read the data from the database
-		dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, sortCol, sortDir, maxRows, rowOffset)
+	} else {
+		// It's a live database, so we send the request to our AMQP backend
+		reqData := com.LiveDBRowsRequest{
+			DbTable:   requestedTable,
+			SortCol:   sortCol,
+			SortDir:   sortDir,
+			CommitID:  commitID,
+			RowOffset: rowOffset,
+			MaxRows:   maxRows,
+		}
+		var rawResponse []byte
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "rowdata", loggedInUser, dbOwner, dbName, reqData)
 		if err != nil {
-			// Some kind of error when reading the database data
-			log.Printf("Error occurred when reading table data for '%s%s%s', commit '%s': %s\n", com.SanitiseLogString(dbOwner),
-				dbFolder, com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
 			return
 		}
 
-		// Count the total number of rows in the requested table
-		dataRows.TotalRows, err = com.GetSQLiteRowCount(sdb, requestedTable)
+		// Decode the response
+		var resp com.LiveDBRowsResponse
+		err = json.Unmarshal(rawResponse, &resp)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
 			return
 		}
-
-		// Cache the data in memcache
-		err = com.CacheData(dataCacheKey, dataRows, com.Conf.Memcache.DefaultCacheTime)
-		if err != nil {
-			log.Printf("%s: Error when caching table data for '%s%s%s': %v\n", pageName, com.SanitiseLogString(dbOwner), dbFolder,
-				com.SanitiseLogString(dbName), err)
+		if resp.Error != "" {
+			err = errors.New(resp.Error)
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			return
 		}
+		if resp.Node == "" {
+			log.Printf("In webUI (Live) databasePage().  A node responded, but didn't identify itself.")
+			return
+		}
+		dataRows = resp.RowData
 	}
 
 	// Format the output.  Use json.MarshalIndent() for nicer looking output
@@ -4639,8 +4710,6 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-
-	//w.Header().Set("Access-Control-Allow-Origin", "*")
 	fmt.Fprintf(w, "%s", jsonResponse)
 }
 

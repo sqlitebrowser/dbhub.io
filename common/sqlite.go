@@ -1142,6 +1142,135 @@ func SQLiteSanityCheck(fileName string) (tables []string, err error) {
 	return
 }
 
+// SQLiteReadDatabasePage opens a SQLite database (locally) and returns a "page" of rows from it, for display in the
+// database view page.  Note that the dbSize return value is only set for live databases.
+func SQLiteReadDatabasePage(bucket, id, loggedInUser, dbOwner, dbName, dbTable, sortCol, sortDir, commitID string, rowOffset, maxRows int, isLive bool) (tables []string, defaultTable string, rowData SQLiteRecordSet, dbSize int64, err error) {
+	dbFolder := "/"
+
+	// Get a handle from Minio for the database object
+	var sdb *sqlite.Conn
+	if isLive {
+		// Open live database file
+		sdb, err = OpenSQLiteDatabaseLive(Conf.Live.StorageDir, dbOwner, dbName)
+		if err != nil {
+			return
+		}
+
+		// We also return the file size for live database files
+		var z os.FileInfo
+		z, err = os.Stat(filepath.Join(Conf.Live.StorageDir, dbOwner, dbName, "live.sqlite"))
+		if err != nil {
+			return
+		}
+		dbSize = z.Size()
+	} else {
+		// Open standard database
+		sdb, err = OpenSQLiteDatabase(bucket, id)
+		if err != nil {
+			return
+		}
+	}
+	defer sdb.Close()
+
+	// Retrieve the list of tables and views in the database
+	tables, err = TablesAndViews(sdb, dbName)
+	if err != nil {
+		return
+	}
+
+	// If a specific table or view was requested, check that it's present
+	if dbTable != "" {
+		tablePresent := false
+		for _, tbl := range tables {
+			if tbl == dbTable {
+				tablePresent = true
+			}
+		}
+		if tablePresent == false {
+			// The requested table or view doesn't exist in the database, so pick one of the tables that does
+			for _, t := range tables {
+				err = ValidatePGTable(t)
+				if err == nil {
+					// Validation passed, so use this table or view
+					dbTable = t
+					defaultTable = t
+					break
+				}
+			}
+		}
+	}
+
+	// If a specific table wasn't requested, use the first table in the database that passes validation
+	if dbTable == "" {
+		for _, i := range tables {
+			if i != "" {
+				err = ValidatePGTable(i)
+				if err == nil {
+					// The database table name is acceptable, so use it
+					dbTable = i
+					break
+				}
+			}
+		}
+	}
+
+	// If a sort column was requested, verify it exists
+	if sortCol != "" {
+		var colList []sqlite.Column
+		colList, err = sdb.Columns("", dbTable)
+		if err != nil {
+			log.Printf("Error when reading column names for table '%s': %v\n", SanitiseLogString(dbTable), err.Error())
+			return
+		}
+		colExists := false
+		for _, j := range colList {
+			if j.Name == sortCol {
+				colExists = true
+			}
+		}
+		if colExists == false {
+			// The requested sort column doesn't exist, so we fall back to no sorting
+			sortCol = ""
+		}
+	}
+
+	// Validate the table name, just to be careful
+	if dbTable != "" {
+		err = ValidatePGTable(dbTable)
+		if err != nil {
+			// Validation failed, so don't pass on the table name
+
+			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
+			// bot picking up AngularJS in a string and doing a request with it
+			if dbTable != "{{ db.Tablename }}" {
+				log.Printf("Validation failed for table name: '%s': %s", SanitiseLogString(dbTable), err)
+			}
+			return
+		}
+	}
+
+	var okCache bool
+	if !isLive {
+		rowCacheKey := TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
+			loggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, maxRows)
+		okCache, err = GetCachedData(rowCacheKey, &rowData)
+		if err != nil {
+			log.Printf("Error retrieving page data from cache: %v", err)
+		}
+	}
+
+	// If the row data wasn't in cache, read it from the database
+	if !okCache {
+		rowData, err = ReadSQLiteDB(sdb, dbTable, sortCol, sortDir, maxRows, rowOffset)
+		if err != nil {
+			// Some kind of error when reading the database data
+			return
+		}
+		rowData.Tablename = dbTable
+	}
+	return
+}
+
 // SQLiteRunQuery runs a SQLite query.  DO NOT use this for user provided SQL queries.  For those,
 // use SQLiteRunQueryDefensive().
 func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, ignoreBinary, ignoreNull bool) (memUsed, memHighWater int64, dataRows SQLiteRecordSet, err error) {

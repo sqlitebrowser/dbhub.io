@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -816,7 +818,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		Meta    com.MetaInfo
 		MyStar  bool
 		MyWatch bool
-		Config  com.TomlConfig
+		Config  com.TomlConfig // FIXME: This seems silly to include here, when we just need to provide the server/port info
+		IsLive  bool
 	}
 
 	pageData.Meta.PageSection = "db_data"
@@ -944,84 +947,135 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		}
 	}
 
-	// If a specific commit was requested, make sure it exists in the database commit history
-	if commitID != "" {
-		commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if _, ok := commitList[commitID]; !ok {
-			// The requested commit isn't one in the database commit history so error out
-			errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for database '%s%s%s'", dbOwner,
-				dbFolder, dbName))
-			return
-		}
-	}
-
-	// If a specific release was requested, and no commit ID was given, retrieve the commit ID matching the release
-	if commitID == "" && releaseName != "" {
-		releases, err := com.GetReleases(dbOwner, dbFolder, dbName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve releases for database")
-			return
-		}
-		rls, ok := releases[releaseName]
-		if !ok {
-			errorPage(w, r, http.StatusInternalServerError, "Unknown release requested for this database")
-			return
-		}
-		commitID = rls.Commit
-	}
-
-	// Load the branch info for the database
-	branchHeads, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	// Check if this is a live database
+	var liveNode string
+	pageData.IsLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve branch information for database")
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// If a specific branch was requested and no commit ID was given, use the latest commit for the branch
-	if commitID == "" && branchName != "" {
-		c, ok := branchHeads[branchName]
-		if !ok {
-			errorPage(w, r, http.StatusInternalServerError, "Unknown branch requested for this database")
-			return
+	// Only standard databases have commits, branches, tags (etC)
+	branchHeads := make(map[string]com.BranchEntry)
+	if !pageData.IsLive {
+		// If a specific commit was requested, make sure it exists in the database commit history
+		if commitID != "" {
+			commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if _, ok := commitList[commitID]; !ok {
+				// The requested commit isn't one in the database commit history so error out
+				errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for database '%s%s%s'", dbOwner,
+					dbFolder, dbName))
+				return
+			}
 		}
-		commitID = c.Commit
-	}
 
-	// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
-	// TODO: If we need to reduce database calls, we can probably make a function merging this, GetBranches(), and
-	// TODO  GetCommitList() above.  Potentially also the DBDetails() call below too.
-	if commitID == "" && tagName != "" {
-		tags, err := com.GetTags(dbOwner, dbFolder, dbName)
+		// If a specific release was requested, and no commit ID was given, retrieve the commit ID matching the release
+		if commitID == "" && releaseName != "" {
+			releases, err := com.GetReleases(dbOwner, dbFolder, dbName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve releases for database")
+				return
+			}
+			rls, ok := releases[releaseName]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, "Unknown release requested for this database")
+				return
+			}
+			commitID = rls.Commit
+		}
+
+		// Load the branch info for the database
+		branchHeads, err = com.GetBranches(dbOwner, dbFolder, dbName)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for database")
+			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve branch information for database")
 			return
 		}
-		tg, ok := tags[tagName]
-		if !ok {
-			errorPage(w, r, http.StatusInternalServerError, "Unknown tag requested for this database")
-			return
-		}
-		commitID = tg.Commit
-	}
 
-	// If we still haven't determined the required commit ID, use the head commit of the default branch
-	if commitID == "" {
-		commitID, err = com.DefaultCommit(dbOwner, dbFolder, dbName)
+		// If a specific branch was requested and no commit ID was given, use the latest commit for the branch
+		if commitID == "" && branchName != "" {
+			c, ok := branchHeads[branchName]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, "Unknown branch requested for this database")
+				return
+			}
+			commitID = c.Commit
+		}
+
+		// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
+		// TODO: If we need to reduce database calls, we can probably make a function merging this, GetBranches(), and
+		// TODO  GetCommitList() above.  Potentially also the DBDetails() call below too.
+		if commitID == "" && tagName != "" {
+			tags, err := com.GetTags(dbOwner, dbFolder, dbName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for database")
+				return
+			}
+			tg, ok := tags[tagName]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, "Unknown tag requested for this database")
+				return
+			}
+			commitID = tg.Commit
+		}
+
+		// If we still haven't determined the required commit ID, use the head commit of the default branch
+		if commitID == "" {
+			commitID, err = com.DefaultCommit(dbOwner, dbFolder, dbName)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
+		// Retrieve the database details
+		err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
 		}
-	}
-
-	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
+	} else {
+		// FIXME: We need an equivalent of com.DBDetails() for live databases
+		pageData.DB = com.SQLiteDBinfo{
+			Info: com.DBInfo{
+				Branch:        "",
+				Branches:      0,
+				BranchList:    nil,
+				Commits:       0,
+				CommitID:      "",
+				Contributors:  1, // 1 makes sense here, as we don't yet support sharing live databases
+				Database:      dbName,
+				DateCreated:   time.Time{},
+				DBEntry:       com.DBTreeEntry{},
+				DefaultBranch: "",
+				DefaultTable:  "",
+				Discussions:   0,
+				Downloads:     0,
+				Folder:        "",
+				Forks:         0,
+				FullDesc:      "",
+				LastModified:  time.Time{},
+				Licence:       "",
+				LicenceURL:    "",
+				MRs:           0,
+				OneLineDesc:   "",
+				Public:        false,
+				RepoModified:  time.Time{},
+				Releases:      0,
+				SHA256:        "",
+				Size:          0,
+				SourceURL:     "",
+				Stars:         0,
+				Tables:        nil,
+				Tags:          0,
+				Views:         0,
+				Watchers:      0,
+			},
+			MaxRows: 0,
+		}
 	}
 
 	// Get the latest discussion and merge request count directly from PG, skipping the ones (incorrectly) stored in memcache
@@ -1070,97 +1124,56 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		pageData.DB.MaxRows = tempMaxRows
 	}
 
-	// Get a handle from Minio for the database object
-	sdb, err := com.OpenSQLiteDatabase(pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars],
-		pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:])
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Close the SQLite database and delete the temp file
-	defer sdb.Close()
-
-	// Retrieve the list of tables and views in the database
-	tables, err := com.TablesAndViews(sdb, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	pageData.DB.Info.Tables = tables
-
-	// If a specific table was requested, check that it's present
-	if dbTable != "" {
-		// Check the requested table is present
-		tablePresent := false
-		for _, tbl := range tables {
-			if tbl == dbTable {
-				tablePresent = true
-			}
-		}
-		if tablePresent == false {
-			// The requested table doesn't exist in the database, so pick one of the tables that is
-			for _, t := range tables {
-				err = com.ValidatePGTable(t)
-				if err == nil {
-					// Validation passed, so use this table
-					dbTable = t
-					pageData.DB.Info.DefaultTable = t
-					break
-				}
-			}
-		}
-	}
-
-	// If a specific table wasn't requested, use the first table in the database that passes validation
-	if dbTable == "" {
-		for _, i := range pageData.DB.Info.Tables {
-			if i != "" {
-				err = com.ValidatePGTable(i)
-				if err == nil {
-					// The database table name is acceptable, so use it
-					dbTable = i
-					break
-				}
-			}
-		}
-	}
-
-	// If a sort column was requested, verify it exists
-	if sortCol != "" {
-		colList, err := sdb.Columns("", dbTable)
+	// If it's a standard database then we query it directly, otherwise we query it via our AMQP backend
+	if !pageData.IsLive {
+		bucket := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
+		id := pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:]
+		pageData.DB.Info.Tables, pageData.DB.Info.DefaultTable, pageData.Data, _, err =
+			com.SQLiteReadDatabasePage(bucket, id, pageData.Meta.LoggedInUser, dbOwner, dbName, dbTable, sortCol, sortDir, commitID, rowOffset, pageData.DB.MaxRows, false)
 		if err != nil {
-			log.Printf("Error when reading column names for table '%s': %v\n", com.SanitiseLogString(dbTable),
-				err.Error())
 			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
 			return
 		}
-		colExists := false
-		for _, j := range colList {
-			if j.Name == sortCol {
-				colExists = true
-			}
+	} else {
+		// Send the request to our AMQP backend
+		reqData := com.LiveDBRowsRequest{
+			DbTable:   dbTable,
+			SortCol:   sortCol,
+			SortDir:   sortDir,
+			CommitID:  commitID,
+			RowOffset: rowOffset,
+			MaxRows:   pageData.DB.MaxRows,
 		}
-		if colExists == false {
-			// The requested sort column doesn't exist, so we fall back to no sorting
-			sortCol = ""
-		}
-	}
-
-	// Validate the table name, just to be careful
-	if dbTable != "" {
-		err = com.ValidatePGTable(dbTable)
+		var rawResponse []byte
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "rowdata", pageData.Meta.LoggedInUser, dbOwner, dbName, reqData)
 		if err != nil {
-			// Validation failed, so don't pass on the table name
-
-			// If the failed table name is "{{ db.Tablename }}", don't bother logging it.  It's just a search
-			// bot picking up AngularJS in a string and doing a request with it
-			if dbTable != "{{ db.Tablename }}" {
-				log.Printf("%s: Validation failed for table name: '%s': %s", pageName, com.SanitiseLogString(dbTable), err)
-			}
-			errorPage(w, r, http.StatusBadRequest, "Validation failed for table name")
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
 			return
 		}
+
+		// Decode the response
+		var resp com.LiveDBRowsResponse
+		err = json.Unmarshal(rawResponse, &resp)
+		if err != nil {
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			return
+		}
+		if resp.Error != "" {
+			err = errors.New(resp.Error)
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			return
+		}
+		if resp.Node == "" {
+			log.Printf("In webUI (Live) databasePage().  A node responded, but didn't identify itself.")
+			return
+		}
+		pageData.DB.Info.DBEntry.Size = resp.DatabaseSize
+		pageData.DB.Info.Tables = resp.Tables
+		pageData.DB.Info.DefaultTable = resp.DefaultTable
+		pageData.Data = resp.RowData
 	}
 
 	// Fill out various metadata fields
@@ -1221,33 +1234,22 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.DB.Info.Discussions = currentDisc
 	pageData.DB.Info.MRs = currentMRs
 
-	// Grab the cached table data if it's available
-	rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-		pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
-	ok, err := com.GetCachedData(rowCacheKey, &pageData.Data)
-	if err != nil {
-		log.Printf("%s: Error retrieving page data from cache: %v\n", pageName, err)
-	}
-
-	// If the row data wasn't in cache, read it from the database
-	if !ok {
-		pageData.Data, err = com.ReadSQLiteDB(sdb, dbTable, sortCol, sortDir, pageData.DB.MaxRows, rowOffset)
+	// If this is a standard database, then cache the table row data
+	if !pageData.IsLive {
+		rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
+			pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
+		err = com.CacheData(rowCacheKey, pageData.Data, com.Conf.Memcache.DefaultCacheTime)
 		if err != nil {
-			// Some kind of error when reading the database data
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
+			log.Printf("%s: Error when caching page data: %v\n", pageName, err)
 		}
-		pageData.Data.Tablename = dbTable
-	}
-
-	// Cache the table row data
-	err = com.CacheData(rowCacheKey, pageData.Data, com.Conf.Memcache.DefaultCacheTime)
-	if err != nil {
-		log.Printf("%s: Error when caching page data: %v\n", pageName, err)
 	}
 
 	// Render the page
-	t := tmpl.Lookup("databasePage")
+	templateName := "databasePage"
+	if pageData.IsLive {
+		templateName = "databaseLivePage"
+	}
+	t := tmpl.Lookup(templateName)
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)

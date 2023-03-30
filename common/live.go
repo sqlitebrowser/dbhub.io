@@ -64,11 +64,11 @@ type LiveDBQueryResponse struct {
 
 // LiveDBRequest holds the fields used for sending requests to our AMQP backend
 type LiveDBRequest struct {
-	Operation      string `json:"operation"`
-	DBOwner        string `json:"dbowner"`
-	DBName         string `json:"dbname"`
-	Query          string `json:"query"`
-	RequestingUser string `json:"requesting_user"`
+	Operation      string      `json:"operation"`
+	DBOwner        string      `json:"dbowner"`
+	DBName         string      `json:"dbname"`
+	Data           interface{} `json:"data,omitempty"`
+	RequestingUser string      `json:"requesting_user"`
 }
 
 // LiveDBResponse holds the fields used for receiving (non-query) responses from our AMQP backend
@@ -76,6 +76,26 @@ type LiveDBResponse struct {
 	Node   string `json:"node"`
 	Result string `json:"result"`
 	Error  string `json:"error"`
+}
+
+// LiveDBRowsRequest holds the data used when making an AMQP rows request
+type LiveDBRowsRequest struct {
+	DbTable   string `json:"db_table"`
+	SortCol   string `json:"sort_col"`
+	SortDir   string `json:"sort_dir"`
+	CommitID  string `json:"commit_id"`
+	RowOffset int    `json:"row_offset"`
+	MaxRows   int    `json:"max_rows"`
+}
+
+// LiveDBRowsResponse holds the fields used for receiving database page row responses from our AMQP backend
+type LiveDBRowsResponse struct {
+	Node         string          `json:"node"`
+	DatabaseSize int64           `json:"database_size"`
+	DefaultTable string          `json:"default_table"`
+	RowData      SQLiteRecordSet `json:"row_data"`
+	Tables       []string        `json:"tables"`
+	Error        string          `json:"error"`
 }
 
 // LiveDBs is used for general purpose holding of details about live databases
@@ -292,7 +312,7 @@ func MQCreateResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName, result
 }
 
 // MQRequest is the main function used for sending requests to our AMQP backend
-func MQRequest(channel *amqp.Channel, queue, operation, requestingUser, dbOwner, dbName, query string) (result []byte, err error) {
+func MQRequest(channel *amqp.Channel, queue, operation, requestingUser, dbOwner, dbName string, data interface{}) (result []byte, err error) {
 	// Create a temporary AMQP queue for receiving the response
 	var q amqp.Queue
 	q, err = channel.QueueDeclare("", false, false, true, false, nil)
@@ -305,7 +325,7 @@ func MQRequest(channel *amqp.Channel, queue, operation, requestingUser, dbOwner,
 		Operation:      operation,
 		DBOwner:        dbOwner,
 		DBName:         dbName,
-		Query:          query,
+		Data:           data,
 		RequestingUser: requestingUser,
 	}
 	var z []byte

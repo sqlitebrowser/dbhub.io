@@ -263,7 +263,7 @@
                     <table class="table table-striped table-responsive profileTable" data-cy="livedbstbl">
                         <tr ng-repeat="row in livedbs">
                             <td style="border: 1px solid #ddd">
-                                <h4>{{ row.owner_name }}/{{ row.database_name }}</h4>
+                                <h4><a class="blackLink" href="/{{ row.owner_name + '/' + row.database_name }}" data-cy="livedb-{{ row.owner_name }}-{{ row.database_name }}">{{ row.owner_name }}/{{ row.database_name }}</a></h4>
                             </td>
                             <td>
                                 <button type="button" class="btn btn-danger" ng-click="confirmDelete(row.database_name)" data-cy="delbtn">Delete database</button>
@@ -292,7 +292,6 @@
 
         // Bounce to the database deletion page
         $scope.confirmDelete = function(path) {
-          //console.log(path);
           window.location = '/confirmdelete/[[ .Meta.Owner ]]/' + path;
         };
 

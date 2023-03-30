@@ -229,7 +229,7 @@ func SetUserStatusUpdates(userName string, numUpdates int) error {
 	return nil
 }
 
-// TableRowsCacheKey generates a predictable cache key for SQLite row data
+// TableRowsCacheKey generates a predictable cache key for SQLite row data.  ONLY for standard databases
 func TableRowsCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string, dbTable string, rows int) string {
 	var cacheString string
 	if strings.ToLower(loggedInUser) == strings.ToLower(dbOwner) {
