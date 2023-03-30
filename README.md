@@ -1,6 +1,8 @@
 ## DBHub.io
 
 [![Cypress](https://github.com/sqlitebrowser/dbhub.io/actions/workflows/cypress.yml/badge.svg)](https://github.com/sqlitebrowser/dbhub.io/actions/workflows/cypress.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sqlitebrowser/dbhub.io)](https://goreportcard.com/report/github.com/sqlitebrowser/dbhub.io)
+
 
 ### What it is
 
