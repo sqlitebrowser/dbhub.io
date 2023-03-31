@@ -72,7 +72,7 @@
             <span class="pull-left">
                 <div class="dropdown">
                     <div class="btn-group" uib-dropdown keyboard-nav="true">
-                        <button id="viewtable" type="button" class="btn">Table/view: {{ db.Tablename }}</button>
+                        <button id="viewtable" type="button" class="btn"><span style="font-weight: bold">Table/view:</span> {{ db.Tablename }}</button>
 
                         <button type="button" uib-dropdown-toggle class="btn btn-default" data-cy="tabledropdown">
                             <span class="caret"></span>
@@ -84,7 +84,7 @@
                         </ul>
                     </div>
                     <div class="btn-group" uib-dropdown keyboard-nav="true">
-                        <button id="viewbranch" type="button" class="btn" data-cy="branchname">{{ 'Branch: ' + meta.Branch }}</button>
+                        <button id="viewbranch" type="button" class="btn" data-cy="branchname"><span style="font-weight: bold">Branch:</span> {{ meta.Branch }}</button>
 
                         <button type="button" uib-dropdown-toggle class="btn btn-default" data-cy="branchdropdown">
                             <span class="caret"></span>
