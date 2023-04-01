@@ -263,8 +263,8 @@ describe('visualisation', () => {
     cy.get('[data-cy="runsqlbtn"]').click()
 
     // Verify the result
-    // TODO: Probably need to add cypress to the rows and columns of the results table, then
-    //       check against known good return values
+    // TODO: Probably need to add cypress attributes to the rows and columns of the results table, then
+    //       check against known good return values for the testing
   })
 
   // "Delete" button

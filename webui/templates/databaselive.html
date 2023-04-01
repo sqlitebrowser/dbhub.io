@@ -30,24 +30,21 @@
             </h2>
         </div>
     </div>
-    [[ if not .IsLive ]]
-        <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
-            <div class="col-md-6">
-                <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_data" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data" data-cy="datalink"><i class="fa fa-database"></i> Data</a></label>
-                &nbsp; &nbsp; &nbsp;
-                <label id="viewvis" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_vis" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise" data-cy="vislink"><i class="fa fa-bar-chart"></i> Visualise</a></label>
+
+    <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
+        <div class="col-md-12">
+            <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_data" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data" data-cy="datalink"><i class="fa fa-database"></i> Data</a></label>
+            &nbsp; &nbsp; &nbsp;
+            <label id="viewvis" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_vis" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise" data-cy="vislink"><i class="fa fa-bar-chart"></i> Visualise</a></label>
+            [[ if not .IsLive ]]
                 &nbsp; &nbsp; &nbsp;
                 [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
                 <label id="settings" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_settings" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Settings" data-cy="settingslink"><i class="fa fa-cog"></i> Settings</a></label>
                 [[ end ]]
-            </div>
-            <div class="col-md-6">
-                <div class="pull-right">
-                    <b>Size:</b> <span data-cy="size">{{ meta.Size / 1024 | number : 0 }} KB</span>
-                </div>
-            </div>
+            [[ end ]]
         </div>
-    [[ end ]]
+    </div>
+
     <!-- END of section copied from old headerdatabase template, then modified -->
 
     [[ if not .IsLive ]]
