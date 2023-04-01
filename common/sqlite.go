@@ -1405,9 +1405,7 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	}
 
 	// Automatically close the SQLite database when this function finishes
-	defer func() {
-		sdb.Close()
-	}()
+	defer sdb.Close()
 
 	// Was a user agent part of the request?
 	var userAgent string

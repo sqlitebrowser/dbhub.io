@@ -1232,7 +1232,7 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// Send the columns request to our AMQP backend
+		// Send the tables request to our AMQP backend
 		var rawResponse []byte
 		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "tables", loggedInUser, dbOwner, dbName, "")
 		if err != nil {
