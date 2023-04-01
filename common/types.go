@@ -222,6 +222,7 @@ type DBInfo struct {
 	Folder        string
 	Forks         int
 	FullDesc      string
+	IsLive        bool
 	LastModified  time.Time
 	Licence       string
 	LicenceURL    string

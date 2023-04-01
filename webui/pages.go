@@ -819,7 +819,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		MyStar  bool
 		MyWatch bool
 		Config  com.TomlConfig // FIXME: This seems silly to include here, when we just need to provide the server/port info
-		IsLive  bool
 	}
 
 	pageData.Meta.PageSection = "db_data"
@@ -948,8 +947,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// Check if this is a live database
-	var liveNode string
-	pageData.IsLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -957,7 +955,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// Only standard databases have commits, branches, tags (etC)
 	branchHeads := make(map[string]com.BranchEntry)
-	if !pageData.IsLive {
+	if !isLive {
 		// If a specific commit was requested, make sure it exists in the database commit history
 		if commitID != "" {
 			commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
@@ -1030,52 +1028,13 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 				return
 			}
 		}
+	}
 
-		// Retrieve the database details
-		err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID)
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-	} else {
-		// FIXME: We need an equivalent of com.DBDetails() for live databases
-		pageData.DB = com.SQLiteDBinfo{
-			Info: com.DBInfo{
-				Branch:        "",
-				Branches:      0,
-				BranchList:    nil,
-				Commits:       0,
-				CommitID:      "",
-				Contributors:  1, // 1 makes sense here, as we don't yet support sharing live databases
-				Database:      dbName,
-				DateCreated:   time.Time{},
-				DBEntry:       com.DBTreeEntry{},
-				DefaultBranch: "",
-				DefaultTable:  "",
-				Discussions:   0,
-				Downloads:     0,
-				Folder:        "",
-				Forks:         0,
-				FullDesc:      "",
-				LastModified:  time.Time{},
-				Licence:       "",
-				LicenceURL:    "",
-				MRs:           0,
-				OneLineDesc:   "",
-				Public:        false,
-				RepoModified:  time.Time{},
-				Releases:      0,
-				SHA256:        "",
-				Size:          0,
-				SourceURL:     "",
-				Stars:         0,
-				Tables:        nil,
-				Tags:          0,
-				Views:         0,
-				Watchers:      0,
-			},
-			MaxRows: 0,
-		}
+	// Retrieve the database details
+	err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Get the latest discussion and merge request count directly from PG, skipping the ones (incorrectly) stored in memcache
@@ -1125,7 +1084,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	}
 
 	// If it's a standard database then we query it directly, otherwise we query it via our AMQP backend
-	if !pageData.IsLive {
+	if !isLive {
 		bucket := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
 		id := pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:]
 		pageData.DB.Info.Tables, pageData.DB.Info.DefaultTable, pageData.Data, _, err =
@@ -1235,7 +1194,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.DB.Info.MRs = currentMRs
 
 	// If this is a standard database, then cache the table row data
-	if !pageData.IsLive {
+	if !isLive {
 		rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
 			pageData.Meta.LoggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, pageData.DB.MaxRows)
 		err = com.CacheData(rowCacheKey, pageData.Data, com.Conf.Memcache.DefaultCacheTime)

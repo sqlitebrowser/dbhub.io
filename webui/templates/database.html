@@ -32,7 +32,7 @@
             </div>
         </div>
     [[ end ]]
-    [[ if eq .IsLive false ]]
+    [[ if eq .DB.Info.IsLive false ]]
         <div class="row">
             <div class="col-md-12">
                 <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px;">
@@ -85,7 +85,7 @@
                             </li>
                         </ul>
                     </div>
-                    [[ if eq .IsLive false ]]
+                    [[ if eq .DB.Info.IsLive false ]]
                         <div class="btn-group" uib-dropdown keyboard-nav="true">
                             <button id="viewbranch" type="button" class="btn" data-cy="branchname"><span style="font-weight: bold">Branch:</span> {{ meta.Branch }}</button>
 
@@ -99,14 +99,14 @@
                             </ul>
                         </div>
                     [[ end ]]
-                    [[ if and (.Meta.LoggedInUser) (eq .IsLive false) ]]
+                    [[ if and (.Meta.LoggedInUser) (eq .DB.Info.IsLive false) ]]
                         <a href="/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="btn btn-primary" data-cy="newmrbtn">New Merge Request</a>
                         <button class="btn btn-primary" ng-click="uploadForm()" data-cy="uploadbtn">Upload database</button>
                     [[ end ]]
                 </div>
             </span>
         </div>
-        [[ if eq .IsLive false ]]
+        [[ if eq .DB.Info.IsLive false ]]
             <div class="col-md-4">
                 <span class="pull-right">
                     <div class="btn-group" uib-dropdown keyboard-nav="true">

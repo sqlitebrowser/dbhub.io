@@ -596,7 +596,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 			SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
 				$4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
 				db.branches, db.release_count, db.contributors, db.one_line_description, db.full_description,
-				db.default_table, db.public, db.source_url, db.tags, db.default_branch
+				db.default_table, db.public, db.source_url, db.tags, coalesce(db.default_branch, ''), db.live_db
 			FROM sqlite_databases AS db
 			WHERE db.user_id = (
 					SELECT user_id
@@ -614,7 +614,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 		&DB.Info.CommitID,
 		&DB.Info.DBEntry,
 		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
-		&DB.Info.Public, &sourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch)
+		&DB.Info.Public, &sourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch, &DB.Info.IsLive)
 
 	if err != nil {
 		log.Printf("Error when retrieving database details: %v\n", err.Error())

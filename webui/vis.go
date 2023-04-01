@@ -324,8 +324,8 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 	// Update database star and watch status for the logged in user
 	// FIXME: Add Cypress tests for this, to ensure moving the code above isn't screwing anything up (especially cacheing)
-//pageData.MyStar = myStar
-//pageData.MyWatch = myWatch
+	//pageData.MyStar = myStar
+	//pageData.MyWatch = myWatch
 
 	// Render the visualisation page
 	pageData.Meta.PageSection = "db_vis"
