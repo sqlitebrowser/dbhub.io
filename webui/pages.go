@@ -1246,9 +1246,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// Render the page
 	templateName := "databasePage"
-	if pageData.IsLive {
-		templateName = "databaseLivePage"
-	}
 	t := tmpl.Lookup(templateName)
 	err = t.Execute(w, pageData)
 	if err != nil {

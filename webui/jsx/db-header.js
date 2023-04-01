@@ -42,14 +42,36 @@ function ToggleButton({icon, textSet, textUnset, redirectUrl, updateUrl, pageUrl
 }
 
 export default function DbHeader() {
+	// Fork and commir information and actions are only shown for non-live databases
 	let forkedFrom = null;
-	if (meta.forkOwner) {
-		forkedFrom = (
-			<div style={{fontSize: "small"}}>
-				forked from <a href={"/" + meta.forkOwner}>{meta.forkOwner}</a> /&nbsp;
-				{meta.forkDeleted ? "deleted database" : <a href={"/" + meta.forkOwner + "/" + meta.forkDatabase}>{meta.forkDatabase}</a>}
-			</div>
+	let forkButton = null;
+	let lastCommit = null;
+	if (meta.isLive === false) {
+		forkButton = (
+			<ToggleButton
+				icon="fa-sitemap"
+				textSet="Fork"
+				textUnset="Fork"
+				redirectUrl={"/x/forkdb/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID}
+				pageUrl={"/forks/" + meta.owner + "/" + meta.database}
+				isSet={false}
+				count={meta.numForks}
+				cyToggle="forksbtn"
+				cyPage="forkspagebtn"
+				disabled={meta.owner == authInfo.loggedInUser}
+			/>
 		);
+
+		if (meta.forkOwner) {
+			forkedFrom = (
+				<div style={{fontSize: "small"}}>
+					forked from <a href={"/" + meta.forkOwner}>{meta.forkOwner}</a> /&nbsp;
+					{meta.forkDeleted ? "deleted database" : <a href={"/" + meta.forkOwner + "/" + meta.forkDatabase}>{meta.forkDatabase}</a>}
+				</div>
+			);
+		}
+
+		lastCommit = (<><b>Last Commit:</b> {meta.commitID.substring(0, 8)} ({getTimePeriod(meta.repoModified, false)}) &nbsp;</>);
 	}
 
 	let settings = null;
@@ -117,18 +139,7 @@ export default function DbHeader() {
 							cyPage="starspagebtn"
 						/>
 						&nbsp;
-						<ToggleButton
-							icon="fa-sitemap"
-							textSet="Fork"
-							textUnset="Fork"
-							redirectUrl={"/x/forkdb/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID}
-							pageUrl={"/forks/" + meta.owner + "/" + meta.database}
-							isSet={false}
-							count={meta.numForks}
-							cyToggle="forksbtn"
-							cyPage="forkspagebtn"
-							disabled={meta.owner == authInfo.loggedInUser}
-						/>
+						{forkButton}
 					</div>
 				</h2>
 			</div>
@@ -143,20 +154,20 @@ export default function DbHeader() {
 
 			&nbsp; &nbsp; &nbsp;
 
-			<label id="viewdiscuss" className={meta.pageSection == "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} className="blackLink" title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>
+			{meta.isLive ? null : <label id="viewdiscuss" className={meta.pageSection == "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} className="blackLink" title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>}
 
 			&nbsp; &nbsp; &nbsp;
 
-			<label id="viewmrs" className={meta.pageSection == "db_merge" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/merge/" + meta.owner + "/" + meta.database} className="blackLink" title="Merge Requests" data-cy="mrlink"><i className="fa fa-clone"></i> Merge Requests:</a> {meta.numMRs}</label>
+			{meta.isLive ? null : <label id="viewmrs" className={meta.pageSection == "db_merge" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/merge/" + meta.owner + "/" + meta.database} className="blackLink" title="Merge Requests" data-cy="mrlink"><i className="fa fa-clone"></i> Merge Requests:</a> {meta.numMRs}</label>}
 
 			&nbsp; &nbsp; &nbsp;
 
-			{settings}
+			{meta.isLive ? null : settings}
 		    </div>
 		    <div className="col-md-6">
 			<div className="pull-right">
 				{visibility} &nbsp;
-				<b>Last Commit:</b> {meta.commitID.substring(0, 8)} ({getTimePeriod(meta.repoModified, false)}) &nbsp;
+				{lastCommit}
 				{licence} &nbsp;
 				<b>Size:</b> <span data-cy="size">{Math.round(meta.size / 1024).toLocaleString()} KB</span>
 			</div>

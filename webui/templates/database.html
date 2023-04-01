@@ -32,41 +32,43 @@
             </div>
         </div>
     [[ end ]]
-    <div class="row">
-        <div class="col-md-12">
-            <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px;">
-                <table width="100%" class="table" style="margin-bottom: 0; border: none;">
-                    <tr style="border: none;">
-                        <td style="border: none; border-right: 1px solid #DDD;">
-                            <div style="text-align: center;">
-                                <a href="/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}" class="blackLink" style="font-weight: bold;" data-cy="commitslnk">Commits: <span data-cy="commitscnt">{{ meta.Commits }}</span></a>
-                            </div>
-                        </td>
-                        <td style="border: none; border-right: 1px solid #DDD;">
-                            <div style="text-align: center;">
-                                <a href="/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;" data-cy="brancheslnk">Branches: <span data-cy="branchescnt">{{ meta.Branches }}</span></a>
-                            </div>
-                        </td>
-                        <td style="border: none; border-right: 1px solid #DDD;">
-                            <div style="text-align: center;">
-                                <a href="/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;" data-cy="tagslnk">Tags: <span data-cy="tagscnt">{{ meta.Tags }}</span></a>
-                            </div>
-                        </td>
-                        <td style="border: none; border-right: 1px solid #DDD;">
-                            <div style="text-align: center;">
-                                <a href="/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;" data-cy="rlslnk">Releases: <span data-cy="rlscnt">{{ meta.Releases }}</span></a>
-                            </div>
-                        </td>
-                        <td style="border: none;">
-                            <div style="text-align: center;">
-                                <a href="/contributors/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;" data-cy="contlnk">Contributors: <span data-cy="contcnt">{{ meta.Contributors }}</span></a>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
+    [[ if eq .IsLive false ]]
+        <div class="row">
+            <div class="col-md-12">
+                <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px;">
+                    <table width="100%" class="table" style="margin-bottom: 0; border: none;">
+                        <tr style="border: none;">
+                            <td style="border: none; border-right: 1px solid #DDD;">
+                                <div style="text-align: center;">
+                                    <a href="/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}" class="blackLink" style="font-weight: bold;" data-cy="commitslnk">Commits: <span data-cy="commitscnt">{{ meta.Commits }}</span></a>
+                                </div>
+                            </td>
+                            <td style="border: none; border-right: 1px solid #DDD;">
+                                <div style="text-align: center;">
+                                    <a href="/branches/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;" data-cy="brancheslnk">Branches: <span data-cy="branchescnt">{{ meta.Branches }}</span></a>
+                                </div>
+                            </td>
+                            <td style="border: none; border-right: 1px solid #DDD;">
+                                <div style="text-align: center;">
+                                    <a href="/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;" data-cy="tagslnk">Tags: <span data-cy="tagscnt">{{ meta.Tags }}</span></a>
+                                </div>
+                            </td>
+                            <td style="border: none; border-right: 1px solid #DDD;">
+                                <div style="text-align: center;">
+                                    <a href="/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;" data-cy="rlslnk">Releases: <span data-cy="rlscnt">{{ meta.Releases }}</span></a>
+                                </div>
+                            </td>
+                            <td style="border: none;">
+                                <div style="text-align: center;">
+                                    <a href="/contributors/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" style="font-weight: bold;" data-cy="contlnk">Contributors: <span data-cy="contcnt">{{ meta.Contributors }}</span></a>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
+    [[ end ]]
     <div class="row" style="padding-bottom: 10px;">
         <div class="col-md-8">
             <span class="pull-left">
@@ -83,50 +85,54 @@
                             </li>
                         </ul>
                     </div>
-                    <div class="btn-group" uib-dropdown keyboard-nav="true">
-                        <button id="viewbranch" type="button" class="btn" data-cy="branchname"><span style="font-weight: bold">Branch:</span> {{ meta.Branch }}</button>
+                    [[ if eq .IsLive false ]]
+                        <div class="btn-group" uib-dropdown keyboard-nav="true">
+                            <button id="viewbranch" type="button" class="btn" data-cy="branchname"><span style="font-weight: bold">Branch:</span> {{ meta.Branch }}</button>
 
-                        <button type="button" uib-dropdown-toggle class="btn btn-default" data-cy="branchdropdown">
-                            <span class="caret"></span>
-                        </button>
-                        <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                            <li ng-repeat="row in meta.BranchList" role="menuitem" ng-click="changeBranch(row)" data-cy="branch-{{ row }}">
-                                <a href="">{{ row }}</a>
-                            </li>
-                        </ul>
-                    </div>
-                    [[ if .Meta.LoggedInUser ]]
+                            <button type="button" uib-dropdown-toggle class="btn btn-default" data-cy="branchdropdown">
+                                <span class="caret"></span>
+                            </button>
+                            <ul uib-dropdown-menu class="dropdown-menu" role="menu">
+                                <li ng-repeat="row in meta.BranchList" role="menuitem" ng-click="changeBranch(row)" data-cy="branch-{{ row }}">
+                                    <a href="">{{ row }}</a>
+                                </li>
+                            </ul>
+                        </div>
+                    [[ end ]]
+                    [[ if and (.Meta.LoggedInUser) (eq .IsLive false) ]]
                         <a href="/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="btn btn-primary" data-cy="newmrbtn">New Merge Request</a>
                         <button class="btn btn-primary" ng-click="uploadForm()" data-cy="uploadbtn">Upload database</button>
                     [[ end ]]
                 </div>
             </span>
         </div>
-        <div class="col-md-4">
-            <span class="pull-right">
-                <div class="btn-group" uib-dropdown keyboard-nav="true">
-                    <button type="button" class="btn btn-success" uib-dropdown-toggle>
-                        Clone database in DB4S <span class="caret"></span>
-                    </button>
-                    <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
-                        <li><input type="text" value="https://[[ .Config.DB4S.Server ]][[ if (ne .Config.DB4S.Port 443) ]]:[[ .Config.DB4S.Port ]][[ end ]]/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&branch=[[ .DB.Info.Branch ]]" id="db4sCloneLink" /></li>
-                        <li><a href="#" onclick="copyToClipboard('db4sCloneLink');return false;">Copy link <span class="glyphicon glyphicon-link"></span></a></li>
-                    </ul>
-                </div>
-                <div class="btn-group" uib-dropdown keyboard-nav="true" data-cy="dldropdown">
-                    <button type="button" class="btn btn-success" uib-dropdown-toggle>
-                        Download database <span class="caret"></span>
-                    </button>
-                    <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
-                        <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]" data-cy="dldb">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
-                        [[ if (le .DB.Info.DBEntry.Size 100000000) ]]
-                            <!-- Don't display the CSV export options for large databases, as the current node setup doesn't have sufficient ram + swap for it. -->
-                            <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}" data-cy="dlcsv">Selected table as CSV</a></li>
-                        [[ end ]]
-                    </ul>
-                </div>
-            </span>
-        </div>
+        [[ if eq .IsLive false ]]
+            <div class="col-md-4">
+                <span class="pull-right">
+                    <div class="btn-group" uib-dropdown keyboard-nav="true">
+                        <button type="button" class="btn btn-success" uib-dropdown-toggle>
+                            Clone database in DB4S <span class="caret"></span>
+                        </button>
+                        <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
+                            <li><input type="text" value="https://[[ .Config.DB4S.Server ]][[ if (ne .Config.DB4S.Port 443) ]]:[[ .Config.DB4S.Port ]][[ end ]]/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&branch=[[ .DB.Info.Branch ]]" id="db4sCloneLink" /></li>
+                            <li><a href="#" onclick="copyToClipboard('db4sCloneLink');return false;">Copy link <span class="glyphicon glyphicon-link"></span></a></li>
+                        </ul>
+                    </div>
+                    <div class="btn-group" uib-dropdown keyboard-nav="true" data-cy="dldropdown">
+                        <button type="button" class="btn btn-success" uib-dropdown-toggle>
+                            Download database <span class="caret"></span>
+                        </button>
+                        <ul uib-dropdown class="dropdown-menu dropdown-menu-right" role="menu">
+                            <li><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]" data-cy="dldb">Entire database ({{ meta.Size / 1024 | number : 0 }} KB)</a></li>
+                            [[ if (le .DB.Info.DBEntry.Size 100000000) ]]
+                                <!-- Don't display the CSV export options for large databases, as the current node setup doesn't have sufficient ram + swap for it. -->
+                                <li><a href="/x/downloadcsv/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&table={{ db.Tablename }}" data-cy="dlcsv">Selected table as CSV</a></li>
+                            [[ end ]]
+                        </ul>
+                    </div>
+                </span>
+            </div>
+        [[ end ]]
     </div>
     <div class="row">
         <div class="col-md-12">
