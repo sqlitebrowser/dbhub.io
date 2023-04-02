@@ -214,6 +214,10 @@ type DBInfo struct {
 	Discussions   int
 	Downloads     int
 	Folder        string
+	ForkDatabase  string
+	ForkDeleted   bool
+	ForkFolder    string
+	ForkOwner     string
 	Forks         int
 	FullDesc      string
 	IsLive        bool
@@ -343,13 +347,9 @@ type MergeRequestEntry struct {
 }
 
 type MetaInfo struct {
-	Database         string
-	Folder           string
-	ForkDatabase     string
-	ForkDeleted      bool
-	ForkFolder       string
-	ForkOwner        string
-	Owner            string
+	Database string
+	Folder   string
+	Owner    string
 }
 
 type ReleaseEntry struct {

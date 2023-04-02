@@ -668,6 +668,12 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 		return err
 	}
 
+	// Retrieve the "forked from" information
+	DB.Info.ForkOwner, DB.Info.ForkFolder, DB.Info.ForkDatabase, DB.Info.ForkDeleted, err = ForkedFrom(dbOwner, dbFolder, dbName)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

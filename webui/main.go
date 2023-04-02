@@ -379,19 +379,17 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 	return
 }
 
-func collectPageAuth0Info() (auth0 Auth0Set) {
-	auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	auth0.ClientID = com.Conf.Auth0.ClientID
-	auth0.Domain = com.Conf.Auth0.Domain
-	return
-}
-
 func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.MetaInfo, requireLogin bool, getOwnerAndDatabaseFromUrl bool, getOwnerAndDatabaseFromData bool) (errCode int, err error) {
 	// Auth0 info
-	pageMeta.Auth0 = collectPageAuth0Info()
+	pageMeta.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
+	pageMeta.Auth0.ClientID = com.Conf.Auth0.ClientID
+	pageMeta.Auth0.Domain = com.Conf.Auth0.Domain
 
 	// Server name
 	pageMeta.Server = com.Conf.Web.ServerName
+
+	// Pass along the environment setting
+	pageMeta.Environment = com.Conf.Environment.Environment
 
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
@@ -467,16 +465,7 @@ func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.Meta
 		meta.Database = dbName
 		meta.Owner = usr.Username
 		meta.Folder = "/"
-
-		// Retrieve the "forked from" information
-		meta.ForkOwner, meta.ForkFolder, meta.ForkDatabase, meta.ForkDeleted, err = com.ForkedFrom(meta.Owner, meta.Folder, meta.Database)
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
 	}
-
-	// Pass along the environment setting
-	pageMeta.Environment = com.Conf.Environment.Environment
 
 	return
 }
