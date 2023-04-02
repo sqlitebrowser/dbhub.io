@@ -159,6 +159,10 @@ func main() {
 					continue
 				}
 
+				if com.AmqpDebug {
+					log.Printf("Running BACKUP on '%s/%s'", req.DBOwner, req.DBName)
+				}
+
 				// Return a success message to the caller
 				resp := com.LiveDBErrorResponse{Node: com.Conf.Live.Nodename, Error: ""} // Use an empty error message to indicate success
 				err = com.MQResponse("BACKUP", msg, ch, com.Conf.Live.Nodename, resp)
@@ -180,6 +184,10 @@ func main() {
 					continue
 				}
 
+				if com.AmqpDebug {
+					log.Printf("Running COLUMNS on '%s/%s': '%s'", req.DBOwner, req.DBName, req.Data)
+				}
+
 				// Return the columns list to the caller
 				resp := com.LiveDBColumnsResponse{Node: com.Conf.Live.Nodename, Columns: columns, Error: "", ErrCode: com.AMQPNoError}
 				err = com.MQResponse("COLUMNS", msg, ch, com.Conf.Live.Nodename, resp)
@@ -198,6 +206,10 @@ func main() {
 						log.Printf("Error: occurred on '%s' in MQResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 					}
 					continue
+				}
+
+				if com.AmqpDebug {
+					log.Printf("Running DELETE on '%s/%s'", req.DBOwner, req.DBName)
 				}
 
 				// Return a success message (empty string in this case) to the caller
@@ -221,6 +233,10 @@ func main() {
 					continue
 				}
 
+				if com.AmqpDebug {
+					log.Printf("Running EXECUTE on '%s/%s': '%s'", req.DBOwner, req.DBName, req.Data)
+				}
+
 				// Return a success message to the caller
 				resp := com.LiveDBExecuteResponse{Node: com.Conf.Live.Nodename, RowsChanged: rowsChanged, Error: ""}
 				err = com.MQResponse("EXECUTE", msg, ch, com.Conf.Live.Nodename, resp)
@@ -241,6 +257,10 @@ func main() {
 					continue
 				}
 
+				if com.AmqpDebug {
+					log.Printf("Running INDEXES on '%s/%s'", req.DBOwner, req.DBName)
+				}
+
 				// Return the indexes list to the caller
 				resp := com.LiveDBIndexesResponse{Node: com.Conf.Live.Nodename, Indexes: indexes, Error: ""}
 				err = com.MQResponse("INDEXES", msg, ch, com.Conf.Live.Nodename, resp)
@@ -259,6 +279,10 @@ func main() {
 						log.Printf("Error: occurred on '%s' in MQResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 					}
 					continue
+				}
+
+				if com.AmqpDebug {
+					log.Printf("Running QUERY on '%s/%s': '%s'", req.DBOwner, req.DBName, req.Data)
 				}
 
 				// Return the query response to the caller
@@ -294,6 +318,10 @@ func main() {
 					continue
 				}
 
+				if com.AmqpDebug {
+					log.Printf("Running ROWDATA on '%s/%s'", req.DBOwner, req.DBName)
+				}
+
 				// Return the row data to the caller
 				err = com.MQResponse("ROWDATA", msg, ch, com.Conf.Live.Nodename, resp)
 				if err != nil {
@@ -311,6 +339,10 @@ func main() {
 						log.Printf("Error: occurred on '%s' in MQResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 					}
 					continue
+				}
+
+				if com.AmqpDebug {
+					log.Printf("Running TABLES on '%s/%s'", req.DBOwner, req.DBName)
 				}
 
 				// Return the tables list to the caller
@@ -331,6 +363,10 @@ func main() {
 						log.Printf("Error: occurred on '%s' in MQResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
 					}
 					continue
+				}
+
+				if com.AmqpDebug {
+					log.Printf("Running VIEWS on '%s/%s'", req.DBOwner, req.DBName)
 				}
 
 				// Return the views list to the caller
