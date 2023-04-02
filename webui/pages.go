@@ -18,12 +18,11 @@ import (
 // Renders the "About Us" page.
 func aboutPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Meta     com.MetaInfo
 		PageMeta PageMetaInfo
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -60,7 +59,12 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.PageSection = "db_data"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -156,7 +160,12 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.PageSection = "db_data"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -352,7 +361,12 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.Title = "Create a Merge Request"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -362,6 +376,13 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	errCode, err = requireLogin(pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
+		return
+	}
+
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -421,13 +442,6 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 	pageData.DestDBDefaultBranch, err = com.GetDefaultBranchName(pageData.DestOwner, pageData.DestFolder,
 		pageData.DestDBName)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -530,7 +544,12 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.Title = "Confirm database deletion"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -579,7 +598,12 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.PageSection = "db_data"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -670,7 +694,12 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.Title = "Create new branch"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -725,7 +754,12 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.PageSection = "db_disc"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -784,7 +818,12 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -835,7 +874,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.PageMeta.PageSection = "db_data"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1233,7 +1272,12 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1341,7 +1385,12 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.PageSection = "db_disc"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1442,14 +1491,13 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string) {
 	var pageData struct {
 		Message  string
-		Meta     com.MetaInfo
 		PageMeta PageMetaInfo
 	}
 	pageData.Message = msg
 	pageData.PageMeta.Title = "Error"
 
 	// Get all meta information
-	_, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false)
+	_, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		// We can't use errorPage() here, as it can lead to a recursive loop (which crashes)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -1476,7 +1524,12 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.Title = "Forks"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1514,13 +1567,12 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 func frontPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	var pageData struct {
-		Meta     com.MetaInfo
 		PageMeta PageMetaInfo
 		Stats    map[com.ActivityRange]com.ActivityStats
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1582,7 +1634,12 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1821,11 +1878,10 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 		DisplayName string
 		Email       string
 		MaxRows     int
-		Meta        com.MetaInfo
 		PageMeta    PageMetaInfo
 	}
 	pageData.PageMeta.Title = "Settings"
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -1870,8 +1926,8 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 
 func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	var pageData struct {
-		Meta             com.MetaInfo
 		LiveDBS          []com.LiveDBs
+		Meta             com.MetaInfo
 		PageMeta         PageMetaInfo
 		PrivateDBs       []com.DBInfo
 		PublicDBs        []com.DBInfo
@@ -1881,7 +1937,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		Watching         []com.DBEntry
 	}
 
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2026,7 +2082,12 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.PageSection = "db_data"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2179,7 +2240,12 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.Title = "Database settings"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2360,7 +2426,12 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.Title = "Stars"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2416,7 +2487,12 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.PageSection = "db_data"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2506,13 +2582,12 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 // This function presents the status updates page to logged in users.
 func updatesPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Meta     com.MetaInfo
 		PageMeta PageMetaInfo
 		Updates  map[string][]com.StatusUpdateEntry
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2558,7 +2633,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2661,7 +2736,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2724,7 +2799,12 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	pageData.PageMeta.Title = "Watchers"
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return

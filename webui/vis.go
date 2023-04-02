@@ -33,7 +33,12 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, true)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return

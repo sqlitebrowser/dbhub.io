@@ -379,7 +379,33 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 	return
 }
 
-func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.MetaInfo, getOwnerAndDatabaseFromUrl bool) (errCode int, err error) {
+func collectDatabaseInfo(r *http.Request, meta *com.MetaInfo) (errCode int, err error) {
+	// TODO: Add folder and branch name support
+	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	// Validate the supplied information
+	if dbOwner == "" || dbName == "" {
+		return http.StatusBadRequest, fmt.Errorf("Missing database owner or database name")
+	}
+
+	// Retrieve correctly capitalised username for the database owner
+	usr, err := com.User(dbOwner)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	// Store information
+	meta.Database = dbName
+	meta.Owner = usr.Username
+	meta.Folder = "/"
+
+	return
+}
+
+func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo) (errCode int, err error) {
 	// Auth0 info
 	pageMeta.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
 	pageMeta.Auth0.ClientID = com.Conf.Auth0.ClientID
@@ -413,40 +439,6 @@ func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.Meta
 		if err != nil {
 			return http.StatusBadRequest, err
 		}
-	}
-
-	// Retrieve the database owner & name
-	if getOwnerAndDatabaseFromUrl {
-		// TODO: Add folder and branch name support
-		dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
-
-		// Validate the supplied information
-		if dbOwner == "" || dbName == "" {
-			return http.StatusBadRequest, fmt.Errorf("Missing database owner or database name")
-		}
-
-		// Check if the database exists
-		exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, "/", dbName, false)
-		if err != nil {
-			return http.StatusInternalServerError, fmt.Errorf("Database failure when looking up database details")
-		}
-		if !exists {
-			return http.StatusNotFound, fmt.Errorf("That database doesn't seem to exist")
-		}
-
-		// Retrieve correctly capitalised username for the database owner
-		usr, err := com.User(dbOwner)
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
-
-		// Store information
-		meta.Database = dbName
-		meta.Owner = usr.Username
-		meta.Folder = "/"
 	}
 
 	return

@@ -43,7 +43,6 @@
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('updatesView', function($scope) {
-        $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
         $scope.updates = [[ .Updates ]];
 
         // Returns a nicely presented "time elapsed" string
