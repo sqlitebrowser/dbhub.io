@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import ModalImage from "react-modal-image";
 
 import Auth from "./auth";
+import BranchesTable from "./branches";
 import DbHeader from "./db-header";
 import MarkdownEditor from "./markdown-editor";
 
@@ -24,12 +25,21 @@ import MarkdownEditor from "./markdown-editor";
 }
 
 {
+	const rootNode = document.getElementById("branches");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(React.createElement(BranchesTable));
+	}
+}
+
+{
 	document.querySelectorAll(".markdown-editor").forEach((rootNode) => {
 		const editorId = rootNode.dataset.id;
 		const rows = rootNode.dataset.rows;
 		const placeholder = rootNode.dataset.placeholder;
 		const defaultIndex = rootNode.dataset.defaultIndex;
 		const initialValue = rootNode.dataset.initialValue;
+		const viewOnly = rootNode.dataset.viewOnly;
 
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(React.createElement(MarkdownEditor, {
@@ -37,7 +47,8 @@ import MarkdownEditor from "./markdown-editor";
 			rows: rows,
 			placeholder: placeholder,
 			defaultIndex: defaultIndex,
-			initialValue: initialValue
+			initialValue: initialValue,
+			viewOnly: viewOnly
 		}));
 	});
 }

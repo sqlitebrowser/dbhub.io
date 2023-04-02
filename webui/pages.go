@@ -40,16 +40,9 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 // Render the branches page, which lists the branches for a database.
 func branchesPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
-	type brEntry struct {
-		Commit       string `json:"commit"`
-		Description  string `json:"description"`
-		MarkDownDesc string `json:"mkdowndesc"`
-		Name         string `json:"name"`
-	}
 	var pageData struct {
-		Branches      []brEntry
+		Branches      map[string]com.BranchEntry
 		DB            com.SQLiteDBinfo
-		DefaultBranch string
 		PageMeta      PageMetaInfo
 	}
 	pageData.PageMeta.Title = "Branch list"
@@ -75,33 +68,10 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read the branch heads list from the database
-	branches, err := com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
+	pageData.Branches, err = com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
-	}
-
-	pageData.DefaultBranch, err = com.GetDefaultBranchName(dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	for i, j := range branches {
-		// Create a branch entry
-		var r string
-		if j.Description == "" {
-			r = "No description"
-		} else {
-			r = string(gfm.Markdown([]byte(j.Description)))
-		}
-		k := brEntry{
-			Commit:       j.Commit,
-			Description:  j.Description,
-			MarkDownDesc: r,
-			Name:         i,
-		}
-		pageData.Branches = append(pageData.Branches, k)
 	}
 
 	// Render the page
