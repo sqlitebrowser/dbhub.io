@@ -59,7 +59,7 @@
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('createDiscussionView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
-            [[ if .Meta.LoggedInUser ]]
+            [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
                 Loggedin: "false",

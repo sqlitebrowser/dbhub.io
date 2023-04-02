@@ -99,7 +99,7 @@
                             </ul>
                         </div>
                     [[ end ]]
-                    [[ if and (.Meta.LoggedInUser) (eq .DB.Info.IsLive false) ]]
+                    [[ if and (.PageMeta.LoggedInUser) (eq .DB.Info.IsLive false) ]]
                         <a href="/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="btn btn-primary" data-cy="newmrbtn">New Merge Request</a>
                         <button class="btn btn-primary" ng-click="uploadForm()" data-cy="uploadbtn">Upload database</button>
                     [[ end ]]
@@ -233,7 +233,7 @@
             Tables:       [[ .DB.Info.Tables ]],
             Size:         [[ .DB.Info.DBEntry.Size ]],
             Tags:         "[[ .DB.Info.Tags ]]",
-            [[ if .Meta.LoggedInUser ]]
+            [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
                 Loggedin: "false",

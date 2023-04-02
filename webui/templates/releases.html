@@ -19,7 +19,7 @@
                 <thead>
                     <tr style="border: none;">
                         <td style="background-color: #FFFFFF;">&nbsp;</td>
-                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                        [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                             <th style="border-radius: 7px 0 0 0;">Actions</th>
                             <th>Name</th>
                         [[ else ]]
@@ -35,7 +35,7 @@
                         <td style="background-color: #FFFFFF; border: none;">
                             <div style="text-align: center;"><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}" class="btn btn-success">Download</a></div>
                         </td>
-                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                        [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                             <td style="border: none; border-left: 1px solid #DDD; padding: 10px;">
                                 <button class="btn btn-primary" ng-click="updateRelease(key)" data-cy="updatebtn">Update</button>
                             </td>
@@ -67,7 +67,7 @@
                         <td style="background-color: #FFFFFF; border: none">
                             <div style="text-align: center;">{{ row.size / 1024 | number : 0 }} KB</div>
                         </td>
-                        [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                        [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                             <td style="border: 1px solid #DDD; border-top: none; border-right: none;">
                                 <button class="btn btn-primary" ng-click="deleteRelease(key)" data-cy="delbtn">Delete</button>
                             </td>
@@ -75,7 +75,7 @@
                         [[ else ]]
                             <td style="border: 1px solid #DDD; border-top: none; padding: 0;" colspan="4">
                         [[ end ]]
-                            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                             <uib-tabset>
                                 <uib-tab index="0" heading="Description" select="getMarkdown(key)" data-cy="renderedtab">
                                     <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;"><span ng-bind-html="RelRendered[key]" data-cy="rendereddiv"></span></div>

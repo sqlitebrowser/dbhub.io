@@ -22,7 +22,7 @@
                         <th>Email address</th>
                         <td><input name="email" style="width: 100%;" value="{{ EmailAddr }}" ng-attr-placeholder="{{ EmailPlaceholder }}" maxlength="80" data-cy="email"><br />
                             <i>If you don't want to use your real email address, use
-                                "[[ .Meta.LoggedInUser ]]@[[ .Meta.Server ]]".</i></td>
+                                "[[ .PageMeta.LoggedInUser ]]@[[ .PageMeta.Server ]]".</i></td>
                     </tr>
                 </table>
                 <h3 style="text-align: center;">Display options</h3>
@@ -106,7 +106,7 @@
         $scope.EmailAddr = "";
         $scope.EmailPlaceholder = "";
         if ("[[ .Email ]]" === "") {
-            $scope.EmailPlaceholder = "[[ .Meta.LoggedInUser ]]@[[ .Meta.Server ]]";
+            $scope.EmailPlaceholder = "[[ .PageMeta.LoggedInUser ]]@[[ .PageMeta.Server ]]";
         } else {
             $scope.EmailAddr = "[[ .Email ]]";
         }

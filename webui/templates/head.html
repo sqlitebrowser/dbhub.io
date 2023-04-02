@@ -1,7 +1,7 @@
 [[ define "head" ]]
 <head>
     <meta charset="UTF-8">
-    <title>DBHub.io - [[ .Meta.Title ]]</title>
+    <title>DBHub.io - [[ .PageMeta.Title ]]</title>
     <script src="/js/angular-1.8.2.min.js"></script>
     <script src="/js/angular-sanitize-1.8.2.min.js"></script>
     <script src="/js/ui-bootstrap-tpls-2.5.0.min.js"></script>
@@ -10,11 +10,11 @@
     <link href="/css/local.css" rel="stylesheet">
     <script src="//cdn.auth0.com/js/lock/11.35.0/lock.min.js"></script>
     <script src="/js/local.js" type="application/javascript"></script>
-    [[ if eq .Meta.Environment "production" ]]
+    [[ if eq .PageMeta.Environment "production" ]]
         <script type="application/javascript">
         // Only invoke the Auth0 pieces in the production environment
-        const lock = new Auth0Lock("[[ .Auth0.ClientID ]]", "[[ .Auth0.Domain ]]", { auth: {
-            redirectUrl: "[[ .Auth0.CallbackURL]]"
+        const lock = new Auth0Lock("[[ .PageMeta.Auth0.ClientID ]]", "[[ .PageMeta.Auth0.Domain ]]", { auth: {
+            redirectUrl: "[[ .PageMeta.Auth0.CallbackURL]]"
         }});
         </script>
     [[ end ]]

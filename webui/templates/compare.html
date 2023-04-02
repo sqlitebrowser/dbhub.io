@@ -185,7 +185,7 @@
             DestBranches:   [[ .DestDBBranches ]],
             SourceBranch:   [[ .SourceDBDefaultBranch ]],
             SourceBranches: [[ .SourceDBBranches ]],
-            [[ if .Meta.LoggedInUser ]]
+            [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
                 Loggedin: "false",
@@ -339,7 +339,7 @@
                         "sourcefolder": encodeURIComponent($scope.source.folder),
                         "sourceowner": encodeURIComponent($scope.source.owner),
                         "title": encodeURIComponent($scope.mr.title),
-                        "username": encodeURIComponent([[ .Meta.LoggedInUser ]])
+                        "username": encodeURIComponent([[ .PageMeta.LoggedInUser ]])
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {

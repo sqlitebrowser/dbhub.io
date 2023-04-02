@@ -379,16 +379,19 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 	return
 }
 
-func collectPageAuth0Info() (auth0 com.Auth0Set) {
+func collectPageAuth0Info() (auth0 Auth0Set) {
 	auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
 	auth0.ClientID = com.Conf.Auth0.ClientID
 	auth0.Domain = com.Conf.Auth0.Domain
 	return
 }
 
-func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool, getOwnerAndDatabaseFromUrl bool, getOwnerAndDatabaseFromData bool) (errCode int, err error) {
+func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.MetaInfo, requireLogin bool, getOwnerAndDatabaseFromUrl bool, getOwnerAndDatabaseFromData bool) (errCode int, err error) {
+	// Auth0 info
+	pageMeta.Auth0 = collectPageAuth0Info()
+
 	// Server name
-	meta.Server = com.Conf.Web.ServerName
+	pageMeta.Server = com.Conf.Web.ServerName
 
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
@@ -396,7 +399,7 @@ func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool,
 		return http.StatusBadRequest, err
 	}
 	if validSession {
-		meta.LoggedInUser = loggedInUser
+		pageMeta.LoggedInUser = loggedInUser
 	}
 
 	// Ensure we have a valid logged in user
@@ -411,9 +414,9 @@ func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool,
 			return http.StatusBadRequest, err
 		}
 		if ur.AvatarURL != "" {
-			meta.AvatarURL = ur.AvatarURL + "&s=48"
+			pageMeta.AvatarURL = ur.AvatarURL + "&s=48"
 		}
-		meta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
+		pageMeta.NumStatusUpdates, err = com.UserStatusUpdates(loggedInUser)
 		if err != nil {
 			return http.StatusBadRequest, err
 		}
@@ -473,7 +476,7 @@ func collectPageMetaInfo(r *http.Request, meta *com.MetaInfo, requireLogin bool,
 	}
 
 	// Pass along the environment setting
-	meta.Environment = com.Conf.Environment.Environment
+	pageMeta.Environment = com.Conf.Environment.Environment
 
 	return
 }

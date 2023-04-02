@@ -24,13 +24,13 @@
 
     <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
         <div class="col-md-12">
-            <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_data" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data" data-cy="datalink"><i class="fa fa-database"></i> Data</a></label>
+            <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; [[ if eq .PageMeta.PageSection "db_data" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Data" data-cy="datalink"><i class="fa fa-database"></i> Data</a></label>
             &nbsp; &nbsp; &nbsp;
-            <label id="viewvis" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_vis" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise" data-cy="vislink"><i class="fa fa-bar-chart"></i> Visualise</a></label>
+            <label id="viewvis" style="font-weight: 600; font-family: 'arial black'; [[ if eq .PageMeta.PageSection "db_vis" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Visualise" data-cy="vislink"><i class="fa fa-bar-chart"></i> Visualise</a></label>
             [[ if not .IsLive ]]
             &nbsp; &nbsp; &nbsp;
-            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
-            <label id="settings" style="font-weight: 600; font-family: 'arial black'; [[ if eq .Meta.PageSection "db_settings" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Settings" data-cy="settingslink"><i class="fa fa-cog"></i> Settings</a></label>
+            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+            <label id="settings" style="font-weight: 600; font-family: 'arial black'; [[ if eq .PageMeta.PageSection "db_settings" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" class="blackLink" title="Settings" data-cy="settingslink"><i class="fa fa-cog"></i> Settings</a></label>
             [[ end ]]
             [[ end ]]
         </div>
@@ -284,7 +284,7 @@
             BranchList:   [[ .DB.Info.BranchList ]],
             Database:     "[[ .Meta.Database ]]",
             Owner:        "[[ .Meta.Owner ]]",
-            [[ if .Meta.LoggedInUser ]]
+            [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
                 Loggedin: "false",

@@ -14,12 +14,12 @@ import (
 
 func visualisePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Auth0       com.Auth0Set
 		Data        com.SQLiteRecordSet
 		DB          com.SQLiteDBinfo
 		Meta        com.MetaInfo
 		MyStar      bool
 		MyWatch     bool
+		PageMeta    PageMetaInfo
 		ParamsGiven bool
 		DataGiven   bool
 		ChartType   string
@@ -33,7 +33,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.Meta, false, true, false)
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta, &pageData.Meta, false, true, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -75,7 +75,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the database exists and the user has access to view it
 	var exists bool
-	exists, err = com.CheckDBPermissions(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, false)
+	exists, err = com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -170,21 +170,21 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Retrieve the database details
-		err = com.DBDetails(&pageData.DB, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitID)
+		err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitID)
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
 		}
 
 		// Check if the database was starred by the logged in user
-		pageData.MyStar, err = com.CheckDBStarred(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+		pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database star status")
 			return
 		}
 
 		// Check if the database is being watched by the logged in user
-		pageData.MyWatch, err = com.CheckDBWatched(pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+		pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 			return
@@ -224,7 +224,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 			} else {
 				// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
 				log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
-					"logged in user '%s'", com.SanitiseLogString(j), pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.Meta.LoggedInUser)
+					"logged in user '%s'", com.SanitiseLogString(j), pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.PageMeta.LoggedInUser)
 			}
 		}
 		pageData.DB.Info.Branch = branchName
@@ -284,7 +284,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 			var data com.SQLiteRecordSet
 			if !pageData.IsLive {
 				// It's a standard database, so run the query locally
-				data, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitID, pageData.Meta.LoggedInUser, params.SQL)
+				data, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitID, pageData.PageMeta.LoggedInUser, params.SQL)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -295,7 +295,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 				//	data, ok, err := com.GetVisualisationData(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitID, hash)
 			} else {
 				// It's a live database, so run the query via our AMQP backend
-				data, err = com.LiveQueryDB(com.AmqpChan, liveNode, pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Database, params.SQL)
+				data, err = com.LiveQueryDB(com.AmqpChan, liveNode, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Database, params.SQL)
 				if err != nil {
 					log.Println(err)
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -317,10 +317,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fill out various metadata fields
-	pageData.Meta.Title = fmt.Sprintf("vis - %s %s %s", pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
-
-	// Add Auth0 info to the page data
-	pageData.Auth0 = collectPageAuth0Info()
+	pageData.PageMeta.Title = fmt.Sprintf("vis - %s %s %s", pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
 
 	// Update database star and watch status for the logged in user
 	// FIXME: Add Cypress tests for this, to ensure moving the code above isn't screwing anything up (especially cacheing)
@@ -328,7 +325,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	//pageData.MyWatch = myWatch
 
 	// Render the visualisation page
-	pageData.Meta.PageSection = "db_vis"
+	pageData.PageMeta.PageSection = "db_vis"
 	templateName := "visualisePage"
 	if pageData.IsLive {
 		templateName = "visualiseLivePage"

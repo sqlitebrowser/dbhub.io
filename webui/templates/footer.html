@@ -40,7 +40,7 @@
         <div class="col-md-3">&nbsp;</div>
     </div>
 </div>
-[[ if eq .Meta.Environment "production" ]]
+[[ if eq .PageMeta.Environment "production" ]]
 <!-- Fathom - simple website analytics - https://github.com/usefathom/fathom -->
 <script type="application/javascript">
     (function(f, a, t, h, o, m){
@@ -76,14 +76,14 @@
 
 <script type="application/javascript">
     const authInfo = {
-        [[ if .Meta.LoggedInUser ]]
+        [[ if .PageMeta.LoggedInUser ]]
             loggedIn: true,
         [[ else ]]
             loggedIn: false,
         [[ end ]]
-        loggedInUser: "[[ .Meta.LoggedInUser ]]",
-        avatarUrl: "[[ .Meta.AvatarURL ]]",
-        numStatusUpdates: [[ .Meta.NumStatusUpdates ]]
+        loggedInUser: "[[ .PageMeta.LoggedInUser ]]",
+        avatarUrl: "[[ .PageMeta.AvatarURL ]]",
+        numStatusUpdates: [[ .PageMeta.NumStatusUpdates ]]
     };
 </script>
 <script src="/js/dbhub.js"></script>

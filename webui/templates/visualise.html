@@ -265,7 +265,7 @@
             BranchList:   [[ .DB.Info.BranchList ]],
             Database:     "[[ .Meta.Database ]]",
             Owner:        "[[ .Meta.Owner ]]",
-            [[ if .Meta.LoggedInUser ]]
+            [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
                 Loggedin: "false",

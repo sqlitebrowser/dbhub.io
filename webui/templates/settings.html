@@ -275,7 +275,7 @@
             SourceURL:     "[[ .DB.Info.SourceURL ]]",
             Tables:        [[ .DB.Info.Tables ]],
             Owner:         "[[ .Meta.Owner ]]",
-            [[ if .Meta.LoggedInUser ]]
+            [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
                 Loggedin: "false",

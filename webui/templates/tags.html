@@ -19,7 +19,7 @@
                 <table id="contents" ng-if="numTags > 0" class="table table-striped table-responsive" style="margin: 0;">
                     <thead>
                         <tr>
-                            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                                 <th>Actions</th>
                             [[ end ]]
                             <th>Name</th><th>Tag creator</th><th>Creation date</th><th>Commit ID</th>
@@ -27,7 +27,7 @@
                     </thead>
                     <tbody>
                         <tr ng-repeat-start="(key, row) in Tags" style="border-style: none;">
-                            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                                 <td style="border-style: none;">
                                     <button class="btn btn-primary" ng-click="updateTag(key)" data-cy="updatebtn">Update</button>
                                 </td>
@@ -56,13 +56,13 @@
                             </td>
                         </tr>
                         <tr ng-repeat-end class="tableRow">
-                            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                                 <td style="border-style: none;">
                                     <button class="btn btn-primary" ng-click="deleteTag(key)" data-cy="delbtn">Delete</button>
                                 </td>
                             [[ end ]]
                             <td style="border-style: none; padding: 0;" colspan="4">
-                                [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                                [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                                     <uib-tabset>
                                         <uib-tab index="0" heading="Description" select="getMarkdown(key)" data-cy="renderedtab">
                                             <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;"><span ng-bind-html="TagRendered[key]" data-cy="rendereddiv"></span></div>

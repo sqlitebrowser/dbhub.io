@@ -15,7 +15,7 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            [[ if ne .Meta.Owner .Meta.LoggedInUser ]]
+            [[ if ne .Meta.Owner .PageMeta.LoggedInUser ]]
                 <div style="text-align: center; padding-bottom: 10px;">
                     <i>Default branch: {{ meta.DefBranch }}</i>
                 </div>
@@ -24,7 +24,7 @@
                 <table id="contents" class="table table-striped table-responsive" style="margin: 0;">
                     <thead>
                         <tr>
-                            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                                 <th colspan="2">Actions</th>
                             [[ end ]]
                             <th>Name</th><th>Head Commit ID</th>
@@ -32,7 +32,7 @@
                     </thead>
                     <tbody>
                         <tr ng-repeat-start="row in meta.Branches">
-                            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                                 <td style="border-style: none;">
                                     <button class="btn btn-primary" ng-click="updateBranch(row.name)" data-cy="savebtn">Save Changes</button>
                                 </td>
@@ -44,7 +44,7 @@
                                 </td>
                             [[ end ]]
                             <td style="border-style: none;">
-                                [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                                [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                                     <input name="{{ row.name }}_name" id="{{ row.name }}_name" size="20" maxlength="20" value="{{ row.name }}" data-cy="nameinput">
                                 [[ else ]]
                                     <div style="padding-top: 8px;">
@@ -59,7 +59,7 @@
                             </td>
                         </tr>
                         <tr ng-repeat-end class="tableRow">
-                            [[ if eq .Meta.Owner .Meta.LoggedInUser ]]
+                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
                                 <td style="border-style: none;">
                                 <button ng-if="row.name != meta.DefBranch" class="btn btn-default" ng-click="viewChanges(row.commit)" data-cy="comparebtn">Compare with {{ meta.DefBranch }}</button>
                                     <button ng-if="row.name != meta.DefBranch" class="btn btn-danger" ng-click="deleteBranch(row.name)" data-cy="delbtn">Delete</button>

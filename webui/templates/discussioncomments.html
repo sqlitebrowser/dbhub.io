@@ -40,7 +40,7 @@
                                         <div ng-switch="editDiscTitle">
                                             <div ng-switch-when="title">
                                                 <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ Disc.disc_id }}" style="font-size: x-large; color: #333;">{{ Disc.title }}</a>
-                                                <span ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
+                                                <span ng-if="Disc.creator == '[[ .PageMeta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .PageMeta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
                                                     <a class="blackLink" ng-click="editDiscussion()"><i class="fa fa-pencil fa-fw"></i></a>
                                                 </span>
                                             </div>
@@ -83,7 +83,7 @@
                                 <td style="border: none; padding: 8px 8px 8px 0;">
                                     <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
                                         <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <a name="c{{ row.com_id }}" href="#c{{ row.com_id }}" style="color: #333;">commented</a> <span title="{{ row.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.creation_date, true) }}</span>
-                                        <span ng-if="row.commenter == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
+                                        <span ng-if="row.commenter == '[[ .PageMeta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
                                             <a class="blackLink" ng-click="editComment(row.com_id)"><i class="fa fa-pencil fa-fw"></i></a>
                                             <a class="blackLink" ng-click="deleteComment(row.com_id)"><i class="fa fa-trash-o fa-fw"></i></a>
                                         </span>
@@ -114,7 +114,7 @@
                     <div ng-if="row.entry_type == 'cls'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-ban text-danger fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">closed this</span> <span title="{{ row.creation_date | date : 'medium' }}">{{ getTimePeriodTxt(row.creation_date, true) }}</span>.</div>
                     <div ng-if="row.entry_type == 'rop'" style="text-align: center; font-size: medium; padding-bottom: 8px; padding-top: 2px;"><i class="fa fa-recycle text-success fa-2g"></i> <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <span style="color: grey;">reopened this</span> <span title="{{ row.creation_date | date : 'medium' }}">{{ getTimePeriodTxt(row.creation_date, true) }}</span>.</div>
                 </span>
-                [[ if .Meta.LoggedInUser ]]
+                [[ if .PageMeta.LoggedInUser ]]
                     <span>
                         <table class="table table-responsive" style="margin-bottom: 0px;">
                             <tbody>
@@ -137,7 +137,7 @@
                                             <input type="hidden" name="folder" value="/">
                                             <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
                                             <input type="hidden" name="discid" value="[[ .SelectedID ]]">
-                                            <input ng-if="Disc.creator == '[[ .Meta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .Meta.LoggedInUser ]]'" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
+                                            <input ng-if="Disc.creator == '[[ .PageMeta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .PageMeta.LoggedInUser ]]'" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
                                             <input type="submit" class="btn btn-success" value="Add comment" style="margin-top: 10px;" ng-click="addComment(false)">
                                         </div>
                                     </td>
@@ -171,7 +171,7 @@
             Database:    "[[ .Meta.Database ]]",
             Owner:       "[[ .Meta.Owner ]]",
             SelectedID:  "[[ .SelectedID ]]",
-            [[ if .Meta.LoggedInUser ]]
+            [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
                 Loggedin: "false",

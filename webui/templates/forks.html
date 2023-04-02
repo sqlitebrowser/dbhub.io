@@ -83,7 +83,7 @@
             if (row.public === true) {
                 return '<a class="blackLink" href="/'+ row.database_owner + row.database_folder + row.database_name +
                     '">' + row.database_name + '</a>';
-            } else if (row.database_owner === "[[ .Meta.LoggedInUser ]]") {
+            } else if (row.database_owner === "[[ .PageMeta.LoggedInUser ]]") {
                 // The logged in user should see their own private databases. Make sure it's not mistaken as public though.
                 return '<a class="blackLink" href="/'+ row.database_owner + row.database_folder + row.database_name +
                     '">' + row.database_name + '</a> (private database)';

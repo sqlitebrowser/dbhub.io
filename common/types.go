@@ -132,12 +132,6 @@ type APIKey struct {
 	DateCreated time.Time `json:"date_created"`
 }
 
-type Auth0Set struct {
-	CallbackURL string
-	ClientID    string
-	Domain      string
-}
-
 type BranchEntry struct {
 	Commit      string `json:"commit"`
 	CommitCount int    `json:"commit_count"`
@@ -349,21 +343,13 @@ type MergeRequestEntry struct {
 }
 
 type MetaInfo struct {
-	AvatarURL        string
 	Database         string
-	Environment      string
 	Folder           string
 	ForkDatabase     string
 	ForkDeleted      bool
 	ForkFolder       string
 	ForkOwner        string
-	LoggedInUser     string
-	NumStatusUpdates int
 	Owner            string
-	PageSection      string
-	Protocol         string
-	Server           string
-	Title            string
 }
 
 type ReleaseEntry struct {
