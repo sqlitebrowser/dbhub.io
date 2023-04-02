@@ -5,11 +5,9 @@
 <body>
 [[ template "header" . ]]
 <div>
+    <div id="db-header-root"></div>
     <div class="row">
-        <div class="col-md-1">
-            &nbsp;
-        </div>
-        <div class="col-md-10">
+        <div class="col-md-12">
             <h2 style="text-align: center;" data-cy="createbranch">Create new branch</h2>
             <form action="/x/createbranch" method="post">
                 <div style="text-align: center;"><i>From commit: [[ .Commit ]]</i></div>
@@ -41,11 +39,9 @@
                 </table>
             </form>
         </div>
-        <div class="col-md-1">
-            &nbsp;
-        </div>
     </div>
 </div>
+[[ template "script_db_header" . ]]
 [[ template "footer" . ]]
 </body>
 </html>

@@ -5,11 +5,9 @@
 <body>
 [[ template "header" . ]]
 <div>
+    <div id="db-header-root"></div>
     <div class="row">
-        <div class="col-md-1">
-            &nbsp;
-        </div>
-        <div class="col-md-10">
+        <div class="col-md-12">
             <h2 style="text-align: center;">Create new tag or release</h2>
             <form action="/x/createtag" method="post">
                 <div style="text-align: center;"><i>On commit: [[ .Commit ]]</i></div>
@@ -64,11 +62,9 @@
                 </table>
             </form>
         </div>
-        <div class="col-md-1">
-            &nbsp;
-        </div>
     </div>
 </div>
+[[ template "script_db_header" . ]]
 [[ template "footer" . ]]
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);

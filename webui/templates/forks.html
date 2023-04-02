@@ -5,26 +5,18 @@
 <body>
 [[ template "header" . ]]
 <div>
+    <div id="db-header-root"></div>
     <div class="row">
-        <div class="col-md-1">
-            &nbsp;
-        </div>
-        <div class="col-md-10">
+        <div class="col-md-12">
             <h2 style="text-align: center;">
                 <span data-cy="forks">Forks of</span>
                 <a class="blackLink" href="/[[ .DB.Info.Owner ]]" data-cy="ownerlnk">[[ .DB.Info.Owner ]]</a> /
                 <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]" data-cy="dblnk">[[ .DB.Info.Database ]]</a>
             </h2>
         </div>
-        <div class="col-md-1">
-            &nbsp;
-        </div>
     </div>
     <div class="row">
-        <div class="col-md-3">
-            &nbsp;
-        </div>
-        <div class="col-md-9">
+        <div class="col-md-12">
             <table class="table" style="border-style: none;">
                 <tr ng-repeat="row in forks.Forks">
                     <td style="border-style: none;">&nbsp;</td>
@@ -39,6 +31,7 @@
         </div>
     </div>
 </div>
+[[ template "script_db_header" . ]]
 [[ template "footer" . ]]
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);

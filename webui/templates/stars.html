@@ -5,11 +5,9 @@
 <body>
 [[ template "header" . ]]
 <div>
+    <div id="db-header-root"></div>
     <div class="row">
-        <div class="col-md-2">
-            &nbsp;
-        </div>
-        <div class="col-md-8">
+        <div class="col-md-12">
             <h2 style="text-align: center;">
                 <span data-cy="stars">People who starred</span>
                 <a class="blackLink" href="/[[ .DB.Info.Owner ]]" data-cy="ownerlnk">[[ .DB.Info.Owner ]]</a> /
@@ -25,11 +23,9 @@
             </table>
             <h3 ng-if="stars.Stars === null" style="text-align: center;">No-one has starred [[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]] yet</h3>
         </div>
-        <div class="col-md-2">
-            &nbsp;
-        </div>
     </div>
 </div>
+[[ template "script_db_header" . ]]
 [[ template "footer" . ]]
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
