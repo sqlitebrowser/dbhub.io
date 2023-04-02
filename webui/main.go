@@ -379,7 +379,7 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 	return
 }
 
-func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.MetaInfo, getOwnerAndDatabaseFromUrl bool, getOwnerAndDatabaseFromData bool) (errCode int, err error) {
+func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.MetaInfo, getOwnerAndDatabaseFromUrl bool) (errCode int, err error) {
 	// Auth0 info
 	pageMeta.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
 	pageMeta.Auth0.ClientID = com.Conf.Auth0.ClientID
@@ -416,24 +416,11 @@ func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.Meta
 	}
 
 	// Retrieve the database owner & name
-	if getOwnerAndDatabaseFromUrl || getOwnerAndDatabaseFromData {
+	if getOwnerAndDatabaseFromUrl {
 		// TODO: Add folder and branch name support
-		var dbOwner, dbName string
-		if getOwnerAndDatabaseFromUrl {
-			dbOwner, dbName, err = com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
-			if err != nil {
-				return http.StatusBadRequest, err
-			}
-		} else {
-			// Get owner + dbname combination from post data
-			dbOwner, _, dbName, err = com.GetUFD(r, true)
-			if dbOwner == "" || dbName == "" {
-				err = nil
-				return
-			}
-			if err != nil {
-				return http.StatusBadRequest, err
-			}
+		dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
+		if err != nil {
+			return http.StatusBadRequest, err
 		}
 
 		// Validate the supplied information
