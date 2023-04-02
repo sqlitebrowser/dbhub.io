@@ -379,7 +379,7 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 	return
 }
 
-func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.MetaInfo, requireLogin bool, getOwnerAndDatabaseFromUrl bool, getOwnerAndDatabaseFromData bool) (errCode int, err error) {
+func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.MetaInfo, getOwnerAndDatabaseFromUrl bool, getOwnerAndDatabaseFromData bool) (errCode int, err error) {
 	// Auth0 info
 	pageMeta.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
 	pageMeta.Auth0.ClientID = com.Conf.Auth0.ClientID
@@ -398,11 +398,6 @@ func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo, meta *com.Meta
 	}
 	if validSession {
 		pageMeta.LoggedInUser = loggedInUser
-	}
-
-	// Ensure we have a valid logged in user
-	if requireLogin && !validSession {
-		return http.StatusUnauthorized, fmt.Errorf("You need to be logged in")
 	}
 
 	// Retrieve the details and status updates count for the logged in user
@@ -3757,6 +3752,17 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Bounce to the user home page
 	http.Redirect(w, r, "/"+loggedInUser, http.StatusSeeOther)
+}
+
+// Returns an error if the user is not logged in according to the page meta data.
+// This requires the meta data structure to be filled in before
+func requireLogin(pageMeta PageMetaInfo) (errCode int, err error) {
+	// Ensure we have a valid logged in user
+	if pageMeta.LoggedInUser == "" {
+		return http.StatusUnauthorized, fmt.Errorf("You need to be logged in")
+	}
+
+	return
 }
 
 // Handler for the Database Settings page
