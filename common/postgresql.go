@@ -681,6 +681,18 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 		return err
 	}
 
+	// Check if the database was starred by the logged in user
+	DB.Info.MyStar, err = CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		return err
+	}
+
+	// Check if the database is being watched by the logged in user
+	DB.Info.MyWatch, err = CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

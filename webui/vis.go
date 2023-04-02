@@ -16,8 +16,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		Data        com.SQLiteRecordSet
 		DB          com.SQLiteDBinfo
-		MyStar      bool
-		MyWatch     bool
 		PageMeta    PageMetaInfo
 		ParamsGiven bool
 		DataGiven   bool
@@ -217,20 +215,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database star status")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 

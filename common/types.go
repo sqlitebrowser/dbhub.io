@@ -231,6 +231,8 @@ type DBInfo struct {
 	Licence       string
 	LicenceURL    string
 	MRs           int
+	MyStar        bool
+	MyWatch       bool
 	OneLineDesc   string
 	Owner         string
 	Public        bool

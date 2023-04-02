@@ -50,8 +50,6 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 		Branches      []brEntry
 		DB            com.SQLiteDBinfo
 		DefaultBranch string
-		MyStar        bool
-		MyWatch       bool
 		PageMeta      PageMetaInfo
 	}
 	pageData.PageMeta.Title = "Branch list"
@@ -73,20 +71,6 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -149,8 +133,6 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		Branches []string
 		DB       com.SQLiteDBinfo
 		History  []HistEntry
-		MyStar   bool
-		MyWatch  bool
 		PageMeta PageMetaInfo
 	}
 
@@ -180,20 +162,6 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -346,8 +314,6 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		DestFolder            string
 		DestOwner             string
 		Forks                 []com.ForkEntry
-		MyStar                bool
-		MyWatch               bool
 		PageMeta              PageMetaInfo
 		SourceDBBranches      []string
 		SourceDBDefaultBranch string
@@ -441,20 +407,6 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		pageData.DestDBName)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -593,8 +545,6 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		Contributors map[string]AuthorEntry
 		DB           com.SQLiteDBinfo
-		MyStar       bool
-		MyWatch      bool
 		PageMeta     PageMetaInfo
 	}
 	pageData.PageMeta.Title = "Contributors"
@@ -616,20 +566,6 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -755,8 +691,6 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		DB       com.SQLiteDBinfo
-		MyStar   bool
-		MyWatch  bool
 		PageMeta PageMetaInfo
 	}
 	pageData.PageMeta.Title = "Create new discussion"
@@ -785,20 +719,6 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -880,8 +800,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	var pageData struct {
 		Data     com.SQLiteRecordSet
 		DB       com.SQLiteDBinfo
-		MyStar   bool
-		MyWatch  bool
 		PageMeta PageMetaInfo
 		Config   com.TomlConfig // FIXME: This seems silly to include here, when we just need to provide the server/port info
 	}
@@ -1106,20 +1024,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		return
 	}
 
-	// Check if the database was starred by the logged in user
-	myStar, err := com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbOwner, dbFolder, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database star status")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	myWatch, err := com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbOwner, dbFolder, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
-		return
-	}
-
 	// If a specific table wasn't requested, use the user specified default (if present)
 	if dbTable == "" {
 		// Ensure the default table name validates.  This catches a case where a database was uploaded with an invalid
@@ -1241,10 +1145,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	pageData.DB.Info.Branch = branchName
 	pageData.DB.Info.Commits = branchHeads[branchName].CommitCount
 
-	// Update database star and watch status for the logged in user
-	pageData.MyStar = myStar
-	pageData.MyWatch = myWatch
-
 	// Render the full description as markdown
 	pageData.DB.Info.FullDesc = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
 
@@ -1277,8 +1177,6 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 		Diffs             com.Diffs
 		ColumnNamesBefore map[string][]string
 		ColumnNamesAfter  map[string][]string
-		MyStar            bool
-		MyWatch           bool
 		PageMeta          PageMetaInfo
 	}
 
@@ -1313,20 +1211,6 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, commitB)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -1387,8 +1271,6 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		DB             com.SQLiteDBinfo
 		DiscussionList []com.DiscussionEntry
 		SelectedID     int
-		MyStar         bool
-		MyWatch        bool
 		PageMeta       PageMetaInfo
 	}
 
@@ -1422,20 +1304,6 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -1619,8 +1487,6 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		StatusMessageColour string
 		SourceBranchOK      bool
 		SourceDBOK          bool
-		MyStar              bool
-		MyWatch             bool
 	}
 
 	pageData.PageMeta.PageSection = "db_merge"
@@ -1654,20 +1520,6 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -2075,8 +1927,6 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	}
 	var pageData struct {
 		DB          com.SQLiteDBinfo
-		MyStar      bool
-		MyWatch     bool
 		PageMeta    PageMetaInfo
 		ReleaseList map[string]relEntry
 	}
@@ -2099,20 +1949,6 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -2232,8 +2068,6 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		FullDescRendered string
 		Licences         map[string]com.LicenceEntry
 		NumLicences      int
-		MyStar           bool
-		MyWatch          bool
 		PageMeta         PageMetaInfo
 		Shares           map[string]com.ShareDatabasePermissions
 	}
@@ -2262,20 +2096,6 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	if strings.ToLower(dbName.Owner) != strings.ToLower(pageData.PageMeta.LoggedInUser) {
 		errorPage(w, r, http.StatusBadRequest,
 			"You can only access the settings page for your own databases")
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
@@ -2473,8 +2293,6 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	var pageData struct {
 		DB       com.SQLiteDBinfo
-		MyStar   bool
-		MyWatch  bool
 		PageMeta PageMetaInfo
 		TagList  map[string]tgEntry
 	}
@@ -2497,20 +2315,6 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
-		return
-	}
-
-	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
