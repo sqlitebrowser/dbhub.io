@@ -39,8 +39,8 @@
                                     <div>
                                         <div ng-switch="editDiscTitle">
                                             <div ng-switch-when="title">
-                                                <a href="/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ Disc.disc_id }}" style="font-size: x-large; color: #333;">{{ Disc.title }}</a>
-                                                <span ng-if="Disc.creator == '[[ .PageMeta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .PageMeta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
+                                                <a href="/discuss/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?id={{ Disc.disc_id }}" style="font-size: x-large; color: #333;">{{ Disc.title }}</a>
+                                                <span ng-if="Disc.creator == '[[ .PageMeta.LoggedInUser ]]' || '[[ .DB.Info.Owner ]]' == '[[ .PageMeta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
                                                     <a class="blackLink" ng-click="editDiscussion()"><i class="fa fa-pencil fa-fw"></i></a>
                                                 </span>
                                             </div>
@@ -83,7 +83,7 @@
                                 <td style="border: none; padding: 8px 8px 8px 0;">
                                     <div style="border: 1px solid #CCC; border-bottom: none; padding: 10px; background-color: #EFEFEF; border-radius: 7px 7px 0px 0px;">
                                         <a class="blackLink" href="/{{ row.commenter }}">{{ row.commenter }}</a> <a name="c{{ row.com_id }}" href="#c{{ row.com_id }}" style="color: #333;">commented</a> <span title="{{ row.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.creation_date, true) }}</span>
-                                        <span ng-if="row.commenter == '[[ .PageMeta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .PageMeta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
+                                        <span ng-if="row.commenter == '[[ .PageMeta.LoggedInUser ]]' || '[[ .DB.Info.Owner ]]' == '[[ .PageMeta.LoggedInUser ]]'" class="pull-right" style="font-size: medium;">
                                             <a class="blackLink" ng-click="editComment(row.com_id)"><i class="fa fa-pencil fa-fw"></i></a>
                                             <a class="blackLink" ng-click="deleteComment(row.com_id)"><i class="fa fa-trash-o fa-fw"></i></a>
                                         </span>
@@ -133,11 +133,11 @@
                                                     <div class="rendered" ng-bind-html="markDownPreview"></div>
                                                 </uib-tab>
                                             </uib-tabset>
-                                            <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
+                                            <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
                                             <input type="hidden" name="folder" value="/">
-                                            <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
+                                            <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
                                             <input type="hidden" name="discid" value="[[ .SelectedID ]]">
-                                            <input ng-if="Disc.creator == '[[ .PageMeta.LoggedInUser ]]' || '[[ .Meta.Owner ]]' == '[[ .PageMeta.LoggedInUser ]]'" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
+                                            <input ng-if="Disc.creator == '[[ .PageMeta.LoggedInUser ]]' || '[[ .DB.Info.Owner ]]' == '[[ .PageMeta.LoggedInUser ]]'" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
                                             <input type="submit" class="btn btn-success" value="Add comment" style="margin-top: 10px;" ng-click="addComment(false)">
                                         </div>
                                     </td>
@@ -168,8 +168,8 @@
     app.controller('discussCommentsView', function($scope, $http, $httpParamSerializerJQLike) {
         // Pre-filled data
         $scope.meta = {
-            Database:    "[[ .Meta.Database ]]",
-            Owner:       "[[ .Meta.Owner ]]",
+            Database:    "[[ .DB.Info.Database ]]",
+            Owner:       "[[ .DB.Info.Owner ]]",
             SelectedID:  "[[ .SelectedID ]]",
             [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
@@ -213,13 +213,13 @@
                     "close": alsoClose,
                     "folder": "/",
                     "discid": [[ .SelectedID ]],
-                    "dbname": [[ .Meta.Database ]],
-                    "username": [[ .Meta.Owner ]],
+                    "dbname": [[ .DB.Info.Database ]],
+                    "username": [[ .DB.Info.Owner ]],
                     }),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // Adding the comment succeeded, so display it in the list (we cheat for now by just reloading the page)
-                window.location = '/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
+                window.location = '/discuss/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?id=[[ .SelectedID ]]';
             }, function failure(response) {
                 // Adding the comment failed, so display an error message
                 $scope.statusMessageColour = "red";
@@ -233,7 +233,7 @@
                 // User needs to be logged in
                 lock.show();
             } else {
-                window.location = '/creatediscuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+                window.location = '/creatediscuss/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]';
             }
         };
 
@@ -252,13 +252,13 @@
                     "comid": comID,
                     "folder": "/",
                     "discid": [[ .SelectedID ]],
-                    "dbname": [[ .Meta.Database ]],
-                    "username": [[ .Meta.Owner ]],
+                    "dbname": [[ .DB.Info.Database ]],
+                    "username": [[ .DB.Info.Owner ]],
                     }),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // Deleting the comment succeeded, so reload the page
-                window.location = '/discuss/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id=[[ .SelectedID ]]';
+                window.location = '/discuss/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?id=[[ .SelectedID ]]';
             }, function failure(response) {
                 // Deleting the comment failed, so display an error message
                 $scope.statusMessageColour = "red";
@@ -411,8 +411,8 @@
                     "comtext": encodeURIComponent(txt),
                     "folder": "/",
                     "discid": [[ .SelectedID ]],
-                    "dbname": [[ .Meta.Database ]],
-                    "username": [[ .Meta.Owner ]],
+                    "dbname": [[ .DB.Info.Database ]],
+                    "username": [[ .DB.Info.Owner ]],
                     }),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {
@@ -447,8 +447,8 @@
                     "disctitle": encodeURIComponent(title),
                     "folder": "/",
                     "discid": [[ .SelectedID ]],
-                    "dbname": [[ .Meta.Database ]],
-                    "username": [[ .Meta.Owner ]],
+                    "dbname": [[ .DB.Info.Database ]],
+                    "username": [[ .DB.Info.Owner ]],
                     }),
                 headers: { "Content-Type" : "application/x-www-form-urlencoded" }
             }).then(function (response) {

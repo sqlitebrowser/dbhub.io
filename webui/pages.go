@@ -50,7 +50,6 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 		Branches      []brEntry
 		DB            com.SQLiteDBinfo
 		DefaultBranch string
-		Meta          com.MetaInfo
 		MyStar        bool
 		MyWatch       bool
 		PageMeta      PageMetaInfo
@@ -64,41 +63,41 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Read the branch heads list from the database
-	branches, err := com.GetBranches(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	branches, err := com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	pageData.DefaultBranch, err = com.GetDefaultBranchName(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.DefaultBranch, err = com.GetDefaultBranchName(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -150,7 +149,6 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		Branches []string
 		DB       com.SQLiteDBinfo
 		History  []HistEntry
-		Meta     com.MetaInfo
 		MyStar   bool
 		MyWatch  bool
 		PageMeta PageMetaInfo
@@ -165,9 +163,9 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -179,28 +177,28 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get its details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Read the branch heads list from the database
-	branches, err := com.GetBranches(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	branches, err := com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -208,7 +206,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 
 	// If no branch name was given, we use the default branch
 	if branchName == "" {
-		branchName, err = com.GetDefaultBranchName(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+		branchName, err = com.GetDefaultBranchName(dbName.Owner, dbName.Folder, dbName.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -231,7 +229,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 
 	// Walk the commit history backwards from the head commit, assembling the commit history for this branch from the
 	// full list
-	rawList, err := com.GetCommitList(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	rawList, err := com.GetCommitList(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -348,7 +346,6 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		DestFolder            string
 		DestOwner             string
 		Forks                 []com.ForkEntry
-		Meta                  com.MetaInfo
 		MyStar                bool
 		MyWatch               bool
 		PageMeta              PageMetaInfo
@@ -366,9 +363,9 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -380,44 +377,44 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Retrieve list of forks for the database
-	pageData.Forks, err = com.ForkTree(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.Forks, err = com.ForkTree(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError,
-			fmt.Sprintf("Error retrieving fork list for '%s%s%s': %v\n", pageData.Meta.Owner, pageData.Meta.Folder,
-				pageData.Meta.Database, err.Error()))
+			fmt.Sprintf("Error retrieving fork list for '%s%s%s': %v\n", dbName.Owner, dbName.Folder,
+				dbName.Database, err.Error()))
 		return
 	}
 
 	// Use the database which the "New Merge Request" button was pressed on as the initially selected source
-	pageData.SourceOwner = pageData.Meta.Owner
-	pageData.SourceFolder = pageData.Meta.Folder
-	pageData.SourceDBName = pageData.Meta.Database
+	pageData.SourceOwner = dbName.Owner
+	pageData.SourceFolder = dbName.Folder
+	pageData.SourceDBName = dbName.Database
 
 	// If the source database has an (accessible) parent, use that as the default destination selected for the user.
 	// If it doesn't, then set the source as the destination as well and the user will have to manually choose
-	pageData.DestOwner, pageData.DestFolder, pageData.DestDBName, err = com.ForkParent(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder,
-		pageData.Meta.Database)
+	pageData.DestOwner, pageData.DestFolder, pageData.DestDBName, err = com.ForkParent(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder,
+		dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 	if pageData.DestOwner == "" || pageData.DestFolder == "" || pageData.DestDBName == "" {
-		pageData.DestOwner = pageData.Meta.Owner
-		pageData.DestFolder = pageData.Meta.Folder
-		pageData.DestDBName = pageData.Meta.Database
+		pageData.DestOwner = dbName.Owner
+		pageData.DestFolder = dbName.Folder
+		pageData.DestDBName = dbName.Database
 	}
 
 	// * Determine the source and destination database branches *
 
 	// Retrieve the branch info for the source database
-	srcBranchList, err := com.GetBranches(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	srcBranchList, err := com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -425,7 +422,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	for name := range srcBranchList {
 		pageData.SourceDBBranches = append(pageData.SourceDBBranches, name)
 	}
-	pageData.SourceDBDefaultBranch, err = com.GetDefaultBranchName(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.SourceDBDefaultBranch, err = com.GetDefaultBranchName(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -448,14 +445,14 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
@@ -463,7 +460,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 
 	// If the initially chosen source and destinations can be directly applied, fill out the initial commit list entries
 	// for display to the user
-	ancestorID, cList, errType, err := com.GetCommonAncestorCommits(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database,
+	ancestorID, cList, errType, err := com.GetCommonAncestorCommits(dbName.Owner, dbName.Folder, dbName.Database,
 		pageData.SourceDBDefaultBranch, pageData.DestOwner, pageData.DestFolder, pageData.DestDBName,
 		pageData.DestDBDefaultBranch)
 	if err != nil && errType != http.StatusBadRequest {
@@ -515,7 +512,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 			// Check for licence changes
 			commitLicSHA := j.Tree.Entries[0].LicenceSHA
 			if commitLicSHA != destLicenceSHA {
-				lName, _, err := com.GetLicenceInfoFromSha256(pageData.Meta.Owner, commitLicSHA)
+				lName, _, err := com.GetLicenceInfoFromSha256(dbName.Owner, commitLicSHA)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -538,7 +535,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 // Displays a web page asking the user to confirm deleting their database.
 func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Meta     com.MetaInfo
+		DB       com.SQLiteDBinfo
 		PageMeta PageMetaInfo
 	}
 	pageData.PageMeta.Title = "Confirm database deletion"
@@ -549,9 +546,9 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -562,8 +559,15 @@ func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// Make sure the database owner matches the logged in user
-	if strings.ToLower(pageData.PageMeta.LoggedInUser) != strings.ToLower(pageData.Meta.Owner) {
+	if strings.ToLower(pageData.PageMeta.LoggedInUser) != strings.ToLower(dbName.Owner) {
 		errorPage(w, r, http.StatusUnauthorized, "You can't delete databases you don't own")
 		return
 	}
@@ -589,7 +593,6 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		Contributors map[string]AuthorEntry
 		DB           com.SQLiteDBinfo
-		Meta         com.MetaInfo
 		MyStar       bool
 		MyWatch      bool
 		PageMeta     PageMetaInfo
@@ -603,35 +606,35 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Read the commit list from the database
-	commitList, err := com.GetCommitList(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	commitList, err := com.GetCommitList(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -687,7 +690,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 // Displays a web page asking for the new branch name.
 func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Meta     com.MetaInfo
+		DB       com.SQLiteDBinfo
 		PageMeta PageMetaInfo
 		Commit   string
 	}
@@ -699,9 +702,9 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -720,13 +723,20 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, true)
+	allowed, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if allowed == false {
 		errorPage(w, r, http.StatusUnauthorized, "You are not authorised to change this database")
+		return
+	}
+
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -745,7 +755,6 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		DB       com.SQLiteDBinfo
-		Meta     com.MetaInfo
 		MyStar   bool
 		MyWatch  bool
 		PageMeta PageMetaInfo
@@ -759,9 +768,9 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -773,21 +782,21 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
@@ -804,7 +813,7 @@ func createDiscussionPage(w http.ResponseWriter, r *http.Request) {
 // Displays a web page asking for the new tag details.
 func createTagPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Meta     com.MetaInfo
+		DB       com.SQLiteDBinfo
 		PageMeta PageMetaInfo
 		Commit   string
 	}
@@ -823,9 +832,9 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -836,8 +845,15 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, true)
+	allowed, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -864,7 +880,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 	var pageData struct {
 		Data     com.SQLiteRecordSet
 		DB       com.SQLiteDBinfo
-		Meta     com.MetaInfo
 		MyStar   bool
 		MyWatch  bool
 		PageMeta PageMetaInfo
@@ -879,9 +894,6 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	pageData.Meta.Owner = dbOwner
-	pageData.Meta.Folder = dbFolder
-	pageData.Meta.Database = dbName
 
 	// Store settings
 	pageData.Config = com.Conf
@@ -1265,7 +1277,6 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 		Diffs             com.Diffs
 		ColumnNamesBefore map[string][]string
 		ColumnNamesAfter  map[string][]string
-		Meta              com.MetaInfo
 		MyStar            bool
 		MyWatch           bool
 		PageMeta          PageMetaInfo
@@ -1277,9 +1288,9 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -1294,46 +1305,46 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitA)
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, commitA)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitB)
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, commitB)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Retrieve the diffs for these commits
-	pageData.Diffs, err = com.Diff(pageData.Meta.Owner, "/", pageData.Meta.Database, commitA, pageData.Meta.Owner, "/", pageData.Meta.Database, commitB, pageData.PageMeta.LoggedInUser, com.NoMerge, true)
+	pageData.Diffs, err = com.Diff(dbName.Owner, "/", dbName.Database, commitA, dbName.Owner, "/", dbName.Database, commitB, pageData.PageMeta.LoggedInUser, com.NoMerge, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Retrieve the column information for each table with data changes
-	sdbBefore, err := com.OpenSQLiteDatabaseDefensive(w, r, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitA, pageData.PageMeta.LoggedInUser)
+	sdbBefore, err := com.OpenSQLiteDatabaseDefensive(w, r, dbName.Owner, dbName.Folder, dbName.Database, commitA, pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	defer sdbBefore.Close()
-	sdbAfter, err := com.OpenSQLiteDatabaseDefensive(w, r, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, commitB, pageData.PageMeta.LoggedInUser)
+	sdbAfter, err := com.OpenSQLiteDatabaseDefensive(w, r, dbName.Owner, dbName.Folder, dbName.Database, commitB, pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1375,7 +1386,6 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		CommentList    []com.DiscussionCommentEntry
 		DB             com.SQLiteDBinfo
 		DiscussionList []com.DiscussionEntry
-		Meta           com.MetaInfo
 		SelectedID     int
 		MyStar         bool
 		MyWatch        bool
@@ -1390,9 +1400,9 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -1409,28 +1419,28 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Retrieve the list of discussions for this database
-	pageData.DiscussionList, err = com.Discussions(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, com.DISCUSSION, pageData.SelectedID)
+	pageData.DiscussionList, err = com.Discussions(dbName.Owner, dbName.Folder, dbName.Database, com.DISCUSSION, pageData.SelectedID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1455,7 +1465,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Load the comments for the requested discussion
-		pageData.CommentList, err = com.DiscussionComments(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.SelectedID, 0)
+		pageData.CommentList, err = com.DiscussionComments(dbName.Owner, dbName.Folder, dbName.Database, pageData.SelectedID, 0)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1463,7 +1473,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 
 		// If this discussion matches one of the user's status updates, remove the status update from the list
 		if pageData.PageMeta.LoggedInUser != "" {
-			pageData.PageMeta.NumStatusUpdates, err = com.StatusUpdateCheck(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.SelectedID, pageData.PageMeta.LoggedInUser)
+			pageData.PageMeta.NumStatusUpdates, err = com.StatusUpdateCheck(dbName.Owner, dbName.Folder, dbName.Database, pageData.SelectedID, pageData.PageMeta.LoggedInUser)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -1517,8 +1527,8 @@ func errorPage(w http.ResponseWriter, r *http.Request, httpCode int, msg string)
 // Render the page showing forks of the given database
 func forksPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
+		DB       com.SQLiteDBinfo
 		Forks    []com.ForkEntry
-		Meta     com.MetaInfo
 		PageMeta PageMetaInfo
 	}
 	pageData.PageMeta.Title = "Forks"
@@ -1529,29 +1539,25 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, false)
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if allowed == false {
-		errorPage(w, r, http.StatusNotFound, "Database not found")
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Retrieve list of forks for the database
-	pageData.Forks, err = com.ForkTree(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.Forks, err = com.ForkTree(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError,
-			fmt.Sprintf("Error retrieving fork list for '%s%s%s': %v\n", pageData.Meta.Owner, pageData.Meta.Folder,
-				pageData.Meta.Database, err.Error()))
+			fmt.Sprintf("Error retrieving fork list for '%s%s%s': %v\n", dbName.Owner, dbName.Folder,
+				dbName.Database, err.Error()))
 		return
 	}
 
@@ -1607,7 +1613,6 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		DestBranchUsable    bool
 		LicenceWarning      string
 		MRList              []com.DiscussionEntry
-		Meta                com.MetaInfo
 		PageMeta            PageMetaInfo
 		SelectedID          int
 		StatusMessage       string
@@ -1639,35 +1644,35 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Retrieve the list of MRs for this database
-	pageData.MRList, err = com.Discussions(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, com.MERGE_REQUEST, pageData.SelectedID)
+	pageData.MRList, err = com.Discussions(dbName.Owner, dbName.Folder, dbName.Database, com.MERGE_REQUEST, pageData.SelectedID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1721,7 +1726,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Check if the destination branch name is still available
-		destBranches, err := com.GetBranches(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+		destBranches, err := com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1757,8 +1762,8 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 				// Check if the source branch can still be applied to the destination, and also check for new/changed
 				// commits
 				ancestorID, newCommitList, _, err := com.GetCommonAncestorCommits(mr.MRDetails.SourceOwner,
-					mr.MRDetails.SourceFolder, mr.MRDetails.SourceDBName, mr.MRDetails.SourceBranch, pageData.Meta.Owner, pageData.Meta.Folder,
-					pageData.Meta.Database, mr.MRDetails.DestBranch)
+					mr.MRDetails.SourceFolder, mr.MRDetails.SourceDBName, mr.MRDetails.SourceBranch, dbName.Owner, dbName.Folder,
+					dbName.Database, mr.MRDetails.DestBranch)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -1775,7 +1780,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 					mr.MRDetails.Commits = newCommitList
 
 					// Save the updated commit list back to PostgreSQL
-					err = com.UpdateMergeRequestCommits(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.SelectedID,
+					err = com.UpdateMergeRequestCommits(dbName.Owner, dbName.Folder, dbName.Database, pageData.SelectedID,
 						mr.MRDetails.Commits)
 					if err != nil {
 						errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -1786,7 +1791,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Retrieve the current licence for the destination branch
-		commitList, err := com.GetCommitList(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+		commitList, err := com.GetCommitList(dbName.Owner, dbName.Folder, dbName.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1839,7 +1844,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Load the comments for the requested MR
-		pageData.CommentList, err = com.DiscussionComments(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.SelectedID, 0)
+		pageData.CommentList, err = com.DiscussionComments(dbName.Owner, dbName.Folder, dbName.Database, pageData.SelectedID, 0)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1847,7 +1852,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 
 		// If this MR matches one of the user's status updates, remove the status update from the list
 		if pageData.PageMeta.LoggedInUser != "" {
-			pageData.PageMeta.NumStatusUpdates, err = com.StatusUpdateCheck(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, pageData.SelectedID, pageData.PageMeta.LoggedInUser)
+			pageData.PageMeta.NumStatusUpdates, err = com.StatusUpdateCheck(dbName.Owner, dbName.Folder, dbName.Database, pageData.SelectedID, pageData.PageMeta.LoggedInUser)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -1927,7 +1932,6 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	var pageData struct {
 		LiveDBS          []com.LiveDBs
-		Meta             com.MetaInfo
 		PageMeta         PageMetaInfo
 		PrivateDBs       []com.DBInfo
 		PublicDBs        []com.DBInfo
@@ -2046,7 +2050,6 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 
-	pageData.Meta.Owner = usr.Username
 	pageData.PageMeta.Title = usr.Username
 
 	// Render the page
@@ -2072,7 +2075,6 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	}
 	var pageData struct {
 		DB          com.SQLiteDBinfo
-		Meta        com.MetaInfo
 		MyStar      bool
 		MyWatch     bool
 		PageMeta    PageMetaInfo
@@ -2087,35 +2089,35 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Retrieve the release list for the database
-	releases, err := com.GetReleases(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	releases, err := com.GetReleases(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2178,7 +2180,6 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 // Displays a web page for new users to choose their username.
 func selectUserNamePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Meta     com.MetaInfo
 		Nick     string
 		PageMeta PageMetaInfo
 	}
@@ -2230,7 +2231,6 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		DB               com.SQLiteDBinfo
 		FullDescRendered string
 		Licences         map[string]com.LicenceEntry
-		Meta             com.MetaInfo
 		NumLicences      int
 		MyStar           bool
 		MyWatch          bool
@@ -2245,9 +2245,9 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -2259,28 +2259,28 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate permissions
-	if strings.ToLower(pageData.Meta.Owner) != strings.ToLower(pageData.PageMeta.LoggedInUser) {
+	if strings.ToLower(dbName.Owner) != strings.ToLower(pageData.PageMeta.LoggedInUser) {
 		errorPage(w, r, http.StatusBadRequest,
 			"You can only access the settings page for your own databases")
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -2301,14 +2301,14 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		defer sdb.Close()
 
 		// Retrieve the list of tables in the database
-		pageData.DB.Info.Tables, err = com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database))
+		pageData.DB.Info.Tables, err = com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", dbName.Owner, dbName.Folder, dbName.Database))
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 	} else {
 		// Get live node
-		_, liveNode, err := com.CheckDBLive(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+		_, liveNode, err := com.CheckDBLive(dbName.Owner, dbName.Folder, dbName.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -2316,7 +2316,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 
 		// Send the request to our AMQP backend
 		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "tables", pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Database, nil)
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "tables", pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, nil)
 		if err != nil {
 			log.Println(err)
 			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
@@ -2345,14 +2345,14 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of branches
-	branchHeads, err := com.GetBranches(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	branchHeads, err := com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Retrieve all of the commits for the database
-	commitList, err := com.GetCommitList(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	commitList, err := com.GetCommitList(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2365,7 +2365,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
 				"Couldn't retrieve branch '%s' head commit '%s' for database '%s%s%s'\n", bName, bEntry.Commit,
-				pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database))
+				dbName.Owner, dbName.Folder, dbName.Database))
 			return
 		}
 		licSHA := c.Tree.Entries[0].LicenceSHA
@@ -2373,7 +2373,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		// If the licence SHA256 field isn't empty, look up the licence info corresponding to it
 		var a string
 		if licSHA != "" {
-			a, _, err = com.GetLicenceInfoFromSha256(pageData.Meta.Owner, licSHA)
+			a, _, err = com.GetLicenceInfoFromSha256(dbName.Owner, licSHA)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -2401,7 +2401,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the share settings
-	pageData.Shares, err = com.GetShares(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.Shares, err = com.GetShares(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2419,7 +2419,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 // Present the stars page to the user.
 func starsPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Meta     com.MetaInfo
+		DB       com.SQLiteDBinfo
 		PageMeta PageMetaInfo
 		Stars    []com.DBEntry
 	}
@@ -2431,25 +2431,21 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, false)
+	// Retrieve the database details
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if allowed == false {
-		errorPage(w, r, http.StatusNotFound, "Database not found")
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Retrieve list of users who starred the database
-	pageData.Stars, err = com.UsersStarredDB(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.Stars, err = com.UsersStarredDB(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -2477,7 +2473,6 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	var pageData struct {
 		DB       com.SQLiteDBinfo
-		Meta     com.MetaInfo
 		MyStar   bool
 		MyWatch  bool
 		PageMeta PageMetaInfo
@@ -2492,35 +2487,35 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Check if the database was starred by the logged in user
-	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyStar, err = com.CheckDBStarred(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve latest social stats")
 		return
 	}
 
 	// Check if the database is being watched by the logged in user
-	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.MyWatch, err = com.CheckDBWatched(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve database watch status")
 		return
 	}
 
 	// Retrieve the tag list for the database
-	tags, err := com.GetTags(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	tags, err := com.GetTags(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2623,12 +2618,11 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	// Data to pass to the upload form
 	var pageData struct {
 		Branches       []string
+		DB             com.SQLiteDBinfo
 		DefaultBranch  string
 		Licences       map[string]com.LicenceEntry
-		Meta           com.MetaInfo
 		NumLicences    int
 		PageMeta       PageMetaInfo
-		Public         bool
 		SelectedBranch string
 	}
 
@@ -2648,7 +2642,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the database owner & name from GET parameters.
 	// Purposefully not checking for errors here because not providing this information is permitted.
-	dbOwner, _, dbName, _ := com.GetUFD(r, true)
+	dbOwner, _, dbDatabase, _ := com.GetUFD(r, true)
 
 	// Retrieve correctly capitalised username for the database owner
 	usr, err := com.User(dbOwner)
@@ -2658,13 +2652,14 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store information
-	pageData.Meta.Database = dbName
-	pageData.Meta.Owner = usr.Username
-	pageData.Meta.Folder = "/"
+	var dbName com.DatabaseName
+	dbName.Database = dbDatabase
+	dbName.Owner = usr.Username
+	dbName.Folder = "/"
 
 	// Check if the user has write access to this database, also set the public/private button to the existing value
-	if pageData.Meta.Owner != "" && pageData.Meta.Database != "" {
-		writeAccess, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, "/", pageData.Meta.Database, true)
+	if dbName.Owner != "" && dbName.Database != "" {
+		writeAccess, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, "/", dbName.Database, true)
 		if err != nil {
 			errorPage(w, r, errCode, err.Error())
 			return
@@ -2675,13 +2670,11 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Pre-populate the public/private selection to match the existing setting
-		var tmp com.SQLiteDBinfo
-		err = com.DBDetails(&tmp, pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, "/", pageData.Meta.Database, "")
+		err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, "/", dbName.Database, "")
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
 		}
-		pageData.Public = tmp.Info.Public
 	}
 
 	// Get branch name, if it was passed.  Otherwise, default to "main"
@@ -2730,9 +2723,9 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	var pageData struct {
 		DBRows        []com.DBInfo
 		FullName      string
-		Meta          com.MetaInfo
 		PageMeta      PageMetaInfo
 		UserAvatarURL string
+		UserName      string
 	}
 
 	// Get all meta information
@@ -2768,8 +2761,8 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 	pageData.FullName = usr.DisplayName
-	pageData.Meta.Owner = usr.Username
 	pageData.PageMeta.Title = usr.Username
+	pageData.UserName = usr.Username
 	if usr.AvatarURL != "" {
 		pageData.UserAvatarURL = usr.AvatarURL + "&s=48"
 	}
@@ -2792,7 +2785,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 // Present the watchers page to the user.
 func watchersPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Meta     com.MetaInfo
+		DB       com.SQLiteDBinfo
 		PageMeta PageMetaInfo
 		Watchers []com.DBEntry
 	}
@@ -2804,25 +2797,21 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	errCode, err = collectDatabaseInfo(r, &pageData.Meta)
+	dbName, err := getDatabaseName(r)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database, false)
+	// Check if the user has access to the requested database (and get it's details if available)
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, "")
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if allowed == false {
-		errorPage(w, r, http.StatusNotFound, "Database not found")
+		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Retrieve list of users watching the database
-	pageData.Watchers, err = com.UsersWatchingDB(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+	pageData.Watchers, err = com.UsersWatchingDB(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return

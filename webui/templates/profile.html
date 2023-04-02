@@ -274,7 +274,7 @@
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('profileView', function($scope) {
         $scope.livedbs = [[ .LiveDBS ]];
-        $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
+        $scope.meta = { Owner: "[[ .PageMeta.LoggedInUser ]]" };
         $scope.pubdb = { Databases: [[ .PublicDBs ]] };
         $scope.privdb = { Databases: [[ .PrivateDBs ]] };
         $scope.sharedWithOthers = [[ .SharedWithOthers ]];
@@ -284,7 +284,7 @@
 
         // Bounce to the database deletion page
         $scope.confirmDelete = function(path) {
-          window.location = '/confirmdelete/[[ .Meta.Owner ]]/' + path;
+          window.location = '/confirmdelete/[[ .PageMeta.LoggedInUser ]]/' + path;
         };
 
         // Returns a nicely presented "time elapsed" string

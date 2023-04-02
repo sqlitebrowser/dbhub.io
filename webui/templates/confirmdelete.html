@@ -12,7 +12,7 @@
         <div class="col-md-10">
             <div style="text-align: center;">
                 <h2>[[ .PageMeta.Title ]]</h2>
-                <h3 style="color: red;">Are you sure you want to delete [[ .Meta.Owner ]]/[[ .Meta.Database ]]?</h3>
+                <h3 style="color: red;">Are you sure you want to delete [[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?</h3>
                 <h3>There is no "undo" if you proceed.</h3>
                 <br />
 
@@ -41,7 +41,7 @@
 
         // Handler for the cancel button.  Just bounces back to the database settings page
         $scope.cancelDelete = function() {
-            window.location = "/settings/[[ .Meta.Owner ]]/[[ .Meta.Database ]]";
+            window.location = "/settings/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]";
         };
 
         // Delete the database
@@ -52,15 +52,15 @@
                 url: "/x/deletedatabase/",
                 data: $httpParamSerializerJQLike({
                         "folder": "/",
-                        "dbname": [[ .Meta.Database ]],
-                        "username": [[ .Meta.Owner ]]
+                        "dbname": [[ .DB.Info.Database ]],
+                        "username": [[ .DB.Info.Owner ]]
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // If successful, reload the page
                 let status = response.status;
                 if (status === 200) {
-                    window.location = '/[[ .Meta.Owner ]]';
+                    window.location = '/[[ .DB.Info.Owner ]]';
                 }
             }, function failure(response) {
                 // The delete failed, so display the returned error message

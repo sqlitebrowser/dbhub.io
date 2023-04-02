@@ -379,32 +379,6 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 	return
 }
 
-func collectDatabaseInfo(r *http.Request, meta *com.MetaInfo) (errCode int, err error) {
-	// TODO: Add folder and branch name support
-	dbOwner, dbName, err := com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
-	if err != nil {
-		return http.StatusBadRequest, err
-	}
-
-	// Validate the supplied information
-	if dbOwner == "" || dbName == "" {
-		return http.StatusBadRequest, fmt.Errorf("Missing database owner or database name")
-	}
-
-	// Retrieve correctly capitalised username for the database owner
-	usr, err := com.User(dbOwner)
-	if err != nil {
-		return http.StatusBadRequest, err
-	}
-
-	// Store information
-	meta.Database = dbName
-	meta.Owner = usr.Username
-	meta.Folder = "/"
-
-	return
-}
-
 func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo) (errCode int, err error) {
 	// Auth0 info
 	pageMeta.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
@@ -2974,6 +2948,31 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Useful reference info: https://pki-tutorial.readthedocs.io/en/latest/mime.html
 	w.Header().Set("Content-Type", "application/x-pem-file")
 	w.Write(newCert)
+	return
+}
+
+func getDatabaseName(r *http.Request) (db com.DatabaseName, err error) {
+	// TODO: Add folder and branch name support
+	db.Owner, db.Database, err = com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
+	if err != nil {
+		return
+	}
+
+	// Validate the supplied information
+	if db.Owner == "" || db.Database == "" {
+		return db, fmt.Errorf("Missing database owner or database name")
+	}
+
+	// Retrieve correctly capitalised username for the database owner
+	usr, err := com.User(db.Owner)
+	if err != nil {
+		return db, err
+	}
+
+	// Store information
+	db.Owner = usr.Username
+	db.Folder = "/"
+
 	return
 }
 

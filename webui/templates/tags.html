@@ -19,7 +19,7 @@
                 <table id="contents" ng-if="numTags > 0" class="table table-striped table-responsive" style="margin: 0;">
                     <thead>
                         <tr>
-                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                            [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                                 <th>Actions</th>
                             [[ end ]]
                             <th>Name</th><th>Tag creator</th><th>Creation date</th><th>Commit ID</th>
@@ -27,7 +27,7 @@
                     </thead>
                     <tbody>
                         <tr ng-repeat-start="(key, row) in Tags" style="border-style: none;">
-                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                            [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                                 <td style="border-style: none;">
                                     <button class="btn btn-primary" ng-click="updateTag(key)" data-cy="updatebtn">Update</button>
                                 </td>
@@ -37,7 +37,7 @@
                             [[ else ]]
                                 <td style="border-style: none;">
                                     <div style="padding-top: 8px;">
-                                        <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?tag={{ key }}">{{ key }}</a>
+                                        <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?tag={{ key }}">{{ key }}</a>
                                     </div>
                                 </td>
                             [[ end ]]
@@ -51,18 +51,18 @@
                             </td>
                             <td style="border-style: none;">
                                 <div style="padding-top: 8px;">
-                                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}" data-cy="commitlnk">{{ row.commit }}</a>
+                                    <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit={{ row.commit }}" data-cy="commitlnk">{{ row.commit }}</a>
                                 </div>
                             </td>
                         </tr>
                         <tr ng-repeat-end class="tableRow">
-                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                            [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                                 <td style="border-style: none;">
                                     <button class="btn btn-primary" ng-click="deleteTag(key)" data-cy="delbtn">Delete</button>
                                 </td>
                             [[ end ]]
                             <td style="border-style: none; padding: 0;" colspan="4">
-                                [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                                [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                                     <uib-tabset>
                                         <uib-tab index="0" heading="Description" select="getMarkdown(key)" data-cy="renderedtab">
                                             <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;"><span ng-bind-html="TagRendered[key]" data-cy="rendereddiv"></span></div>
@@ -119,15 +119,15 @@
                 data: $httpParamSerializerJQLike({
                         "tag": encodeURIComponent(tagName),
                         "folder": "/",
-                        "dbname": [[ .Meta.Database ]],
-                        "username": [[ .Meta.Owner ]]
+                        "dbname": [[ .DB.Info.Database ]],
+                        "username": [[ .DB.Info.Owner ]]
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // If successful, reload the page
                 let status = response.status;
                 if (status === 200) {
-                    window.location = '/tags/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+                    window.location = '/tags/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]';
                 }
             });
         };
@@ -164,8 +164,8 @@
                 data: $httpParamSerializerJQLike({
                         "tag": encodeURIComponent(tagName),
                         "folder": "/",
-                        "dbname": [[ .Meta.Database ]],
-                        "username": [[ .Meta.Owner ]],
+                        "dbname": [[ .DB.Info.Database ]],
+                        "username": [[ .DB.Info.Owner ]],
                         "newmsg": encodeURIComponent($scope.TagText[tagName]),
                         "newtag": encodeURIComponent(newName)
                     }),

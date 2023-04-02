@@ -9,7 +9,7 @@
         <div class="col-md-12">
             <h2 id="viewuser" style="margin-top: 10px;">
                 <div class="pull-left">
-                    [[ if .UserAvatarURL ]]<img src="[[ .UserAvatarURL ]]" height="48" width="48" style="border: 1px solid #8c8c8c;"/>[[ end ]] [[ .Meta.Owner ]][[ if .FullName ]] : [[ .FullName ]][[ end ]]'s <span data-cy="userpg">public projects</span>
+                    [[ if .UserAvatarURL ]]<img src="[[ .UserAvatarURL ]]" height="48" width="48" style="border: 1px solid #8c8c8c;"/>[[ end ]] [[ .UserName ]][[ if .FullName ]] : [[ .FullName ]][[ end ]]'s <span data-cy="userpg">public projects</span>
                 </div>
                 <div class="pull-right">
                     <button type="button" class="btn btn-default" ng-click="toggleCollapsed()">{{ titleCollapsed }}</button>
@@ -52,7 +52,7 @@
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('userView', function($scope) {
-        $scope.meta = { Owner: "[[ .Meta.Owner ]]" };
+        $scope.meta = { Owner: "[[ .UserName ]]" };
         $scope.db = { Databases: [[ .DBRows ]] };
 
         // Returns a nicely presented "time elapsed" string

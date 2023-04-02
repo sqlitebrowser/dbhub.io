@@ -10,7 +10,7 @@
             &nbsp;
         </div>
         <div class="col-md-10">
-            [[ if and (ne .Meta.Owner "") (ne .Meta.Database "") ]]
+            [[ if and (ne .DB.Info.Owner "") (ne .DB.Info.Database "") ]]
                 <h2 style="text-align: center;" data-cy="uptitle">Upload a new commit</h2>
             [[ else ]]
                 <h2 style="text-align: center;" data-cy="uptitle">Upload a database</h2>
@@ -37,13 +37,13 @@
                             <span ng-bind-html="liveDesc"></span>
                         </td>
                     </tr>
-                    [[ if and (ne .Meta.Owner "") (ne .Meta.Database "") ]]
+                    [[ if and (ne .DB.Info.Owner "") (ne .DB.Info.Database "") ]]
                     <tr>
                         <td>&nbsp;</td>
                         <th style="vertical-align: middle;" colspan="1">
-                            As a new commit into the <a class="blackLink" href="/[[ .Meta.Owner ]]" data-cy="ownerlabel">[[ .Meta.Owner ]]</a> /
-                            <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]" data-cy="dbnamelabel">[[ .Meta.Database ]]</a> database,
-                            in the <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ branchName }}" data-cy="branchlabel">{{ branchName }}</a> branch
+                            As a new commit into the <a class="blackLink" href="/[[ .DB.Info.Owner ]]" data-cy="ownerlabel">[[ .DB.Info.Owner ]]</a> /
+                            <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]" data-cy="dbnamelabel">[[ .DB.Info.Database ]]</a> database,
+                            in the <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?branch={{ branchName }}" data-cy="branchlabel">{{ branchName }}</a> branch
                         </th>
                     </tr>
                     [[ else ]]
@@ -102,7 +102,7 @@
                                     </div>
                                 </td>
                             </tr>
-                            [[ if and (eq .Meta.Owner "") (eq .Meta.Database "") ]]
+                            [[ if and (eq .DB.Info.Owner "") (eq .DB.Info.Database "") ]]
                             <tr>
                                 <th style="vertical-align: middle;">Source URL:</th>
                                 <td>
@@ -122,8 +122,8 @@
                 <div style="text-align: center;">
                     <input type="hidden" name="public" value="{{ radioPublic }}" data-cy="hidpub">
                     <input type="hidden" name="licence" value="{{ Licence }}" data-cy="hidlic">
-                    <input type="hidden" name="username" value="[[ .Meta.Owner ]]" data-cy="hidowner">
-                    <input type="hidden" name="dbname" value="[[ .Meta.Database ]]" data-cy="hiddbname">
+                    <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]" data-cy="hidowner">
+                    <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]" data-cy="hiddbname">
                     <input type="hidden" name="live" value="{{ radioLive }}" data-cy="hidlive">
                     <input type="submit" class="btn btn-success" value="Upload" data-cy="uploadbtn">
                 </div>
@@ -188,7 +188,7 @@
 
         // Set the public radio buttons state when the page first loads
         $scope.publicDesc = "";
-        $scope.radioPublic = "[[ .Public ]]";
+        $scope.radioPublic = "[[ .DB.Info.Public ]]";
         $scope.publicClick = function(newValue) {
             if (newValue === "true") {
                 $scope.publicDesc = "&nbsp; Database will be <b>public</b>. Everyone has read access to it.";

@@ -225,9 +225,9 @@
                     <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelSettings()" data-cy="cancelbtn">
                     <input type="submit" class="btn btn-primary" value="Save" data-cy="savebtn">
                 </div>
-                <input type="hidden" name="username" value="[[ .Meta.Owner ]]">
+                <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
                 <input type="hidden" name="folder" value="[[ .DB.Info.Folder ]]">
-                <input type="hidden" name="dbname" value="[[ .Meta.Database ]]">
+                <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
                 <input type="hidden" name="commit" value="[[ .DB.Info.CommitID ]]">
                 <input type="hidden" name="public" value="{{ radioPublic }}">
                 <input type="hidden" name="licences" value="{{ meta.BranchLics }}">
@@ -267,14 +267,14 @@
     app.controller('settingsView', function($scope, $http, $httpParamSerializerJQLike) {
         $scope.meta = {
             BranchLics:    [[ .BranchLics ]],
-            Database:      "[[ .Meta.Database ]]",
+            Database:      "[[ .DB.Info.Database ]]",
             DefaultBranch: "[[ .DB.Info.DefaultBranch ]]",
             DefaultTable:  "[[ .DB.Info.DefaultTable ]]",
             FullDesc:      "[[ .DB.Info.FullDesc ]]",
             OneLineDesc:   "[[ .DB.Info.OneLineDesc ]]",
             SourceURL:     "[[ .DB.Info.SourceURL ]]",
             Tables:        [[ .DB.Info.Tables ]],
-            Owner:         "[[ .Meta.Owner ]]",
+            Owner:         "[[ .DB.Info.Owner ]]",
             [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
@@ -326,7 +326,7 @@
 
         // Handler for the cancel button.  Just bounces back to the database page
         $scope.cancelSettings = function() {
-            window.location = "/[[ .Meta.Owner ]]/[[ .Meta.Database ]]";
+            window.location = "/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]";
         };
 
         // Update name of default branch in the drop down selector, and update the default table list
@@ -340,8 +340,8 @@
                 data: $httpParamSerializerJQLike({
                         "branch": encodeURIComponent(newbranch),
                         "folder": "/",
-                        "dbname": [[ .Meta.Database ]],
-                        "username": [[ .Meta.Owner ]]
+                        "dbname": [[ .DB.Info.Database ]],
+                        "username": [[ .DB.Info.Owner ]]
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
@@ -380,7 +380,7 @@
 
         // Bounce to the database deletion page
         $scope.confirmDelete = function() {
-            window.location = '/confirmdelete/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+            window.location = '/confirmdelete/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]';
         };
 
         // Returns the currently selected licence for a given branch

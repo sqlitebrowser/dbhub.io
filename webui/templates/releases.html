@@ -19,7 +19,7 @@
                 <thead>
                     <tr style="border: none;">
                         <td style="background-color: #FFFFFF;">&nbsp;</td>
-                        [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                        [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                             <th style="border-radius: 7px 0 0 0;">Actions</th>
                             <th>Name</th>
                         [[ else ]]
@@ -33,9 +33,9 @@
                 <tbody>
                     <tr ng-repeat-start="(key, row) in Releases">
                         <td style="background-color: #FFFFFF; border: none;">
-                            <div style="text-align: center;"><a href="/x/download/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}" class="btn btn-success">Download</a></div>
+                            <div style="text-align: center;"><a href="/x/download/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit={{ row.commit }}" class="btn btn-success">Download</a></div>
                         </td>
-                        [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                        [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                             <td style="border: none; border-left: 1px solid #DDD; padding: 10px;">
                                 <button class="btn btn-primary" ng-click="updateRelease(key)" data-cy="updatebtn">Update</button>
                             </td>
@@ -45,7 +45,7 @@
                         [[ else ]]
                             <td style="border: none; border-left: 1px solid #DDD;">
                                 <div style="padding-top: 8px;">
-                                    <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?release={{ key }}">{{ key }}</a>
+                                    <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?release={{ key }}">{{ key }}</a>
                                 </div>
                             </td>
                         [[ end ]]
@@ -59,7 +59,7 @@
                         </td>
                         <td style="border: none; border-right: 1px solid #DDD;">
                             <div style="padding-top: 8px;">
-                                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit={{ row.commit }}" data-cy="commitlnk">{{ row.commit }}</a>
+                                <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit={{ row.commit }}" data-cy="commitlnk">{{ row.commit }}</a>
                             </div>
                         </td>
                     </tr>
@@ -67,7 +67,7 @@
                         <td style="background-color: #FFFFFF; border: none">
                             <div style="text-align: center;">{{ row.size / 1024 | number : 0 }} KB</div>
                         </td>
-                        [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                        [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                             <td style="border: 1px solid #DDD; border-top: none; border-right: none;">
                                 <button class="btn btn-primary" ng-click="deleteRelease(key)" data-cy="delbtn">Delete</button>
                             </td>
@@ -75,7 +75,7 @@
                         [[ else ]]
                             <td style="border: 1px solid #DDD; border-top: none; padding: 0;" colspan="4">
                         [[ end ]]
-                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                            [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                             <uib-tabset>
                                 <uib-tab index="0" heading="Description" select="getMarkdown(key)" data-cy="renderedtab">
                                     <div class="rendered minHeightSmaller" style="border-left: 1px solid #DDD;"><span ng-bind-html="RelRendered[key]" data-cy="rendereddiv"></span></div>
@@ -131,15 +131,15 @@
                 data: $httpParamSerializerJQLike({
                         "release": encodeURIComponent(relName),
                         "folder": "/",
-                        "dbname": [[ .Meta.Database ]],
-                        "username": [[ .Meta.Owner ]]
+                        "dbname": [[ .DB.Info.Database ]],
+                        "username": [[ .DB.Info.Owner ]]
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // If successful, reload the page
                 let status = response.status;
                 if (status === 200) {
-                    window.location = '/releases/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+                    window.location = '/releases/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]';
                 }
             });
         };
@@ -176,8 +176,8 @@
                 data: $httpParamSerializerJQLike({
                         "release": encodeURIComponent(relName),
                         "folder": "/",
-                        "dbname": [[ .Meta.Database ]],
-                        "username": [[ .Meta.Owner ]],
+                        "dbname": [[ .DB.Info.Database ]],
+                        "username": [[ .DB.Info.Owner ]],
                         "newmsg": encodeURIComponent($scope.RelText[relName]),
                         "newrel": encodeURIComponent(newName)
                     }),

@@ -37,10 +37,10 @@
                             <div style="padding-top: 6px;"># {{ row.disc_id }}</div>
                         </td>
                         <td style="border-style: none;">
-                            <a href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ row.disc_id }}" style="font-size: x-large; color: #333;">{{ row.title }}</a>
+                            <a href="/merge/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?id={{ row.disc_id }}" style="font-size: x-large; color: #333;">{{ row.title }}</a>
                             <div>
                                 Created <span title="{{ row.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.creation_date, true) }}</span> by <a class="blackLink" href="/{{ row.creator }}"><img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" style="vertical-align: top; border: 1px solid #8c8c8c;" height="18" width="18"/> {{ row.creator }}</a>. Last modified <span title="{{ row.last_modified | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.last_modified, true) }}</span>
-                                <span ng-if="row.comment_count > 0"><i class="fa fa-comment-o"></i> <a class="blackLink" href="/merge/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?id={{ row.disc_id }}">{{ row.comment_count }} comment<span ng-if="row.comment_count > 1">s</span></a></span>
+                                <span ng-if="row.comment_count > 0"><i class="fa fa-comment-o"></i> <a class="blackLink" href="/merge/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?id={{ row.disc_id }}">{{ row.comment_count }} comment<span ng-if="row.comment_count > 1">s</span></a></span>
                             </div>
                         </td>
                     </tr>
@@ -59,8 +59,8 @@
     app.controller('mergeRequestListView', function($scope, $http) {
         // Pre-filled data
         $scope.meta = {
-            Database:    "[[ .Meta.Database ]]",
-            Owner:       "[[ .Meta.Owner ]]",
+            Database:    "[[ .DB.Info.Database ]]",
+            Owner:       "[[ .DB.Info.Owner ]]",
             [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
@@ -91,7 +91,7 @@
                 // User needs to be logged in
                 lock.show();
             } else {
-                window.location = '/compare/[[ .Meta.Owner ]]/[[ .Meta.Database ]]';
+                window.location = '/compare/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]';
             }
         };
 

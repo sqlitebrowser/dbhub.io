@@ -79,8 +79,6 @@
     app.controller('diffView', function($scope, $http) {
         // Pre-filled data
         $scope.meta = {
-            Database:    "[[ .Meta.Database ]]",
-            Owner:       "[[ .Meta.Owner ]]",
             [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]

@@ -652,9 +652,16 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 		DB.Info.Licence = "Not specified"
 	}
 
+	// Retrieve correctly capitalised username for the database owner
+	usrOwner, err := User(dbOwner)
+	if err != nil {
+		return err
+	}
+
 	// Fill out the fields we already have data for
 	DB.Info.Database = dbName
 	DB.Info.Folder = dbFolder
+	DB.Info.Owner = usrOwner.Username
 
 	// The social stats are always updated because they could change without the cache being updated
 	DB.Info.Watchers, DB.Info.Stars, DB.Info.Forks, err = SocialStats(dbOwner, dbFolder, dbName)

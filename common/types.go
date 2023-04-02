@@ -163,6 +163,12 @@ type CommitEntry struct {
 	Tree           DBTree    `json:"tree"`
 }
 
+type DatabaseName struct {
+	Database string
+	Folder   string
+	Owner    string
+}
+
 type DataValue struct {
 	Name  string
 	Type  ValType
@@ -226,6 +232,7 @@ type DBInfo struct {
 	LicenceURL    string
 	MRs           int
 	OneLineDesc   string
+	Owner         string
 	Public        bool
 	RepoModified  time.Time
 	Releases      int
@@ -344,12 +351,6 @@ type MergeRequestEntry struct {
 	SourceFolder string            `json:"source_folder"`
 	SourceOwner  string            `json:"source_owner"`
 	State        MergeRequestState `json:"state"`
-}
-
-type MetaInfo struct {
-	Database string
-	Folder   string
-	Owner    string
 }
 
 type ReleaseEntry struct {

@@ -40,7 +40,7 @@
                 <table id="contents" class="table table-striped table-responsive" style="margin: 0;">
                     <thead>
                         <tr>
-                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                            [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                                 <th>Actions</th>
                             [[ end ]]
                             <th width="25%" colspan="2">Author</th><th>Date</th><th>Commit ID</th>
@@ -48,7 +48,7 @@
                     </thead>
                     <tbody>
                         <tr ng-repeat-start="row in meta.History">
-                            [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                            [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                                 <td style="border-style: none;">
                                     <button class="btn btn-primary" ng-click="createBranch(row.id)" data-cy="createbranchbtn">Create Branch</button>
                                 </td>
@@ -62,7 +62,7 @@
                                 <span title="{{ row.timestamp | date : 'medium' }}">{{ getTimePeriodTxt(row.timestamp, false) }}</span>
                             </td>
                             <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
-                                <a class="blackLink" href="/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch={{ meta.Branch }}&commit={{ row.id }}">{{ row.id }}</a>
+                                <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?branch={{ meta.Branch }}&commit={{ row.id }}">{{ row.id }}</a>
                             </td>
                         </tr>
                         <tr ng-repeat-end class="tableRow">
@@ -71,7 +71,7 @@
                                 <button class="btn btn-primary" ng-click="viewChanges(meta.History[$index + 1].id, row.id)">View Changes</button>
                                 <br /><br />
                               </span>  
-                              [[ if eq .Meta.Owner .PageMeta.LoggedInUser ]]
+                              [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
                                     <button class="btn btn-primary" ng-click="createTag(row.id)" data-cy="createtagrelbtn">Create Tag or Release</button>
                                     <span ng-if="(row.id == headCommit) && (row.id != lastCommit)">
                                             <br /><br />
@@ -108,22 +108,22 @@
 
         // Change the branch being viewed
         $scope.changeBranch = function(branchName){
-            window.location = "/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch=" + branchName;
+            window.location = "/commits/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?branch=" + branchName;
         };
 
         // Bounce to the page for creating branches
         $scope.createBranch = function(commit){
-            window.location = "/createbranch/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=" + commit;
+            window.location = "/createbranch/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=" + commit;
         };
 
         // Bounce to the page for creating tags
         $scope.createTag = function(commit){
-            window.location = "/createtag/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=" + commit;
+            window.location = "/createtag/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=" + commit;
         };
 
         // Bounce to the page for viewing changes
         $scope.viewChanges = function(commit_a, commit_b){
-            window.location = "/diffs/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit_a=" + commit_a + "&commit_b=" + commit_b;
+            window.location = "/diffs/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit_a=" + commit_a + "&commit_b=" + commit_b;
         };
 
         // Change \u0026 to &
@@ -141,15 +141,15 @@
                         "branch": $scope.meta.Branch,
                         "commit": commit,
                         "folder": "/",
-                        "dbname": [[ .Meta.Database ]],
-                        "username": [[ .Meta.Owner ]]
+                        "dbname": [[ .DB.Info.Database ]],
+                        "username": [[ .DB.Info.Owner ]]
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function success(response) {
                 // The delete was successful, so reload the page
                 let status = response.status;
                 if (status === 200) {
-                    window.location = '/commits/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch=' + $scope.meta.Branch;
+                    window.location = '/commits/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?branch=' + $scope.meta.Branch;
                 }
             }, function failure(response) {
                 // The delete failed, so display the returned error message

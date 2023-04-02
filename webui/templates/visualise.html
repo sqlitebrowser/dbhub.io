@@ -207,7 +207,7 @@
     let dataReceived = false;
 
     // Remove any database file extension from the chart title
-    let plotTitle = "[[ .Meta.Database ]]";
+    let plotTitle = "[[ .DB.Info.Database ]]";
     if (plotTitle.endsWith(".sqlite")) {
         chartData.Title = plotTitle.replace(/\.sqlite$/, "");
     }
@@ -263,8 +263,8 @@
         $scope.meta = {
             Branch:       "[[ .DB.Info.Branch ]]",
             BranchList:   [[ .DB.Info.BranchList ]],
-            Database:     "[[ .Meta.Database ]]",
-            Owner:        "[[ .Meta.Owner ]]",
+            Database:     "[[ .DB.Info.Database ]]",
+            Owner:        "[[ .DB.Info.Owner ]]",
             [[ if .PageMeta.LoggedInUser ]]
                 Loggedin: "true",
             [[ else ]]
@@ -287,7 +287,7 @@
 
         // Change the branch being viewed
         $scope.changeBranch = function(branchName){
-            window.location = "/vis/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?branch=" + branchName;
+            window.location = "/vis/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?branch=" + branchName;
         };
 
         // Display a Plotly chart
@@ -412,7 +412,7 @@
         // Change to a newly selected visualisation
         $scope.changeVis = function(newVis) {
             // Retrieve the SQL and chart settings for the newly chosen visualisation from the server
-            $http.get("/x/visget/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?visname="+newVis).then(
+            $http.get("/x/visget/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?visname="+newVis).then(
                 function success(response) {
                     // Clear any existing status message
                     $scope.statusMessage = "";
@@ -441,7 +441,7 @@
                     // Execute the retrieved SQL
                     let sql = response.data["sql"];
                     let encoded = base64url(sql);
-                    $http.get("/x/execsql/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
+                    $http.get("/x/execsql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
                         function success(response) {
                             // Clear any existing status message
                             $scope.statusMessage = "";
@@ -593,7 +593,7 @@
             let name = document.getElementById("savename").value;
             let arrIdx = $scope.visNames.indexOf(name);
             if (arrIdx > -1) {
-                $http.get("/x/visdel/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?visname="+name).then(
+                $http.get("/x/visdel/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?visname="+name).then(
                     function success(response) {
                         $scope.statusMessageColour = "green";
                         $scope.statusMessage = "Visualisation '" + name + "' deleted";
@@ -622,7 +622,7 @@
         //       online from the results
         $scope.downloadResults = function() {
             let encoded = base64url(userSQL);
-            $http.get("/x/visdlresults/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
+            $http.get("/x/visdlresults/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
                 function success(response) {
                     // Clear any existing status message
                     $scope.statusMessage = "";
@@ -652,7 +652,7 @@
         $scope.execSQL = function() {
             // Send the SQL string to the backend
             let encoded = base64url(userSQL);
-            $http.get("/x/execsql/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
+            $http.get("/x/execsql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
                 function success(response) {
                     // Clear any existing status message
                     $scope.statusMessage = "";
@@ -760,7 +760,7 @@
                 args += "&showxlabel=" + $scope.radioXAxisShowLabels;
                 args += "&showylabel=" + $scope.radioYAxisShowLabels;
             }
-            $http.get("/x/vissave/[[ .Meta.Owner ]]/[[ .Meta.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
+            $http.get("/x/vissave/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
                     $scope.statusMessage = "Visualisation '" + name + "' saved";
