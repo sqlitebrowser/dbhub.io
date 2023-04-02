@@ -2235,23 +2235,62 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get a handle from Minio for the database object
-	bkt := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
-	id := pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:]
-	sdb, err := com.OpenSQLiteDatabase(bkt, id)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
+	// If it's a standard database then we query it directly, otherwise we query it via our AMQP backend
+	if !pageData.DB.Info.IsLive {
+		// Get a handle from Minio for the database object
+		bkt := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
+		id := pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:]
+		sdb, err := com.OpenSQLiteDatabase(bkt, id)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
 
-	// Automatically close the SQLite database when this function finishes
-	defer sdb.Close()
+		// Automatically close the SQLite database when this function finishes
+		defer sdb.Close()
 
-	// Retrieve the list of tables in the database
-	pageData.DB.Info.Tables, err = com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database))
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
+		// Retrieve the list of tables in the database
+		pageData.DB.Info.Tables, err = com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database))
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		// Get live node
+		_, liveNode, err := com.CheckDBLive(pageData.Meta.Owner, pageData.Meta.Folder, pageData.Meta.Database)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Send the request to our AMQP backend
+		var rawResponse []byte
+		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "tables", pageData.Meta.LoggedInUser, pageData.Meta.Owner, pageData.Meta.Database, nil)
+		if err != nil {
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			return
+		}
+
+		// Decode the response
+		var resp com.LiveDBTablesResponse
+		err = json.Unmarshal(rawResponse, &resp)
+		if err != nil {
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			return
+		}
+		if resp.Error != "" {
+			err = errors.New(resp.Error)
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			return
+		}
+		if resp.Node == "" {
+			log.Printf("In webUI (Live) settingsPage().  A node responded, but didn't identify itself.")
+			return
+		}
+		pageData.DB.Info.Tables = resp.Tables
 	}
 
 	// Retrieve the list of branches
