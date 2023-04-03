@@ -27,7 +27,7 @@ describe('branches', () => {
     cy.get('[data-cy="nameinput"]').first().should('have.value', 'main')
 
     // Description
-    cy.get('[data-cy="rendereddiv"]').first().should('contain', 'No description')
+    cy.get('[data-cy="main_desc-preview"]').first().should('contain', 'No description')
 
     // Editable description tag
     cy.get('[data-cy="edittab"]').first().click()
