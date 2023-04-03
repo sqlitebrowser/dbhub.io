@@ -274,7 +274,7 @@ describe('live visualisation', () => {
 
     // Try accessing a private database's visualisation page
     cy.visit({url: '/vis/default/Join Testing with index.sqlite', failOnStatusCode: false})
-    cy.get('[data-cy="errormsg"').should('contain', 'doesn\'t seem to exist')
+    cy.get('[data-cy="errormsg"').should('contain', 'doesn\'t exist')
 
     // Switch back to the default user
     cy.request('/x/test/switchdefault')

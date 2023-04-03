@@ -1,7 +1,7 @@
 import path from "path";
 
 // Sometimes we need a delay between making a change, and testing it, otherwise the AngularJS changes are missed
-let waitTime = 150;
+let waitTime = 250;
 
 // TODO: Test that when provided a commit id, we visualise the data for that commit rather than the latest commit
 
@@ -290,7 +290,7 @@ describe('visualisation', () => {
 
     // Try accessing a private database's visualisation page
     cy.visit({url: '/vis/default/Assembly Election 2017 with view.sqlite', failOnStatusCode: false})
-    cy.get('[data-cy="errormsg"').should('contain', 'doesn\'t seem to exist')
+    cy.get('[data-cy="errormsg"').should('contain', 'doesn\'t exist')
 
     // Switch back to the default user
     cy.request('/x/test/switchdefault')
