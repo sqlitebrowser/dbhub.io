@@ -24,7 +24,7 @@ var (
 
 	// AmqpDebug controls whether to output - via Log.Print*() functions -  useful messages during processing.  Mostly
 	// useful for development / debugging purposes
-	AmqpDebug = true
+	AmqpDebug = 1
 )
 
 // LiveDBColumnsResponse holds the fields used for receiving column list responses from our AMQP backend
@@ -104,6 +104,13 @@ type LiveDBs struct {
 	DBOwner     string    `json:"owner_name"`
 	DBName      string    `json:"database_name"`
 	DateCreated time.Time `json:"date_created"`
+}
+
+// LiveDBSizeResponse holds the fields used for receiving database size responses from our AMQP backend
+type LiveDBSizeResponse struct {
+	Node  string `json:"node"`
+	Size  int64  `json:"size"`
+	Error string `json:"error"`
 }
 
 // LiveDBTablesResponse holds the fields used for receiving table list responses from our AMQP backend
@@ -230,6 +237,33 @@ func LiveQueryDB(channel *amqp.Channel, nodeName, requestingUser, dbOwner, dbNam
 	return
 }
 
+// LiveSize asks our AMQP backend for the file size of a database
+func LiveSize(liveNode, loggedInUser, dbOwner, dbName string) (size int64, err error) {
+	// Send the tables request to our AMQP backend
+	var rawResponse []byte
+	rawResponse, err = MQRequest(AmqpChan, liveNode, "size", loggedInUser, dbOwner, dbName, "")
+	if err != nil {
+		return
+	}
+
+	// Decode the response
+	var resp LiveDBSizeResponse
+	err = json.Unmarshal(rawResponse, &resp)
+	if err != nil {
+		return
+	}
+	if resp.Error != "" {
+		err = errors.New(resp.Error)
+		return
+	}
+	if resp.Node == "" {
+		log.Printf("A node responded to a 'size' request, but didn't identify itself")
+		return
+	}
+	size = resp.Size
+	return
+}
+
 // LiveTables asks our AMQP backend to provide the list of tables (not including views!) in a database
 func LiveTables(liveNode, loggedInUser, dbOwner, dbName string) (tables []string, err error) {
 	// Send the tables request to our AMQP backend
@@ -326,7 +360,7 @@ func MQResponse(requestType string, msg amqp.Delivery, channel *amqp.Channel, no
 		log.Println(err)
 	}
 	msg.Ack(false)
-	if AmqpDebug {
+	if AmqpDebug > 0 {
 		log.Printf("[%s] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", requestType, nodeName, msg.CorrelationId, msg.ReplyTo)
 	}
 	return
@@ -380,7 +414,7 @@ func MQCreateResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName, result
 		log.Println(err)
 	}
 	msg.Ack(false)
-	if AmqpDebug {
+	if AmqpDebug > 0 {
 		log.Printf("[CREATE] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
 	}
 	return

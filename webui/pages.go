@@ -2192,6 +2192,14 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
 			return
 		}
+
+		// Also request the database size from our AMQP backend
+		pageData.DB.Info.DBEntry.Size, err = com.LiveSize(pageData.DB.Info.LiveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
+		if err != nil {
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	// If the default table is blank, use the first one from the table list

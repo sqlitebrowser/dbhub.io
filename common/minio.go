@@ -72,7 +72,7 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName string) (dbPath string, 
 		return
 	}
 
-	if AmqpDebug {
+	if AmqpDebug > 0 {
 		log.Printf("Live node '%s': Database file '%s/%s' written to filesystem at: '%s'",
 			Conf.Live.Nodename, dbOwner, dbName, dbPath)
 	}
@@ -108,7 +108,7 @@ func LiveStoreDatabaseMinio(db *os.File, dbOwner, dbName string, dbSize int64) (
 		return err
 	}
 
-	if AmqpDebug {
+	if AmqpDebug > 0 {
 		log.Printf("Added Minio LIVE database object '%s/%s', using bucket '%s' and id '%s'", dbOwner, dbName, bkt, dbName)
 	}
 	return
@@ -121,7 +121,7 @@ func MinioDeleteDatabase(source, dbOwner, dbName, bucket, id string) (err error)
 		return
 	}
 
-	if AmqpDebug {
+	if AmqpDebug > 0 {
 		log.Printf("[DELETE] '%s' removed Minio database object '%s/%s', using bucket '%s' and id '%s'",
 			source, dbOwner, dbName, bucket, id)
 	}

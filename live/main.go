@@ -126,7 +126,7 @@ func main() {
 	}
 	go func() {
 		for msg := range requests {
-			if com.AmqpDebug {
+			if com.AmqpDebug > 1 {
 				log.Printf("'%s' received AMQP REQUEST (of not-yet-determined type)", com.Conf.Live.Nodename)
 			}
 
@@ -142,8 +142,10 @@ func main() {
 				continue
 			}
 
-			if com.AmqpDebug {
+			if com.AmqpDebug > 1 {
 				log.Printf("Decoded request on '%s'.  Correlation ID: '%s', request operation: '%s', request query: '%v'", com.Conf.Live.Nodename, msg.CorrelationId, req.Operation, req.Data)
+			} else if com.AmqpDebug == 1 {
+				log.Printf("Decoded request on '%s'.  Correlation ID: '%s', request operation: '%s'", com.Conf.Live.Nodename, msg.CorrelationId, req.Operation)
 			}
 
 			// Handle each operation
@@ -159,8 +161,8 @@ func main() {
 					continue
 				}
 
-				if com.AmqpDebug {
-					log.Printf("Running BACKUP on '%s/%s'", req.DBOwner, req.DBName)
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [BACKUP] on '%s/%s'", req.DBOwner, req.DBName)
 				}
 
 				// Return a success message to the caller
@@ -184,8 +186,8 @@ func main() {
 					continue
 				}
 
-				if com.AmqpDebug {
-					log.Printf("Running COLUMNS on '%s/%s': '%s'", req.DBOwner, req.DBName, req.Data)
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [COLUMNS] on '%s/%s': '%s'", req.DBOwner, req.DBName, req.Data)
 				}
 
 				// Return the columns list to the caller
@@ -208,8 +210,8 @@ func main() {
 					continue
 				}
 
-				if com.AmqpDebug {
-					log.Printf("Running DELETE on '%s/%s'", req.DBOwner, req.DBName)
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [DELETE] on '%s/%s'", req.DBOwner, req.DBName)
 				}
 
 				// Return a success message (empty string in this case) to the caller
@@ -233,8 +235,8 @@ func main() {
 					continue
 				}
 
-				if com.AmqpDebug {
-					log.Printf("Running EXECUTE on '%s/%s': '%s'", req.DBOwner, req.DBName, req.Data)
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [EXECUTE] on '%s/%s': '%s'", req.DBOwner, req.DBName, req.Data)
 				}
 
 				// Return a success message to the caller
@@ -257,8 +259,8 @@ func main() {
 					continue
 				}
 
-				if com.AmqpDebug {
-					log.Printf("Running INDEXES on '%s/%s'", req.DBOwner, req.DBName)
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [INDEXES] on '%s/%s'", req.DBOwner, req.DBName)
 				}
 
 				// Return the indexes list to the caller
@@ -281,8 +283,8 @@ func main() {
 					continue
 				}
 
-				if com.AmqpDebug {
-					log.Printf("Running QUERY on '%s/%s': '%s'", req.DBOwner, req.DBName, req.Data)
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [QUERY] on '%s/%s': '%s'", req.DBOwner, req.DBName, req.Data)
 				}
 
 				// Return the query response to the caller
@@ -318,14 +320,39 @@ func main() {
 					continue
 				}
 
-				if com.AmqpDebug {
-					log.Printf("Running ROWDATA on '%s/%s'", req.DBOwner, req.DBName)
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [ROWDATA] on '%s/%s'", req.DBOwner, req.DBName)
 				}
 
 				// Return the row data to the caller
 				err = com.MQResponse("ROWDATA", msg, ch, com.Conf.Live.Nodename, resp)
 				if err != nil {
 					log.Printf("Error: occurred on '%s' in MQResponse() while constructing the AMQP query response: '%s'", com.Conf.Live.Nodename, err)
+				}
+				continue
+
+			case "size":
+				dbPath := filepath.Join(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, "live.sqlite")
+				var db os.FileInfo
+				db, err = os.Stat(dbPath)
+				if err != nil {
+					resp := com.LiveDBSizeResponse{Node: com.Conf.Live.Nodename, Size: 0, Error: err.Error()}
+					err = com.MQResponse("SIZE", msg, ch, com.Conf.Live.Nodename, resp)
+					if err != nil {
+						log.Printf("Error: occurred on '%s' in MQResponse() while constructing an AMQP error message response: '%s'", com.Conf.Live.Nodename, err)
+					}
+					continue
+				}
+
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [SIZE] on '%s/%s'", req.DBOwner, req.DBName)
+				}
+
+				// Return the database size to the caller
+				resp := com.LiveDBSizeResponse{Node: com.Conf.Live.Nodename, Size: db.Size(), Error: ""}
+				err = com.MQResponse("SIZE", msg, ch, com.Conf.Live.Nodename, resp)
+				if err != nil {
+					log.Printf("Error: occurred on '%s' in MQResponse() while constructing the AMQP size response: '%s'", com.Conf.Live.Nodename, err)
 				}
 				continue
 
@@ -341,8 +368,8 @@ func main() {
 					continue
 				}
 
-				if com.AmqpDebug {
-					log.Printf("Running TABLES on '%s/%s'", req.DBOwner, req.DBName)
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [TABLES] on '%s/%s'", req.DBOwner, req.DBName)
 				}
 
 				// Return the tables list to the caller
@@ -365,8 +392,8 @@ func main() {
 					continue
 				}
 
-				if com.AmqpDebug {
-					log.Printf("Running VIEWS on '%s/%s'", req.DBOwner, req.DBName)
+				if com.AmqpDebug > 0 {
+					log.Printf("Running [VIEWS] on '%s/%s'", req.DBOwner, req.DBName)
 				}
 
 				// Return the views list to the caller
@@ -424,7 +451,7 @@ func removeLiveDB(dbOwner, dbName string) (err error) {
 		return
 	}
 
-	if com.AmqpDebug {
+	if com.AmqpDebug > 0 {
 		log.Printf("Live node '%s': Database file '%s/%s' removed from filesystem path: '%s'",
 			com.Conf.Live.Nodename, dbOwner, dbName, dbPath)
 	}

@@ -298,6 +298,16 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// For live databases, we ask the AMQP backend for its file size
+	if pageData.IsLive {
+		pageData.DB.Info.DBEntry.Size, err = com.LiveSize(liveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
+		if err != nil {
+			log.Println(err)
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	// If there are no visualisations, indicate that using an empty slice instead of a null value. This makes sure the array of
 	// visualisation names in the resulting JavaScript code is encoded correctly.
 	if pageData.VisNames == nil {
