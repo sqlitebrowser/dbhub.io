@@ -204,10 +204,14 @@
         $scope.liveClick = function(newValue) {
             if (newValue === "true") {
                 $scope.radioLive = "true";
-                $scope.liveDesc = "<b>Live</b> means a traditional SQLite database.  These <b>are</b> able to run INSERT/UPDATE/DELETE statements and other SQL queries.  A good choice if you're not publishing data, or looking to share them with others.";
+                $scope.liveDesc = "<b>Live</b> means a traditional SQLite database.  These <b>are</b> able to run " +
+                  "INSERT/UPDATE/DELETE statements and other SQL queries.  A good choice if you're not publishing " +
+                  "data, nor looking to share the database with others.";
             } else {
                 $scope.radioLive = "false";
-                $scope.liveDesc = "<b>Standard</b> uses a git like system of read-only snapshots, suitable for publishing data, and collaborating upon with others. These databases <b>cannot</b> have INSERT/UPDATE/DELETE statements run on them directly.";
+                $scope.liveDesc = "<b>Standard</b> uses a git like system of read-only snapshots, suitable for " +
+                  "publishing data, and collaborating upon with others. These databases <b>cannot</b> have " +
+                  "INSERT/UPDATE/DELETE statements run on them directly.";
             }
         };
         $scope.liveClick($scope.radioLive);

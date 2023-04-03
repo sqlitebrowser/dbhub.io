@@ -42,7 +42,7 @@ function ToggleButton({icon, textSet, textUnset, redirectUrl, updateUrl, pageUrl
 }
 
 export default function DbHeader() {
-	// Fork and commir information and actions are only shown for non-live databases
+	// Fork and commit information and actions are only shown for non-live databases
 	let forkedFrom = null;
 	let forkButton = null;
 	let lastCommit = null;
@@ -156,19 +156,19 @@ export default function DbHeader() {
 
 			{meta.isLive ? null : <label id="viewdiscuss" className={meta.pageSection == "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} className="blackLink" title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>}
 
-			&nbsp; &nbsp; &nbsp;
+			{meta.isLive ? null : <span>&nbsp; &nbsp; &nbsp;</span> }
 
 			{meta.isLive ? null : <label id="viewmrs" className={meta.pageSection == "db_merge" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/merge/" + meta.owner + "/" + meta.database} className="blackLink" title="Merge Requests" data-cy="mrlink"><i className="fa fa-clone"></i> Merge Requests:</a> {meta.numMRs}</label>}
 
-			&nbsp; &nbsp; &nbsp;
+			{meta.isLive ? null : <span>&nbsp; &nbsp; &nbsp;</span> }
 
-			{meta.isLive ? null : settings}
+			{settings}
 		    </div>
 		    <div className="col-md-6">
 			<div className="pull-right">
 				{visibility} &nbsp;
 				{lastCommit}
-				{licence} &nbsp;
+				{meta.isLive ? null : licence} &nbsp;
 				<b>Size:</b> <span data-cy="size">{Math.round(meta.size / 1024).toLocaleString()} KB</span>
 			</div>
 		    </div>
