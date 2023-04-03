@@ -1,3 +1,6 @@
+// Set a wait time to give the markdown preview some time for rendering
+let waitTime = 250;
+
 describe('branches', () => {
   before(() => {
     // Seed data
@@ -27,14 +30,14 @@ describe('branches', () => {
     cy.get('[data-cy="nameinput"]').first().should('have.value', 'main')
 
     // Description
-    cy.get('[data-cy="main_desc-preview"]').first().should('contain', 'No description')
+    cy.get('[data-cy="main_desc-preview"]').should('be.empty')
 
     // Editable description tag
-    cy.get('[data-cy="edittab"]').first().click()
-    cy.get('[data-cy="desctext"]').first().should('be.empty')
+    cy.get('[data-cy="main_desc-edit-tab"]').click()
+    cy.get('[data-cy="main_desc"]').should('be.empty')
 
     // URL for commit id
-    cy.get('[data-cy="commitlnk"]').first().should('have.attr', 'href').and('match', /^\/default\/Assembly%20Election%202017.sqlite\?branch=main&commit=.*$/)
+    cy.get('[data-cy="commitlnk"]').first().should('have.attr', 'href').and('match', /^\/default\/Assembly Election 2017.sqlite\?branch=main&commit=.*$/)
   })
 
   // Rename branch
@@ -50,12 +53,12 @@ describe('branches', () => {
   // Change description text
   it('change branch description', () => {
     cy.visit('branches/default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="rendereddiv"]').first().should('contain', 'No description')
-    cy.get('[data-cy="edittab"]').first().click()
-    cy.get('[data-cy="desctext"]').first().type('{selectall}{backspace}').type('A new description').should('have.value', 'A new description')
+    cy.get('[data-cy="Some other name_desc-preview"]').should('be.empty')
+    cy.get('[data-cy="Some other name_desc-edit-tab"]').click()
+    cy.get('[data-cy="Some other name_desc"]').type('{selectall}{backspace}').type('A new description').should('have.value', 'A new description')
     cy.get('[data-cy="savebtn"]').first().click()
     cy.reload()
-    cy.get('[data-cy="rendereddiv"]').first().should('contain', 'A new description')
+    cy.get('[data-cy="Some other name_desc-preview"]').should('contain', 'A new description')
   })
 
   // Delete branch
@@ -63,7 +66,7 @@ describe('branches', () => {
     cy.visit('default/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="branchescnt"]').should('contain', '2')
     cy.visit('branches/default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="delbtn"]').click()
+    cy.get('[data-cy="delbtn"]').eq(1).click()
     cy.visit('default/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="branchescnt"]').should('contain', '1')
   })
