@@ -747,7 +747,8 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the database owner name, database name, and (optional) commit ID for the database from the request
-	dbOwner, dbName, _, err := com.GetFormODC(r)
+	var dbOwner, dbName string
+	dbOwner, dbName, _, err = com.GetFormODC(r)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -756,14 +757,16 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
-	query, err := com.CheckUnicode(rawInput)
+	var sql string
+	sql, err = com.CheckUnicode(rawInput)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	var exists bool
+	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -775,7 +778,9 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	var isLive bool
+	var liveNode string
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -798,30 +803,17 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Send the query execution request to our AMQP backend
-	var rawResponse []byte
-	rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "execute", loggedInUser, dbOwner, dbName, query)
-	if err != nil {
-		return
-	}
-
-	// Decode the response
-	var resp com.LiveDBExecuteResponse
-	err = json.Unmarshal(rawResponse, &resp)
+	// Send the SQL execution request to our AMQP backend
+	var rowsChanged int
+	rowsChanged, err = com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
 	if err != nil {
 		log.Println(err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// If the Execute() failed, then provide the error message to the user
-	if resp.Error != "" {
-		jsonErr(w, resp.Error, http.StatusBadRequest)
-		return
-	}
-
 	// The Execute() succeeded, so pass along the # of rows changed
-	z := com.ExecuteResponseContainer{RowsChanged: resp.RowsChanged, Status: "OK"}
+	z := com.ExecuteResponseContainer{RowsChanged: rowsChanged, Status: "OK"}
 	jsonData, err := json.MarshalIndent(z, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in executeHandler(): %v\n", err)

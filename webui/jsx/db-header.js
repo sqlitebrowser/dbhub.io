@@ -154,6 +154,10 @@ export default function DbHeader() {
 
 			&nbsp; &nbsp; &nbsp;
 
+			{meta.isLive ? <label id="viewexec" className={meta.pageSection == "db_exec" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/exec/" + meta.owner + "/" + meta.database} className="blackLink" title="Execute SQL" data-cy="execlink"><i className="fa fa-bar-chart"></i> Execute SQL</a></label> : null }
+
+			{meta.isLive ? <span>&nbsp; &nbsp; &nbsp;</span> : null }
+
 			{meta.isLive ? null : <label id="viewdiscuss" className={meta.pageSection == "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} className="blackLink" title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>}
 
 			{meta.isLive ? null : <span>&nbsp; &nbsp; &nbsp;</span> }

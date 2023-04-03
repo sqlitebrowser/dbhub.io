@@ -112,6 +112,31 @@ func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string) (err error) {
 	return
 }
 
+// LiveExecute asks our AMQP backend to execute a SQL statement on a database
+func LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql string) (rowsChanged int, err error) {
+	var rawResponse []byte
+	rawResponse, err = MQRequest(AmqpChan, liveNode, "execute", loggedInUser, dbOwner, dbName, sql)
+	if err != nil {
+		return
+	}
+
+	// Decode the response
+	var resp LiveDBExecuteResponse
+	err = json.Unmarshal(rawResponse, &resp)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// If the SQL execution failed, then provide the error message to the user
+	if resp.Error != "" {
+		err = errors.New(resp.Error)
+		return
+	}
+	rowsChanged = resp.RowsChanged
+	return
+}
+
 // LiveQueryDB sends a SQLite query to a live database on its hosting node
 func LiveQueryDB(channel *amqp.Channel, nodeName, requestingUser, dbOwner, dbName, query string) (rows SQLiteRecordSet, err error) {
 	// Send the query request to our AMQP backend
