@@ -124,11 +124,11 @@ export default function BranchesTable() {
 
 	// Reorder the branches with the default branch first, then the remainder alphabetically
 	let rows = [];
-        let sortedBranchNames = Object.keys(branchData)
+        Object.keys(branchData)
             .sort(function (a, b) {
-                if (a > b || b === defaultBranch) {
+		if ((a > b && a !== defaultBranch) || b === defaultBranch) {
                     return 1;
-                } else if (a < b || a === defaultBranch) {
+		} else if ((a < b && b !== defaultBranch) || a == defaultBranch) {
                     return -1;
                 } else {
                     return 0;
