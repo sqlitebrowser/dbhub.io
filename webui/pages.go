@@ -144,11 +144,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 
 	// If no branch name was given, we use the default branch
 	if branchName == "" {
-		branchName, err = com.GetDefaultBranchName(dbName.Owner, dbName.Folder, dbName.Database)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
+		branchName = pageData.DB.Info.DefaultBranch
 	}
 
 	// Work out the head commit ID for the requested branch
@@ -358,11 +354,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	for name := range srcBranchList {
 		pageData.SourceDBBranches = append(pageData.SourceDBBranches, name)
 	}
-	pageData.SourceDBDefaultBranch, err = com.GetDefaultBranchName(dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
+	pageData.SourceDBDefaultBranch = pageData.DB.Info.DefaultBranch
 
 	// Retrieve the branch info for the destination database
 	destBranchList, err := com.GetBranches(pageData.DestOwner, pageData.DestFolder, pageData.DestDBName)
@@ -1076,11 +1068,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 
 	// Retrieve default branch name details
 	if branchName == "" {
-		branchName, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
-			return
-		}
+		branchName = pageData.DB.Info.DefaultBranch
 	}
 
 	// Fill out the branch info
