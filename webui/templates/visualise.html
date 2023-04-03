@@ -26,7 +26,7 @@
                             </ul>
                         </div>
                     [[ end ]]
-                    <div class="btn-group" uib-dropdown keyboard-nav="true">
+                    <div class="btn-group" uib-dropdown keyboard-nav="true" ng-if="visNames.length > 0">
                         <button id="visName" type="button" class="btn"><span style="font-weight: bold">Visualisation:</span> <span data-cy="selectedvis">{{ visName }}</span></button>
 
                         <button type="button" uib-dropdown-toggle class="btn btn-default" data-cy="visdropdown">
@@ -600,12 +600,23 @@
                         $scope.statusMessageColour = "green";
                         $scope.statusMessage = "Visualisation '" + name + "' deleted";
 
-                        // Remove the visualisation from the drop down list
+                        // Remove the visualisation from the drop-down list
                         $scope.visNames.splice(arrIdx, 1);
 
-                        // If the currently selected visualisation is the deleted one, set the current visualisation name back to default
+                        // If the currently selected visualisation was the deleted one, pick the first in the remaining
+                        // visualisation list as the new selection
                         if($scope.visName === name) {
-                            $scope.visName = "default"
+                            if ($scope.visNames.length > 0) {
+                                let newSelected = $scope.visNames[0];
+                                $scope.visName = newSelected;
+                                document.getElementById("savename").value = newSelected;
+                                // FIXME:  After trying this out, it's better than automatically selecting "default"
+                                //         for the new selected name (by a large margin).  However, it *really* needs
+                                //         a way to:
+                                //         1. display the successful deletion message
+                                //         2. load the SQL for the new selection (without running it)
+                                //         3. clear the displayed chart, which likely will be for the deleted query
+                            }
                         }
                     }, function failure(response) {
                         // The deletion failed, so display the returned error message

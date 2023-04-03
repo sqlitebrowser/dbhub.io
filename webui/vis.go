@@ -94,7 +94,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	var liveNode string
 	pageData.IsLive, liveNode, err = com.CheckDBLive(dbName.Owner, dbName.Folder, dbName.Database)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -349,7 +349,7 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 	}
 	err = com.Validate.Struct(input)
 	if err != nil {
-		log.Printf("Input validation error for visGet(): %s", err)
+		log.Printf("Input validation error for visDel(): %s", err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "Error when validating input: %s", err)
 		return
@@ -594,11 +594,13 @@ func visGet(w http.ResponseWriter, r *http.Request) {
 	var allowed bool
 	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err)
 		return
 	}
 	if allowed == false {
-		errorPage(w, r, http.StatusNotFound, "Database not found")
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Database not found")
 		return
 	}
 
@@ -655,7 +657,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	}
 	err = com.Validate.Struct(input)
 	if err != nil {
-		log.Printf("Input validation error for visGet(): %s", err)
+		log.Printf("Input validation error for visSave(): %s", err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "Error when validating input: %s", err)
 		return
