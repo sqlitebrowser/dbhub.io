@@ -15,6 +15,7 @@ export default function MarkdownEditor({editorId, rows, placeholder, defaultInde
 
 	if (viewOnly === undefined) {
 		viewOnly = false;
+	} else if (viewOnly === true) {
 		defaultIndex = 1;	// When in view-only mode, always change to the preview tab
 	}
 
