@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	sqlite "github.com/gwenn/gosqlite"
@@ -226,6 +227,80 @@ func LiveQueryDB(channel *amqp.Channel, nodeName, requestingUser, dbOwner, dbNam
 		return
 	}
 	rows = resp.Results
+	return
+}
+
+// LiveTables asks our AMQP backend to provide the list of tables (not including views!) in a database
+func LiveTables(liveNode, loggedInUser, dbOwner, dbName string) (tables []string, err error) {
+	// Send the tables request to our AMQP backend
+	var rawResponse []byte
+	rawResponse, err = MQRequest(AmqpChan, liveNode, "tables", loggedInUser, dbOwner, dbName, "")
+	if err != nil {
+		return
+	}
+
+	// Decode the response
+	var resp LiveDBTablesResponse
+	err = json.Unmarshal(rawResponse, &resp)
+	if err != nil {
+		return
+	}
+	if resp.Error != "" {
+		err = errors.New(resp.Error)
+		return
+	}
+	if resp.Node == "" {
+		log.Printf("A node responded to a 'tables' request, but didn't identify itself")
+		return
+	}
+	tables = resp.Tables
+	return
+}
+
+// LiveTablesAndViews asks our AMQP backend to provide the list of tables and views in a database
+func LiveTablesAndViews(liveNode, loggedInUser, dbOwner, dbName string) (list []string, err error) {
+	// Send the tables request to our AMQP backend
+	list, err = LiveTables(liveNode, loggedInUser, dbOwner, dbName)
+	if err != nil {
+		return
+	}
+
+	// Send the tables request to our AMQP backend
+	var vw []string
+	vw, err = LiveViews(liveNode, loggedInUser, dbOwner, dbName)
+	if err != nil {
+		return
+	}
+
+	// Merge the table and view lists
+	list = append(list, vw...)
+	sort.Strings(list)
+	return
+}
+
+// LiveViews asks our AMQP backend to provide the list of views (not including tables!) in a database
+func LiveViews(liveNode, loggedInUser, dbOwner, dbName string) (views []string, err error) {
+	var rawResponse []byte
+	rawResponse, err = MQRequest(AmqpChan, liveNode, "views", loggedInUser, dbOwner, dbName, "")
+	if err != nil {
+		return
+	}
+
+	// Decode the response
+	var resp LiveDBViewsResponse
+	err = json.Unmarshal(rawResponse, &resp)
+	if err != nil {
+		return
+	}
+	if resp.Error != "" {
+		err = errors.New(resp.Error)
+		return
+	}
+	if resp.Node == "" {
+		log.Printf("A node responded to a 'views' request, but didn't identify itself")
+		return
+	}
+	views = resp.Views
 	return
 }
 

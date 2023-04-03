@@ -1233,32 +1233,11 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Send the tables request to our AMQP backend
-		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "tables", loggedInUser, dbOwner, dbName, "")
+		tables, err = com.LiveTables(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
 			return
 		}
-
-		// Decode the response
-		var resp com.LiveDBTablesResponse
-		err = json.Unmarshal(rawResponse, &resp)
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
-			return
-		}
-		if resp.Error != "" {
-			err = errors.New(resp.Error)
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if resp.Node == "" {
-			log.Printf("In API (Live) tablesHandler().  A node responded, but didn't identify itself.")
-			return
-		}
-		tables = resp.Tables
 	}
 
 	// Return the results
@@ -1593,33 +1572,12 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// Send the columns request to our AMQP backend
-		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "views", loggedInUser, dbOwner, dbName, "")
+		// Send the views request to our AMQP backend
+		views, err = com.LiveViews(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
 			return
 		}
-
-		// Decode the response
-		var resp com.LiveDBViewsResponse
-		err = json.Unmarshal(rawResponse, &resp)
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
-			return
-		}
-		if resp.Error != "" {
-			err = errors.New(resp.Error)
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if resp.Node == "" {
-			log.Printf("In API (Live) viewsHandler().  A node responded, but didn't identify itself.")
-			return
-		}
-		views = resp.Views
 	}
 
 	// Return the results

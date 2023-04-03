@@ -161,7 +161,7 @@ func CheckDBExists(dbOwner, dbFolder, dbName string) (bool, error) {
 func CheckDBLive(dbOwner, dbFolder, dbName string) (isLive bool, liveNode string, err error) {
 	// Query matching databases
 	dbQuery := `
-		SELECT live_db, live_node
+		SELECT live_db, coalesce(live_node, '')
 		FROM sqlite_databases
 		WHERE user_id = (
 				SELECT user_id
@@ -172,13 +172,9 @@ func CheckDBLive(dbOwner, dbFolder, dbName string) (isLive bool, liveNode string
 			AND db_name = $3
 			AND is_deleted = false
 		LIMIT 1`
-	var n pgx.NullString
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&isLive, &n)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&isLive, &liveNode)
 	if err != nil {
 		return false, "", err
-	}
-	if n.Valid {
-		liveNode = n.String
 	}
 	return
 }
@@ -594,9 +590,11 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 	// Retrieve the database details
 	dbQuery := `
 			SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
-				$4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry,
-				db.branches, db.release_count, db.contributors, db.one_line_description, db.full_description,
-				db.default_table, db.public, db.source_url, db.tags, coalesce(db.default_branch, ''), db.live_db
+				$4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry, db.branches,
+				db.release_count, db.contributors, coalesce(db.one_line_description, 'No description'),
+				coalesce(db.full_description, 'No full description'), coalesce(db.default_table, ''), db.public,
+				coalesce(db.source_url, ''), db.tags, coalesce(db.default_branch, ''), db.live_db,
+				coalesce(db.live_node, '')
 			FROM sqlite_databases AS db
 			WHERE db.user_id = (
 					SELECT user_id
@@ -608,40 +606,18 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 				AND db.is_deleted = false`
 
 	// Retrieve the requested database details
-	var defTable, fullDesc, oneLineDesc, sourceURL pgx.NullString
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated,
-		&DB.Info.RepoModified, &DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs,
-		&DB.Info.CommitID,
-		&DB.Info.DBEntry,
-		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &oneLineDesc, &fullDesc, &defTable,
-		&DB.Info.Public, &sourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch, &DB.Info.IsLive)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated, &DB.Info.RepoModified,
+		&DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs, &DB.Info.CommitID, &DB.Info.DBEntry,
+		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &DB.Info.OneLineDesc, &DB.Info.FullDesc,
+		&DB.Info.DefaultTable, &DB.Info.Public, &DB.Info.SourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch,
+		&DB.Info.IsLive, &DB.Info.LiveNode)
 
 	if err != nil {
 		log.Printf("Error when retrieving database details: %v\n", err.Error())
 		return errors.New("The requested database doesn't exist")
 	}
-	if !oneLineDesc.Valid {
-		DB.Info.OneLineDesc = "No description"
-	} else {
-		DB.Info.OneLineDesc = oneLineDesc.String
-	}
-	if !fullDesc.Valid {
-		DB.Info.FullDesc = "No full description"
-	} else {
-		DB.Info.FullDesc = fullDesc.String
-	}
-	if !defTable.Valid {
-		DB.Info.DefaultTable = ""
-	} else {
-		DB.Info.DefaultTable = defTable.String
-	}
-	if !sourceURL.Valid {
-		DB.Info.SourceURL = ""
-	} else {
-		DB.Info.SourceURL = sourceURL.String
-	}
 
-	// If an sha256 was in the licence field, retrieve it's friendly name and url for displaying
+	// If an sha256 was in the licence field, retrieve its friendly name and url for displaying
 	licSHA := DB.Info.DBEntry.LicenceSHA
 	if licSHA != "" {
 		DB.Info.Licence, DB.Info.LicenceURL, err = GetLicenceInfoFromSha256(dbOwner, licSHA)

@@ -355,6 +355,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(data))
 }
 
+// Retrieve session data for the user, if any exists
 func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err error) {
 	// Retrieve session data (if any)
 	var u interface{}
@@ -2951,8 +2952,8 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// Retrieves the owner and database name from an incoming request, using only the URL path (r.URL.Path) in the request.
 func getDatabaseName(r *http.Request) (db com.DatabaseName, err error) {
-	// TODO: Add folder and branch name support
 	db.Owner, db.Database, err = com.GetOD(1, r) // 1 = Ignore "/xxx/" at the start of the URL
 	if err != nil {
 		return
@@ -2972,7 +2973,6 @@ func getDatabaseName(r *http.Request) (db com.DatabaseName, err error) {
 	// Store information
 	db.Owner = usr.Username
 	db.Folder = "/"
-
 	return
 }
 
@@ -3739,11 +3739,10 @@ func requireLogin(pageMeta PageMetaInfo) (errCode int, err error) {
 	if pageMeta.LoggedInUser == "" {
 		return http.StatusUnauthorized, fmt.Errorf("You need to be logged in")
 	}
-
 	return
 }
 
-// Handler for the Database Settings page
+// Receives requests sent by the "Save" button on the database settings page.
 func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)

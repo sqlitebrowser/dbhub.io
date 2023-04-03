@@ -230,6 +230,7 @@ type DBInfo struct {
 	LastModified  time.Time
 	Licence       string
 	LicenceURL    string
+	LiveNode      string
 	MRs           int
 	MyStar        bool
 	MyWatch       bool

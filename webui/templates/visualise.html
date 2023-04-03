@@ -425,7 +425,7 @@
                     // data if '.value' is used.  Instead, Cypress returns old data which of course fails every test
                     // using it.  Everything else (Chromium, FF, etc) is totally fine, returning the correct data.
                     // Cypress itself even *visually displays* the correct data that it should be returning.  But no,
-                    // the actual .should() call done by Cypress returns *old* (incorrect) data that causing failures.
+                    // the actual .should() call done by Cypress returns *old* (incorrect) data, causing failures.
                     // WTF? :(
                     let txtArea = document.getElementById("usersql");
                     txtArea.textContent = response.data["sql"];

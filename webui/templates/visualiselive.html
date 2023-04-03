@@ -6,38 +6,7 @@
 <script src="/js/plotly-basic-2.18.2.min.js"></script>
 [[ template "header" . ]]
 <div>
-
-    <!-- START of section copied from old headerdatabase template, then modified -->
-
-    <div class="row">
-        <div class="col-md-12">
-            <h2 id="viewdb" style="margin-top: 10px;">
-                <div class="pull-left">
-                    <div>
-                        <a class="blackLink" href="/[[ .DB.Info.Owner ]]" data-cy="headerownerlnk">[[ .DB.Info.Owner ]]</a> /
-                        <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]" data-cy="headerdblnk">[[ .DB.Info.Database ]]</a>
-                    </div>
-                </div>
-            </h2>
-        </div>
-    </div>
-
-    <div class="row" style="padding-bottom: 5px; padding-top: 10px;">
-        <div class="col-md-12">
-            <label id="viewdata" style="font-weight: 600; font-family: 'arial black'; [[ if eq .PageMeta.PageSection "db_data" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]" class="blackLink" title="Data" data-cy="datalink"><i class="fa fa-database"></i> Data</a></label>
-            &nbsp; &nbsp; &nbsp;
-            <label id="viewvis" style="font-weight: 600; font-family: 'arial black'; [[ if eq .PageMeta.PageSection "db_vis" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/vis/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]" class="blackLink" title="Visualise" data-cy="vislink"><i class="fa fa-bar-chart"></i> Visualise</a></label>
-            [[ if not .IsLive ]]
-            &nbsp; &nbsp; &nbsp;
-            [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
-            <label id="settings" style="font-weight: 600; font-family: 'arial black'; [[ if eq .PageMeta.PageSection "db_settings" ]] border-bottom: 1px grey dashed; [[ end ]]"><a href="/settings/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]" class="blackLink" title="Settings" data-cy="settingslink"><i class="fa fa-cog"></i> Settings</a></label>
-            [[ end ]]
-            [[ end ]]
-        </div>
-    </div>
-
-    <!-- END of section copied from old headerdatabase template, then modified -->
-
+    <div id="db-header-root"></div>
     <div class="row" style="padding-bottom: 10px;">
         <div class="col-md-1">&nbsp;</div>
         <div class="col-md-10">
@@ -444,7 +413,7 @@
                     // data if '.value' is used.  Instead, Cypress returns old data which of course fails every test
                     // using it.  Everything else (Chromium, FF, etc) is totally fine, returning the correct data.
                     // Cypress itself even *visually displays* the correct data that it should be returning.  But no,
-                    // the actual .should() call done by Cypress returns *old* (incorrect) data that causing failures.
+                    // the actual .should() call done by Cypress returns *old* (incorrect) data, causing failures.
                     // WTF? :(
                     let txtArea = document.getElementById("usersql");
                     txtArea.textContent = response.data["sql"];

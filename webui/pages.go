@@ -2126,105 +2126,77 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-	} else {
-		// Get live node
-		_, liveNode, err := com.CheckDBLive(dbName.Owner, dbName.Folder, dbName.Database)
+
+		// Retrieve the list of branches
+		branchHeads, err := com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		// Send the request to our AMQP backend
-		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "tables", pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, nil)
+		// Retrieve all the commits for the database
+		commitList, err := com.GetCommitList(dbName.Owner, dbName.Folder, dbName.Database)
 		if err != nil {
-			log.Println(err)
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		// Decode the response
-		var resp com.LiveDBTablesResponse
-		err = json.Unmarshal(rawResponse, &resp)
-		if err != nil {
-			log.Println(err)
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-			return
-		}
-		if resp.Error != "" {
-			err = errors.New(resp.Error)
-			log.Println(err)
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-			return
-		}
-		if resp.Node == "" {
-			log.Printf("In webUI (Live) settingsPage().  A node responded, but didn't identify itself.")
-			return
-		}
-		pageData.DB.Info.Tables = resp.Tables
-	}
-
-	// Retrieve the list of branches
-	branchHeads, err := com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Retrieve all of the commits for the database
-	commitList, err := com.GetCommitList(dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Work out the licence assigned to each of the branch heads
-	pageData.BranchLics = make(map[string]string)
-	for bName, bEntry := range branchHeads {
-		c, ok := commitList[bEntry.Commit]
-		if !ok {
-			errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
-				"Couldn't retrieve branch '%s' head commit '%s' for database '%s%s%s'\n", bName, bEntry.Commit,
-				dbName.Owner, dbName.Folder, dbName.Database))
-			return
-		}
-		licSHA := c.Tree.Entries[0].LicenceSHA
-
-		// If the licence SHA256 field isn't empty, look up the licence info corresponding to it
-		var a string
-		if licSHA != "" {
-			a, _, err = com.GetLicenceInfoFromSha256(dbName.Owner, licSHA)
-			if err != nil {
-				errorPage(w, r, http.StatusInternalServerError, err.Error())
+		// Work out the licence assigned to each of the branch heads
+		pageData.BranchLics = make(map[string]string)
+		for bName, bEntry := range branchHeads {
+			c, ok := commitList[bEntry.Commit]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
+					"Couldn't retrieve branch '%s' head commit '%s' for database '%s%s%s'\n", bName, bEntry.Commit,
+					dbName.Owner, dbName.Folder, dbName.Database))
 				return
 			}
-		} else {
-			a = "Not specified"
+			licSHA := c.Tree.Entries[0].LicenceSHA
+
+			// If the licence SHA256 field isn't empty, look up the licence info corresponding to it
+			var a string
+			if licSHA != "" {
+				a, _, err = com.GetLicenceInfoFromSha256(dbName.Owner, licSHA)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+			} else {
+				a = "Not specified"
+			}
+			pageData.BranchLics[bName] = a
 		}
-		pageData.BranchLics[bName] = a
-	}
 
-	// Populate the licence list
-	pageData.Licences, err = com.GetLicences(pageData.PageMeta.LoggedInUser)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
-		return
-	}
-	pageData.NumLicences = len(pageData.Licences)
+		// Populate the licence list
+		pageData.Licences, err = com.GetLicences(pageData.PageMeta.LoggedInUser)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
+			return
+		}
+		pageData.NumLicences = len(pageData.Licences)
 
-	// Render the full description markdown
-	pageData.FullDescRendered = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
+		// Render the full description markdown
+		pageData.FullDescRendered = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
+
+		// Retrieve the share settings
+		pageData.Shares, err = com.GetShares(dbName.Owner, dbName.Folder, dbName.Database)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		// Ask our AMQP backend for the list of tables and views in the database
+		pageData.DB.Info.Tables, err = com.LiveTablesAndViews(pageData.DB.Info.LiveNode, pageData.PageMeta.LoggedInUser,
+			dbName.Owner, dbName.Database)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			return
+		}
+	}
 
 	// If the default table is blank, use the first one from the table list
 	if pageData.DB.Info.DefaultTable == "" {
 		pageData.DB.Info.DefaultTable = pageData.DB.Info.Tables[0]
-	}
-
-	// Retrieve the share settings
-	pageData.Shares, err = com.GetShares(dbName.Owner, dbName.Folder, dbName.Database)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
 	}
 
 	// Render the page
