@@ -6,11 +6,10 @@
 
 ### What it is
 
-An early stage (in development) "Cloud" for SQLite databases, with special
-integration for [DB Browser for SQLite](http://sqlitebrowser.org).
+A Cloud for SQLite databases, with special integration for [DB Browser for SQLite](http://sqlitebrowser.org).
 
-You can try out our live server at [https://dbhub.io](https://dbhub.io/justinclift/DB4S%20download%20stats.sqlite),
-or run it locally for your own users.
+You can use our live hosted version at [https://dbhub.io](https://dbhub.io/justinclift/DB4S%20download%20stats.sqlite),
+our API server at https://api.dbhub.io, or run things locally for your own users.
 
 ### Screenshot
 
@@ -23,7 +22,7 @@ or run it locally for your own users.
 * [Minio](https://minio.io) - release 2016-11-26T02:23:47Z and later are known to work.
 * [NodeJS](https://nodejs.org) - version 18.x is known to work, others are untested.
 * [PostgreSQL](https://www.postgresql.org) - version 13 and above are known to work.
-* [RabbitMQ](https://www.rabbitmq.com) - version 3.10.x is known to work, others are untested.
+* [RabbitMQ](https://www.rabbitmq.com) - version 3.10.x and above are known to work.
 * [Yarn](https://classic.yarnpkg.com) - version 1.22.x.  Not Yarn 2.x or greater.
 
 ### Subdirectories
