@@ -325,9 +325,6 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	// Render the visualisation page
 	pageData.PageMeta.PageSection = "db_vis"
 	templateName := "visualisePage"
-	if pageData.IsLive {
-		templateName = "visualiseLivePage"
-	}
 	t := tmpl.Lookup(templateName)
 	err = t.Execute(w, pageData)
 	if err != nil {
