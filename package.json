@@ -25,7 +25,7 @@
     "docker:debug": "docker exec -it dbhub-build /bin/sh /usr/local/bin/debug.sh",
     "docker:exec": "docker exec -it dbhub-build /bin/sh",
     "docker:github": "docker run -itd --rm --name dbhub-build -p 9443-9445:9443-9445/tcp --mount type=bind,src=\"$(pwd)\",target=/dbhub.io dbhub-build:latest",
-    "docker:psql": "docker exec -it dbhub-build psql -U postgres dbhub",
+    "docker:psql": "docker exec -it dbhub-build psql -U dbhub dbhub",
     "docker:recompile": "docker exec -it dbhub-build /bin/sh /usr/local/bin/compile.sh",
     "docker:restart": "docker exec -it dbhub-build /bin/sh /usr/local/bin/restart.sh",
     "docker:rm": "docker image rm dbhub-build",
