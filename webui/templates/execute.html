@@ -179,12 +179,7 @@
                                 let newSelected = $scope.execNames[0];
                                 $scope.selectedName = newSelected;
                                 document.getElementById("savename").value = newSelected;
-                                // FIXME:  After trying this out, it's better than automatically selecting "default"
-                                //         for the new selected name (by a large margin).  However, it *really* needs
-                                //         a way to:
-                                //         1. display the successful deletion message, and
-                                //         2. load the SQL for the new selection (without running it)
-                                //         NOTE: This is similar to, but not exactly the same as, for the visualisation page
+                                $scope.changeExec(newSelected);
                             }
                         }
                     }, function failure(response) {
@@ -225,6 +220,8 @@
         // Uses the external sqlformat.org API for now.  If this turns out to be used a lot, we should switch to
         // doing this via our own server.
         // FIXME: We should probably switch to a better formatting approach.  This one is eating commented out lines. :(
+        // Doing it in the front end using something like this (https://www.npmjs.com/package/sql-formatter) was
+        // suggested by people in the Gophers Slack channel.  Sounds good like a good idea.
         $scope.formatSQL = function() {
             // Send the string for formatting
             $http({
