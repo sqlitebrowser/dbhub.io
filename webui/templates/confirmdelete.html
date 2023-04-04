@@ -51,7 +51,6 @@
                 method: "POST",
                 url: "/x/deletedatabase/",
                 data: $httpParamSerializerJQLike({
-                        "folder": "/",
                         "dbname": [[ .DB.Info.Database ]],
                         "username": [[ .DB.Info.Owner ]]
                     }),

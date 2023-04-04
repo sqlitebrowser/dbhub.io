@@ -77,13 +77,13 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the database exists and the user has access to view it
 	var exists bool
-	exists, err = com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, false)
+	exists, err = com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbName.Owner, dbName.Folder,
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbName.Owner, "/",
 			dbName.Database))
 		return
 	}
@@ -92,7 +92,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if this is a live database
 	var liveNode string
-	pageData.IsLive, liveNode, err = com.CheckDBLive(dbName.Owner, dbName.Folder, dbName.Database)
+	pageData.IsLive, liveNode, err = com.CheckDBLive(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -102,22 +102,22 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	if !pageData.IsLive {
 		// If a specific commit was requested, make sure it exists in the database commit history
 		if commitID != "" {
-			commitList, err := com.GetCommitList(dbName.Owner, dbName.Folder, dbName.Database)
+			commitList, err := com.GetCommitList(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
 			}
 			if _, ok := commitList[commitID]; !ok {
 				// The requested commit isn't one in the database commit history so error out
-				errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for database '%s%s%s'", dbName.Owner,
-					dbName.Folder, dbName.Database))
+				errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for database '%s/%s'", dbName.Owner,
+					dbName.Database))
 				return
 			}
 		}
 
 		// If a specific release was requested, and no commit ID was given, retrieve the commit ID matching the release
 		if commitID == "" && releaseName != "" {
-			releases, err := com.GetReleases(dbName.Owner, dbName.Folder, dbName.Database)
+			releases, err := com.GetReleases(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve releases for database")
 				return
@@ -131,7 +131,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Load the branch info for the database
-		branchHeads, err := com.GetBranches(dbName.Owner, dbName.Folder, dbName.Database)
+		branchHeads, err := com.GetBranches(dbName.Owner, dbName.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve branch information for database")
 			return
@@ -149,7 +149,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 		// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
 		if commitID == "" && tagName != "" {
-			tags, err := com.GetTags(dbName.Owner, dbName.Folder, dbName.Database)
+			tags, err := com.GetTags(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for database")
 				return
@@ -164,7 +164,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 		// If we still haven't determined the required commit ID, use the head commit of the default branch
 		if commitID == "" {
-			commitID, err = com.DefaultCommit(dbName.Owner, dbName.Folder, dbName.Database)
+			commitID, err = com.DefaultCommit(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -173,7 +173,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 		// Retrieve default branch name details
 		if branchName == "" {
-			branchName, err = com.GetDefaultBranchName(dbName.Owner, dbName.Folder, dbName.Database)
+			branchName, err = com.GetDefaultBranchName(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
 				return
@@ -204,22 +204,22 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 				bCheck[j] = struct{}{}
 			} else {
 				// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
-				log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s%s%s', "+
-					"logged in user '%s'", com.SanitiseLogString(j), dbName.Owner, dbName.Folder, dbName.Database, pageData.PageMeta.LoggedInUser)
+				log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s/%s', "+
+					"logged in user '%s'", com.SanitiseLogString(j), dbName.Owner, dbName.Database, pageData.PageMeta.LoggedInUser)
 			}
 		}
 		pageData.DB.Info.Branch = branchName
 	}
 
 	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Folder, dbName.Database, commitID)
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Get a list of all saved visualisations for this database
-	pageData.VisNames, err = com.GetVisualisations(dbName.Owner, dbName.Folder, dbName.Database)
+	pageData.VisNames, err = com.GetVisualisations(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -241,7 +241,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Retrieve a set of visualisation parameters for this database
-		params, ok, err := com.GetVisualisationParams(dbName.Owner, dbName.Folder, dbName.Database, visName)
+		params, ok, err := com.GetVisualisationParams(dbName.Owner, dbName.Database, visName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -272,15 +272,15 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 			var data com.SQLiteRecordSet
 			if !pageData.IsLive {
 				// It's a standard database, so run the query locally
-				data, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, dbName.Owner, dbName.Folder, dbName.Database, commitID, pageData.PageMeta.LoggedInUser, params.SQL)
+				data, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, dbName.Owner, dbName.Database, commitID, pageData.PageMeta.LoggedInUser, params.SQL)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
 				}
 
 				//	TODO: Consider cacheing/retrieving the data for this visualisation
-				//	hash := visHash(dbName.Owner, dbName.Folder, dbName.Database, commitID, "default", params)
-				//	data, ok, err := com.GetVisualisationData(dbName.Owner, dbName.Folder, dbName.Database, commitID, hash)
+				//	hash := visHash(dbName.Owner, "/", dbName.Database, commitID, "default", params)
+				//	data, ok, err := com.GetVisualisationData(dbName.Owner, "/", dbName.Database, commitID, hash)
 			} else {
 				// It's a live database, so run the query via our AMQP backend
 				data, err = com.LiveQueryDB(com.AmqpChan, liveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, params.SQL)
@@ -315,7 +315,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fill out various metadata fields
-	pageData.PageMeta.Title = fmt.Sprintf("vis - %s %s %s", dbName.Owner, dbName.Folder, dbName.Database)
+	pageData.PageMeta.Title = fmt.Sprintf("vis - %s %s %s", dbName.Owner, "/", dbName.Database)
 
 	// Update database star and watch status for the logged in user
 	// FIXME: Add Cypress tests for this, to ensure moving the code above isn't screwing anything up (especially cacheing)
@@ -341,7 +341,6 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Required information is missing")
 		return
 	}
-	dbFolder := "/"
 
 	// Validate input
 	input := com.VisGetFields{
@@ -384,7 +383,7 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the logged in user has the permissions to proceed
 	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -397,7 +396,7 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the saved visualisation for this database
-	err = com.VisualisationDeleteParams(dbOwner, dbFolder, dbName, visName)
+	err = com.VisualisationDeleteParams(dbOwner, dbName, visName)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -493,7 +492,6 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbFolder := "/"
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
@@ -507,7 +505,7 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 
 	// Check if the requested database exists
 	var exists bool
-	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -515,14 +513,14 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 	}
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		fmt.Fprintf(w, "Database '%s/%s' doesn't exist", dbOwner, dbName)
 		return
 	}
 
 	// Check if this is a live database
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -531,7 +529,7 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 
 	// Run the visualisation query
 	if !isLive {
-		data, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+		data, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, dbOwner, dbName, commitID, loggedInUser, decodedStr)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err)
@@ -558,7 +556,6 @@ func visGet(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Required information is missing")
 		return
 	}
-	dbFolder := "/"
 
 	// Validate input
 	input := com.VisGetFields{
@@ -592,7 +589,7 @@ func visGet(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the logged in user has the permissions to proceed
 	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -607,7 +604,7 @@ func visGet(w http.ResponseWriter, r *http.Request) {
 	// Retrieve a set of visualisation parameters for this database
 	var params com.VisParamsV2
 	var ok bool
-	params, ok, err = com.GetVisualisationParams(dbOwner, dbFolder, dbName, visName)
+	params, ok, err = com.GetVisualisationParams(dbOwner, dbName, visName)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -640,7 +637,6 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbFolder := "/"
 
 	// Extract X axis, Y axis, and aggregate type variables if present
 	chartType := r.FormValue("charttype")
@@ -739,7 +735,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the logged in user has the permissions to proceed
 	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -764,7 +760,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	// Check if this is a live database
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -774,7 +770,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	// Run the visualisation query, to ensure it returns valid data
 	var visData com.SQLiteRecordSet
 	if !isLive {
-		visData, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, dbOwner, dbFolder, dbName, commitID, loggedInUser, decodedStr)
+		visData, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, dbOwner, dbName, commitID, loggedInUser, decodedStr)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err)
@@ -798,10 +794,10 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the SQLite visualisation parameters
-	err = com.VisualisationSaveParams(dbOwner, dbFolder, dbName, visName, vParams)
+	err = com.VisualisationSaveParams(dbOwner, dbName, visName, vParams)
 	if err != nil {
-		log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", com.SanitiseLogString(visName),
-			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())
+		log.Printf("Error occurred when saving visualisation '%s' for' '%s/%s', commit '%s': %s\n", com.SanitiseLogString(visName),
+			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -809,11 +805,11 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	// TODO: Cache the SQLite visualisation data
 	//         * We'll probably need to update the SQLite authoriser code to catch SQLite functions which shouldn't be
 	//           cached - such as random() - and not cache those results
-	//hash := visHash(dbOwner, dbFolder, dbName, commitID, visName, vParams)
-	//err = com.VisualisationSaveData(dbOwner, dbFolder, dbName, commitID, hash, visData)
+	//hash := visHash(dbOwner, dbName, commitID, visName, vParams)
+	//err = com.VisualisationSaveData(dbOwner, dbName, commitID, hash, visData)
 	//if err != nil {
 	//	log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", visName,
-	//		dbOwner, dbFolder, dbName, commitID, err.Error())
+	//		dbOwner, dbName, commitID, err.Error())
 	//	w.WriteHeader(http.StatusInternalServerError)
 	//	return
 	//}

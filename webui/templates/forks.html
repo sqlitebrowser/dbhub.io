@@ -23,7 +23,7 @@
                     <td style="border-style: none;">&nbsp;</td>
                     <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
                         <span ng-bind-html="rowIcons(row)"></span>
-                        <a class="blackLink" href="/{{ row.database_owner }}">{{ row.database_owner }}</a> {{ row.database_folder }}
+                        <a class="blackLink" href="/{{ row.database_owner }}">{{ row.database_owner }}</a> /
                         <span ng-bind-html="rowURL(row)"></span>
                     </td>
                 </tr>
@@ -74,11 +74,11 @@
 
             // Create appropriate link or placeholder for public/private databases
             if (row.public === true) {
-                return '<a class="blackLink" href="/'+ row.database_owner + row.database_folder + row.database_name +
+                return '<a class="blackLink" href="/'+ row.database_owner + "/" + row.database_name +
                     '">' + row.database_name + '</a>';
             } else if (row.database_owner === "[[ .PageMeta.LoggedInUser ]]") {
                 // The logged in user should see their own private databases. Make sure it's not mistaken as public though.
-                return '<a class="blackLink" href="/'+ row.database_owner + row.database_folder + row.database_name +
+                return '<a class="blackLink" href="/'+ row.database_owner + "/" + row.database_name +
                     '">' + row.database_name + '</a> (private database)';
             } else {
                 return "private database";

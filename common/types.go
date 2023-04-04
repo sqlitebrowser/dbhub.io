@@ -165,7 +165,6 @@ type CommitEntry struct {
 
 type DatabaseName struct {
 	Database string
-	Folder   string
 	Owner    string
 }
 
@@ -177,7 +176,6 @@ type DataValue struct {
 type DataRow []DataValue
 
 type DBEntry struct {
-	Folder           string
 	DateEntry        time.Time
 	DBName           string
 	Owner            string
@@ -219,10 +217,8 @@ type DBInfo struct {
 	DefaultTable  string
 	Discussions   int
 	Downloads     int
-	Folder        string
 	ForkDatabase  string
 	ForkDeleted   bool
-	ForkFolder    string
 	ForkOwner     string
 	Forks         int
 	FullDesc      string
@@ -292,7 +288,6 @@ type DiscussionEntry struct {
 type EventDetails struct {
 	DBName    string    `json:"database_name"`
 	DiscID    int       `json:"discussion_id"`
-	Folder    string    `json:"database_folder"`
 	ID        string    `json:"event_id"`
 	Message   string    `json:"message"`
 	Owner     string    `json:"database_owner"`
@@ -314,7 +309,6 @@ const (
 
 type ForkEntry struct {
 	DBName     string     `json:"database_name"`
-	Folder     string     `json:"database_folder"`
 	ForkedFrom int        `json:"forked_from"`
 	IconList   []ForkType `json:"icon_list"`
 	ID         int        `json:"id"`
@@ -351,7 +345,6 @@ type MergeRequestEntry struct {
 	SourceBranch string            `json:"source_branch"`
 	SourceDBID   int64             `json:"source_database_id"`
 	SourceDBName string            `json:"source_database_name"`
-	SourceFolder string            `json:"source_folder"`
 	SourceOwner  string            `json:"source_owner"`
 	State        MergeRequestState `json:"state"`
 }

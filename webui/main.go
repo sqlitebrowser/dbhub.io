@@ -295,7 +295,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, true)
+	usr, _, dbName, err := com.GetUFD(r, true)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -303,13 +303,13 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	dbOwner := strings.ToLower(usr)
 
 	// If any of the required values were empty, indicate failure
-	if dbOwner == "" || dbFolder == "" || dbName == "" {
+	if dbOwner == "" || dbName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -322,13 +322,13 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the branch info for the database
-	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	branchList, err := com.GetBranches(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -458,20 +458,18 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	dbFolder := "/"
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
-			dbName))
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName))
 		return
 	}
 
 	// Read the branch heads list from the database
-	branches, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	branches, err := com.GetBranches(dbOwner, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -485,7 +483,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Count the number of commits in the new branch
-	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	commitList, err := com.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -500,8 +498,8 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		commitCount++
 		c, ok = commitList[c.Parent]
 		if !ok {
-			log.Printf("Error when counting commits in new branch '%s' of database '%s%s%s'\n", com.SanitiseLogString(branchName),
-				com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+			log.Printf("Error when counting commits in new branch '%s' of database '%s/%s'\n", com.SanitiseLogString(branchName),
+				com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			return
 		}
 	}
@@ -513,14 +511,14 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		Description: branchDesc,
 	}
 	branches[branchName] = newBranch
-	err = com.StoreBranches(dbOwner, dbFolder, dbName, branches)
+	err = com.StoreBranches(dbOwner, dbName, branches)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Invalidate the memcache data for the database, so the new branch count gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -528,7 +526,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Bounce to the branches page
-	http.Redirect(w, r, fmt.Sprintf("/branches/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/branches/%s/%s", loggedInUser, dbName), http.StatusSeeOther)
 }
 
 // Receives incoming info for adding a comment to an existing discussion
@@ -548,7 +546,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract and validate the form variables
-	dbOwner, dbFolder, dbName, err := com.GetUFD(r, false)
+	dbOwner, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Missing or incorrect data supplied")
@@ -605,7 +603,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since discussions are considered public
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -613,12 +611,12 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		fmt.Fprintf(w, "Database '%s/%s' doesn't exist", dbOwner, dbName)
 		return
 	}
 
 	// Add the comment to PostgreSQL
-	err = com.StoreComment(dbOwner, dbFolder, dbName, loggedInUser, discID, comText, discClose,
+	err = com.StoreComment(dbOwner, dbName, loggedInUser, discID, comText, discClose,
 		com.CLOSED_WITHOUT_MERGE) // com.CLOSED_WITHOUT_MERGE is ignored for discussions.  It's only used for MRs
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -629,7 +627,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Invalidate the memcache data for the database, so if the discussion counter for the database was changed it
 	// gets picked up
 	if discClose {
-		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 		if err != nil {
 			// Something went wrong when invalidating memcached entries for the database
 			log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -658,7 +656,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract and validate the form variables
-	dbOwner, dbFolder, dbName, err := com.GetUFD(r, false)
+	dbOwner, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
 		return
@@ -687,19 +685,18 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	discText := txt
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since discussions are considered public
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
-			dbName))
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName))
 		return
 	}
 
 	// Add the discussion detail to PostgreSQL
-	id, err := com.StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, discTitle, discText, com.DISCUSSION,
+	id, err := com.StoreDiscussion(dbOwner, dbName, loggedInUser, discTitle, discText, com.DISCUSSION,
 		com.MergeRequestEntry{})
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -710,11 +707,10 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	details := com.EventDetails{
 		DBName:   dbName,
 		DiscID:   id,
-		Folder:   dbFolder,
 		Owner:    dbOwner,
 		Title:    discTitle,
 		Type:     com.EVENT_NEW_DISCUSSION,
-		URL:      fmt.Sprintf("/discuss/%s%s%s?id=%d", url.PathEscape(dbOwner), dbFolder, url.PathEscape(dbName), id),
+		URL:      fmt.Sprintf("/discuss/%s/%s?id=%d", url.PathEscape(dbOwner), url.PathEscape(dbName), id),
 		UserName: loggedInUser,
 	}
 	err = com.NewEvent(details)
@@ -724,7 +720,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate the memcache data for the database, so the new discussion count gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -732,7 +728,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Bounce to the discussions page
-	http.Redirect(w, r, fmt.Sprintf("/discuss/%s%s%s?id=%d", dbOwner, dbFolder, dbName, id), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/discuss/%s/%s?id=%d", dbOwner, dbName, id), http.StatusSeeOther)
 }
 
 // Receives incoming requests from the merge request creation page, creating them if the info is correct
@@ -775,22 +771,6 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.ValidateUser(srcOwner)
 	if err != nil {
 		log.Printf("Validation failed for username: '%s'- %s", com.SanitiseLogString(srcOwner), err)
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-
-	// Retrieve source folder
-	f := r.PostFormValue("sourcefolder")
-	srcFolder, err := url.QueryUnescape(f)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	err = com.ValidateFolder(srcFolder)
-	if err != nil {
-		log.Printf("Validation failed for folder: '%s' - %s", com.SanitiseLogString(srcFolder), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		return
@@ -839,22 +819,6 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.ValidateUser(destOwner)
 	if err != nil {
 		log.Printf("Validation failed for username: '%s'- %s", com.SanitiseLogString(destOwner), err)
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-
-	// Retrieve destination folder
-	f = r.PostFormValue("destfolder")
-	destFolder, err := url.QueryUnescape(f)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	err = com.ValidateFolder(destFolder)
-	if err != nil {
-		log.Printf("Validation failed for folder: '%s' - %s", com.SanitiseLogString(destFolder), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		return
@@ -933,21 +897,20 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure none of the required fields is empty
-	if srcOwner == "" || srcFolder == "" || srcDBName == "" || srcBranch == "" || destOwner == "" || destFolder ==
-		"" || destDBName == "" || destBranch == "" || title == "" || descrip == "" {
+	if srcOwner == "" || srcDBName == "" || srcBranch == "" || destOwner == "" || destDBName == "" || destBranch == "" || title == "" || descrip == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Some of the (required) supplied fields are empty")
 		return
 	}
 
 	// Check the databases exist
-	srcExists, err := com.CheckDBPermissions(loggedInUser, srcOwner, srcFolder, srcDBName, false) // We don't require write access since MRs are considered public
+	srcExists, err := com.CheckDBPermissions(loggedInUser, srcOwner, srcDBName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	destExists, err := com.CheckDBPermissions(loggedInUser, destOwner, destFolder, destDBName, false) // We don't require write access since MRs are considered public
+	destExists, err := com.CheckDBPermissions(loggedInUser, destOwner, destDBName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -964,12 +927,11 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		DestBranch:   destBranch,
 		SourceBranch: srcBranch,
 		SourceDBName: srcDBName,
-		SourceFolder: srcFolder,
 		SourceOwner:  srcOwner,
 	}
 	var ancestorID string
-	ancestorID, mrDetails.Commits, _, err = com.GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch,
-		destOwner, destFolder, destDBName, destBranch)
+	ancestorID, mrDetails.Commits, _, err = com.GetCommonAncestorCommits(srcOwner, srcDBName, srcBranch,
+		destOwner, destDBName, destBranch)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -988,7 +950,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	var x struct {
 		ID int `json:"mr_id"`
 	}
-	x.ID, err = com.StoreDiscussion(destOwner, destFolder, destDBName, loggedInUser, title, descrip, com.MERGE_REQUEST,
+	x.ID, err = com.StoreDiscussion(destOwner, destDBName, loggedInUser, title, descrip, com.MERGE_REQUEST,
 		mrDetails)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -1000,11 +962,10 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	details := com.EventDetails{
 		DBName:   destDBName,
 		DiscID:   x.ID,
-		Folder:   destFolder,
 		Owner:    destOwner,
 		Title:    title,
 		Type:     com.EVENT_NEW_MERGE_REQUEST,
-		URL:      fmt.Sprintf("/merge/%s%s%s?id=%d", url.PathEscape(destOwner), destFolder, url.PathEscape(destDBName), x.ID),
+		URL:      fmt.Sprintf("/merge/%s/%s?id=%d", url.PathEscape(destOwner), url.PathEscape(destDBName), x.ID),
 		UserName: loggedInUser,
 	}
 	err = com.NewEvent(details)
@@ -1014,7 +975,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate the memcache data for the destination database, so the new MR count gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, destOwner, destFolder, destDBName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, destOwner, destDBName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -1079,15 +1040,13 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	dbFolder := "/"
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder,
-			dbName))
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName))
 		return
 	}
 
@@ -1102,7 +1061,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		// * It's a release *
 
 		// Read the releases list from the database
-		rels, err := com.GetReleases(dbOwner, dbFolder, dbName)
+		rels, err := com.GetReleases(dbOwner, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1116,7 +1075,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Retrieve the size of the database for this release
 		var tmp com.SQLiteDBinfo
-		err = com.DBDetails(&tmp, loggedInUser, dbOwner, dbFolder, dbName, commit)
+		err = com.DBDetails(&tmp, loggedInUser, dbOwner, dbName, commit)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1135,14 +1094,14 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		rels[tagName] = newRel
 
 		// Store it in PostgreSQL
-		err = com.StoreReleases(dbOwner, dbFolder, dbName, rels)
+		err = com.StoreReleases(dbOwner, dbName, rels)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		// Invalidate the memcache data for the database
-		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 		if err != nil {
 			// Something went wrong when invalidating memcached entries for the database
 			log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -1150,14 +1109,14 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Bounce to the releases page
-		http.Redirect(w, r, fmt.Sprintf("/releases/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/releases/%s/%s", loggedInUser, dbName), http.StatusSeeOther)
 		return
 	}
 
 	// * It's a tag *
 
 	// Read the tags list from the database
-	tags, err := com.GetTags(dbOwner, dbFolder, dbName)
+	tags, err := com.GetTags(dbOwner, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1180,14 +1139,14 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	tags[tagName] = newTag
 
 	// Store it in PostgreSQL
-	err = com.StoreTags(dbOwner, dbFolder, dbName, tags)
+	err = com.StoreTags(dbOwner, dbName, tags)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Invalidate the memcache data for the database, so the new tag count gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -1195,7 +1154,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Bounce to the tags page
-	http.Redirect(w, r, fmt.Sprintf("/tags/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/tags/%s/%s", loggedInUser, dbName), http.StatusSeeOther)
 }
 
 func createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -1469,7 +1428,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -1484,13 +1443,13 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
+	if branchName == "" || dbName == "" || dbOwner == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1502,7 +1461,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branchList, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	branchList, err := com.GetBranches(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1516,7 +1475,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the branch being deleted isn't the default one
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1531,21 +1490,21 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// release in place with no way to reach it
 
 	// Get the commit list for the database
-	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	commitList, err := com.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Get the tag list for the database
-	tags, err := com.GetTags(dbOwner, dbFolder, dbName)
+	tags, err := com.GetTags(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Get the release list for the database
-	rels, err := com.GetReleases(dbOwner, dbFolder, dbName)
+	rels, err := com.GetReleases(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1559,7 +1518,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		c, ok := commitList[branch.Commit]
 		if !ok {
 			log.Printf("Error when checking for isolated tags while deleting branch '%s' of database "+
-				"'%s%s%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+				"'%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -1574,7 +1533,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 			c, ok = commitList[c.Parent]
 			if !ok {
 				log.Printf("Error when checking for isolated tags while deleting branch '%s' of database "+
-					"'%s%s%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+					"'%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -1611,7 +1570,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 					c, ok = commitList[c.Parent]
 					if !ok {
 						log.Printf("Error when checking for isolated tags while deleting branch '%s' of "+
-							"database '%s%s%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+							"database '%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
@@ -1656,7 +1615,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		c, ok := commitList[branch.Commit]
 		if !ok {
 			log.Printf("Error when checking for isolated releases while deleting branch '%s' of database "+
-				"'%s%s%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+				"'%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -1671,7 +1630,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 			c, ok = commitList[c.Parent]
 			if !ok {
 				log.Printf("Error when checking for isolated releases while deleting branch '%s' of database "+
-					"'%s%s%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+					"'%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -1708,7 +1667,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 					c, ok = commitList[c.Parent]
 					if !ok {
 						log.Printf("Error when checking for isolated releases while deleting branch '%s' of "+
-							"database '%s%s%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+							"database '%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
@@ -1749,8 +1708,8 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	lst := map[string]bool{}
 	c, ok := commitList[branch.Commit]
 	if !ok {
-		log.Printf("Error when creating commit list while deleting branch '%s' of database '%s%s%s'\n",
-			com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+		log.Printf("Error when creating commit list while deleting branch '%s' of database '%s/%s'\n",
+			com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -1758,8 +1717,8 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	for c.Parent != "" {
 		c, ok = commitList[c.Parent]
 		if !ok {
-			log.Printf("Error when creating commit list while deleting branch '%s' of database '%s%s%s'\n",
-				com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+			log.Printf("Error when creating commit list while deleting branch '%s' of database '%s/%s'\n",
+				com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -1781,7 +1740,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		c, ok = commitList[bEntry.Commit]
 		if !ok {
 			err = fmt.Errorf("Broken commit history encountered when checking for commits while deleting "+
-				"branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+				"branch '%s' of database '%s/%s'\n", branchName, dbOwner, dbName)
 			log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 			return
 		}
@@ -1795,7 +1754,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 			c, ok = commitList[c.Parent]
 			if !ok {
 				err = fmt.Errorf("Broken commit history encountered when checking for commits while "+
-					"deleting branch '%s' of database '%s%s%s'\n", branchName, dbOwner, dbFolder, dbName)
+					"deleting branch '%s' of database '%s/%s'\n", branchName, dbOwner, dbName)
 				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 				return
 			}
@@ -1810,7 +1769,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Delete the branch
 	delete(branchList, branchName)
-	err = com.StoreBranches(dbOwner, dbFolder, dbName, branchList)
+	err = com.StoreBranches(dbOwner, dbName, branchList)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1821,16 +1780,16 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	for cid := range lst {
 		delete(commitList, cid)
 	}
-	err = com.StoreCommits(dbOwner, dbFolder, dbName, commitList)
+	err = com.StoreCommits(dbOwner, dbName, commitList)
 	if err != nil {
-		log.Printf("Error when updating commit list while deleting branch '%s' of database '%s%s%s': %s\n",
-			com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName), err.Error())
+		log.Printf("Error when updating commit list while deleting branch '%s' of database '%s/%s': %s\n",
+			com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Invalidate the memcache data for the database, so the new branch count gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -1858,7 +1817,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract and validate the form variables
-	dbOwner, dbFolder, dbName, err := com.GetUFD(r, false)
+	dbOwner, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Missing or incorrect data supplied")
@@ -1898,7 +1857,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since MRs are considered public
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1906,7 +1865,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		fmt.Fprintf(w, "Database '%s/%s' doesn't exist", dbOwner, dbName)
 		return
 	}
 
@@ -1917,7 +1876,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 		deleteAllowed = true
 	} else {
 		// Retrieve the details for the requested comment, so we can check if the logged in user is the comment creator
-		rq, err := com.DiscussionComments(dbOwner, dbFolder, dbName, discID, comID)
+		rq, err := com.DiscussionComments(dbOwner, dbName, discID, comID)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err.Error())
@@ -1935,7 +1894,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the comment from PostgreSQL
-	err = com.DeleteComment(dbOwner, dbFolder, dbName, discID, comID)
+	err = com.DeleteComment(dbOwner, dbName, discID, comID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1962,7 +1921,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -1984,13 +1943,13 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || commit == "" {
+	if branchName == "" || dbName == "" || dbOwner == "" || commit == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2002,7 +1961,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	branches, err := com.GetBranches(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2024,7 +1983,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Determine the commit ID we'll be rewinding to
-	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	commitList, err := com.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2044,14 +2003,14 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If we're working on the default branch, check if the default table is present in the prior commit's version
 	// of the database.  If it's not, we need to clear the default table value
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if branchName == defBranch {
 		// * Retrieve the list of tables present in the prior commit *
-		bkt, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, prevCommit, loggedInUser)
+		bkt, id, _, err := com.MinioLocation(dbOwner, dbName, prevCommit, loggedInUser)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -2068,14 +2027,14 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		defer sdb.Close()
 
 		// Retrieve the list of tables in the database
-		sTbls, err := com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+		sTbls, err := com.TablesAndViews(sdb, fmt.Sprintf("%s/%s", dbOwner, dbName))
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		// Retrieve the default table name for the database
-		defTbl, err := com.GetDefaultTableName(dbOwner, dbFolder, dbName)
+		defTbl, err := com.GetDefaultTableName(dbOwner, dbName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -2088,7 +2047,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if !defFound {
 			// The default table is present in the previous commit, so we clear the default table value
-			err = com.StoreDefaultTableName(dbOwner, dbFolder, dbName, "")
+			err = com.StoreDefaultTableName(dbOwner, dbName, "")
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -2097,7 +2056,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the commit
-	iTags, iRels, err := com.DeleteBranchHistory(dbOwner, dbFolder, dbName, branchName, prevCommit)
+	iTags, iRels, err := com.DeleteBranchHistory(dbOwner, dbName, branchName, prevCommit)
 	if err != nil {
 		if (len(iTags) > 0) || (len(iRels) > 0) {
 			msg := fmt.Sprintln("You need to delete the following tags and releases before the commit can be " +
@@ -2135,7 +2094,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate the memcache data for the database, so the new branch count gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -2165,7 +2124,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Validation failed for owner or database name")
@@ -2174,22 +2133,21 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	dbOwner := strings.ToLower(usr)
 
 	// If any of the required values were empty, indicate failure
-	if dbFolder == "" || dbName == "" || dbOwner == "" {
+	if dbName == "" || dbOwner == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Owner, folder, or database name values() missing")
+		fmt.Fprint(w, "Owner or database name values missing")
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
 		return
 	}
 	if !exists {
-		log.Printf("%s: Missing database for '%s%s%s' when attempting deletion\n", pageName, com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder),
-			com.SanitiseLogString(dbName))
+		log.Printf("%s: Missing database for '%s/%s' when attempting deletion\n", pageName, com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "Internal server error")
 		return
@@ -2205,7 +2163,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	// If this is a standard database, then invalidate it's memcache data
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
@@ -2217,7 +2175,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		// call and the delete.  On the other hand, once it's deleted the invalidation function would itself fail due to
 		// needing the database to be present so it can look up the commit list.  At least doing the invalidation here lets
 		// us clear stale data (hopefully) for the vast majority of the time
-		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 		if err != nil {
 			// Something went wrong when invalidating memcached entries for the database
 			log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -2226,7 +2184,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the database
-	err = com.DeleteDatabase(dbOwner, dbFolder, dbName)
+	err = com.DeleteDatabase(dbOwner, dbName)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
@@ -2302,7 +2260,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -2317,13 +2275,13 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if relName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
+	if relName == "" || dbName == "" || dbOwner == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2335,7 +2293,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing releases for the database
-	releases, err := com.GetReleases(loggedInUser, dbFolder, dbName)
+	releases, err := com.GetReleases(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2349,14 +2307,14 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Delete the release
 	delete(releases, relName)
-	err = com.StoreReleases(dbOwner, dbFolder, dbName, releases)
+	err = com.StoreReleases(dbOwner, dbName, releases)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Invalidate the memcache data for the database, so the new release count gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -2385,7 +2343,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -2400,13 +2358,13 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if tagName == "" || dbFolder == "" || dbName == "" || dbOwner == "" {
+	if tagName == "" || dbName == "" || dbOwner == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2418,7 +2376,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing tags for the database
-	tags, err := com.GetTags(loggedInUser, dbFolder, dbName)
+	tags, err := com.GetTags(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2432,14 +2390,14 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Delete the tag
 	delete(tags, tagName)
-	err = com.StoreTags(dbOwner, dbFolder, dbName, tags)
+	err = com.StoreTags(dbOwner, dbName, tags)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Invalidate the memcache data for the database, so the new tag count gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -2470,22 +2428,6 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.ValidateUser(srcOwner)
 	if err != nil {
 		log.Printf("Validation failed for username: '%s'- %s", com.SanitiseLogString(srcOwner), err)
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-
-	// Retrieve source folder
-	f := r.PostFormValue("sourcefolder")
-	srcFolder, err := url.QueryUnescape(f)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	err = com.ValidateFolder(srcFolder)
-	if err != nil {
-		log.Printf("Validation failed for folder: '%s' - %s", com.SanitiseLogString(srcFolder), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		return
@@ -2539,22 +2481,6 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retrieve destination folder
-	f = r.PostFormValue("destfolder")
-	destFolder, err := url.QueryUnescape(f)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	err = com.ValidateFolder(destFolder)
-	if err != nil {
-		log.Printf("Validation failed for folder: '%s' - %s", com.SanitiseLogString(destFolder), err)
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-
 	// Retrieve destination database name
 	d = r.PostFormValue("destdbname")
 	destDBName, err := url.QueryUnescape(d)
@@ -2588,21 +2514,20 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure none of the required fields is empty
-	if srcOwner == "" || srcFolder == "" || srcDBName == "" || srcBranch == "" || destOwner == "" || destFolder ==
-		"" || destDBName == "" || destBranch == "" {
+	if srcOwner == "" || srcDBName == "" || srcBranch == "" || destOwner == "" || destDBName == "" || destBranch == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Some of the (required) supplied fields are empty")
 		return
 	}
 
 	// Check the databases exist
-	srcExists, err := com.CheckDBPermissions(loggedInUser, srcOwner, srcFolder, srcDBName, false)
+	srcExists, err := com.CheckDBPermissions(loggedInUser, srcOwner, srcDBName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	destExists, err := com.CheckDBPermissions(loggedInUser, destOwner, destFolder, destDBName, false)
+	destExists, err := com.CheckDBPermissions(loggedInUser, destOwner, destDBName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2615,8 +2540,8 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the commit list diff
-	ancestorID, cList, errType, err := com.GetCommonAncestorCommits(srcOwner, srcFolder, srcDBName, srcBranch, destOwner,
-		destFolder, destDBName, destBranch)
+	ancestorID, cList, errType, err := com.GetCommonAncestorCommits(srcOwner, srcDBName, srcBranch, destOwner,
+		destDBName, destBranch)
 	if err != nil && errType != http.StatusBadRequest {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2635,7 +2560,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	// * Retrieve the current licence for the destination branch *
 
 	// Retrieve the commit ID for the destination branch
-	destBranchList, err := com.GetBranches(destOwner, destFolder, destDBName)
+	destBranchList, err := com.GetBranches(destOwner, destDBName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2652,7 +2577,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	destCommitID := b.Commit
 
 	// Retrieve the current licence for the destination branch, using the commit ID
-	commitList, err := com.GetCommitList(destOwner, destFolder, destDBName)
+	commitList, err := com.GetCommitList(destOwner, destDBName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2739,7 +2664,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
-	bucket, id, _, err := com.MinioLocation(dbOwner, "/", dbName, commitID, loggedInUser)
+	bucket, id, _, err := com.MinioLocation(dbOwner, dbName, commitID, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2747,7 +2672,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure the database being requested isn't overly large
 	var tmp com.SQLiteDBinfo
-	err = com.DBDetails(&tmp, loggedInUser, dbOwner, "/", dbName, commitID)
+	err = com.DBDetails(&tmp, loggedInUser, dbOwner, dbName, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2807,7 +2732,6 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	dbFolder := "/"
 
 	// Retrieve session data (if any)
 	loggedInUser, _, err := checkLogin(r)
@@ -2818,7 +2742,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Return the requested database to the user
 	var bytesWritten int64
-	bytesWritten, err = com.DownloadDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, "webui")
+	bytesWritten, err = com.DownloadDatabase(w, r, dbOwner, dbName, commitID, loggedInUser, "webui")
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2836,7 +2760,6 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	dbFolder := "/"
 
 	// Make sure a database commit ID was given
 	if commitID == "" {
@@ -2859,7 +2782,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the user has access to the specific version of the source database requested
-	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2877,7 +2800,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the user doesn't have a database of the same name already
 	// Note the use of "loggedInUser" for the 2nd parameter in this call, unlike using "dbOwner" in the call above
-	exists, err := com.CheckDBPermissions(loggedInUser, loggedInUser, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(loggedInUser, loggedInUser, dbName, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2889,7 +2812,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the forked database info to PostgreSQL
-	_, err = com.ForkDatabase(dbOwner, dbFolder, dbName, loggedInUser)
+	_, err = com.ForkDatabase(dbOwner, dbName, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2897,7 +2820,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Add the user to the watch list for the forked database
 	if !exists {
-		err = com.ToggleDBWatch(loggedInUser, loggedInUser, dbFolder, dbName)
+		err = com.ToggleDBWatch(loggedInUser, loggedInUser, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -2905,7 +2828,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate the old memcached entry for the database
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -2913,10 +2836,10 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the database fork
-	log.Printf("Database '%s%s%s' forked to user '%s'\n", com.SanitiseLogString(dbOwner), dbFolder, com.SanitiseLogString(dbName), loggedInUser)
+	log.Printf("Database '%s/%s' forked to user '%s'\n", com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), loggedInUser)
 
 	// Bounce to the page of the forked database
-	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, dbFolder, dbName), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/%s/%s", loggedInUser, dbName), http.StatusSeeOther)
 }
 
 // Generates a client certificate for the user and gives it to the browser.
@@ -2972,7 +2895,6 @@ func getDatabaseName(r *http.Request) (db com.DatabaseName, err error) {
 
 	// Store information
 	db.Owner = usr.Username
-	db.Folder = "/"
 	return
 }
 
@@ -3485,13 +3407,6 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	default:
-		// TODO: Add support for folders and sub folders
-		// TODO  eg: Allow for collections of databases
-		// TODO    * /user/collectionFoo/database1
-		// TODO    * /user/collectionFoo/database2
-		// TODO    * /user/collectionBar/database1
-		// TODO    * /user/collectionBar/database2
-
 		// We haven't yet added support for folders and subfolders, so bounce back to the /user/database page
 		http.Redirect(w, r, fmt.Sprintf("/%s/%s", pathStrings[1], pathStrings[2]), http.StatusTemporaryRedirect)
 		return
@@ -3507,11 +3422,8 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Add support for folders and sub-folders in request paths
-	dbFolder := "/"
-
 	// A specific database was requested
-	databasePage(w, r, userName, dbFolder, dbName)
+	databasePage(w, r, userName, dbName)
 }
 
 // Returns HTML rendered content from a given markdown string, for the settings page README preview tab.
@@ -3556,7 +3468,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract and validate the form variables
-	dbOwner, dbFolder, dbName, err := com.GetUFD(r, false)
+	dbOwner, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Missing or incorrect data supplied")
@@ -3580,7 +3492,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -3588,12 +3500,12 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		fmt.Fprintf(w, "Database '%s/%s' doesn't exist", dbOwner, dbName)
 		return
 	}
 
 	// Retrieve the names of the source & destination databases and branches
-	disc, err := com.Discussions(dbOwner, dbFolder, dbName, com.MERGE_REQUEST, mrID)
+	disc, err := com.Discussions(dbOwner, dbName, com.MERGE_REQUEST, mrID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -3602,7 +3514,6 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	branchName := disc[0].MRDetails.DestBranch
 	commitDiffList := disc[0].MRDetails.Commits
 	srcOwner := disc[0].MRDetails.SourceOwner
-	srcFolder := disc[0].MRDetails.SourceFolder
 	srcDBName := disc[0].MRDetails.SourceDBName
 	srcBranchName := disc[0].MRDetails.SourceBranch
 
@@ -3615,9 +3526,8 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	// * The required details have been collected, and sanity checks completed, so merge the MR *
 
-	message := fmt.Sprintf("Merge branch '%s' of '%s%s%s' into '%s'", srcBranchName, srcOwner, srcFolder,
-		srcDBName, branchName)
-	_, err = com.Merge(dbOwner, dbFolder, dbName, branchName, srcOwner, srcFolder, srcDBName, commitDiffList, message, loggedInUser)
+	message := fmt.Sprintf("Merge branch '%s' of '%s/%s' into '%s'", srcBranchName, srcOwner, srcDBName, branchName)
+	_, err = com.Merge(dbOwner, dbName, branchName, srcOwner, srcDBName, commitDiffList, message, loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -3625,7 +3535,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Change the status of the MR to closed, and indicate it was successfully merged
-	err = com.StoreComment(dbOwner, dbFolder, dbName, loggedInUser, mrID, "", true,
+	err = com.StoreComment(dbOwner, dbName, loggedInUser, mrID, "", true,
 		com.CLOSED_WITH_MERGE)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -3634,7 +3544,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate the memcached entries for the destination database case
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -3766,18 +3676,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract the username, folder, and (current) database name form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	// Extract the username and (current) database name form variables
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 	dbOwner := strings.ToLower(usr)
-
-	// Default to the root folder if none was given
-	if dbFolder == "" {
-		dbFolder = "/"
-	}
 
 	// Make sure a username was given
 	if len(dbOwner) == 0 || dbOwner == "" {
@@ -3896,7 +3801,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the list of branches in the database
-	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	branchList, err := com.GetBranches(dbOwner, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3908,7 +3813,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusInternalServerError, "Requested branch name not found")
 		return
 	}
-	bkt, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, head.Commit, loggedInUser)
+	bkt, id, _, err := com.MinioLocation(dbOwner, dbName, head.Commit, loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -3927,7 +3832,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the list of tables in the database
 	// TODO: Update this to handle having a default table "per branch".  Even though it would mean looping here, it
 	// TODO  seems like the only way to be flexible and accurate enough for our purposes
-	tables, err := com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+	tables, err := com.TablesAndViews(sdb, fmt.Sprintf("%s/%s", dbOwner, dbName))
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3944,15 +3849,15 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if tablePresent == false {
 			// The requested table doesn't exist in the database
-			log.Printf("Requested table '%s' not present in database '%s%s%s'\n",
-				com.SanitiseLogString(defTable), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+			log.Printf("Requested table '%s' not present in database '%s/%s'\n",
+				com.SanitiseLogString(defTable), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
 			return
 		}
 	}
 
 	// Grab the complete commit list for the database
-	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	commitList, err := com.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3966,8 +3871,8 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		c, ok := commitList[bEntry.Commit]
 		if !ok {
 			errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
-				"Error when retrieving commit ID '%s', branch '%s' for database '%s%s%s'", bEntry.Commit,
-				bName, dbOwner, dbFolder, dbName))
+				"Error when retrieving commit ID '%s', branch '%s' for database '%s/%s'", bEntry.Commit,
+				bName, dbOwner, dbName))
 			return
 		}
 		dbEntry := c.Tree.Entries[0]
@@ -4054,13 +3959,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the branches were updated, store the new commit list and branch heads
 	if branchesUpdated {
-		err = com.StoreCommits(dbOwner, dbFolder, dbName, commitList)
+		err = com.StoreCommits(dbOwner, dbName, commitList)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		err = com.StoreBranches(dbOwner, dbFolder, dbName, newBranchHeads)
+		err = com.StoreBranches(dbOwner, dbName, newBranchHeads)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -4068,13 +3973,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store the new share settings if they changed
-	oldShares, err := com.GetShares(dbOwner, dbFolder, dbName)
+	oldShares, err := com.GetShares(dbOwner, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if reflect.DeepEqual(shares, oldShares) == false {
-		err = com.StoreShares(dbOwner, dbFolder, dbName, shares)
+		err = com.StoreShares(dbOwner, dbName, shares)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -4092,7 +3997,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save settings
-	err = com.SaveDBSettings(dbOwner, dbFolder, dbName, oneLineDesc, fullDesc, defTable, public, sourceURL, defBranch)
+	err = com.SaveDBSettings(dbOwner, dbName, oneLineDesc, fullDesc, defTable, public, sourceURL, defBranch)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -4101,9 +4006,8 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// If the new database name is different from the old one, perform the rename
 	// Note - It's useful to do this *after* the SaveDBSettings() call, so the cache invalidation code at the
 	// end of that function gets run and we don't have to repeat it here
-	// TODO: We'll probably need to add support for renaming folders somehow too
 	if newName != "" && newName != dbName {
-		err = com.RenameDatabase(dbOwner, dbFolder, dbName, newName)
+		err = com.RenameDatabase(dbOwner, dbName, newName)
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -4111,7 +4015,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Settings saved, so bounce back to the database page
-	http.Redirect(w, r, fmt.Sprintf("/%s%s%s", loggedInUser, dbFolder, newName), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/%s/%s", loggedInUser, newName), http.StatusSeeOther)
 }
 
 // This function sets a branch as the default for a given database.
@@ -4132,7 +4036,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -4147,13 +4051,13 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if dbOwner == "" || dbFolder == "" || dbName == "" || branchName == "" {
+	if dbOwner == "" || dbName == "" || branchName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4171,7 +4075,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	branches, err := com.GetBranches(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4184,14 +4088,14 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set the default branch
-	err = com.StoreDefaultBranchName(dbOwner, dbFolder, dbName, branchName)
+	err = com.StoreDefaultBranchName(dbOwner, dbName, branchName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Invalidate the memcache data for the database, so the new default branch gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -4205,7 +4109,6 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 // Handles JSON requests from the front end to toggle a database's star.
 func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the user and database name
-	// TODO: Add folder support
 	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/star/" at the start of the URL
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -4228,14 +4131,14 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Toggle on or off the starring of a database by a user
-	err = com.ToggleDBStar(loggedInUser, dbOwner, "/", dbName)
+	err = com.ToggleDBStar(loggedInUser, dbOwner, dbName)
 	if err != nil {
 		fmt.Fprint(w, "-1") // -1 tells the front end not to update the displayed star count
 		return
 	}
 
 	// Invalidate the old memcached entry for the database
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, "/", dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -4243,7 +4146,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the updated star count
-	newStarCount, err := com.DBStars(dbOwner, "/", dbName)
+	newStarCount, err := com.DBStars(dbOwner, dbName)
 	if err != nil {
 		fmt.Fprint(w, "-1") // -1 tells the front end not to update the displayed star count
 		return
@@ -4267,7 +4170,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -4282,13 +4185,13 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if dbOwner == "" || dbFolder == "" || dbName == "" || branchName == "" {
+	if dbOwner == "" || dbName == "" || branchName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4300,7 +4203,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	branches, err := com.GetBranches(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4318,7 +4221,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	// * Retrieve the table names for the given commit *
 
 	// Retrieve the Minio bucket and id for the commit
-	bkt, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	bkt, id, _, err := com.MinioLocation(dbOwner, dbName, commitID, loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4335,7 +4238,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	defer sdb.Close()
 
 	// Retrieve the list of tables in the database
-	sTbls, err := com.TablesAndViews(sdb, fmt.Sprintf("%s%s%s", dbOwner, dbFolder, dbName))
+	sTbls, err := com.TablesAndViews(sdb, fmt.Sprintf("%s/%s", dbOwner, dbName))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4356,13 +4259,13 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the branch name given is the default branch, check what the default table is set to for it and pass that
 	// info back as the one to have auto-selected in the drop down
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if defBranch == branchName {
-		dt, err := com.GetDefaultTableName(dbOwner, dbFolder, dbName)
+		dt, err := com.GetDefaultTableName(dbOwner, dbName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -4411,13 +4314,11 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Table data handler"
 
 	// Retrieve user, database, table, and commit ID
-	// TODO: Add folder support
 	dbOwner, dbName, requestedTable, commitID, err := com.GetODTC(2, r) // 1 = Ignore "/x/table/" at the start of the URL
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbFolder := "/"
 
 	// Extract sort column, sort direction, and offset variables if present
 	sortCol := r.FormValue("sort")
@@ -4470,7 +4371,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system, and the user has access to it
 	var exists bool
-	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4493,7 +4394,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if this is a live database
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4507,7 +4408,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		// If a cached version of the page data exists, use it
 		var ok bool
 		dataCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-			loggedInUser, dbOwner, dbFolder, dbName, commitID, requestedTable, maxRows)
+			loggedInUser, dbOwner, dbName, commitID, requestedTable, maxRows)
 		ok, err = com.GetCachedData(dataCacheKey, &dataRows)
 		if err != nil {
 			log.Printf("%s: Error retrieving table data from cache: %v", pageName, err)
@@ -4518,7 +4419,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 			// Get the Minio details
 			var bucket, id string
-			bucket, id, _, err = com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+			bucket, id, _, err = com.MinioLocation(dbOwner, dbName, commitID, loggedInUser)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -4526,7 +4427,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 			// Sanity check
 			if bucket == "" || id == "" {
-				log.Printf("%s: Couldn't retrieve Minio details for a database. Owner: '%s%s%s'", pageName, com.SanitiseLogString(dbOwner), dbFolder, com.SanitiseLogString(dbName))
+				log.Printf("%s: Couldn't retrieve Minio details for a database. Owner: '%s/%s'", pageName, com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -4629,8 +4530,8 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, sortCol, sortDir, maxRows, rowOffset)
 			if err != nil {
 				// Some kind of error when reading the database data
-				log.Printf("Error occurred when reading table data for '%s%s%s', commit '%s': %s\n", com.SanitiseLogString(dbOwner),
-					dbFolder, com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())
+				log.Printf("Error occurred when reading table data for '%s/%s', commit '%s': %s\n", com.SanitiseLogString(dbOwner),
+					com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -4645,7 +4546,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			// Cache the data in memcache
 			err = com.CacheData(dataCacheKey, dataRows, com.Conf.Memcache.DefaultCacheTime)
 			if err != nil {
-				log.Printf("%s: Error when caching table data for '%s%s%s': %v\n", pageName, com.SanitiseLogString(dbOwner), dbFolder,
+				log.Printf("%s: Error when caching table data for '%s/%s': %v\n", pageName, com.SanitiseLogString(dbOwner),
 					com.SanitiseLogString(dbName), err)
 			}
 		}
@@ -4715,7 +4616,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -4761,13 +4662,13 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if branchName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newName == "" {
+	if branchName == "" || dbName == "" || dbOwner == "" || newName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4779,7 +4680,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(loggedInUser, dbFolder, dbName)
+	branches, err := com.GetBranches(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4794,14 +4695,14 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the branch being changed is the default branch, and it's being renamed, we need to update the default branch
 	// entry in the database with the new branch name
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if defBranch == branchName {
 		// Update the default branch name for the database
-		err = com.StoreDefaultBranchName(dbOwner, dbFolder, dbName, newName)
+		err = com.StoreDefaultBranchName(dbOwner, dbName, newName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -4815,14 +4716,14 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 		CommitCount: oldInfo.CommitCount,
 		Description: newDesc,
 	}
-	err = com.StoreBranches(dbOwner, dbFolder, dbName, branches)
+	err = com.StoreBranches(dbOwner, dbName, branches)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Invalidate the memcache data for the database, so the new branch name gets picked up
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -4851,7 +4752,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -4908,14 +4809,14 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if dbOwner == "" || dbFolder == "" || dbName == "" || discID == 0 || comID == 0 || newTxt == "" {
+	if dbOwner == "" || dbName == "" || discID == 0 || comID == 0 || newTxt == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Required values missing!")
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since discussions are considered public
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4927,7 +4828,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the discussion text
-	err = com.UpdateComment(dbOwner, dbFolder, dbName, loggedInUser, discID, comID, newTxt)
+	err = com.UpdateComment(dbOwner, dbName, loggedInUser, discID, comID, newTxt)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -4955,7 +4856,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Bad request")
@@ -5018,14 +4919,14 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if dbOwner == "" || dbFolder == "" || dbName == "" || discID == 0 || newTitle == "" || newTxt == "" {
+	if dbOwner == "" || dbName == "" || discID == 0 || newTitle == "" || newTxt == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Required values missing!")
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false) // We don't require write access since MRs are considered public
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since MRs are considered public
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5038,7 +4939,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the discussion text
-	err = com.UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser, discID, newTitle, newTxt)
+	err = com.UpdateDiscussion(dbOwner, dbName, loggedInUser, discID, newTitle, newTxt)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5068,7 +4969,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -5114,13 +5015,13 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if relName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newName == "" {
+	if relName == "" || dbName == "" || dbOwner == "" || newName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5132,7 +5033,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing releases for the database
-	releases, err := com.GetReleases(loggedInUser, dbFolder, dbName)
+	releases, err := com.GetReleases(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5156,7 +5057,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		Size:          oldInfo.Size,
 	}
 
-	err = com.StoreReleases(dbOwner, dbFolder, dbName, releases)
+	err = com.StoreReleases(dbOwner, dbName, releases)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5184,7 +5085,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract the required form variables
-	usr, dbFolder, dbName, err := com.GetUFD(r, false)
+	usr, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -5230,13 +5131,13 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If any of the required values were empty, indicate failure
-	if tagName == "" || dbFolder == "" || dbName == "" || dbOwner == "" || newName == "" {
+	if tagName == "" || dbName == "" || dbOwner == "" || newName == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != err {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5248,7 +5149,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing tags for the database
-	tags, err := com.GetTags(loggedInUser, dbFolder, dbName)
+	tags, err := com.GetTags(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5271,7 +5172,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 		TaggerName:  oldInfo.TaggerName,
 	}
 
-	err = com.StoreTags(dbOwner, dbFolder, dbName, tags)
+	err = com.StoreTags(dbOwner, dbName, tags)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5393,9 +5294,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Add support for folders and sub-folders
 	var dbOwner, dbName string
-	dbFolder := "/"
 
 	tempFile, handler, err := r.FormFile("database")
 	if err != nil {
@@ -5432,7 +5331,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists already
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -5457,7 +5356,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	createBranch := false
 	if !isLiveDB {
 		if exists {
-			branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+			branchList, err := com.GetBranches(dbOwner, dbName)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -5469,7 +5368,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 				createBranch = true
 
 				// We also need a commit ID to branch from, so we use the head commit of the default branch
-				defBranch, err := com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+				defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -5484,7 +5383,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Sanity check the uploaded database, and if ok then add it to the system
-		numBytes, _, sha, err = com.AddDatabase(loggedInUser, dbOwner, dbFolder, dbName, createBranch, branchName,
+		numBytes, _, sha, err = com.AddDatabase(loggedInUser, dbOwner, dbName, createBranch, branchName,
 			commitID, accessType, licenceName, commitMsg, sourceURL, tempFile, time.Now(), time.Time{},
 			"", "", "", "", nil, "")
 		if err != nil {
@@ -5493,15 +5392,15 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Make a record of the upload
-		err = com.LogUpload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
+		err = com.LogUpload(dbOwner, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
 		// Log the successful database upload
-		log.Printf("%s: Username: '%s', database '%s%s%s' uploaded', bytes: %v\n", pageName, loggedInUser,
-			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName), numBytes)
+		log.Printf("%s: Username: '%s', database '%s/%s' uploaded', bytes: %v\n", pageName, loggedInUser,
+			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 		// As the upload was for a standard database, bounce the user to the database view page for it
 		http.Redirect(w, r, fmt.Sprintf("/%s/%s?branch=%s", html.EscapeString(dbOwner), html.EscapeString(dbName), html.EscapeString(branchName)), http.StatusSeeOther)
@@ -5512,7 +5411,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Write the incoming database to a temporary file on disk, and sanity check it
 	var tempDB *os.File
-	numBytes, tempDB, _, _, err = com.WriteDBtoDisk(loggedInUser, dbOwner, dbFolder, dbName, tempFile)
+	numBytes, tempDB, _, _, err = com.WriteDBtoDisk(loggedInUser, dbOwner, dbName, tempFile)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -5540,8 +5439,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the successful database upload
-	log.Printf("%s: Username: '%s', LIVE database '%s%s%s' uploaded', bytes: %v\n", pageName, loggedInUser,
-		com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName), numBytes)
+	log.Printf("%s: Username: '%s', LIVE database '%s/%s' uploaded', bytes: %v\n", pageName, loggedInUser,
+		com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 	// Send a request to the AMQP backend to set up the database there, ready for querying
 	err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
@@ -5559,13 +5458,11 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 // Handles JSON requests from the front end to toggle watching of a database.
 func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the user and database name
-	// TODO: Add folder support
 	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/watch/" at the start of the URL
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbFolder := "/"
 
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
@@ -5582,7 +5479,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Toggle on or off the watching of a database by a user
-	err = com.ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName)
+	err = com.ToggleDBWatch(loggedInUser, dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5590,7 +5487,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Invalidate the old memcached entry for the database
-	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -5600,7 +5497,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the updated watchers count
-	newStarCount, err := com.DBWatchers(dbOwner, dbFolder, dbName)
+	newStarCount, err := com.DBWatchers(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())

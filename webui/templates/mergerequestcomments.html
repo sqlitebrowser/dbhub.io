@@ -58,10 +58,10 @@
                                     </div>
                                     <div>Opened <span title="{{ Disc.creation_date | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(Disc.creation_date, true) }}</span>: <a href="/{{ Disc.creator }}">{{ Disc.creator }}</a>
                                         <span ng-if="Disc.open === true">wants to merge</span><span ng-if="Disc.open !== true">requested a merge from</span>
-                                        <a ng-if="meta.SourceDBOK === true" href="{{ '/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name }}" ng-bind="Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name"></a>
-                                        <span ng-if="meta.SourceDBOK !== true">{{ Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name }}</span>
+                                        <a ng-if="meta.SourceDBOK === true" href="{{ '/' + Disc.mr_details.source_owner + '/' + Disc.mr_details.source_database_name }}" ng-bind="Disc.mr_details.source_owner + '/' + Disc.mr_details.source_database_name"></a>
+                                        <span ng-if="meta.SourceDBOK !== true">{{ Disc.mr_details.source_owner + "/" + Disc.mr_details.source_database_name }}</span>
                                         branch
-                                        <a ng-if="(meta.SourceDBOK === true) && (meta.SourceBranchOK === true)" href="{{ '/commits/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?branch=' + Disc.mr_details.source_branch }}">{{ Disc.mr_details.source_branch }}</a>
+                                        <a ng-if="(meta.SourceDBOK === true) && (meta.SourceBranchOK === true)" href="{{ '/commits/' + Disc.mr_details.source_owner + '/' + Disc.mr_details.source_database_name + '?branch=' + Disc.mr_details.source_branch }}">{{ Disc.mr_details.source_branch }}</a>
                                         <span ng-if="(meta.SourceDBOK !== true) || (meta.SourceBranchOK !== true)" ng-bind="Disc.mr_details.source_branch"></span>
                                         into
                                         <a ng-if="meta.DestBranchNameOK === true" href="/commits/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?branch={{ Disc.mr_details.destination_branch }}" ng-bind="Disc.mr_details.destination_branch"></a>
@@ -92,7 +92,7 @@
                                 <div style="border: 1px solid #CCC; border-radius: 0 0 7px 7px; padding: 10px;">
                                 [[ end ]]
                                     <h4 style="margin: 0;">Commit List</h4>
-                                    <a ng-if="Disc.open === true" href="{{ '/diffs/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?commit_a=' + CommitList[CommitList.length-1].parent + '&commit_b=' + CommitList[0].id }}"><span style="vertical-align: middle;">View changes</span></a>
+                                    <a ng-if="Disc.open === true" href="{{ '/diffs/' + Disc.mr_details.source_owner + '/' + Disc.mr_details.source_database_name + '?commit_a=' + CommitList[CommitList.length-1].parent + '&commit_b=' + CommitList[0].id }}"><span style="vertical-align: middle;">View changes</span></a>
                                     <table class="table table-responsive settingsTable" style="margin: 5px 0 0 0;">
                                         <thead>
                                             <tr>
@@ -109,7 +109,7 @@
                                                 </td>
                                                 <td>
                                                     <span ng-if="Disc.open !== true" ng-bind="row.id | limitTo: 8" style="vertical-align: middle;"></span>
-                                                    <a ng-if="Disc.open === true" href="{{ '/diffs/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?commit_a=' + row.parent + '&commit_b=' + row.id }}"><span ng-bind="row.id | limitTo: 8" class="blackLink" style="vertical-align: middle;"></span></a>
+                                                    <a ng-if="Disc.open === true" href="{{ '/diffs/' + Disc.mr_details.source_owner + '/' + Disc.mr_details.source_database_name + '?commit_a=' + row.parent + '&commit_b=' + row.id }}"><span ng-bind="row.id | limitTo: 8" class="blackLink" style="vertical-align: middle;"></span></a>
                                                 </td>
                                                 <td>
                                                     <span ng-bind="row.message" style="vertical-align: middle;"></span><span ng-if="row.message === ''" style="color: grey; vertical-align: middle;">This commit has no commit message</span>
@@ -204,7 +204,6 @@
                                                 </uib-tab>
                                             </uib-tabset>
                                             <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
-                                            <input type="hidden" name="folder" value="/">
                                             <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
                                             <input type="hidden" name="discid" value="[[ .SelectedID ]]">
                                             <input ng-if="Disc.mr_details.state !== 1 && (Disc.creator === '[[ .PageMeta.LoggedInUser ]]' || '[[ .DB.Info.Owner ]]' === '[[ .PageMeta.LoggedInUser ]]')" type="submit" class="btn btn-default" value="{{ closeLabel }}" style="margin-top: 10px;" ng-click="addComment(true)">
@@ -292,7 +291,6 @@
                 data: $httpParamSerializerJQLike({
                     "comtext": encodeURIComponent(txt),
                     "close": alsoClose,
-                    "folder": "/",
                     "discid": [[ .SelectedID ]],
                     "dbname": [[ .DB.Info.Database ]],
                     "username": [[ .DB.Info.Owner ]],
@@ -317,7 +315,6 @@
                 data: $httpParamSerializerJQLike({
                     "comtext": "",
                     "close": true,
-                    "folder": "/",
                     "discid": [[ .SelectedID ]],
                     "dbname": [[ .DB.Info.Database ]],
                     "username": [[ .DB.Info.Owner ]],
@@ -356,7 +353,6 @@
                 url: "/x/deletecomment/",
                 data: $httpParamSerializerJQLike({
                     "comid": comID,
-                    "folder": "/",
                     "discid": [[ .SelectedID ]],
                     "dbname": [[ .DB.Info.Database ]],
                     "username": [[ .DB.Info.Owner ]],
@@ -488,7 +484,6 @@
                 method: "POST",
                 url: "/x/mergerequest/",
                 data: $httpParamSerializerJQLike({
-                    "folder": "/",
                     "mrid": [[ .SelectedID ]],
                     "dbname": [[ .DB.Info.Database ]],
                     "username": [[ .DB.Info.Owner ]],
@@ -537,7 +532,6 @@
                 data: $httpParamSerializerJQLike({
                     "comid": comID,
                     "comtext": encodeURIComponent(txt),
-                    "folder": "/",
                     "discid": [[ .SelectedID ]],
                     "dbname": [[ .DB.Info.Database ]],
                     "username": [[ .DB.Info.Owner ]],
@@ -573,7 +567,6 @@
                 data: $httpParamSerializerJQLike({
                     "disctext": encodeURIComponent(txt),
                     "disctitle": encodeURIComponent(title),
-                    "folder": "/",
                     "discid": [[ .SelectedID ]],
                     "dbname": [[ .DB.Info.Database ]],
                     "username": [[ .DB.Info.Owner ]],

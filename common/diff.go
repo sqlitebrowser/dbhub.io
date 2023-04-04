@@ -75,13 +75,13 @@ type Diffs struct {
 }
 
 // Diff generates the differences between the two commits commitA and commitB of the two databases specified in the other parameters
-func Diff(ownerA string, folderA string, nameA string, commitA string, ownerB string, folderB string, nameB string, commitB string, loggedInUser string, merge MergeStrategy, includeData bool) (Diffs, error) {
+func Diff(ownerA string, nameA string, commitA string, ownerB string, nameB string, commitB string, loggedInUser string, merge MergeStrategy, includeData bool) (Diffs, error) {
 	// Check if the user has access to the requested databases
-	bucketA, idA, _, err := MinioLocation(ownerA, folderA, nameA, commitA, loggedInUser)
+	bucketA, idA, _, err := MinioLocation(ownerA, nameA, commitA, loggedInUser)
 	if err != nil {
 		return Diffs{}, err
 	}
-	bucketB, idB, _, err := MinioLocation(ownerB, folderB, nameB, commitB, loggedInUser)
+	bucketB, idB, _, err := MinioLocation(ownerB, nameB, commitB, loggedInUser)
 	if err != nil {
 		return Diffs{}, err
 	}
@@ -90,15 +90,15 @@ func Diff(ownerA string, folderA string, nameA string, commitA string, ownerB st
 	if idA == "" {
 		// The requested database wasn't found, or the user doesn't have permission to access it
 		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found: '%s%s%s'", SanitiseLogString(ownerA),
-			SanitiseLogString(folderA), SanitiseLogString(nameA))
+		log.Printf("Requested database not found: '%s/%s'", SanitiseLogString(ownerA),
+			SanitiseLogString(nameA))
 		return Diffs{}, err
 	}
 	if idB == "" {
 		// The requested database wasn't found, or the user doesn't have permission to access it
 		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found: '%s%s%s'", SanitiseLogString(ownerB),
-			SanitiseLogString(folderB), SanitiseLogString(nameB))
+		log.Printf("Requested database not found: '%s/%s'", SanitiseLogString(ownerB),
+			SanitiseLogString(nameB))
 		return Diffs{}, err
 	}
 

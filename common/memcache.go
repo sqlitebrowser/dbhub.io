@@ -87,9 +87,9 @@ func GetCachedData(cacheKey string, cacheData interface{}) (bool, error) {
 }
 
 // GetViewCount retrieves the view count in Memcached for a database
-func GetViewCount(dbOwner string, dbFolder string, dbName string) (count int, err error) {
+func GetViewCount(dbOwner string, dbName string) (count int, err error) {
 	// Generate the cache key
-	cacheString := fmt.Sprintf("viewcount-%s-%s-%s", dbOwner, dbFolder, dbName)
+	cacheString := fmt.Sprintf("viewcount-%s-/-%s", dbOwner, dbName)
 	tempArr := md5.Sum([]byte(cacheString))
 	cacheKey := hex.EncodeToString(tempArr[:])
 
@@ -114,9 +114,9 @@ func GetViewCount(dbOwner string, dbFolder string, dbName string) (count int, er
 }
 
 // IncrementViewCount increments the view counter in Memcached for a database
-func IncrementViewCount(dbOwner string, dbFolder string, dbName string) error {
+func IncrementViewCount(dbOwner string, dbName string) error {
 	// Generate the cache key
-	cacheString := fmt.Sprintf("viewcount-%s-%s-%s", dbOwner, dbFolder, dbName)
+	cacheString := fmt.Sprintf("viewcount-%s-/-%s", dbOwner, dbName)
 	tempArr := md5.Sum([]byte(cacheString))
 	cacheKey := hex.EncodeToString(tempArr[:])
 
@@ -130,7 +130,7 @@ func IncrementViewCount(dbOwner string, dbFolder string, dbName string) error {
 
 		// The cached value didn't exist, so we check if it has an entry in PostgreSQL already
 		// NOTE: This function returns 0 if there's no existing entry, so we can just increment whatever it gives us
-		cnt, err := ViewCount(dbOwner, dbFolder, dbName)
+		cnt, err := ViewCount(dbOwner, dbName)
 		if err != nil {
 			return err
 		}
@@ -150,13 +150,13 @@ func IncrementViewCount(dbOwner string, dbFolder string, dbName string) error {
 }
 
 // InvalidateCacheEntry invalidate Memcache data for a database entry or entries
-func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) error {
+func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbName string, commitID string) error {
 	// If commitID is "", that means "for all commits".  Otherwise, just invalidate the data for the requested one
 	var commitList []string
 	if commitID == "" {
 		// Get the list of all commits for the given database
 		var err error
-		l, err := GetCommitList(dbOwner, dbFolder, dbName) // Get the full commit list
+		l, err := GetCommitList(dbOwner, dbName) // Get the full commit list
 		if err != nil {
 			return err
 		}
@@ -172,7 +172,7 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 	// Loop around, invalidating the now outdated entries
 	for _, c := range commitList {
 		// Invalidate the download page data, for private database versions
-		cacheKey := MetadataCacheKey("dwndb-meta", dbOwner, dbOwner, dbFolder, dbName, c)
+		cacheKey := MetadataCacheKey("dwndb-meta", dbOwner, dbOwner, dbName, c)
 		err := memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
@@ -182,7 +182,7 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbFolder string, 
 		}
 
 		// Invalidate the download page data for public database versions
-		cacheKey = MetadataCacheKey("dwndb-meta", "", dbOwner, dbFolder, dbName, c)
+		cacheKey = MetadataCacheKey("dwndb-meta", "", dbOwner, dbName, c)
 		err = memCache.Delete(cacheKey)
 		if err != nil {
 			if err != memcache.ErrCacheMiss {
@@ -200,10 +200,10 @@ func MemcacheHandle() *memcache.Client {
 }
 
 // MetadataCacheKey generates a predictable cache key for metadata information
-func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string) string {
+func MetadataCacheKey(prefix string, loggedInUser string, dbOwner string, dbName string, commitID string) string {
 	// The following schema of the cache string makes sure that the information is stored separately for all users.
 	// Users who are not logged in all have the same empty user name and this way get the same cache key.
-	cacheString := fmt.Sprintf("%s/%s/%s/%s/%s/%s", prefix, loggedInUser, strings.ToLower(dbOwner), dbFolder, dbName, commitID)
+	cacheString := fmt.Sprintf("%s/%s/%s/%s/%s/%s", prefix, loggedInUser, strings.ToLower(dbOwner), "/", dbName, commitID)
 
 	tempArr := md5.Sum([]byte(cacheString))
 	return hex.EncodeToString(tempArr[:])
@@ -230,14 +230,14 @@ func SetUserStatusUpdates(userName string, numUpdates int) error {
 }
 
 // TableRowsCacheKey generates a predictable cache key for SQLite row data.  ONLY for standard databases
-func TableRowsCacheKey(prefix string, loggedInUser string, dbOwner string, dbFolder string, dbName string, commitID string, dbTable string, rows int) string {
+func TableRowsCacheKey(prefix string, loggedInUser string, dbOwner string, dbName string, commitID string, dbTable string, rows int) string {
 	var cacheString string
 	if strings.ToLower(loggedInUser) == strings.ToLower(dbOwner) {
-		cacheString = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d", prefix, strings.ToLower(dbOwner), dbFolder, dbName, commitID,
+		cacheString = fmt.Sprintf("%s/%s/%s/%s/%s/%s/%d", prefix, strings.ToLower(dbOwner), "/", dbName, commitID,
 			dbTable, rows)
 	} else {
 		// Requests for other users databases are cached separately from users own database requests
-		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%s/%s/%d", prefix, strings.ToLower(dbOwner), dbFolder, dbName,
+		cacheString = fmt.Sprintf("%s/pub/%s/%s/%s/%s/%s/%d", prefix, strings.ToLower(dbOwner), "/", dbName,
 			commitID, dbTable, rows)
 	}
 	tempArr := md5.Sum([]byte(cacheString))

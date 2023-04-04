@@ -429,7 +429,6 @@ ALTER SEQUENCE public.live_user_sql_statements_stmt_id_seq OWNED BY public.live_
 CREATE TABLE public.sqlite_databases (
     user_id bigint NOT NULL,
     db_id bigint NOT NULL,
-    folder text NOT NULL,
     db_name text NOT NULL,
     public boolean DEFAULT false NOT NULL,
     date_created timestamp with time zone DEFAULT now() NOT NULL,
@@ -791,11 +790,11 @@ ALTER TABLE ONLY public.sqlite_databases
 
 
 --
--- Name: sqlite_databases sqlite_databases_user_id_folder_db_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: sqlite_databases sqlite_databases_user_id_db_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sqlite_databases
-    ADD CONSTRAINT sqlite_databases_user_id_folder_db_name_key UNIQUE (user_id, folder, db_name);
+    ADD CONSTRAINT sqlite_databases_user_id_db_name_key UNIQUE (user_id, db_name);
 
 
 --

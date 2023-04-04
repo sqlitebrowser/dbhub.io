@@ -16,7 +16,6 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 			},
 			body: new URLSearchParams({
 				"branch": name,
-				"folder": "/",
 				"dbname": meta.database,
 				"username": meta.owner,
 				"newdesc": newDesc,
@@ -41,7 +40,6 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 			},
 			body: new URLSearchParams({
 				"branch": name,
-				"folder": "/",
 				"dbname": meta.database,
 				"username": meta.owner
 			})
@@ -65,7 +63,6 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 			},
 			body: new URLSearchParams({
 				"branch": name,
-				"folder": "/",
 				"dbname": meta.database,
 				"username": meta.owner
 			}),

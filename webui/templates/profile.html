@@ -181,7 +181,7 @@
                         <td>
                             <h4>
                                 <a class="blackLink" href="/{{ row.Owner }}">{{ row.Owner }}</a> /
-                                <a class="blackLink" href="/{{ row.Owner + row.Folder + row.DBName }}">{{ row.DBName }}</a>
+                                <a class="blackLink" href="/{{ row.Owner + '/' + row.DBName }}">{{ row.DBName }}</a>
                             </h4>
                             <div uib-collapse="isCollapsedWatch" style="padding-top: 5px;">
                                 <b>Started watching:</b> <span title="{{ row.DateEntry | date : 'medium' }}" style="color: grey;">{{ getTimePeriodTxt(row.DateEntry, false) }}</span>

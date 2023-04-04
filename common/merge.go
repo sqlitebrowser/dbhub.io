@@ -11,9 +11,9 @@ import (
 )
 
 // Merge merges the commits in commitDiffList into the destination branch destBranch of the given database
-func Merge(destOwner, destFolder, destName, destBranch, srcOwner, srcFolder, srcName string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
+func Merge(destOwner, destName, destBranch, srcOwner, srcName string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
 	// Get the details of the head commit for the destination database branch
-	branchList, err := GetBranches(destOwner, destFolder, destName) // Destination branch list
+	branchList, err := GetBranches(destOwner, destName) // Destination branch list
 	if err != nil {
 		return
 	}
@@ -33,7 +33,7 @@ func Merge(destOwner, destFolder, destName, destBranch, srcOwner, srcFolder, src
 		// We can fast-forward. So simply add a merge commit on top of the just added source commits and save
 		// the new commit list and branch details.
 
-		newCommitID, err = performFastForward(destOwner, destFolder, destName, destBranch, destCommitID, commitDiffList, message, loggedInUser)
+		newCommitID, err = performFastForward(destOwner, destName, destBranch, destCommitID, commitDiffList, message, loggedInUser)
 		if err != nil {
 			return
 		}
@@ -41,7 +41,7 @@ func Merge(destOwner, destFolder, destName, destBranch, srcOwner, srcFolder, src
 		// We cannot fast-forward. This means we have to perform an actual merge. A merge commit is automatically created
 		// by the performMerge() function so we do not have to worry about that.
 		// Perform merge
-		newCommitID, err = performMerge(destOwner, destFolder, destName, destBranch, destCommitID, srcOwner, srcFolder, srcName, commitDiffList, message, loggedInUser)
+		newCommitID, err = performMerge(destOwner, destName, destBranch, destCommitID, srcOwner, srcName, commitDiffList, message, loggedInUser)
 		if err != nil {
 			return
 		}
@@ -52,9 +52,9 @@ func Merge(destOwner, destFolder, destName, destBranch, srcOwner, srcFolder, src
 
 // addCommitsForMerging simply adds the commits listed in commitDiffList to the destination branch of the databases.
 // It neither performs any merging nor does it create a merge commit.
-func addCommitsForMerging(destOwner, destFolder, destName, destBranch string, commitDiffList []CommitEntry, newHead bool) (err error) {
+func addCommitsForMerging(destOwner, destName, destBranch string, commitDiffList []CommitEntry, newHead bool) (err error) {
 	// Get the details of the head commit for the destination database branch
-	branchList, err := GetBranches(destOwner, destFolder, destName) // Destination branch list
+	branchList, err := GetBranches(destOwner, destName) // Destination branch list
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func addCommitsForMerging(destOwner, destFolder, destName, destBranch string, co
 	}
 
 	// Get destination commit list
-	destCommitList, err := GetCommitList(destOwner, destFolder, destName)
+	destCommitList, err := GetCommitList(destOwner, destName)
 	if err != nil {
 		return err
 	}
@@ -89,11 +89,11 @@ func addCommitsForMerging(destOwner, destFolder, destName, destBranch string, co
 		Description: branchDetails.Description,
 	}
 	branchList[destBranch] = b
-	err = StoreCommits(destOwner, destFolder, destName, destCommitList)
+	err = StoreCommits(destOwner, destName, destCommitList)
 	if err != nil {
 		return err
 	}
-	err = StoreBranches(destOwner, destFolder, destName, branchList)
+	err = StoreBranches(destOwner, destName, branchList)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func addCommitsForMerging(destOwner, destFolder, destName, destBranch string, co
 }
 
 // performFastForward performs a merge by simply fast-forwarding to a new head.
-func performFastForward(destOwner, destFolder, destName, destBranch, destCommitID string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
+func performFastForward(destOwner, destName, destBranch, destCommitID string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
 	// Retrieve details for the logged in user
 	usr, err := User(loggedInUser)
 	if err != nil {
@@ -126,7 +126,7 @@ func performFastForward(destOwner, destFolder, destName, destBranch, destCommitI
 	newCommitDiffList = append(newCommitDiffList, commitDiffList...)
 
 	// Add the source commits and the new merge commit to the destination db commit list and update the branch list with it
-	err = addCommitsForMerging(destOwner, destFolder, destName, destBranch, newCommitDiffList, true)
+	err = addCommitsForMerging(destOwner, destName, destBranch, newCommitDiffList, true)
 	if err != nil {
 		return
 	}
@@ -135,7 +135,7 @@ func performFastForward(destOwner, destFolder, destName, destBranch, destCommitI
 }
 
 // performMerge takes the destination database and applies the changes from commitDiffList on it.
-func performMerge(destOwner, destFolder, destName, destBranch, destCommitID, srcOwner, srcFolder, srcName string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
+func performMerge(destOwner, destName, destBranch, destCommitID, srcOwner, srcName string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
 	// Figure out the last common ancestor and the current head of the branch to merge
 	lastCommonAncestorId := commitDiffList[len(commitDiffList)-1].Parent
 	currentHeadToMerge := commitDiffList[0].ID
@@ -143,7 +143,7 @@ func performMerge(destOwner, destFolder, destName, destBranch, destCommitID, src
 	// Figure out the changes made to the destination branch since this common ancestor.
 	// For this we don't need any SQLs generated because this information is only required
 	// for checking for conflicts.
-	destDiffs, err := Diff(destOwner, destFolder, destName, lastCommonAncestorId, destOwner, destFolder, destName, destCommitID, loggedInUser, NoMerge, false)
+	destDiffs, err := Diff(destOwner, destName, lastCommonAncestorId, destOwner, destName, destCommitID, loggedInUser, NoMerge, false)
 	if err != nil {
 		return
 	}
@@ -151,7 +151,7 @@ func performMerge(destOwner, destFolder, destName, destBranch, destCommitID, src
 	// Figure out the changes made to the source branch since this common ancestor.
 	// For this we do want SQLs generated because these need to be applied on top of
 	// the destination branch head.
-	srcDiffs, err := Diff(srcOwner, srcFolder, srcName, lastCommonAncestorId, srcOwner, srcFolder, srcName, currentHeadToMerge, loggedInUser, NewPkMerge, false)
+	srcDiffs, err := Diff(srcOwner, srcName, lastCommonAncestorId, srcOwner, srcName, currentHeadToMerge, loggedInUser, NewPkMerge, false)
 	if err != nil {
 		return
 	}
@@ -165,7 +165,7 @@ func performMerge(destOwner, destFolder, destName, destBranch, destCommitID, src
 	}
 
 	// Get Minio location
-	bucket, id, _, err := MinioLocation(destOwner, destFolder, destName, destCommitID, loggedInUser)
+	bucket, id, _, err := MinioLocation(destOwner, destName, destCommitID, loggedInUser)
 	if err != nil {
 		return
 	}
@@ -262,13 +262,13 @@ func performMerge(destOwner, destFolder, destName, destBranch, destCommitID, src
 	// The merging was successful. This means we can add the list of source commits to the destination branch.
 	// This needs to be done before calling AddDatabase() because AddDatabase() adds its own merge commit on
 	// top of the just updated commit list.
-	err = addCommitsForMerging(destOwner, destFolder, destName, destBranch, commitDiffList, false)
+	err = addCommitsForMerging(destOwner, destName, destBranch, commitDiffList, false)
 	if err != nil {
 		return
 	}
 
 	// Store merged database
-	_, newCommitID, _, err = AddDatabase(loggedInUser, destOwner, destFolder, destName, false, destBranch, destCommitID,
+	_, newCommitID, _, err = AddDatabase(loggedInUser, destOwner, destName, false, destBranch, destCommitID,
 		KeepCurrentAccessType, "", message, "", tmpFile, time.Now(), time.Time{}, usr.DisplayName, usr.Email, usr.DisplayName, usr.Email,
 		[]string{currentHeadToMerge}, "")
 	if err != nil {

@@ -21,15 +21,15 @@ type BranchListResponseContainer struct {
 
 // BranchListResponse returns the branch list for a database.  It's used by both the DB4S and API daemons, to ensure
 // they return exactly the same data
-func BranchListResponse(dbOwner, dbFolder, dbName string) (list BranchListResponseContainer, err error) {
+func BranchListResponse(dbOwner, dbName string) (list BranchListResponseContainer, err error) {
 	// Retrieve the branch list for the database
-	list.Branches, err = GetBranches(dbOwner, dbFolder, dbName)
+	list.Branches, err = GetBranches(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Retrieve the default branch for the database
-	list.DefaultBranch, err = GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	list.DefaultBranch, err = GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -57,33 +57,33 @@ type MetadataResponseContainer struct {
 
 // MetadataResponse returns the metadata for a database.  It's used by both the DB4S and API daemons, to ensure they
 // return exactly the same data
-func MetadataResponse(dbOwner, dbFolder, dbName string) (meta MetadataResponseContainer, err error) {
+func MetadataResponse(dbOwner, dbName string) (meta MetadataResponseContainer, err error) {
 	// Get the branch heads list for the database
-	meta.Branches, err = GetBranches(dbOwner, dbFolder, dbName)
+	meta.Branches, err = GetBranches(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Get the default branch for the database
-	meta.DefBranch, err = GetDefaultBranchName(dbOwner, dbFolder, dbName)
+	meta.DefBranch, err = GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Get the complete commit list for the database
-	meta.Commits, err = GetCommitList(dbOwner, dbFolder, dbName)
+	meta.Commits, err = GetCommitList(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Get the releases for the database
-	meta.Releases, err = GetReleases(dbOwner, dbFolder, dbName)
+	meta.Releases, err = GetReleases(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Get the tags for the database
-	meta.Tags, err = GetTags(dbOwner, dbFolder, dbName)
+	meta.Tags, err = GetTags(dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -143,13 +143,10 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 		return
 	}
 
-	// TODO: Add support for folders
-	targetFolder := "/"
-
 	// TODO: These validation functions should probably be in the common library instead
 
 	// Check if the database exists already
-	exists, err := CheckDBExists(targetUser, targetFolder, targetDB)
+	exists, err := CheckDBExists(targetUser, targetDB)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return
@@ -157,7 +154,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 
 	// Check permissions
 	if exists {
-		allowed, err := CheckDBPermissions(loggedInUser, targetUser, targetFolder, targetDB, true)
+		allowed, err := CheckDBPermissions(loggedInUser, targetUser, targetDB, true)
 		if err != nil {
 			return nil, http.StatusInternalServerError, err
 		}
@@ -401,7 +398,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 
 		// Retrieve the branch list for the database
 		var branchList map[string]BranchEntry
-		branchList, err = GetBranches(targetUser, targetFolder, targetDB)
+		branchList, err = GetBranches(targetUser, targetDB)
 		if err != nil {
 			httpStatus = http.StatusInternalServerError
 			return
@@ -424,7 +421,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 			for branch := range branchList {
 				// Loop through the branches, checking if the commit ID is in any of them
 				var a bool
-				a, err = IsCommitInBranchHistory(targetUser, targetFolder, targetDB, branch, commitID)
+				a, err = IsCommitInBranchHistory(targetUser, targetDB, branch, commitID)
 				if err != nil {
 					httpStatus = http.StatusInternalServerError
 					return
@@ -451,7 +448,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 				// database being pushed is out of date compared to the HEAD commit.  We'll need to abort
 				// (with a suitable warning message), unless the force flag was passed + set to true
 				var found bool
-				found, err = IsCommitInBranchHistory(targetUser, targetFolder, targetDB, branchName, commitID)
+				found, err = IsCommitInBranchHistory(targetUser, targetDB, branchName, commitID)
 				if err != nil {
 					httpStatus = http.StatusInternalServerError
 					return
@@ -491,7 +488,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	}
 
 	// Sanity check the uploaded database, and if ok then add it to the system
-	numBytes, returnCommitID, sha, err := AddDatabase(loggedInUser, targetUser, targetFolder, targetDB, createBranch,
+	numBytes, returnCommitID, sha, err := AddDatabase(loggedInUser, targetUser, targetDB, createBranch,
 		branchName, commitID, accessType, licenceName, commitMsg, sourceURL, tempFile, lastMod,
 		commitTime, authorName, authorEmail, committerName, committerEmail, otherParents, dbSHA256)
 	if err != nil {
@@ -507,14 +504,14 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	}
 
 	// Make a record of the upload
-	err = LogUpload(loggedInUser, targetFolder, targetDB, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now().UTC(), sha)
+	err = LogUpload(loggedInUser, targetDB, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now().UTC(), sha)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return
 	}
 
 	// Log the successful database upload
-	log.Printf("Database uploaded: '%s%s%s', bytes: %v\n", loggedInUser, targetFolder, SanitiseLogString(targetDB), numBytes)
+	log.Printf("Database uploaded: '%s%s%s', bytes: %v\n", loggedInUser, SanitiseLogString(targetDB), numBytes)
 
 	// Generate the formatted server string
 	var server string
@@ -525,7 +522,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	}
 
 	// Construct message data for returning to DB4S (only) callers
-	u := server + filepath.Join("/", targetUser, targetFolder, targetDB)
+	u := server + filepath.Join("/", targetUser, targetDB)
 	u += fmt.Sprintf(`?branch=%s&commit=%s`, branchName, returnCommitID)
 	retMsg = map[string]string{"commit_id": returnCommitID, "url": u}
 	return

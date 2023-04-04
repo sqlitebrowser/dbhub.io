@@ -35,10 +35,9 @@ func branchesHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -49,7 +48,7 @@ func branchesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the branch list for the database
-	brList, err := com.BranchListResponse(dbOwner, dbFolder, dbName)
+	brList, err := com.BranchListResponse(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -105,7 +104,6 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// Extract the table name
 	table, err := com.GetFormTable(r, false)
@@ -121,7 +119,7 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -141,7 +139,7 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	var cols []sqlite.Column
 	if !isLive {
 		// Get Minio bucket and object id for the SQLite file
-		bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, "", loggedInUser)
+		bucket, id, _, err := com.MinioLocation(dbOwner, dbName, "", loggedInUser)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -262,10 +260,9 @@ func commitsHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -276,7 +273,7 @@ func commitsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the commits
-	commits, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	commits, err := com.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -372,10 +369,9 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dbOwner := loggedInUser
-	dbFolder := "/"
 
 	// Check if the database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -388,13 +384,13 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	// For a standard database, invalidate its memcache data
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusNotFound)
 		return
 	}
 	if !isLive {
-		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbFolder, dbName, "") // Empty string indicates "for all versions"
+		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -402,7 +398,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the database
-	err = com.DeleteDatabase(dbOwner, dbFolder, dbName)
+	err = com.DeleteDatabase(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -571,7 +567,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check permissions of the first database
 	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwnerA, "/", dbNameA, false)
+	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwnerA, dbNameA, false)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -582,7 +578,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check permissions of the second database
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwnerB, "/", dbNameB, false)
+	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwnerB, dbNameB, false)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -594,7 +590,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If either database is a live database, we return an error message
 	var isLive bool
-	isLive, _, err = com.CheckDBLive(dbOwnerA, "/", dbNameA)
+	isLive, _, err = com.CheckDBLive(dbOwnerA, dbNameA)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -603,7 +599,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, fmt.Sprintf("'%s/%s' is a live database.  It doesn't support diffs.", dbOwnerA, dbNameA), http.StatusBadRequest)
 		return
 	}
-	isLive, _, err = com.CheckDBLive(dbOwnerB, "/", dbNameB)
+	isLive, _, err = com.CheckDBLive(dbOwnerB, dbNameB)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -614,7 +610,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Perform diff
-	diffs, err := com.Diff(dbOwnerA, "/", dbNameA, ca, dbOwnerB, "/", dbNameB, cb, loggedInUser, mergeStrategy, includeData)
+	diffs, err := com.Diff(dbOwnerA, dbNameA, ca, dbOwnerB, dbNameB, cb, loggedInUser, mergeStrategy, includeData)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -644,7 +640,6 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// Was a user agent part of the request?
 	var userAgent string
@@ -655,7 +650,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the database is a live database, and get the node/queue to send the request to
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -664,7 +659,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the requested database to the user
 	if !isLive {
 		// It's a standard database
-		_, err = com.DownloadDatabase(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser, "api")
+		_, err = com.DownloadDatabase(w, r, dbOwner, dbName, commitID, loggedInUser, "api")
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -710,7 +705,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make a record of the download
-	err = com.LogDownload(dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, "api LIVE", userAgent,
+	err = com.LogDownload(dbOwner, dbName, loggedInUser, r.RemoteAddr, "api LIVE", userAgent,
 		time.Now(), fmt.Sprintf("%s/%s", dbOwner, dbName))
 	if err != nil {
 		return
@@ -753,7 +748,6 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	dbFolder := "/"
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
@@ -766,13 +760,13 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the requested database exists
 	var exists bool
-	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if !exists {
-		jsonErr(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName),
+		jsonErr(w, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName),
 			http.StatusNotFound)
 		return
 	}
@@ -780,7 +774,7 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the database is a live database, and get the node/queue to send the request to
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -837,10 +831,9 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -860,7 +853,7 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	var indexes []com.APIJSONIndex
 	if !isLive {
 		// Get Minio bucket and object id for the SQLite file
-		bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, "", loggedInUser)
+		bucket, id, _, err := com.MinioLocation(dbOwner, dbName, "", loggedInUser)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -964,10 +957,9 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -978,7 +970,7 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the metadata for the database
-	meta, err := com.MetadataResponse(dbOwner, dbFolder, dbName)
+	meta, err := com.MetadataResponse(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1019,7 +1011,6 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	dbFolder := "/"
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
@@ -1030,19 +1021,19 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if !exists {
-		jsonErr(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName),
+		jsonErr(w, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName),
 			http.StatusNotFound)
 		return
 	}
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1063,7 +1054,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	var data com.SQLiteRecordSet
 	if !isLive {
 		// Standard database
-		data, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceAPI, dbOwner, dbFolder, dbName, commitID, loggedInUser, query)
+		data, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceAPI, dbOwner, dbName, commitID, loggedInUser, query)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1102,10 +1093,9 @@ func releasesHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1116,7 +1106,7 @@ func releasesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of releases
-	rels, err := com.GetReleases(dbOwner, dbFolder, dbName)
+	rels, err := com.GetReleases(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1172,10 +1162,9 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1195,7 +1184,7 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	var tables []string
 	if !isLive {
 		// Get Minio bucket and object id for the SQLite file
-		bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, "", loggedInUser)
+		bucket, id, _, err := com.MinioLocation(dbOwner, dbName, "", loggedInUser)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1257,10 +1246,9 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1271,7 +1259,7 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the tags
-	tags, err := com.GetTags(dbOwner, dbFolder, dbName)
+	tags, err := com.GetTags(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1410,7 +1398,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Check if the database exists already
-		exists, err := com.CheckDBExists(loggedInUser, "/", dbName)
+		exists, err := com.CheckDBExists(loggedInUser, dbName)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1426,10 +1414,9 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Write the incoming database to a temporary file on disk, and sanity check it
-		dbFolder := "/"
 		var numBytes int64
 		var tempDB *os.File
-		numBytes, tempDB, _, _, err = com.WriteDBtoDisk(loggedInUser, dbOwner, dbFolder, dbName, tempFile)
+		numBytes, tempDB, _, _, err = com.WriteDBtoDisk(loggedInUser, dbOwner, dbName, tempFile)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1512,10 +1499,9 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1535,7 +1521,7 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	var views []string
 	if !isLive {
 		// Get Minio bucket and object id for the SQLite file
-		bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, "", loggedInUser)
+		bucket, id, _, err := com.MinioLocation(dbOwner, dbName, "", loggedInUser)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1597,11 +1583,10 @@ func webpageHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
-	dbFolder := "/"
 
 	// Return the database webUI URL to the user
 	var z com.WebpageResponseContainer
-	z.WebPage = "https://" + com.Conf.Web.ServerName + "/" + dbOwner + dbFolder + dbName
+	z.WebPage = "https://" + com.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName
 	jsonData, err := json.MarshalIndent(z, "", "  ")
 	if err != nil {
 		log.Printf("Error when JSON marshalling returned data in webpageHandler(): %v\n", err)

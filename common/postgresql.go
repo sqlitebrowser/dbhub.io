@@ -133,7 +133,7 @@ func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
 
 // CheckDBExists checks if a database exists. It does NOT perform any permission checks.
 // If an error occurred, the true/false value should be ignored, as only the error value is valid
-func CheckDBExists(dbOwner, dbFolder, dbName string) (bool, error) {
+func CheckDBExists(dbOwner, dbName string) (bool, error) {
 	// Query matching databases
 	dbQuery := `
 		SELECT COUNT(db_id)
@@ -143,12 +143,11 @@ func CheckDBExists(dbOwner, dbFolder, dbName string) (bool, error) {
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3
+			AND db_name = $2
 			AND is_deleted = false
 		LIMIT 1`
 	var dbCount int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbCount)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&dbCount)
 	if err != nil {
 		return false, err
 	}
@@ -158,7 +157,7 @@ func CheckDBExists(dbOwner, dbFolder, dbName string) (bool, error) {
 }
 
 // CheckDBLive checks if the given database is a live database
-func CheckDBLive(dbOwner, dbFolder, dbName string) (isLive bool, liveNode string, err error) {
+func CheckDBLive(dbOwner, dbName string) (isLive bool, liveNode string, err error) {
 	// Query matching databases
 	dbQuery := `
 		SELECT live_db, coalesce(live_node, '')
@@ -168,11 +167,10 @@ func CheckDBLive(dbOwner, dbFolder, dbName string) (isLive bool, liveNode string
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3
+			AND db_name = $2
 			AND is_deleted = false
 		LIMIT 1`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&isLive, &liveNode)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&isLive, &liveNode)
 	if err != nil {
 		return false, "", err
 	}
@@ -181,7 +179,7 @@ func CheckDBLive(dbOwner, dbFolder, dbName string) (isLive bool, liveNode string
 
 // CheckDBPermissions checks if a database exists and can be accessed by the given user.
 // If an error occurred, the true/false value should be ignored, as only the error value is valid
-func CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName string, writeAccess bool) (bool, error) {
+func CheckDBPermissions(loggedInUser, dbOwner, dbName string, writeAccess bool) (bool, error) {
 	// Query id and public flag of the database
 	dbQuery := `
 		SELECT db_id, public
@@ -191,13 +189,12 @@ func CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName string, writeAcc
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3
+			AND db_name = $2
 			AND is_deleted = false
 		LIMIT 1`
 	var dbId int
 	var dbPublic bool
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbId, &dbPublic)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&dbId, &dbPublic)
 
 	// There are two possible error cases: no rows returned or another error.
 	// If no rows were returned the database simply does not exist and no error is returned to the caller.
@@ -259,11 +256,11 @@ func CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName string, writeAcc
 	return true, nil
 }
 
-// CheckDBID checks if a given database ID is available, and returns it's folder/name so the caller can determine if it
+// CheckDBID checks if a given database ID is available, and returns its name so the caller can determine if it
 // has been renamed.  If an error occurs, the true/false value should be ignored, as only the error value is valid
-func CheckDBID(dbOwner string, dbID int64) (avail bool, dbFolder, dbName string, err error) {
+func CheckDBID(dbOwner string, dbID int64) (avail bool, dbName string, err error) {
 	dbQuery := `
-		SELECT folder, db_name
+		SELECT db_name
 		FROM sqlite_databases
 		WHERE user_id = (
 				SELECT user_id
@@ -272,7 +269,7 @@ func CheckDBID(dbOwner string, dbID int64) (avail bool, dbFolder, dbName string,
 			)
 			AND db_id = $2
 			AND is_deleted = false`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbID).Scan(&dbFolder, &dbName)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbID).Scan(&dbName)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			avail = false
@@ -289,14 +286,14 @@ func CheckDBID(dbOwner string, dbID int64) (avail bool, dbFolder, dbName string,
 
 // CheckDBStarred check if a database has been starred by a given user.  The boolean return value is only valid when
 // err is nil
-func CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error) {
+func CheckDBStarred(loggedInUser, dbOwner, dbName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM database_stars
 		WHERE database_stars.user_id = (
 				SELECT user_id
 				FROM users
-				WHERE lower(user_name) = lower($4)
+				WHERE lower(user_name) = lower($3)
 			)
 			AND database_stars.db_id = (
 					SELECT db_id
@@ -306,14 +303,13 @@ func CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error
 							FROM users
 							WHERE lower(user_name) = lower($1)
 						)
-						AND folder = $2
-						AND db_name = $3
+						AND db_name = $2
 						AND is_deleted = false)`
 	var starCount int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser).Scan(&starCount)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbName, loggedInUser).Scan(&starCount)
 	if err != nil {
-		log.Printf("Error looking up star count for database. User: '%s' DB: '%s%s%s'. Error: %v\n",
-			loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Error looking up star count for database. User: '%s' DB: '%s/%s'. Error: %v\n",
+			loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return true, err
 	}
 	if starCount == 0 {
@@ -327,14 +323,14 @@ func CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error
 
 // CheckDBWatched checks if a database is being watched by a given user.  The boolean return value is only valid when
 // err is nil
-func CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error) {
+func CheckDBWatched(loggedInUser, dbOwner, dbName string) (bool, error) {
 	dbQuery := `
 		SELECT count(db_id)
 		FROM watchers
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE lower(user_name) = lower($4)
+				WHERE lower(user_name) = lower($3)
 			)
 			AND db_id = (
 					SELECT db_id
@@ -344,14 +340,13 @@ func CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName string) (bool, error
 							FROM users
 							WHERE lower(user_name) = lower($1)
 						)
-						AND folder = $2
-						AND db_name = $3
+						AND db_name = $2
 						AND is_deleted = false)`
 	var watchCount int
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser).Scan(&watchCount)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbName, loggedInUser).Scan(&watchCount)
 	if err != nil {
-		log.Printf("Error looking up watchers count for database. User: '%s' DB: '%s%s%s'. Error: %v\n",
-			loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Error looking up watchers count for database. User: '%s' DB: '%s/%s'. Error: %v\n",
+			loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return true, err
 	}
 	if watchCount == 0 {
@@ -454,7 +449,7 @@ func ConnectPostgreSQL() (err error) {
 }
 
 // databaseID returns the ID number for a given user's database
-func databaseID(dbOwner, dbFolder, dbName string) (dbID int, err error) {
+func databaseID(dbOwner, dbName string) (dbID int, err error) {
 	// Retrieve the database id
 	dbQuery := `
 		SELECT db_id
@@ -463,10 +458,9 @@ func databaseID(dbOwner, dbFolder, dbName string) (dbID int, err error) {
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1))
-			AND folder = $2
-			AND db_name = $3
+			AND db_name = $2
 			AND is_deleted = false`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&dbID)
 	if err != nil {
 		log.Printf("Error looking up database id. Owner: '%s', Database: '%s'. Error: %v\n",
 			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
@@ -569,9 +563,9 @@ func DB4SDefaultList(loggedInUser string) (UserInfoSlice, error) {
 }
 
 // DBDetails returns the details for a specific database
-func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commitID string) error {
+func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbName, commitID string) error {
 	// Check permissions first
-	allowed, err := CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	allowed, err := CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		return err
 	}
@@ -581,7 +575,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 
 	// If no commit ID was supplied, we retrieve the latest one from the default branch
 	if commitID == "" {
-		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
+		commitID, err = DefaultCommit(dbOwner, dbName)
 		if err != nil {
 			return err
 		}
@@ -590,7 +584,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 	// Retrieve the database details
 	dbQuery := `
 			SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
-				$4::text AS commit_id, db.commit_list->$4::text->'tree'->'entries'->0 AS db_entry, db.branches,
+				$3::text AS commit_id, db.commit_list->$3::text->'tree'->'entries'->0 AS db_entry, db.branches,
 				db.release_count, db.contributors, coalesce(db.one_line_description, 'No description'),
 				coalesce(db.full_description, 'No full description'), coalesce(db.default_table, ''), db.public,
 				coalesce(db.source_url, ''), db.tags, coalesce(db.default_branch, ''), db.live_db,
@@ -601,12 +595,11 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND db.folder = $2
-				AND db.db_name = $3
+				AND db.db_name = $2
 				AND db.is_deleted = false`
 
 	// Retrieve the requested database details
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&DB.Info.DateCreated, &DB.Info.RepoModified,
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName, commitID).Scan(&DB.Info.DateCreated, &DB.Info.RepoModified,
 		&DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs, &DB.Info.CommitID, &DB.Info.DBEntry,
 		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &DB.Info.OneLineDesc, &DB.Info.FullDesc,
 		&DB.Info.DefaultTable, &DB.Info.Public, &DB.Info.SourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch,
@@ -636,35 +629,34 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 
 	// Fill out the fields we already have data for
 	DB.Info.Database = dbName
-	DB.Info.Folder = dbFolder
 	DB.Info.Owner = usrOwner.Username
 
 	// The social stats are always updated because they could change without the cache being updated
-	DB.Info.Watchers, DB.Info.Stars, DB.Info.Forks, err = SocialStats(dbOwner, dbFolder, dbName)
+	DB.Info.Watchers, DB.Info.Stars, DB.Info.Forks, err = SocialStats(dbOwner, dbName)
 	if err != nil {
 		return err
 	}
 
 	// Retrieve the latest discussion and MR counts
-	DB.Info.Discussions, DB.Info.MRs, err = GetDiscussionAndMRCount(dbOwner, dbFolder, dbName)
+	DB.Info.Discussions, DB.Info.MRs, err = GetDiscussionAndMRCount(dbOwner, dbName)
 	if err != nil {
 		return err
 	}
 
 	// Retrieve the "forked from" information
-	DB.Info.ForkOwner, DB.Info.ForkFolder, DB.Info.ForkDatabase, DB.Info.ForkDeleted, err = ForkedFrom(dbOwner, dbFolder, dbName)
+	DB.Info.ForkOwner, DB.Info.ForkDatabase, DB.Info.ForkDeleted, err = ForkedFrom(dbOwner, dbName)
 	if err != nil {
 		return err
 	}
 
 	// Check if the database was starred by the logged in user
-	DB.Info.MyStar, err = CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	DB.Info.MyStar, err = CheckDBStarred(loggedInUser, dbOwner, dbName)
 	if err != nil {
 		return err
 	}
 
 	// Check if the database is being watched by the logged in user
-	DB.Info.MyWatch, err = CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	DB.Info.MyWatch, err = CheckDBWatched(loggedInUser, dbOwner, dbName)
 	if err != nil {
 		return err
 	}
@@ -673,7 +665,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbFolder, dbName, commit
 }
 
 // DBStars returns the star count for a given database
-func DBStars(dbOwner, dbFolder, dbName string) (starCount int, err error) {
+func DBStars(dbOwner, dbName string) (starCount int, err error) {
 	// Retrieve the updated star count
 	dbQuery := `
 		SELECT stars
@@ -683,20 +675,19 @@ func DBStars(dbOwner, dbFolder, dbName string) (starCount int, err error) {
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3
+			AND db_name = $2
 			AND is_deleted = false`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&starCount)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&starCount)
 	if err != nil {
-		log.Printf("Error looking up star count for database '%s%s%s'. Error: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Error looking up star count for database '%s/%s'. Error: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return -1, err
 	}
 	return starCount, nil
 }
 
 // DBWatchers returns the watchers count for a given database
-func DBWatchers(dbOwner, dbFolder, dbName string) (watcherCount int, err error) {
+func DBWatchers(dbOwner, dbName string) (watcherCount int, err error) {
 	// Retrieve the updated watchers count
 	dbQuery := `
 		SELECT watchers
@@ -706,20 +697,19 @@ func DBWatchers(dbOwner, dbFolder, dbName string) (watcherCount int, err error) 
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3
+			AND db_name = $2
 			AND is_deleted = false`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&watcherCount)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&watcherCount)
 	if err != nil {
-		log.Printf("Error looking up watcher count for database '%s%s%s'. Error: %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Error looking up watcher count for database '%s/%s'. Error: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return -1, err
 	}
 	return watcherCount, nil
 }
 
 // DefaultCommit returns the default commit ID for a specific database
-func DefaultCommit(dbOwner, dbFolder, dbName string) (string, error) {
+func DefaultCommit(dbOwner, dbName string) (string, error) {
 	// If no commit ID was supplied, we retrieve the latest commit ID from the default branch
 	dbQuery := `
 		SELECT branch_heads->default_branch->'commit' AS commit_id
@@ -729,11 +719,10 @@ func DefaultCommit(dbOwner, dbFolder, dbName string) (string, error) {
 					FROM users
 					WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3
+			AND db_name = $2
 			AND is_deleted = false`
 	var commitID string
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&commitID)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&commitID)
 	if err != nil {
 		log.Printf("Error when retrieving head commit ID of default branch: %v\n", err.Error())
 		return "", errors.New("Internal error when looking up database details")
@@ -742,7 +731,7 @@ func DefaultCommit(dbOwner, dbFolder, dbName string) (string, error) {
 }
 
 // DeleteComment deletes a specific comment from a discussion
-func DeleteComment(dbOwner, dbFolder, dbName string, discID, comID int) error {
+func DeleteComment(dbOwner, dbName string, discID, comID int) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -761,27 +750,26 @@ func DeleteComment(dbOwner, dbFolder, dbName string, discID, comID int) error {
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		), int AS (
 			SELECT internal_id AS int_id
 			FROM discussions
 			WHERE db_id = (SELECT db_id FROM d)
-			AND disc_id = $4
+			AND disc_id = $3
 		)
 		DELETE FROM discussion_comments
 		WHERE db_id = (SELECT db_id FROM d)
 			AND disc_id = (SELECT int_id FROM int)
-			AND com_id = $5`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID)
+			AND com_id = $4`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbName, discID, comID)
 	if err != nil {
-		log.Printf("Deleting comment '%d' from '%s%s%s', discussion '%d' failed: %v\n", comID,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
+		log.Printf("Deleting comment '%d' from '%s/%s', discussion '%d' failed: %v\n", comID,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected when deleting comment '%d' from database '%s%s%s, discussion '%d''\n",
-			numRows, comID, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID)
+		log.Printf("Wrong number of rows (%v) affected when deleting comment '%d' from database '%s/%s, discussion '%d''\n",
+			numRows, comID, SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID)
 	}
 
 	// Update the comment count and last modified date for the discussion
@@ -794,13 +782,12 @@ func DeleteComment(dbOwner, dbFolder, dbName string, discID, comID int) error {
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		), int AS (
 			SELECT internal_id AS int_id
 			FROM discussions
 			WHERE db_id = (SELECT db_id FROM d)
-			AND disc_id = $4
+			AND disc_id = $3
 		), new AS (
 			SELECT count(*)
 			FROM discussion_comments
@@ -811,15 +798,15 @@ func DeleteComment(dbOwner, dbFolder, dbName string, discID, comID int) error {
 		UPDATE discussions
 		SET comment_count = (SELECT count FROM new), last_modified = now()
 		WHERE internal_id = (SELECT int_id FROM int)`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID)
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbName, discID)
 	if err != nil {
-		log.Printf("Updating comment count for discussion '%v' of '%s%s%s' in PostgreSQL failed: %v\n",
-			discID, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Updating comment count for discussion '%v' of '%s/%s' in PostgreSQL failed: %v\n",
+			discID, SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%v) affected when updating comment count for discussion '%v' in "+
-			"'%s%s%s'\n", numRows, discID, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+			"'%s/%s'\n", numRows, discID, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 
 	// Commit the transaction
@@ -832,12 +819,12 @@ func DeleteComment(dbOwner, dbFolder, dbName string, discID, comID int) error {
 }
 
 // DeleteDatabase deletes a database from PostgreSQL
-func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
+func DeleteDatabase(dbOwner, dbName string) error {
 	// TODO: At some point we'll need to figure out a garbage collection approach to remove standard databases
 	//       from Minio which are no longer pointed to by anything
 
 	// Is this a live database
-	isLive, _, err := CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, _, err := CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		return err
 	}
@@ -860,17 +847,16 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
 		SELECT count(*)
 		FROM sqlite_databases AS db, this_db
 		WHERE db.forked_from = this_db.db_id`
 	var numForks int
-	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&numForks)
+	err = tx.QueryRow(dbQuery, dbOwner, dbName).Scan(&numForks)
 	if err != nil {
-		log.Printf("Retrieving fork list failed for database '%s%s%s': %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Retrieving fork list failed for database '%s/%s': %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numForks == 0 {
@@ -888,8 +874,7 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 			), new_count AS (
 				SELECT count(*) AS forks
 				FROM sqlite_databases AS db, root_db
@@ -900,15 +885,15 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 			SET forks = new_count.forks - 2
 			FROM new_count, root_db
 			WHERE sqlite_databases.db_id = root_db.id`
-		commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+		commandTag, err := tx.Exec(dbQuery, dbOwner, dbName)
 		if err != nil {
-			log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", SanitiseLogString(dbOwner),
-				SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+			log.Printf("Updating fork count for '%s/%s' in PostgreSQL failed: %v\n", SanitiseLogString(dbOwner),
+				SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 && !isLive { // Skip this check when deleting live databases
-			log.Printf("Wrong number of rows (%v) affected (spot 1) when updating fork count for database '%s%s%s'\n",
-				numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+			log.Printf("Wrong number of rows (%v) affected (spot 1) when updating fork count for database '%s/%s'\n",
+				numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 
 		// Do the database deletion in PostgreSQL (needs to come after the above fork count update, else the fork count
@@ -921,18 +906,17 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3`
-		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+				AND db_name = $2`
+		commandTag, err = tx.Exec(dbQuery, dbOwner, dbName)
 		if err != nil {
-			log.Printf("Deleting database entry failed for database '%s%s%s': %v\n", SanitiseLogString(dbOwner),
-				SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+			log.Printf("Deleting database entry failed for database '%s/%s': %v\n", SanitiseLogString(dbOwner),
+				SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
-				"Wrong number of rows (%v) affected when deleting database '%s%s%s'\n", numRows,
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+				"Wrong number of rows (%v) affected when deleting database '%s/%s'\n", numRows,
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 
 		// Commit the transaction
@@ -942,7 +926,7 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 		}
 
 		// Log the database deletion
-		log.Printf("Database '%s%s%s' deleted\n", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Database '%s/%s' deleted\n", SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		return nil
 	}
 
@@ -961,13 +945,12 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 			)`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbName)
 	if err != nil {
-		log.Printf("Deleting (forked) database stars failed for database '%s%s%s': %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Deleting (forked) database stars failed for database '%s/%s': %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return err
 	}
 
@@ -978,24 +961,23 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 	// Replace the database entry in sqlite_databases with a stub
 	dbQuery = `
 		UPDATE sqlite_databases AS db
-		SET is_deleted = true, public = false, db_name = $4, last_modified = now()
+		SET is_deleted = true, public = false, db_name = $3, last_modified = now()
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, newName)
+			AND db_name = $2`
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbName, newName)
 	if err != nil {
-		log.Printf("Deleting (forked) database entry failed for database '%s%s%s': %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Deleting (forked) database entry failed for database '%s/%s': %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when deleting (forked) database '%s%s%s'\n", numRows,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+			"Wrong number of rows (%v) affected when deleting (forked) database '%s/%s'\n", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 
 	// Update the fork count for the root database
@@ -1008,8 +990,7 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		), new_count AS (
 			SELECT count(*) AS forks
 			FROM sqlite_databases AS db, root_db
@@ -1020,15 +1001,15 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 		SET forks = new_count.forks - 1
 		FROM new_count, root_db
 		WHERE sqlite_databases.db_id = root_db.id`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, newName)
+	commandTag, err = tx.Exec(dbQuery, dbOwner, newName)
 	if err != nil {
-		log.Printf("Updating fork count for '%s%s%s' in PostgreSQL failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Updating fork count for '%s/%s' in PostgreSQL failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected (spot 2) when updating fork count for database '%s%s%s'\n",
-			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong number of rows (%v) affected (spot 2) when updating fork count for database '%s/%s'\n",
+			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 
 	// Commit the transaction
@@ -1038,8 +1019,7 @@ func DeleteDatabase(dbOwner, dbFolder, dbName string) error {
 	}
 
 	// Log the database deletion
-	log.Printf("(Forked) database '%s%s%s' deleted\n", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder),
-		SanitiseLogString(dbName))
+	log.Printf("(Forked) database '%s/%s' deleted\n", SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	return nil
 }
 
@@ -1185,7 +1165,7 @@ func DisconnectPostgreSQL() {
 //	BY clause in the SQL and preserve the returned order (maps don't preserve order).  If in future we no longer
 //	need to preserve the order, it might be useful to switch to using a map instead since they're often simpler
 //	to work with.
-func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, discID int) (list []DiscussionEntry, err error) {
+func Discussions(dbOwner, dbName string, discType DiscussionType, discID int) (list []DiscussionEntry, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -1195,14 +1175,13 @@ func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, disc
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND db.folder = $2
-				AND db.db_name = $3)
+				AND db.db_name = $2)
 		SELECT disc.disc_id, disc.title, disc.open, disc.date_created, users.user_name, users.email, users.avatar_url,
 			disc.description, last_modified, comment_count, mr_source_db_id, mr_source_db_branch,
 			mr_destination_branch, mr_state, mr_commits
 		FROM discussions AS disc, d, users
 		WHERE disc.db_id = d.db_id
-			AND disc.discussion_type = $4
+			AND disc.discussion_type = $3
 			AND disc.creator = users.user_id`
 	if discID != 0 {
 		dbQuery += fmt.Sprintf(`
@@ -1211,7 +1190,7 @@ func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, disc
 	dbQuery += `
 		ORDER BY last_modified DESC`
 	var rows *pgx.Rows
-	rows, err = pdb.Query(dbQuery, dbOwner, dbFolder, dbName, discType)
+	rows, err = pdb.Query(dbQuery, dbOwner, dbName, discType)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return
@@ -1224,8 +1203,8 @@ func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, disc
 			&oneRow.Body, &oneRow.LastModified, &oneRow.CommentCount, &sdb, &sb, &db, &oneRow.MRDetails.State,
 			&oneRow.MRDetails.Commits)
 		if err != nil {
-			log.Printf("Error retrieving discussion/MR list for database '%s%s%s': %v\n",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+			log.Printf("Error retrieving discussion/MR list for database '%s/%s': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 			rows.Close()
 			return
 		}
@@ -1251,26 +1230,23 @@ func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, disc
 		list = append(list, oneRow)
 	}
 
-	// For merge requests, turn the source database ID's into full owner/folder/name strings
+	// For merge requests, turn the source database ID's into full owner/name strings
 	if discType == MERGE_REQUEST {
 		for i, j := range list {
-			// Retrieve the owner/folder/name for a database id
+			// Retrieve the owner/name for a database id
 			dbQuery = `
-				SELECT users.user_name, db.folder, db.db_name
+				SELECT users.user_name, db.db_name
 				FROM sqlite_databases AS db, users
 				WHERE db.db_id = $1
 					AND db.user_id = users.user_id`
-			var o, f, n pgx.NullString
-			err2 := pdb.QueryRow(dbQuery, j.MRDetails.SourceDBID).Scan(&o, &f, &n)
+			var o, n pgx.NullString
+			err2 := pdb.QueryRow(dbQuery, j.MRDetails.SourceDBID).Scan(&o, &n)
 			if err2 != nil && err2 != pgx.ErrNoRows {
-				log.Printf("Retrieving source database owner/folder/name failed: %v\n", err)
+				log.Printf("Retrieving source database owner/name failed: %v\n", err)
 				return
 			}
 			if o.Valid {
 				list[i].MRDetails.SourceOwner = o.String
-			}
-			if f.Valid {
-				list[i].MRDetails.SourceFolder = f.String
 			}
 			if n.Valid {
 				list[i].MRDetails.SourceDBName = n.String
@@ -1289,7 +1265,7 @@ func Discussions(dbOwner, dbFolder, dbName string, discType DiscussionType, disc
 //
 //	and preserve the returned order (maps don't preserve order).  If in future we no longer need to preserve the
 //	order, it might be useful to switch to using a map instead since they're often simpler to work with.
-func DiscussionComments(dbOwner, dbFolder, dbName string, discID, comID int) (list []DiscussionCommentEntry, err error) {
+func DiscussionComments(dbOwner, dbName string, discID, comID int) (list []DiscussionCommentEntry, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -1299,13 +1275,12 @@ func DiscussionComments(dbOwner, dbFolder, dbName string, discID, comID int) (li
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND db.folder = $2
-				AND db.db_name = $3
+				AND db.db_name = $2
 		), int AS (
 				SELECT internal_id AS int_id
 				FROM discussions
 				WHERE db_id = (SELECT db_id FROM d)
-				AND disc_id = $4
+				AND disc_id = $3
 			)
 		SELECT com.com_id, users.user_name, users.email, users.avatar_url, com.date_created, com.body, com.entry_type
 		FROM discussion_comments AS com, d, users
@@ -1319,7 +1294,7 @@ func DiscussionComments(dbOwner, dbFolder, dbName string, discID, comID int) (li
 	dbQuery += `
 		ORDER BY date_created ASC`
 	var rows *pgx.Rows
-	rows, err = pdb.Query(dbQuery, dbOwner, dbFolder, dbName, discID)
+	rows, err = pdb.Query(dbQuery, dbOwner, dbName, discID)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return
@@ -1329,8 +1304,8 @@ func DiscussionComments(dbOwner, dbFolder, dbName string, discID, comID int) (li
 		var oneRow DiscussionCommentEntry
 		err = rows.Scan(&oneRow.ID, &oneRow.Commenter, &em, &av, &oneRow.DateCreated, &oneRow.Body, &oneRow.EntryType)
 		if err != nil {
-			log.Printf("Error retrieving comment list for database '%s%s%s', discussion '%d': %v\n",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
+			log.Printf("Error retrieving comment list for database '%s/%s', discussion '%d': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, err)
 			rows.Close()
 			return
 		}
@@ -1355,7 +1330,6 @@ func DiscussionComments(dbOwner, dbFolder, dbName string, discID, comID int) (li
 func FlushViewCount() {
 	type dbEntry struct {
 		Owner  string
-		Folder string
 		Name   string
 	}
 
@@ -1369,7 +1343,7 @@ func FlushViewCount() {
 	for true {
 		// Retrieve the list of all public databases
 		dbQuery := `
-			SELECT users.user_name, db.folder, db.db_name
+			SELECT users.user_name, db.db_name
 			FROM sqlite_databases AS db, users
 			WHERE db.public = true
 				AND db.is_deleted = false
@@ -1382,7 +1356,7 @@ func FlushViewCount() {
 		var dbList []dbEntry
 		for rows.Next() {
 			var oneRow dbEntry
-			err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.Name)
+			err = rows.Scan(&oneRow.Owner, &oneRow.Name)
 			if err != nil {
 				log.Printf("Error retrieving database list for view count flush thread: %v\n", err)
 				rows.Close()
@@ -1395,13 +1369,12 @@ func FlushViewCount() {
 		// For each public database, retrieve the latest view count from memcache and save it back to PostgreSQL
 		for _, db := range dbList {
 			dbOwner := db.Owner
-			dbFolder := db.Folder
 			dbName := db.Name
 
 			// Retrieve the view count from Memcached
-			newValue, err := GetViewCount(dbOwner, dbFolder, dbName)
+			newValue, err := GetViewCount(dbOwner, dbName)
 			if err != nil {
-				log.Printf("Error when getting memcached view count for %s%s%s: %s\n", dbOwner, dbFolder, dbName,
+				log.Printf("Error when getting memcached view count for %s/%s: %s\n", dbOwner, dbName,
 					err.Error())
 				continue
 			}
@@ -1411,22 +1384,21 @@ func FlushViewCount() {
 				// Update the view count in PostgreSQL
 				dbQuery = `
 					UPDATE sqlite_databases
-					SET page_views = $4
+					SET page_views = $3
 					WHERE user_id = (
 							SELECT user_id
 							FROM users
 							WHERE lower(user_name) = lower($1)
 						)
-						AND folder = $2
-						AND db_name = $3`
-				commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, newValue)
+						AND db_name = $2`
+				commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, newValue)
 				if err != nil {
-					log.Printf("Flushing view count for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, err)
+					log.Printf("Flushing view count for '%s/%s' failed: %v\n", dbOwner, dbName, err)
 					continue
 				}
 				if numRows := commandTag.RowsAffected(); numRows != 1 {
-					log.Printf("Wrong number of rows affected (%v) when flushing view count for '%s%s%s'\n",
-						numRows, dbOwner, dbFolder, dbName)
+					log.Printf("Wrong number of rows affected (%v) when flushing view count for '%s/%s'\n",
+						numRows, dbOwner, dbName)
 					continue
 				}
 			}
@@ -1439,7 +1411,7 @@ func FlushViewCount() {
 }
 
 // ForkDatabase forks the PostgreSQL entry for a SQLite database from one user to another
-func ForkDatabase(srcOwner, dbFolder, dbName, dstOwner string) (newForkCount int, err error) {
+func ForkDatabase(srcOwner, dbName, dstOwner string) (newForkCount int, err error) {
 	// Copy the main database entry
 	dbQuery := `
 		WITH dst_u AS (
@@ -1447,10 +1419,10 @@ func ForkDatabase(srcOwner, dbFolder, dbName, dstOwner string) (newForkCount int
 			FROM users
 			WHERE lower(user_name) = lower($1)
 		)
-		INSERT INTO sqlite_databases (user_id, folder, db_name, public, forks, one_line_description, full_description,
+		INSERT INTO sqlite_databases (user_id, db_name, public, forks, one_line_description, full_description,
 			branches, contributors, root_database, default_table, source_url, commit_list, branch_heads, tags,
 			default_branch, forked_from)
-		SELECT dst_u.user_id, folder, db_name, public, 0, one_line_description, full_description, branches,
+		SELECT dst_u.user_id, db_name, public, 0, one_line_description, full_description, branches,
 			contributors, root_database, default_table, source_url, commit_list, branch_heads, tags, default_branch,
 			db_id
 		FROM sqlite_databases, dst_u
@@ -1459,18 +1431,17 @@ func ForkDatabase(srcOwner, dbFolder, dbName, dstOwner string) (newForkCount int
 				FROM users
 				WHERE lower(user_name) = lower($2)
 			)
-			AND folder = $3
-			AND db_name = $4`
-	commandTag, err := pdb.Exec(dbQuery, dstOwner, srcOwner, dbFolder, dbName)
+			AND db_name = $3`
+	commandTag, err := pdb.Exec(dbQuery, dstOwner, srcOwner, dbName)
 	if err != nil {
-		log.Printf("Forking database '%s%s%s' in PostgreSQL failed: %v\n", SanitiseLogString(srcOwner), dbFolder,
+		log.Printf("Forking database '%s/%s' in PostgreSQL failed: %v\n", SanitiseLogString(srcOwner),
 			SanitiseLogString(dbName), err)
 		return 0, err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows affected (%d) when forking main database entry: "+
-			"'%s%s%s' to '%s%s%s'\n", numRows, SanitiseLogString(srcOwner), dbFolder, SanitiseLogString(dbName),
-			dstOwner, dbFolder, SanitiseLogString(dbName))
+			"'%s/%s' to '%s/%s'\n", numRows, SanitiseLogString(srcOwner), SanitiseLogString(dbName),
+			dstOwner, SanitiseLogString(dbName))
 	}
 
 	// Update the fork count for the root database
@@ -1483,8 +1454,7 @@ func ForkDatabase(srcOwner, dbFolder, dbName, dstOwner string) (newForkCount int
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		), new_count AS (
 			SELECT count(*) AS forks
 			FROM sqlite_databases AS db, root_db
@@ -1496,7 +1466,7 @@ func ForkDatabase(srcOwner, dbFolder, dbName, dstOwner string) (newForkCount int
 		FROM new_count, root_db
 		WHERE sqlite_databases.db_id = root_db.id
 		RETURNING new_count.forks - 1`
-	err = pdb.QueryRow(dbQuery, dstOwner, dbFolder, dbName).Scan(&newForkCount)
+	err = pdb.QueryRow(dbQuery, dstOwner, dbName).Scan(&newForkCount)
 	if err != nil {
 		log.Printf("Updating fork count in PostgreSQL failed: %v\n", err)
 		return 0, err
@@ -1504,9 +1474,9 @@ func ForkDatabase(srcOwner, dbFolder, dbName, dstOwner string) (newForkCount int
 	return newForkCount, nil
 }
 
-// ForkedFrom checks if the given database was forked from another, and if so returns that one's owner, folder and
+// ForkedFrom checks if the given database was forked from another, and if so returns that one's owner and
 // database name
-func ForkedFrom(dbOwner, dbFolder, dbName string) (forkOwn, forkFol, forkDB string, forkDel bool, err error) {
+func ForkedFrom(dbOwner, dbName string) (forkOwn, forkDB string, forkDel bool, err error) {
 	// Check if the database was forked from another
 	var dbID, forkedFrom pgx.NullInt64
 	dbQuery := `
@@ -1516,44 +1486,43 @@ func ForkedFrom(dbOwner, dbFolder, dbName string) (forkOwn, forkFol, forkDB stri
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1))
-			AND folder = $2
-			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&dbID, &forkedFrom)
+			AND db_name = $2`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&dbID, &forkedFrom)
 	if err != nil {
-		log.Printf("Error checking if database was forked from another '%s%s%s'. Error: %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
-		return "", "", "", false, err
+		log.Printf("Error checking if database was forked from another '%s/%s'. Error: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
+		return "", "", false, err
 	}
 	if !forkedFrom.Valid {
 		// The database wasn't forked, so return empty strings
-		return "", "", "", false, nil
+		return "", "", false, nil
 	}
 
 	// Return the details of the database this one was forked from
 	dbQuery = `
-		SELECT u.user_name, db.folder, db.db_name, db.is_deleted
+		SELECT u.user_name, db.db_name, db.is_deleted
 		FROM users AS u, sqlite_databases AS db
 		WHERE db.db_id = $1
 			AND u.user_id = db.user_id`
-	err = pdb.QueryRow(dbQuery, forkedFrom).Scan(&forkOwn, &forkFol, &forkDB, &forkDel)
+	err = pdb.QueryRow(dbQuery, forkedFrom).Scan(&forkOwn, &forkDB, &forkDel)
 	if err != nil {
-		log.Printf("Error retrieving forked database information for '%s%s%s'. Error: %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
-		return "", "", "", false, err
+		log.Printf("Error retrieving forked database information for '%s/%s'. Error: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
+		return "", "", false, err
 	}
 
 	// If the database this one was forked from has been deleted, indicate that and clear the database name value
 	if forkDel {
 		forkDB = ""
 	}
-	return forkOwn, forkFol, forkDB, forkDel, nil
+	return forkOwn, forkDB, forkDel, nil
 }
 
 // ForkParent returns the parent of a database, if there is one (and it's accessible to the logged in user).  If no
-// parent was found, the returned Owner/Folder/DBName values will be empty strings
-func ForkParent(loggedInUser, dbOwner, dbFolder, dbName string) (parentOwner, parentFolder, parentDBName string, err error) {
+// parent was found, the returned Owner/DBName values will be empty strings
+func ForkParent(loggedInUser, dbOwner, dbName string) (parentOwner, parentDBName string, err error) {
 	dbQuery := `
-		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
+		SELECT users.user_name, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
 		FROM sqlite_databases AS db, users
 		WHERE db.root_database = (
 				SELECT root_database
@@ -1563,12 +1532,11 @@ func ForkParent(loggedInUser, dbOwner, dbFolder, dbName string) (parentOwner, pa
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 				)
 			AND db.user_id = users.user_id
 		ORDER BY db.forked_from NULLS FIRST`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, err := pdb.Query(dbQuery, dbOwner, dbName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return
@@ -1578,9 +1546,9 @@ func ForkParent(loggedInUser, dbOwner, dbFolder, dbName string) (parentOwner, pa
 	for rows.Next() {
 		var frk pgx.NullInt64
 		var oneRow ForkEntry
-		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk, &oneRow.Deleted)
+		err = rows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk, &oneRow.Deleted)
 		if err != nil {
-			log.Printf("Error retrieving fork parent for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+			log.Printf("Error retrieving fork parent for '%s/%s': %v\n", dbOwner, dbName,
 				err)
 			return
 		}
@@ -1598,7 +1566,7 @@ func ForkParent(loggedInUser, dbOwner, dbFolder, dbName string) (parentOwner, pa
 	}
 
 	// Get the ID of the database being called
-	dbID, err := databaseID(dbOwner, dbFolder, dbName)
+	dbID, err := databaseID(dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -1620,7 +1588,6 @@ func ForkParent(loggedInUser, dbOwner, dbFolder, dbName string) (parentOwner, pa
 		if !dbEntry.Deleted {
 			// Found a parent (that's not deleted).  We'll use this and stop looping
 			parentOwner = dbEntry.Owner
-			parentFolder = dbEntry.Folder
 			parentDBName = dbEntry.DBName
 			break
 		}
@@ -1629,9 +1596,9 @@ func ForkParent(loggedInUser, dbOwner, dbFolder, dbName string) (parentOwner, pa
 }
 
 // ForkTree returns the complete fork tree for a given database
-func ForkTree(loggedInUser, dbOwner, dbFolder, dbName string) (outputList []ForkEntry, err error) {
+func ForkTree(loggedInUser, dbOwner, dbName string) (outputList []ForkEntry, err error) {
 	dbQuery := `
-		SELECT users.user_name, db.folder, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
+		SELECT users.user_name, db.db_name, db.public, db.db_id, db.forked_from, db.is_deleted
 		FROM sqlite_databases AS db, users
 		WHERE db.root_database = (
 				SELECT root_database
@@ -1641,12 +1608,11 @@ func ForkTree(loggedInUser, dbOwner, dbFolder, dbName string) (outputList []Fork
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 				)
 			AND db.user_id = users.user_id
 		ORDER BY db.forked_from NULLS FIRST`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, err := pdb.Query(dbQuery, dbOwner, dbName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
@@ -1656,9 +1622,9 @@ func ForkTree(loggedInUser, dbOwner, dbFolder, dbName string) (outputList []Fork
 	for rows.Next() {
 		var frk pgx.NullInt64
 		var oneRow ForkEntry
-		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk, &oneRow.Deleted)
+		err = rows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.Public, &oneRow.ID, &frk, &oneRow.Deleted)
 		if err != nil {
-			log.Printf("Error retrieving fork list for '%s%s%s': %v\n", dbOwner, dbFolder, dbName,
+			log.Printf("Error retrieving fork list for '%s/%s': %v\n", dbOwner, dbName,
 				err)
 			return nil, err
 		}
@@ -1905,7 +1871,7 @@ func GetActivityStats() (stats ActivityStats, err error) {
 // GetBranches load the branch heads for a database
 // TODO: It might be better to have the default branch name be returned as part of this list, by indicating in the list
 // TODO  which of the branches is the default.
-func GetBranches(dbOwner, dbFolder, dbName string) (branches map[string]BranchEntry, err error) {
+func GetBranches(dbOwner, dbName string) (branches map[string]BranchEntry, err error) {
 	dbQuery := `
 		SELECT db.branch_heads
 		FROM sqlite_databases AS db
@@ -1914,12 +1880,11 @@ func GetBranches(dbOwner, dbFolder, dbName string) (branches map[string]BranchEn
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND db.folder = $2
-			AND db.db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&branches)
+			AND db.db_name = $2`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&branches)
 	if err != nil {
-		log.Printf("Error when retrieving branch heads for database '%s%s%s': %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Error when retrieving branch heads for database '%s/%s': %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return nil, err
 	}
 	return branches, nil
@@ -1970,7 +1935,7 @@ func GetAPIKeyUser(key string) (user string, err error) {
 }
 
 // GetCommitList returns the full commit list for a database
-func GetCommitList(dbOwner, dbFolder, dbName string) (map[string]CommitEntry, error) {
+func GetCommitList(dbOwner, dbName string) (map[string]CommitEntry, error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -1980,21 +1945,20 @@ func GetCommitList(dbOwner, dbFolder, dbName string) (map[string]CommitEntry, er
 		SELECT commit_list as commits
 		FROM sqlite_databases AS db, u
 		WHERE db.user_id = u.user_id
-			AND db.folder = $2
-			AND db.db_name = $3
+			AND db.db_name = $2
 			AND db.is_deleted = false`
 	var l map[string]CommitEntry
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&l)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&l)
 	if err != nil {
-		log.Printf("Retrieving commit list for '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Retrieving commit list for '%s/%s' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return map[string]CommitEntry{}, err
 	}
 	return l, nil
 }
 
 // GetDefaultBranchName returns the default branch name for a database
-func GetDefaultBranchName(dbOwner, dbFolder, dbName string) (branchName string, err error) {
+func GetDefaultBranchName(dbOwner, dbName string) (branchName string, err error) {
 	dbQuery := `
 		SELECT db.default_branch
 		FROM sqlite_databases AS db
@@ -2003,18 +1967,17 @@ func GetDefaultBranchName(dbOwner, dbFolder, dbName string) (branchName string, 
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND db.folder = $2
-			AND db.db_name = $3
+			AND db.db_name = $2
 			AND db.is_deleted = false`
 	var b pgx.NullString
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&b)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&b)
 	if err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("Error when retrieving default branch name for database '%s%s%s': %v\n",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+			log.Printf("Error when retrieving default branch name for database '%s/%s': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		} else {
-			log.Printf("No default branch name exists for database '%s%s%s'. This shouldn't happen\n",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+			log.Printf("No default branch name exists for database '%s/%s'. This shouldn't happen\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 		return
 	}
@@ -2025,7 +1988,7 @@ func GetDefaultBranchName(dbOwner, dbFolder, dbName string) (branchName string, 
 }
 
 // GetDefaultTableName returns the default table name for a database
-func GetDefaultTableName(dbOwner, dbFolder, dbName string) (tableName string, err error) {
+func GetDefaultTableName(dbOwner, dbName string) (tableName string, err error) {
 	dbQuery := `
 		SELECT db.default_table
 		FROM sqlite_databases AS db
@@ -2034,15 +1997,14 @@ func GetDefaultTableName(dbOwner, dbFolder, dbName string) (tableName string, er
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND db.folder = $2
-			AND db.db_name = $3
+			AND db.db_name = $2
 			AND db.is_deleted = false`
 	var t pgx.NullString
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&t)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&t)
 	if err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("Error when retrieving default table name for database '%s%s%s': %v\n",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+			log.Printf("Error when retrieving default table name for database '%s/%s': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 			return
 		}
 	}
@@ -2056,7 +2018,7 @@ func GetDefaultTableName(dbOwner, dbFolder, dbName string) (tableName string, er
 // TODO: The only reason this function exists atm, is because we're incorrectly caching the discussion and MR data in
 // TODO  a way that makes invalidating it correctly hard/impossible.  We should redo our memcached approach to solve the
 // TODO  issue properly
-func GetDiscussionAndMRCount(dbOwner, dbFolder, dbName string) (discCount, mrCount int, err error) {
+func GetDiscussionAndMRCount(dbOwner, dbName string) (discCount, mrCount int, err error) {
 	dbQuery := `
 		SELECT db.discussions, db.merge_requests
 		FROM sqlite_databases AS db
@@ -2065,17 +2027,16 @@ func GetDiscussionAndMRCount(dbOwner, dbFolder, dbName string) (discCount, mrCou
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND db.folder = $2
-			AND db.db_name = $3
+			AND db.db_name = $2
 			AND db.is_deleted = false`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&discCount, &mrCount)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&discCount, &mrCount)
 	if err != nil {
 		if err != pgx.ErrNoRows {
-			log.Printf("Error when retrieving discussion and MR count for database '%s%s%s': %v\n",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+			log.Printf("Error when retrieving discussion and MR count for database '%s/%s': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		} else {
-			log.Printf("Database '%s%s%s' not found when attempting to retrieve discussion and MR count. This"+
-				"shouldn't happen\n", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+			log.Printf("Database '%s/%s' not found when attempting to retrieve discussion and MR count. This"+
+				"shouldn't happen\n", SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 		return
 	}
@@ -2254,7 +2215,7 @@ func GetLicenceSha256FromName(userName, licenceName string) (sha256 string, err 
 }
 
 // GetReleases returns the list of releases for a database
-func GetReleases(dbOwner, dbFolder, dbName string) (releases map[string]ReleaseEntry, err error) {
+func GetReleases(dbOwner, dbName string) (releases map[string]ReleaseEntry, err error) {
 	dbQuery := `
 		SELECT release_list
 		FROM sqlite_databases
@@ -2263,12 +2224,11 @@ func GetReleases(dbOwner, dbFolder, dbName string) (releases map[string]ReleaseE
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&releases)
+			AND db_name = $2`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&releases)
 	if err != nil {
-		log.Printf("Error when retrieving releases for database '%s%s%s': %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Error when retrieving releases for database '%s/%s': %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return nil, err
 	}
 	if releases == nil {
@@ -2280,7 +2240,7 @@ func GetReleases(dbOwner, dbFolder, dbName string) (releases map[string]ReleaseE
 
 // GetShares returns a map with all users for which the given database is shared as key and their
 // permissions as value.
-func GetShares(dbOwner, dbFolder, dbName string) (shares map[string]ShareDatabasePermissions, err error) {
+func GetShares(dbOwner, dbName string) (shares map[string]ShareDatabasePermissions, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -2290,14 +2250,13 @@ func GetShares(dbOwner, dbFolder, dbName string) (shares map[string]ShareDatabas
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND folder = $2
-				AND db_name = $3
+			AND db_name = $2
 		)
 		SELECT usr.user_name, share.access
 		FROM database_shares AS share, d, users AS usr
 		WHERE share.db_id = d.db_id AND usr.user_id = share.user_id
 		ORDER BY usr.user_name`
-	rows, e := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, e := pdb.Query(dbQuery, dbOwner, dbName)
 	if e != nil && e != pgx.ErrNoRows {
 		return nil, e
 	}
@@ -2348,7 +2307,7 @@ func GetSharesForUser(userName string) (shares []ShareDatabasePermissionsUser, e
 }
 
 // GetTags returns the tags for a database
-func GetTags(dbOwner, dbFolder, dbName string) (tags map[string]TagEntry, err error) {
+func GetTags(dbOwner, dbName string) (tags map[string]TagEntry, err error) {
 	dbQuery := `
 		SELECT tag_list
 		FROM sqlite_databases
@@ -2357,12 +2316,11 @@ func GetTags(dbOwner, dbFolder, dbName string) (tags map[string]TagEntry, err er
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&tags)
+			AND db_name = $2`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&tags)
 	if err != nil {
-		log.Printf("Error when retrieving tags for database '%s%s%s': %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Error when retrieving tags for database '%s/%s': %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return nil, err
 	}
 	if tags == nil {
@@ -2401,7 +2359,7 @@ func GetUsernameFromEmail(email string) (userName, avatarURL string, err error) 
 }
 
 // GetVisualisationData returns a saved set of visualisation query results
-func GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash string) (data []VisRowV1, ok bool, err error) {
+func GetVisualisationData(dbOwner, dbName, commitID, hash string) (data []VisRowV1, ok bool, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -2411,16 +2369,15 @@ func GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash string) (dat
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
 		SELECT results
 		FROM vis_result_cache as vis_cache, u, d
 		WHERE vis_cache.db_id = d.db_id
 			AND vis_cache.user_id = u.user_id
-			AND vis_cache.commit_id = $4
-			AND vis_cache.hash = $5`
-	e := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID, hash).Scan(&data)
+			AND vis_cache.commit_id = $3
+			AND vis_cache.hash = $4`
+	e := pdb.QueryRow(dbQuery, dbOwner, dbName, commitID, hash).Scan(&data)
 	if e != nil {
 		if e == pgx.ErrNoRows {
 			// There weren't any saved parameters for this database visualisation
@@ -2439,7 +2396,7 @@ func GetVisualisationData(dbOwner, dbFolder, dbName, commitID, hash string) (dat
 }
 
 // GetVisualisationParams returns a saved set of visualisation parameters
-func GetVisualisationParams(dbOwner, dbFolder, dbName, visName string) (params VisParamsV2, ok bool, err error) {
+func GetVisualisationParams(dbOwner, dbName, visName string) (params VisParamsV2, ok bool, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -2449,15 +2406,14 @@ func GetVisualisationParams(dbOwner, dbFolder, dbName, visName string) (params V
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
 		SELECT parameters
 		FROM vis_params as vis, u, d
 		WHERE vis.db_id = d.db_id
 			AND vis.user_id = u.user_id
-			AND vis.name = $4`
-	e := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, visName).Scan(&params)
+			AND vis.name = $3`
+	e := pdb.QueryRow(dbQuery, dbOwner, dbName, visName).Scan(&params)
 	if e != nil {
 		if e == pgx.ErrNoRows {
 			// There weren't any saved parameters for this database visualisation
@@ -2466,8 +2422,8 @@ func GetVisualisationParams(dbOwner, dbFolder, dbName, visName string) (params V
 
 		// A real database error occurred
 		err = e
-		log.Printf("Retrieving visualisation parameters for '%s%s%s', visualisation '%s' failed: %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), SanitiseLogString(visName), e)
+		log.Printf("Retrieving visualisation parameters for '%s/%s', visualisation '%s' failed: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), SanitiseLogString(visName), e)
 		return
 	}
 
@@ -2477,7 +2433,7 @@ func GetVisualisationParams(dbOwner, dbFolder, dbName, visName string) (params V
 }
 
 // GetVisualisations returns the list of saved visualisations for a given database
-func GetVisualisations(dbOwner, dbFolder, dbName string) (visNames []string, err error) {
+func GetVisualisations(dbOwner, dbName string) (visNames []string, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -2487,15 +2443,14 @@ func GetVisualisations(dbOwner, dbFolder, dbName string) (visNames []string, err
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
 		SELECT name
 		FROM vis_params as vis, u, d
 		WHERE vis.db_id = d.db_id
 			AND vis.user_id = u.user_id
 		ORDER BY name`
-	rows, e := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, e := pdb.Query(dbQuery, dbOwner, dbName)
 	if e != nil {
 		if e == pgx.ErrNoRows {
 			// There weren't any saved visualisations for this database
@@ -2504,7 +2459,7 @@ func GetVisualisations(dbOwner, dbFolder, dbName string) (visNames []string, err
 
 		// A real database error occurred
 		err = e
-		log.Printf("Retrieving visualisation list for '%s%s%s' failed: %v\n", dbOwner, dbFolder, dbName, e)
+		log.Printf("Retrieving visualisation list for '%s/%s' failed: %v\n", dbOwner, dbName, e)
 		return
 	}
 	defer rows.Close()
@@ -2522,7 +2477,7 @@ func GetVisualisations(dbOwner, dbFolder, dbName string) (visNames []string, err
 }
 
 // IncrementDownloadCount increments the download count for a database
-func IncrementDownloadCount(dbOwner, dbFolder, dbName string) error {
+func IncrementDownloadCount(dbOwner, dbName string) error {
 	dbQuery := `
 		UPDATE sqlite_databases
 		SET download_count = download_count + 1
@@ -2531,17 +2486,16 @@ func IncrementDownloadCount(dbOwner, dbFolder, dbName string) error {
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName)
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName)
 	if err != nil {
-		log.Printf("Increment download count for '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Increment download count for '%s/%s' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when incrementing download count for '%s%s%s'\n",
-			numRows, dbOwner, dbFolder, dbName)
+		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when incrementing download count for '%s/%s'\n",
+			numRows, dbOwner, dbName)
 		log.Printf(SanitiseLogString(errMsg))
 		return errors.New(errMsg)
 	}
@@ -2555,11 +2509,11 @@ func LiveAddDatabasePG(dbOwner, dbName, liveNode string) (err error) {
 		WITH root AS (
 			SELECT nextval('sqlite_databases_db_id_seq') AS val
 		)
-		INSERT INTO sqlite_databases (user_id, db_id, folder, db_name, live_db, live_node)
+		INSERT INTO sqlite_databases (user_id, db_id, db_name, live_db, live_node)
 		SELECT (
 			SELECT user_id
 			FROM users
-			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), '/', $2, true, $3`
+			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), $2, true, $3`
 	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, liveNode)
 	if err != nil {
 		log.Printf("Storing LIVE database '%s/%s' failed: %v\n", SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
@@ -2757,7 +2711,7 @@ func LogDB4SConnect(userAcc, ipAddr, userAgent string, downloadDate time.Time) e
 }
 
 // LogDownload creates a download log entry
-func LogDownload(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, serverSw, userAgent string, downloadDate time.Time, sha string) error {
+func LogDownload(dbOwner, dbName, loggedInUser, ipAddr, serverSw, userAgent string, downloadDate time.Time, sha string) error {
 	// If the downloader isn't a logged in user, use a NULL value for that column
 	var downloader pgx.NullString
 	if loggedInUser != "" {
@@ -2768,28 +2722,27 @@ func LogDownload(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, serverSw, user
 	// Store the download details
 	dbQuery := `
 		WITH d AS (
-			SELECT db.db_id, db.folder, db.db_name
+			SELECT db.db_id, db.db_name
 			FROM sqlite_databases AS db
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND db.folder = $2
-				AND db.db_name = $3
+				AND db.db_name = $2
 		)
 		INSERT INTO database_downloads (db_id, user_id, ip_addr, server_sw, user_agent, download_date, db_sha256)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7, $8, $9`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, downloader, ipAddr, serverSw, userAgent,
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($3)), $4, $5, $6, $7, $8`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, downloader, ipAddr, serverSw, userAgent,
 		downloadDate, sha)
 	if err != nil {
-		log.Printf("Storing record of download '%s%s%s', sha '%s' by '%v' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), sha, downloader, err)
+		log.Printf("Storing record of download '%s/%s', sha '%s' by '%v' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), sha, downloader, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while storing download record for '%s%s%s'\n", numRows,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong number of rows (%v) affected while storing download record for '%s/%s'\n", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return nil
 }
@@ -2813,7 +2766,7 @@ func LogSQLiteQueryAfter(insertID, memUsed, memHighWater int64) (err error) {
 }
 
 // LogSQLiteQueryBefore logs the basic info for a user supplied SQLite query
-func LogSQLiteQueryBefore(source, dbOwner, dbFolder, dbName, loggedInUser, ipAddr, userAgent, query string) (int64, error) {
+func LogSQLiteQueryBefore(source, dbOwner, dbName, loggedInUser, ipAddr, userAgent, query string) (int64, error) {
 	// If the user isn't logged in, use a NULL value for that column
 	var queryUser pgx.NullString
 	if loggedInUser != "" {
@@ -2827,31 +2780,30 @@ func LogSQLiteQueryBefore(source, dbOwner, dbFolder, dbName, loggedInUser, ipAdd
 	// Store the query details
 	dbQuery := `
 		WITH d AS (
-			SELECT db.db_id, db.folder, db.db_name
+			SELECT db.db_id, db.db_name
 			FROM sqlite_databases AS db
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND db.folder = $2
-				AND db.db_name = $3
+				AND db.db_name = $2
 		)
 		INSERT INTO vis_query_runs (db_id, user_id, ip_addr, user_agent, query_string, source)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7, $8
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($3)), $4, $5, $6, $7
 		RETURNING query_run_id`
 	var insertID int64
-	err := pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, queryUser, ipAddr, userAgent, encodedQuery, source).Scan(&insertID)
+	err := pdb.QueryRow(dbQuery, dbOwner, dbName, queryUser, ipAddr, userAgent, encodedQuery, source).Scan(&insertID)
 	if err != nil {
-		log.Printf("Storing record of user SQLite query '%v' on '%s%s%s' failed: %v\n", encodedQuery,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Storing record of user SQLite query '%v' on '%s/%s' failed: %v\n", encodedQuery,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return 0, err
 	}
 	return insertID, nil
 }
 
 // LogUpload creates an upload log entry
-func LogUpload(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, serverSw, userAgent string, uploadDate time.Time, sha string) error {
+func LogUpload(dbOwner, dbName, loggedInUser, ipAddr, serverSw, userAgent string, uploadDate time.Time, sha string) error {
 	// If the uploader isn't a logged in user, use a NULL value for that column
 	var uploader pgx.NullString
 	if loggedInUser != "" {
@@ -2862,40 +2814,39 @@ func LogUpload(dbOwner, dbFolder, dbName, loggedInUser, ipAddr, serverSw, userAg
 	// Store the upload details
 	dbQuery := `
 		WITH d AS (
-			SELECT db.db_id, db.folder, db.db_name
+			SELECT db.db_id, db.db_name
 			FROM sqlite_databases AS db
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND db.folder = $2
-				AND db.db_name = $3
+				AND db.db_name = $2
 		)
 		INSERT INTO database_uploads (db_id, user_id, ip_addr, server_sw, user_agent, upload_date, db_sha256)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $5, $6, $7, $8, $9`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, uploader, ipAddr, serverSw, userAgent,
+		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($3)), $4, $5, $6, $7, $8`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, uploader, ipAddr, serverSw, userAgent,
 		uploadDate, sha)
 	if err != nil {
-		log.Printf("Storing record of upload '%s%s%s', sha '%s' by '%v' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), sha, uploader, err)
+		log.Printf("Storing record of upload '%s/%s', sha '%s' by '%v' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), sha, uploader, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while storing upload record for '%s%s%s'\n", numRows,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong number of rows (%v) affected while storing upload record for '%s/%s'\n", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return nil
 }
 
-// MinioLocation returns the Minio bucket and ID for a given database. dbOwner, dbFolder, & dbName are from
-// owner/folder/database URL fragment, loggedInUser is the name for the currently logged in user, for access permission
+// MinioLocation returns the Minio bucket and ID for a given database. dbOwner & dbName are from
+// owner/database URL fragment, loggedInUser is the name for the currently logged in user, for access permission
 // check.  Use an empty string ("") as the loggedInUser parameter if the true value isn't set or known.
 // If the requested database doesn't exist, or the loggedInUser doesn't have access to it, then an error will be
 // returned
-func MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser string) (minioBucket, minioID string, lastModified time.Time, err error) {
+func MinioLocation(dbOwner, dbName, commitID, loggedInUser string) (minioBucket, minioID string, lastModified time.Time, err error) {
 	// Check permissions
-	allowed, err := CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	allowed, err := CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		return
 	}
@@ -2906,7 +2857,7 @@ func MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser string) (mi
 
 	// If no commit was provided, we grab the default one
 	if commitID == "" {
-		commitID, err = DefaultCommit(dbOwner, dbFolder, dbName)
+		commitID, err = DefaultCommit(dbOwner, dbName)
 		if err != nil {
 			return // Bucket and ID are still the initial default empty string
 		}
@@ -2915,20 +2866,19 @@ func MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser string) (mi
 	// Retrieve the sha256 and last modified date for the requested commit's database file
 	var dbQuery string
 	dbQuery = `
-		SELECT commit_list->$4::text->'tree'->'entries'->0->'sha256' AS sha256,
-			commit_list->$4::text->'tree'->'entries'->0->'last_modified' AS last_modified
+		SELECT commit_list->$3::text->'tree'->'entries'->0->'sha256' AS sha256,
+			commit_list->$3::text->'tree'->'entries'->0->'last_modified' AS last_modified
 		FROM sqlite_databases AS db
 		WHERE db.user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND db.folder = $2
-			AND db.db_name = $3
+			AND db.db_name = $2
 			AND db.is_deleted = false`
 
 	var sha, mod string
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commitID).Scan(&sha, &mod)
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName, commitID).Scan(&sha, &mod)
 	if err != nil {
 		log.Printf("Error retrieving MinioID for '%s/%s' version '%v' by logged in user '%v': %v\n",
 			SanitiseLogString(dbOwner), SanitiseLogString(dbName), SanitiseLogString(commitID), loggedInUser, err)
@@ -2962,13 +2912,12 @@ func NewEvent(details EventDetails) (err error) {
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 				AND is_deleted = false
 		)
 		INSERT INTO events (db_id, event_type, event_data)
-		VALUES ((SELECT db_id FROM d), $4, $5)`
-	_, err = pdb.Exec(dbQuery, details.Owner, details.Folder, details.DBName, details.Type, details)
+		VALUES ((SELECT db_id FROM d), $3, $4)`
+	_, err = pdb.Exec(dbQuery, details.Owner, details.DBName, details.Type, details)
 	if err != nil {
 		return err
 	}
@@ -2995,34 +2944,33 @@ func PrefUserMaxRows(loggedInUser string) int {
 }
 
 // RenameDatabase renames a SQLite database
-func RenameDatabase(userName, dbFolder, dbName, newName string) error {
+func RenameDatabase(userName, dbName, newName string) error {
 	// Save the database settings
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET db_name = $4
+		SET db_name = $3
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, userName, dbFolder, dbName, newName)
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(dbQuery, userName, dbName, newName)
 	if err != nil {
-		log.Printf("Renaming database '%s%s%s' failed: %v\n", SanitiseLogString(userName), SanitiseLogString(dbFolder),
+		log.Printf("Renaming database '%s/%s' failed: %v\n", SanitiseLogString(userName),
 			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when renaming '%s%s%s' to '%s%s%s'\n",
-			numRows, userName, dbFolder, dbName, userName, dbFolder, newName)
+		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when renaming '%s/%s' to '%s/%s'\n",
+			numRows, userName, dbName, userName, newName)
 		log.Printf(SanitiseLogString(errMsg))
 		return errors.New(errMsg)
 	}
 
 	// Log the rename
-	log.Printf("Database renamed from '%s%s%s' to '%s%s%s'\n", SanitiseLogString(userName), SanitiseLogString(dbFolder),
-		SanitiseLogString(dbName), SanitiseLogString(userName), SanitiseLogString(dbFolder), SanitiseLogString(newName))
+	log.Printf("Database renamed from '%s/%s' to '%s/%s'\n", SanitiseLogString(userName), SanitiseLogString(dbName),
+		   SanitiseLogString(userName),SanitiseLogString(newName))
 	return nil
 }
 
@@ -3119,7 +3067,7 @@ func ResetDB() error {
 }
 
 // SaveDBSettings saves updated database settings to PostgreSQL
-func SaveDBSettings(userName, dbFolder, dbName, oneLineDesc, fullDesc, defaultTable string, public bool, sourceURL, defaultBranch string) error {
+func SaveDBSettings(userName, dbName, oneLineDesc, fullDesc, defaultTable string, public bool, sourceURL, defaultBranch string) error {
 	// Check for values which should be NULL
 	var nullable1LineDesc, nullableFullDesc, nullableSourceURL pgx.NullString
 	if oneLineDesc == "" {
@@ -3144,31 +3092,30 @@ func SaveDBSettings(userName, dbFolder, dbName, oneLineDesc, fullDesc, defaultTa
 	// Save the database settings
 	SQLQuery := `
 		UPDATE sqlite_databases
-		SET one_line_description = $4, full_description = $5, default_table = $6, public = $7, source_url = $8,
-			default_branch = $9
+		SET one_line_description = $3, full_description = $4, default_table = $5, public = $6, source_url = $7,
+			default_branch = $8
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := pdb.Exec(SQLQuery, userName, dbFolder, dbName, nullable1LineDesc, nullableFullDesc, defaultTable,
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(SQLQuery, userName, dbName, nullable1LineDesc, nullableFullDesc, defaultTable,
 		public, nullableSourceURL, defaultBranch)
 	if err != nil {
-		log.Printf("Updating description for database '%s%s%s' failed: %v\n", SanitiseLogString(userName),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Updating description for database '%s/%s' failed: %v\n", SanitiseLogString(userName),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when updating description for '%s%s%s'\n",
-			numRows, userName, dbFolder, dbName)
+		errMsg := fmt.Sprintf("Wrong number of rows affected (%v) when updating description for '%s/%s'\n",
+			numRows, userName, dbName)
 		log.Printf(SanitiseLogString(errMsg))
 		return errors.New(errMsg)
 	}
 
 	// Invalidate the old memcached entry for the database
-	err = InvalidateCacheEntry(userName, userName, dbFolder, dbName, "") // Empty string indicates "for all versions"
+	err = InvalidateCacheEntry(userName, userName, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
 		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
@@ -3291,7 +3238,7 @@ func SetUserPreferences(userName string, maxRows int, displayName, email string)
 }
 
 // SocialStats returns the latest social stats for a given database
-func SocialStats(dbOwner, dbFolder, dbName string) (wa, st, fo int, err error) {
+func SocialStats(dbOwner, dbName string) (wa, st, fo int, err error) {
 
 	// TODO: Implement caching of these stats
 
@@ -3304,12 +3251,11 @@ func SocialStats(dbOwner, dbFolder, dbName string) (wa, st, fo int, err error) {
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&st, &fo, &wa)
+			AND db_name = $2`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&st, &fo, &wa)
 	if err != nil {
-		log.Printf("Error retrieving social stats count for '%s%s%s': %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Error retrieving social stats count for '%s/%s': %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return -1, -1, -1, err
 	}
 
@@ -3360,7 +3306,7 @@ func StatusUpdatesLoop() {
 		}
 
 		// Retrieve the list of outstanding events
-		// NOTE - We gather the db_id here instead of dbOwner/dbFolder/dbName as it should be faster for PG to deal
+		// NOTE - We gather the db_id here instead of dbOwner/dbName as it should be faster for PG to deal
 		//        with when generating the watcher list
 		dbQuery := `
 			SELECT event_id, event_timestamp, db_id, event_type, event_data
@@ -3442,7 +3388,7 @@ func StatusUpdatesLoop() {
 
 				// Group the status updates by database, and coalesce multiple updates for the same discussion or MR
 				// into a single entry (keeping the most recent one of each)
-				dbName := fmt.Sprintf("%s%s%s", ev.details.Owner, ev.details.Folder, ev.details.DBName)
+				dbName := fmt.Sprintf("%s/%s", ev.details.Owner, ev.details.DBName)
 				var a StatusUpdateEntry
 				lst, ok := userEvents[dbName]
 				if ev.details.Type == EVENT_NEW_DISCUSSION || ev.details.Type == EVENT_NEW_MERGE_REQUEST || ev.details.Type == EVENT_NEW_COMMENT {
@@ -3500,22 +3446,22 @@ func StatusUpdatesLoop() {
 				var msg, subj string
 				switch ev.details.Type {
 				case EVENT_NEW_DISCUSSION:
-					msg = fmt.Sprintf("A new discussion has been created for %s%s%s.\n\nVisit https://%s%s "+
-						"for the details", ev.details.Owner, ev.details.Folder, ev.details.DBName, Conf.Web.ServerName,
+					msg = fmt.Sprintf("A new discussion has been created for %s/%s.\n\nVisit https://%s%s "+
+						"for the details", ev.details.Owner, ev.details.DBName, Conf.Web.ServerName,
 						ev.details.URL)
-					subj = fmt.Sprintf("DBHub.io: New discussion created on %s%s%s", ev.details.Owner,
-						ev.details.Folder, ev.details.DBName)
+					subj = fmt.Sprintf("DBHub.io: New discussion created on %s/%s", ev.details.Owner,
+						ev.details.DBName)
 				case EVENT_NEW_MERGE_REQUEST:
-					msg = fmt.Sprintf("A new merge request has been created for %s%s%s.\n\nVisit https://%s%s "+
-						"for the details", ev.details.Owner, ev.details.Folder, ev.details.DBName, Conf.Web.ServerName,
+					msg = fmt.Sprintf("A new merge request has been created for %s/%s.\n\nVisit https://%s%s "+
+						"for the details", ev.details.Owner, ev.details.DBName, Conf.Web.ServerName,
 						ev.details.URL)
-					subj = fmt.Sprintf("DBHub.io: New merge request created on %s%s%s", ev.details.Owner,
-						ev.details.Folder, ev.details.DBName)
+					subj = fmt.Sprintf("DBHub.io: New merge request created on %s/%s", ev.details.Owner,
+						ev.details.DBName)
 				case EVENT_NEW_COMMENT:
-					msg = fmt.Sprintf("A new comment has been created for %s%s%s.\n\nVisit https://%s%s for "+
-						"the details", ev.details.Owner, ev.details.Folder, ev.details.DBName, Conf.Web.ServerName,
+					msg = fmt.Sprintf("A new comment has been created for %s/%s.\n\nVisit https://%s%s for "+
+						"the details", ev.details.Owner, ev.details.DBName, Conf.Web.ServerName,
 						ev.details.URL)
-					subj = fmt.Sprintf("DBHub.io: New comment on %s%s%s", ev.details.Owner, ev.details.Folder,
+					subj = fmt.Sprintf("DBHub.io: New comment on %s/%s", ev.details.Owner,
 						ev.details.DBName)
 				default:
 					log.Printf("Unknown message type when creating email message")
@@ -3577,33 +3523,32 @@ func StatusUpdatesLoop() {
 }
 
 // StoreBranches updates the branches list for a database
-func StoreBranches(dbOwner, dbFolder, dbName string, branches map[string]BranchEntry) error {
+func StoreBranches(dbOwner, dbName string, branches map[string]BranchEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET branch_heads = $4, branches = $5
+		SET branch_heads = $3, branches = $4
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 				)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, branches, len(branches))
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, branches, len(branches))
 	if err != nil {
-		log.Printf("Updating branch heads for database '%s%s%s' to '%v' failed: %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), branches, err)
+		log.Printf("Updating branch heads for database '%s/%s' to '%v' failed: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), branches, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when updating branch heads for database '%s%s%s' to '%v'\n",
-			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), branches)
+			"Wrong number of rows (%v) affected when updating branch heads for database '%s/%s' to '%v'\n",
+			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName), branches)
 	}
 	return nil
 }
 
 // StoreComment adds a comment to a discussion
-func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comText string, discClose bool, mrState MergeRequestState) error {
+func StoreComment(dbOwner, dbName, commenter string, discID int, comText string, discClose bool, mrState MergeRequestState) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -3628,15 +3573,14 @@ func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comTe
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 			)
-			AND disc.disc_id = $4
+			AND disc.disc_id = $3
 			AND disc.creator = u.user_id`
-	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discState, &discCreator, &discType, &discTitle)
+	err = tx.QueryRow(dbQuery, dbOwner, dbName, discID).Scan(&discState, &discCreator, &discType, &discTitle)
 	if err != nil {
-		log.Printf("Error retrieving current open state for '%s%s%s', discussion '%d': %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
+		log.Printf("Error retrieving current open state for '%s/%s', discussion '%d': %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, err)
 		return err
 	}
 
@@ -3661,21 +3605,20 @@ func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comTe
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 			), int AS (
 				SELECT internal_id AS int_id
 				FROM discussions
 				WHERE db_id = (SELECT db_id FROM d)
-				AND disc_id = $5
+				AND disc_id = $4
 			)
 			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
-			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $6, 'txt'
+			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($3)), $5, 'txt'
 			RETURNING com_id`
-		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, comText).Scan(&comID)
+		err = tx.QueryRow(dbQuery, dbOwner, dbName, commenter, discID, comText).Scan(&comID)
 		if err != nil {
-			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
+			log.Printf("Adding comment for database '%s/%s', discussion '%d' failed: %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, err)
 			return err
 		}
 	}
@@ -3703,26 +3646,25 @@ func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comTe
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 			), int AS (
 				SELECT internal_id AS int_id
 				FROM discussions
 				WHERE db_id = (SELECT db_id FROM d)
-				AND disc_id = $5
+				AND disc_id = $4
 			)
 			INSERT INTO discussion_comments (db_id, disc_id, commenter, body, entry_type)
-			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($4)), $6, $7`
-		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, commenter, discID, eventTxt, eventType)
+			SELECT (SELECT db_id FROM d), (SELECT int_id FROM int), (SELECT user_id FROM users WHERE lower(user_name) = lower($3)), $5, $6`
+		commandTag, err = tx.Exec(dbQuery, dbOwner, dbName, commenter, discID, eventTxt, eventType)
 		if err != nil {
-			log.Printf("Adding comment for database '%s%s%s', discussion '%d' failed: %v\n",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
+			log.Printf("Adding comment for database '%s/%s', discussion '%d' failed: %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
-				"Wrong number of rows (%v) affected when adding a comment to database '%s%s%s', discussion '%d'\n",
-				numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID)
+				"Wrong number of rows (%v) affected when adding a comment to database '%s/%s', discussion '%d'\n",
+				numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID)
 		}
 	}
 
@@ -3730,7 +3672,7 @@ func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comTe
 	if discClose == true && discType == MERGE_REQUEST {
 		dbQuery = `
 			UPDATE discussions
-			SET mr_state = $5
+			SET mr_state = $4
 			WHERE db_id = (
 					SELECT db.db_id
 					FROM sqlite_databases AS db
@@ -3739,20 +3681,19 @@ func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comTe
 							FROM users
 							WHERE lower(user_name) = lower($1)
 						)
-						AND folder = $2
-						AND db_name = $3
+						AND db_name = $2
 				)
-				AND disc_id = $4`
-		commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, mrState)
+				AND disc_id = $3`
+		commandTag, err = tx.Exec(dbQuery, dbOwner, dbName, discID, mrState)
 		if err != nil {
-			log.Printf("Updating MR state for database '%s%s%s', discussion '%d' failed: %v\n",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
+			log.Printf("Updating MR state for database '%s/%s', discussion '%d' failed: %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
-				"Wrong number of rows (%v) affected when updating MR state for database '%s%s%s', discussion '%d'\n",
-				numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID)
+				"Wrong number of rows (%v) affected when updating MR state for database '%s/%s', discussion '%d'\n",
+				numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID)
 		}
 	}
 
@@ -3781,20 +3722,19 @@ func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comTe
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 			)
-			AND disc_id = $4`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID)
+			AND disc_id = $3`
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbName, discID)
 	if err != nil {
-		log.Printf("Updating last modified date for database '%s%s%s', discussion '%d' failed: %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
+		log.Printf("Updating last modified date for database '%s/%s', discussion '%d' failed: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when updating last_modified date for database '%s%s%s', discussion '%d'\n",
-			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID)
+			"Wrong number of rows (%v) affected when updating last_modified date for database '%s/%s', discussion '%d'\n",
+			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID)
 	}
 
 	// Update the open discussion and MR counters for the database
@@ -3807,8 +3747,7 @@ func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comTe
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
 		UPDATE sqlite_databases
 		SET discussions = (
@@ -3826,32 +3765,31 @@ func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comTe
 					AND discussion_type = 1
 			)
 		WHERE db_id = (SELECT db_id FROM d)`
-	commandTag, err = tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbName)
 	if err != nil {
-		log.Printf("Updating discussion count for database '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Updating discussion count for database '%s/%s' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when updating discussion count for database '%s%s%s'\n",
-			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+			"Wrong number of rows (%v) affected when updating discussion count for database '%s/%s'\n",
+			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 
 	// If comment text was provided, generate an event about the new comment
 	if comText != "" {
 		var commentURL string
 		if discType == MERGE_REQUEST {
-			commentURL = fmt.Sprintf("/merge/%s%s%s?id=%d#c%d", url.PathEscape(dbOwner), dbFolder,
+			commentURL = fmt.Sprintf("/merge/%s/%s?id=%d#c%d", url.PathEscape(dbOwner),
 				url.PathEscape(dbName), discID, comID)
 		} else {
-			commentURL = fmt.Sprintf("/discuss/%s%s%s?id=%d#c%d", url.PathEscape(dbOwner), dbFolder,
+			commentURL = fmt.Sprintf("/discuss/%s/%s?id=%d#c%d", url.PathEscape(dbOwner),
 				url.PathEscape(dbName), discID, comID)
 		}
 		details := EventDetails{
 			DBName:   dbName,
 			DiscID:   discID,
-			Folder:   dbFolder,
 			Owner:    dbOwner,
 			Type:     EVENT_NEW_COMMENT,
 			Title:    discTitle,
@@ -3874,33 +3812,32 @@ func StoreComment(dbOwner, dbFolder, dbName, commenter string, discID int, comTe
 }
 
 // StoreCommits updates the commit list for a database
-func StoreCommits(dbOwner, dbFolder, dbName string, commitList map[string]CommitEntry) error {
+func StoreCommits(dbOwner, dbName string, commitList map[string]CommitEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET commit_list = $4, last_modified = now()
+		SET commit_list = $3, last_modified = now()
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 				)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, commitList)
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, commitList)
 	if err != nil {
-		log.Printf("Updating commit list for database '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Updating commit list for database '%s/%s' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when updating commit list for database '%s%s%s'\n", numRows,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+			"Wrong number of rows (%v) affected when updating commit list for database '%s/%s'\n", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return nil
 }
 
 // StoreDatabase stores database details in PostgreSQL, and the database data itself in Minio
-func StoreDatabase(dbOwner, dbFolder, dbName string, branches map[string]BranchEntry, c CommitEntry, pub bool,
+func StoreDatabase(dbOwner, dbName string, branches map[string]BranchEntry, c CommitEntry, pub bool,
 	buf *os.File, sha string, dbSize int64, oneLineDesc, fullDesc string, createDefBranch bool, branchName,
 	sourceURL string) error {
 	// Store the database file
@@ -3931,7 +3868,7 @@ func StoreDatabase(dbOwner, dbFolder, dbName string, branches map[string]BranchE
 		WITH root AS (
 			SELECT nextval('sqlite_databases_db_id_seq') AS val
 		)
-		INSERT INTO sqlite_databases (user_id, db_id, folder, db_name, public, one_line_description, full_description,
+		INSERT INTO sqlite_databases (user_id, db_id, db_name, public, one_line_description, full_description,
 			branch_heads, root_database, commit_list`
 	if sourceURL != "" {
 		dbQuery += `, source_url`
@@ -3941,40 +3878,40 @@ func StoreDatabase(dbOwner, dbFolder, dbName string, branches map[string]BranchE
 		SELECT (
 			SELECT user_id
 			FROM users
-			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), $2, $3, $4, $5, $6, $8, (SELECT val FROM root), $7`
+			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), $2, $3, $4, $5, $7, (SELECT val FROM root), $6`
 	if sourceURL != "" {
-		dbQuery += `, $9`
+		dbQuery += `, $8`
 	}
 	dbQuery += `
-		ON CONFLICT (user_id, folder, db_name)
+		ON CONFLICT (user_id, db_name)
 			DO UPDATE
-			SET commit_list = sqlite_databases.commit_list || $7,
-				branch_heads = sqlite_databases.branch_heads || $8,
+			SET commit_list = sqlite_databases.commit_list || $6,
+				branch_heads = sqlite_databases.branch_heads || $7,
 				last_modified = now()`
 	if sourceURL != "" {
 		dbQuery += `,
-			source_url = $9`
-		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, pub, nullable1LineDesc, nullableFullDesc,
+			source_url = $8`
+		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, pub, nullable1LineDesc, nullableFullDesc,
 			cMap, branches, sourceURL)
 	} else {
-		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, pub, nullable1LineDesc, nullableFullDesc,
+		commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, pub, nullable1LineDesc, nullableFullDesc,
 			cMap, branches)
 	}
 	if err != nil {
-		log.Printf("Storing database '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder),
+		log.Printf("Storing database '%s/%s' failed: %v\n", SanitiseLogString(dbOwner),
 			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while storing database '%s%s%s'\n", numRows, SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong number of rows (%v) affected while storing database '%s/%s'\n", numRows, SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName))
 	}
 
 	if createDefBranch {
-		err = StoreDefaultBranchName(dbOwner, dbFolder, dbName, branchName)
+		err = StoreDefaultBranchName(dbOwner, dbName, branchName)
 		if err != nil {
-			log.Printf("Storing default branch '%s' name for '%s%s%s' failed: %v\n", SanitiseLogString(branchName),
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+			log.Printf("Storing default branch '%s' name for '%s/%s' failed: %v\n", SanitiseLogString(branchName),
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 			return err
 		}
 	}
@@ -3982,18 +3919,17 @@ func StoreDatabase(dbOwner, dbFolder, dbName string, branches map[string]BranchE
 }
 
 // StoreDefaultBranchName stores the default branch name for a database
-func StoreDefaultBranchName(dbOwner, folder, dbName, branchName string) error {
+func StoreDefaultBranchName(dbOwner, dbName, branchName string) error {
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET default_branch = $4
+		SET default_branch = $3
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 				)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, folder, dbName, branchName)
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, branchName)
 	if err != nil {
 		log.Printf("Changing default branch for database '%v' to '%v' failed: %v\n", SanitiseLogString(dbName),
 			SanitiseLogString(branchName), err)
@@ -4007,7 +3943,7 @@ func StoreDefaultBranchName(dbOwner, folder, dbName, branchName string) error {
 }
 
 // StoreDefaultTableName stores the default table name for a database
-func StoreDefaultTableName(dbOwner, folder, dbName, tableName string) error {
+func StoreDefaultTableName(dbOwner, dbName, tableName string) error {
 	var t pgx.NullString
 	if tableName != "" {
 		t.String = tableName
@@ -4015,15 +3951,14 @@ func StoreDefaultTableName(dbOwner, folder, dbName, tableName string) error {
 	}
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET default_table = $4
+		SET default_table = $3
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 				)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, folder, dbName, t)
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, t)
 	if err != nil {
 		log.Printf("Changing default table for database '%v' to '%v' failed: %v\n", SanitiseLogString(dbName),
 			tableName, err)
@@ -4037,7 +3972,7 @@ func StoreDefaultTableName(dbOwner, folder, dbName, tableName string) error {
 }
 
 // StoreDiscussion stores a new discussion for a database
-func StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, title, text string, discType DiscussionType,
+func StoreDiscussion(dbOwner, dbName, loggedInUser, title, text string, discType DiscussionType,
 	mr MergeRequestEntry) (newID int, err error) {
 
 	// Begin a transaction
@@ -4058,8 +3993,7 @@ func StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, title, text string
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND db.folder = $2
-				AND db.db_name = $3
+				AND db.db_name = $2
 		), next_id AS (
 			SELECT coalesce(max(disc.disc_id), 0) + 1 AS id
 			FROM discussions AS disc, d
@@ -4073,11 +4007,11 @@ func StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, title, text string
 			)
 		SELECT (SELECT db_id FROM d),
 			(SELECT id FROM next_id),
-			(SELECT user_id FROM users WHERE lower(user_name) = lower($4)),
+			(SELECT user_id FROM users WHERE lower(user_name) = lower($3)),
+			$4,
 			$5,
-			$6,
 			true,
-			$7`
+			$6`
 	if discType == MERGE_REQUEST {
 		dbQuery += `,(
 			SELECT db_id
@@ -4085,23 +4019,22 @@ func StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, title, text string
 			WHERE user_id = (
 				SELECT user_id
 				FROM users
-				WHERE lower(user_name) = lower($8))
-			AND folder = $9
-			AND db_name = $10
+				WHERE lower(user_name) = lower($7))
+			AND db_name = $8
 			AND is_deleted = false
-		), $11, $12, $13`
+		), $9, $10, $11`
 	}
 	dbQuery += `
 		RETURNING (SELECT id FROM next_id)`
 	if discType == MERGE_REQUEST {
-		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text, discType, mr.SourceOwner,
-			mr.SourceFolder, mr.SourceDBName, mr.SourceBranch, mr.DestBranch, mr.Commits).Scan(&newID)
+		err = tx.QueryRow(dbQuery, dbOwner, dbName, loggedInUser, title, text, discType, mr.SourceOwner,
+			mr.SourceDBName, mr.SourceBranch, mr.DestBranch, mr.Commits).Scan(&newID)
 	} else {
-		err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, loggedInUser, title, text, discType).Scan(&newID)
+		err = tx.QueryRow(dbQuery, dbOwner, dbName, loggedInUser, title, text, discType).Scan(&newID)
 	}
 	if err != nil {
-		log.Printf("Adding new discussion or merge request '%s' for '%s%s%s' failed: %v\n", SanitiseLogString(title),
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Adding new discussion or merge request '%s' for '%s/%s' failed: %v\n", SanitiseLogString(title),
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return
 	}
 
@@ -4121,17 +4054,16 @@ func StoreDiscussion(dbOwner, dbFolder, dbName, loggedInUser, title, text string
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName)
+			AND db_name = $2`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbName)
 	if err != nil {
-		log.Printf("Updating discussion counter for '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Updating discussion counter for '%s/%s' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected when updating discussion counter for '%s%s%s'\n",
-			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong number of rows (%v) affected when updating discussion counter for '%s/%s'\n",
+			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 
 	// Commit the transaction
@@ -4178,32 +4110,31 @@ func StoreLicence(userName, licenceName string, txt []byte, url string, orderNum
 }
 
 // StoreReleases stores the releases for a database
-func StoreReleases(dbOwner, dbFolder, dbName string, releases map[string]ReleaseEntry) error {
+func StoreReleases(dbOwner, dbName string, releases map[string]ReleaseEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET release_list = $4, release_count = $5
+		SET release_list = $3, release_count = $4
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, releases, len(releases))
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, releases, len(releases))
 	if err != nil {
-		log.Printf("Storing releases for database '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Storing releases for database '%s/%s' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected when storing releases for database: '%s%s%s'\n", numRows,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong number of rows (%v) affected when storing releases for database: '%s/%s'\n", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return nil
 }
 
 // StoreShares stores the shares of a database
-func StoreShares(dbOwner, dbFolder, dbName string, shares map[string]ShareDatabasePermissions) (err error) {
+func StoreShares(dbOwner, dbName string, shares map[string]ShareDatabasePermissions) (err error) {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -4224,11 +4155,10 @@ func StoreShares(dbOwner, dbFolder, dbName string, shares map[string]ShareDataba
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 				AND is_deleted = false
 		)`
-	_, err = tx.Exec(deleteQuery, dbOwner, dbFolder, dbName)
+	_, err = tx.Exec(deleteQuery, dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -4243,17 +4173,16 @@ func StoreShares(dbOwner, dbFolder, dbName string, shares map[string]ShareDataba
 			), u AS (
 				SELECT user_id
 				FROM users
-				WHERE lower(user_name) = lower($4)
+				WHERE lower(user_name) = lower($3)
 			), d AS (
 				SELECT db.db_id
 				FROM sqlite_databases AS db, o
 				WHERE db.user_id = o.user_id
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 			)
 			INSERT INTO database_shares (db_id, user_id, access)
-			SELECT d.db_id, u.user_id, $5 FROM d, u`
-		_, err := tx.Exec(insertQuery, dbOwner, dbFolder, dbName, name, access)
+			SELECT d.db_id, u.user_id, $4 FROM d, u`
+		_, err := tx.Exec(insertQuery, dbOwner, dbName, name, access)
 		if err != nil {
 			return err
 		}
@@ -4287,40 +4216,39 @@ func StoreStatusUpdates(userName string, statusUpdates map[string][]StatusUpdate
 }
 
 // StoreTags stores the tags for a database
-func StoreTags(dbOwner, dbFolder, dbName string, tags map[string]TagEntry) error {
+func StoreTags(dbOwner, dbName string, tags map[string]TagEntry) error {
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET tag_list = $4, tags = $5
+		SET tag_list = $3, tags = $4
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, tags, len(tags))
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, tags, len(tags))
 	if err != nil {
-		log.Printf("Storing tags for database '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Storing tags for database '%s/%s' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected when storing tags for database: '%s%s%s'\n", numRows,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong number of rows (%v) affected when storing tags for database: '%s/%s'\n", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return nil
 }
 
 // ToggleDBStar toggles the starring of a database by a user
-func ToggleDBStar(loggedInUser, dbOwner, dbFolder, dbName string) error {
+func ToggleDBStar(loggedInUser, dbOwner, dbName string) error {
 	// Check if the database is already starred
-	starred, err := CheckDBStarred(loggedInUser, dbOwner, dbFolder, dbName)
+	starred, err := CheckDBStarred(loggedInUser, dbOwner, dbName)
 	if err != nil {
 		return err
 	}
 
 	// Get the ID number of the database
-	dbID, err := databaseID(dbOwner, dbFolder, dbName)
+	dbID, err := databaseID(dbOwner, dbName)
 	if err != nil {
 		return err
 	}
@@ -4389,9 +4317,9 @@ func ToggleDBStar(loggedInUser, dbOwner, dbFolder, dbName string) error {
 }
 
 // ToggleDBWatch toggles the watch status of a database by a user
-func ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName string) error {
+func ToggleDBWatch(loggedInUser, dbOwner, dbName string) error {
 	// Check if the database is already being watched
-	watched, err := CheckDBWatched(loggedInUser, dbOwner, dbFolder, dbName)
+	watched, err := CheckDBWatched(loggedInUser, dbOwner, dbName)
 	if err != nil {
 		return err
 	}
@@ -4403,7 +4331,7 @@ func ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName string) error {
 			WITH u AS (
 				SELECT user_id
 				FROM users
-				WHERE lower(user_name) = lower($4)
+				WHERE lower(user_name) = lower($3)
 			), d AS (
 				SELECT db_id
 				FROM sqlite_databases
@@ -4412,22 +4340,21 @@ func ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName string) error {
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 					AND is_deleted = false
 			)
 			INSERT INTO watchers (db_id, user_id)
 			SELECT d.db_id, u.user_id
 			FROM d, u`
-		commandTag, err := pdb.Exec(insertQuery, dbOwner, dbFolder, dbName, loggedInUser)
+		commandTag, err := pdb.Exec(insertQuery, dbOwner, dbName, loggedInUser)
 		if err != nil {
-			log.Printf("Adding '%s' to watchers list for database '%s%s%s' failed: Error '%v'\n", loggedInUser,
-				SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+			log.Printf("Adding '%s' to watchers list for database '%s/%s' failed: Error '%v'\n", loggedInUser,
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
-			log.Printf("Wrong # of rows affected (%v) when adding '%s' to watchers list for database '%s%s%s'",
-				numRows, loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+			log.Printf("Wrong # of rows affected (%v) when adding '%s' to watchers list for database '%s/%s'",
+				numRows, loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 	} else {
 		// Unwatch the database
@@ -4441,24 +4368,23 @@ func ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName string) error {
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 					AND is_deleted = false
 			)
 			AND user_id = (
 				SELECT user_id
 				FROM users
-				WHERE lower(user_name) = lower($4)
+				WHERE lower(user_name) = lower($3)
 			)`
-		commandTag, err := pdb.Exec(deleteQuery, dbOwner, dbFolder, dbName, loggedInUser)
+		commandTag, err := pdb.Exec(deleteQuery, dbOwner, dbName, loggedInUser)
 		if err != nil {
-			log.Printf("Removing '%s' from watchers list for database '%s%s%s' failed: Error '%v'\n",
-				loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+			log.Printf("Removing '%s' from watchers list for database '%s/%s' failed: Error '%v'\n",
+				loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
-			log.Printf("Wrong # of rows affected (%v) when removing '%s' from watchers list for database '%s%s%s'",
-				numRows, loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+			log.Printf("Wrong # of rows affected (%v) when removing '%s' from watchers list for database '%s/%s'",
+				numRows, loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 	}
 
@@ -4472,8 +4398,7 @@ func ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName string) error {
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 					AND is_deleted = false
 		)
 		UPDATE sqlite_databases
@@ -4482,15 +4407,15 @@ func ToggleDBWatch(loggedInUser, dbOwner, dbFolder, dbName string) error {
 			FROM watchers
 			WHERE db_id = (SELECT db_id FROM d)
 		) WHERE db_id = (SELECT db_id FROM d)`
-	commandTag, err := pdb.Exec(updateQuery, dbOwner, dbFolder, dbName)
+	commandTag, err := pdb.Exec(updateQuery, dbOwner, dbName)
 	if err != nil {
-		log.Printf("Updating watchers count for '%s%s%s' failed: %v", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Updating watchers count for '%s/%s' failed: %v", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong # of rows affected (%v) when updating watchers count for '%s%s%s'", numRows,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong # of rows affected (%v) when updating watchers count for '%s/%s'", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return nil
 }
@@ -4514,9 +4439,9 @@ func UpdateAvatarURL(userName, avatarURL string) error {
 }
 
 // UpdateContributorsCount updates the contributors count for a database
-func UpdateContributorsCount(dbOwner, dbFolder, dbName string) error {
+func UpdateContributorsCount(dbOwner, dbName string) error {
 	// Get the commit list for the database
-	commitList, err := GetCommitList(dbOwner, dbFolder, dbName)
+	commitList, err := GetCommitList(dbOwner, dbName)
 	if err != nil {
 		return err
 	}
@@ -4531,29 +4456,28 @@ func UpdateContributorsCount(dbOwner, dbFolder, dbName string) error {
 	// Store the new contributor count in the database
 	dbQuery := `
 		UPDATE sqlite_databases
-		SET contributors = $4
+		SET contributors = $3
 			WHERE user_id = (
 				SELECT user_id
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-				AND folder = $2
-				AND db_name = $3`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, n)
+				AND db_name = $2`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, n)
 	if err != nil {
-		log.Printf("Updating contributor count in database '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Updating contributor count in database '%s/%s' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong # of rows affected (%v) when updating contributor count for database '%s%s%s'\n",
-			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong # of rows affected (%v) when updating contributor count for database '%s/%s'\n",
+			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return nil
 }
 
 // UpdateComment updates the text for a comment
-func UpdateComment(dbOwner, dbFolder, dbName, loggedInUser string, discID, comID int, newText string) error {
+func UpdateComment(dbOwner, dbName, loggedInUser string, discID, comID int, newText string) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -4573,31 +4497,30 @@ func UpdateComment(dbOwner, dbFolder, dbName, loggedInUser string, discID, comID
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		), int AS (
 			SELECT internal_id AS int_id
 			FROM discussions
 			WHERE db_id = (SELECT db_id FROM d)
-			AND disc_id = $4
+			AND disc_id = $3
 		)
 		SELECT u.user_name
 		FROM discussion_comments AS com, users AS u
 		WHERE com.db_id = (SELECT db_id FROM d)
 			AND com.disc_id = (SELECT int_id FROM int)
-			AND com.com_id = $5
+			AND com.com_id = $4
 			AND com.commenter = u.user_id`
-	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID, comID).Scan(&comCreator)
+	err = tx.QueryRow(dbQuery, dbOwner, dbName, discID, comID).Scan(&comCreator)
 	if err != nil {
-		log.Printf("Error retrieving name of comment creator for '%s%s%s', discussion '%d', comment '%d': %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, comID, err)
+		log.Printf("Error retrieving name of comment creator for '%s/%s', discussion '%d', comment '%d': %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, comID, err)
 		return err
 	}
 
 	// Ensure only users with write access or the comment creator can update the comment
 	allowed := strings.ToLower(loggedInUser) != strings.ToLower(comCreator)
 	if !allowed {
-		allowed, err = CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+		allowed, err = CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 		if err != nil {
 			return err
 		}
@@ -4616,29 +4539,28 @@ func UpdateComment(dbOwner, dbFolder, dbName, loggedInUser string, discID, comID
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		), int AS (
 			SELECT internal_id AS int_id
 			FROM discussions
 			WHERE db_id = (SELECT db_id FROM d)
-			AND disc_id = $4
+			AND disc_id = $3
 		)
 		UPDATE discussion_comments AS com
-		SET body = $6
+		SET body = $5
 		WHERE com.db_id = (SELECT db_id FROM d)
 			AND com.disc_id = (SELECT int_id FROM int)
-			AND com.com_id = $5`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, comID, newText)
+			AND com.com_id = $4`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbName, discID, comID, newText)
 	if err != nil {
-		log.Printf("Updating comment for database '%s%s%s', discussion '%d', comment '%d' failed: %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, comID, err)
+		log.Printf("Updating comment for database '%s/%s', discussion '%d', comment '%d' failed: %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, comID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when updating comment for database '%s%s%s', discussion '%d', comment '%d'\n",
-			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, comID)
+			"Wrong number of rows (%v) affected when updating comment for database '%s/%s', discussion '%d', comment '%d'\n",
+			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, comID)
 	}
 
 	// Commit the transaction
@@ -4650,7 +4572,7 @@ func UpdateComment(dbOwner, dbFolder, dbName, loggedInUser string, discID, comID
 }
 
 // UpdateDiscussion updates the text for a discussion
-func UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser string, discID int, newTitle, newText string) error {
+func UpdateDiscussion(dbOwner, dbName, loggedInUser string, discID int, newTitle, newText string) error {
 	// Begin a transaction
 	tx, err := pdb.Begin()
 	if err != nil {
@@ -4672,22 +4594,21 @@ func UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser string, discID int
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 			)
-			AND disc.disc_id = $4
+			AND disc.disc_id = $3
 			AND disc.creator = u.user_id`
-	err = tx.QueryRow(dbQuery, dbOwner, dbFolder, dbName, discID).Scan(&discCreator)
+	err = tx.QueryRow(dbQuery, dbOwner, dbName, discID).Scan(&discCreator)
 	if err != nil {
-		log.Printf("Error retrieving name of discussion creator for '%s%s%s', discussion '%d': %v\n",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
+		log.Printf("Error retrieving name of discussion creator for '%s/%s', discussion '%d': %v\n",
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID, err)
 		return err
 	}
 
 	// Ensure only users with write access or the discussion starter can update the discussion
 	allowed := strings.ToLower(loggedInUser) != strings.ToLower(discCreator)
 	if !allowed {
-		allowed, err = CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+		allowed, err = CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 		if err != nil {
 			return err
 		}
@@ -4706,23 +4627,22 @@ func UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser string, discID int
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
 		UPDATE discussions AS disc
-		SET title = $5, description = $6, last_modified = now()
+		SET title = $4, description = $6, last_modified = now()
 		WHERE disc.db_id = (SELECT db_id FROM d)
-			AND disc.disc_id = $4`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, newTitle, newText)
+			AND disc.disc_id = $3`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbName, discID, newTitle, newText)
 	if err != nil {
-		log.Printf("Updating discussion for database '%s%s%s', discussion '%d' failed: %v\n", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID, err)
+		log.Printf("Updating discussion for database '%s/%s', discussion '%d' failed: %v\n", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), discID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when updating discussion for database '%s%s%s', discussion '%d'\n",
-			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), discID)
+			"Wrong number of rows (%v) affected when updating discussion for database '%s/%s', discussion '%d'\n",
+			numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName), discID)
 	}
 
 	// Commit the transaction
@@ -4734,7 +4654,7 @@ func UpdateDiscussion(dbOwner, dbFolder, dbName, loggedInUser string, discID int
 }
 
 // UpdateMergeRequestCommits updates the commit list for a Merge Request
-func UpdateMergeRequestCommits(dbOwner, dbFolder, dbName string, discID int, mrCommits []CommitEntry) (err error) {
+func UpdateMergeRequestCommits(dbOwner, dbName string, discID int, mrCommits []CommitEntry) (err error) {
 	dbQuery := `
 		WITH d AS (
 			SELECT db.db_id
@@ -4744,23 +4664,22 @@ func UpdateMergeRequestCommits(dbOwner, dbFolder, dbName string, discID int, mrC
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
 		UPDATE discussions AS disc
-		SET mr_commits = $5
+		SET mr_commits = $4
 		WHERE disc.db_id = (SELECT db_id FROM d)
-			AND disc.disc_id = $4`
-	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, discID, mrCommits)
+			AND disc.disc_id = $3`
+	commandTag, err := pdb.Exec(dbQuery, dbOwner, dbName, discID, mrCommits)
 	if err != nil {
-		log.Printf("Updating commit list for database '%s%s%s', MR '%d' failed: %v\n", dbOwner,
-			dbFolder, dbName, discID, err)
+		log.Printf("Updating commit list for database '%s/%s', MR '%d' failed: %v\n", dbOwner,
+			dbName, discID, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf(
-			"Wrong number of rows (%v) affected when updating commit list for database '%s%s%s', MR '%d'\n",
-			numRows, dbOwner, dbFolder, dbName, discID)
+			"Wrong number of rows (%v) affected when updating commit list for database '%s/%s', MR '%d'\n",
+			numRows, dbOwner, dbName, discID)
 	}
 	return nil
 }
@@ -4819,7 +4738,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
 		), dbs AS (
-			SELECT DISTINCT ON (db.db_name) db.db_name, db.folder, db.date_created, db.last_modified, db.public,
+			SELECT DISTINCT ON (db.db_name) db.db_name, db.date_created, db.last_modified, db.public,
 				db.watchers, db.stars, db.discussions, db.merge_requests, db.branches, db.release_count, db.tags,
 				db.contributors, db.one_line_description, default_commits.id,
 				db.commit_list->default_commits.id->'tree'->'entries'->0, db.source_url, db.default_branch,
@@ -4855,7 +4774,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	for rows.Next() {
 		var defBranch, desc, source pgx.NullString
 		var oneRow DBInfo
-		err = rows.Scan(&oneRow.Database, &oneRow.Folder, &oneRow.DateCreated, &oneRow.RepoModified, &oneRow.Public,
+		err = rows.Scan(&oneRow.Database, &oneRow.DateCreated, &oneRow.RepoModified, &oneRow.Public,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Branches,
 			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.DBEntry, &source,
 			&defBranch, &oneRow.Downloads, &oneRow.Views)
@@ -4904,11 +4823,10 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 				SELECT root_database
 				FROM sqlite_databases
 				WHERE user_id = u.user_id
-					AND folder = $2
-					AND db_name = $3)`
-		err = pdb.QueryRow(dbQuery, userName, j.Folder, j.Database).Scan(&list[i].Forks)
+					AND db_name = $2)`
+		err = pdb.QueryRow(dbQuery, userName, j.Database).Scan(&list[i].Forks)
 		if err != nil {
-			log.Printf("Error retrieving fork count for '%s%s%s': %v\n", SanitiseLogString(userName), j.Folder,
+			log.Printf("Error retrieving fork count for '%s/%s': %v\n", SanitiseLogString(userName),
 				j.Database, err)
 			return nil, err
 		}
@@ -4953,11 +4871,11 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 			WHERE st.user_id = u.user_id
 		),
 		db_users AS (
-			SELECT db.user_id, db.folder, db.db_name, stars.date_starred
+			SELECT db.user_id, db.db_name, stars.date_starred
 			FROM sqlite_databases AS db, stars
 			WHERE db.db_id = stars.db_id
 		)
-		SELECT users.user_name, db_users.folder, db_users.db_name, db_users.date_starred
+		SELECT users.user_name, db_users.db_name, db_users.date_starred
 		FROM users, db_users
 		WHERE users.user_id = db_users.user_id
 		ORDER BY date_starred DESC`
@@ -4969,7 +4887,7 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var oneRow DBEntry
-		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.DateEntry)
+		err = rows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.DateEntry)
 		if err != nil {
 			log.Printf("Error retrieving stars list for user: %v\n", err)
 			return nil, err
@@ -4981,7 +4899,7 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 }
 
 // UsersStarredDB returns the list of users who starred a database
-func UsersStarredDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err error) {
+func UsersStarredDB(dbOwner, dbName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH star_users AS (
 			SELECT user_id, date_starred
@@ -4994,8 +4912,7 @@ func UsersStarredDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err error
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 					AND is_deleted = false
 				)
 		)
@@ -5003,7 +4920,7 @@ func UsersStarredDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err error
 		FROM users, star_users
 		WHERE users.user_id = star_users.user_id
 		ORDER BY star_users.date_starred DESC`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, err := pdb.Query(dbQuery, dbOwner, dbName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
@@ -5030,7 +4947,7 @@ func UsersStarredDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err error
 }
 
 // UsersWatchingDB returns the list of users watching a database
-func UsersWatchingDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err error) {
+func UsersWatchingDB(dbOwner, dbName string) (list []DBEntry, err error) {
 	dbQuery := `
 		WITH lst AS (
 			SELECT user_id, date_watched
@@ -5043,8 +4960,7 @@ func UsersWatchingDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err erro
 						FROM users
 						WHERE lower(user_name) = lower($1)
 					)
-					AND folder = $2
-					AND db_name = $3
+					AND db_name = $2
 					AND is_deleted = false
 				)
 		)
@@ -5052,7 +4968,7 @@ func UsersWatchingDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err erro
 		FROM users, lst
 		WHERE users.user_id = lst.user_id
 		ORDER BY lst.date_watched DESC`
-	rows, err := pdb.Query(dbQuery, dbOwner, dbFolder, dbName)
+	rows, err := pdb.Query(dbQuery, dbOwner, dbName)
 	if err != nil {
 		log.Printf("Database query failed: %v\n", err)
 		return nil, err
@@ -5063,7 +4979,7 @@ func UsersWatchingDB(dbOwner, dbFolder, dbName string) (list []DBEntry, err erro
 		var dn pgx.NullString
 		err = rows.Scan(&oneRow.Owner, &dn, &oneRow.DateEntry)
 		if err != nil {
-			log.Printf("Error retrieving list of watchers for %s%s%s: %v\n", dbOwner, dbFolder, dbName, err)
+			log.Printf("Error retrieving list of watchers for %s/%s: %v\n", dbOwner, dbName, err)
 			return nil, err
 		}
 
@@ -5092,11 +5008,11 @@ func UserWatchingDBs(userName string) (list []DBEntry, err error) {
 			WHERE w.user_id = u.user_id
 		),
 		db_users AS (
-			SELECT db.user_id, db.folder, db.db_name, watching.date_watched
+			SELECT db.user_id, db.db_name, watching.date_watched
 			FROM sqlite_databases AS db, watching
 			WHERE db.db_id = watching.db_id
 		)
-		SELECT users.user_name, db_users.folder, db_users.db_name, db_users.date_watched
+		SELECT users.user_name, db_users.db_name, db_users.date_watched
 		FROM users, db_users
 		WHERE users.user_id = db_users.user_id
 		ORDER BY date_watched DESC`
@@ -5108,7 +5024,7 @@ func UserWatchingDBs(userName string) (list []DBEntry, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var oneRow DBEntry
-		err = rows.Scan(&oneRow.Owner, &oneRow.Folder, &oneRow.DBName, &oneRow.DateEntry)
+		err = rows.Scan(&oneRow.Owner, &oneRow.DBName, &oneRow.DateEntry)
 		if err != nil {
 			log.Printf("Error retrieving database watch list for user: %v\n", err)
 			return nil, err
@@ -5120,7 +5036,7 @@ func UserWatchingDBs(userName string) (list []DBEntry, err error) {
 }
 
 // ViewCount returns the view counter for a specific database
-func ViewCount(dbOwner, dbFolder, dbName string) (viewCount int, err error) {
+func ViewCount(dbOwner, dbName string) (viewCount int, err error) {
 	dbQuery := `
 		SELECT page_views
 		FROM sqlite_databases
@@ -5129,18 +5045,17 @@ func ViewCount(dbOwner, dbFolder, dbName string) (viewCount int, err error) {
 				FROM users
 				WHERE lower(user_name) = lower($1)
 			)
-			AND folder = $2
-			AND db_name = $3`
-	err = pdb.QueryRow(dbQuery, dbOwner, dbFolder, dbName).Scan(&viewCount)
+			AND db_name = $2`
+	err = pdb.QueryRow(dbQuery, dbOwner, dbName).Scan(&viewCount)
 	if err != nil {
-		log.Printf("Retrieving view count for '%s%s%s' failed: %v\n", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Retrieving view count for '%s/%s' failed: %v\n", SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return 0, err
 	}
 	return
 }
 
 // VisualisationDeleteParams deletes a set of visualisation parameters
-func VisualisationDeleteParams(dbOwner, dbFolder, dbName, visName string) (err error) {
+func VisualisationDeleteParams(dbOwner, dbName, visName string) (err error) {
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (
@@ -5151,23 +5066,22 @@ func VisualisationDeleteParams(dbOwner, dbFolder, dbName, visName string) (err e
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
-		DELETE FROM vis_params WHERE user_id = (SELECT user_id FROM u) AND db_id = (SELECT db_id FROM d) AND name = $4`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, visName)
+		DELETE FROM vis_params WHERE user_id = (SELECT user_id FROM u) AND db_id = (SELECT db_id FROM d) AND name = $3`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, visName)
 	if err != nil {
-		log.Printf("Deleting visualisation '%s' for database '%s%s%s' failed: %v\n", SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Deleting visualisation '%s' for database '%s/%s' failed: %v\n", SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while deleting visualisation '%s' for database '%s%s%s'\n", numRows, SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong number of rows (%v) affected while deleting visualisation '%s' for database '%s/%s'\n", numRows, SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return
 }
 
 // VisualisationSaveData saves visualisation result data for later retrieval
-func VisualisationSaveData(dbOwner, dbFolder, dbName, commitID, hash string, visData []VisRowV1) (err error) {
+func VisualisationSaveData(dbOwner, dbName, commitID, hash string, visData []VisRowV1) (err error) {
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (
@@ -5178,27 +5092,26 @@ func VisualisationSaveData(dbOwner, dbFolder, dbName, commitID, hash string, vis
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
 		INSERT INTO vis_result_cache (user_id, db_id, commit_id, hash, results)
-		SELECT (SELECT user_id FROM u), (SELECT db_id FROM d), $4, $5, $6
+		SELECT (SELECT user_id FROM u), (SELECT db_id FROM d), $3, $4, $5
 		ON CONFLICT (db_id, user_id, commit_id, hash)
 			DO UPDATE
-			SET results = $6`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, commitID, hash, visData)
+			SET results = $5`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, commitID, hash, visData)
 	if err != nil {
-		log.Printf("Saving visualisation data for database '%s%s%s', commit '%s', hash '%s' failed: %v\n", dbOwner, dbFolder, dbName, commitID, hash, err)
+		log.Printf("Saving visualisation data for database '%s/%s', commit '%s', hash '%s' failed: %v\n", dbOwner, dbName, commitID, hash, err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while saving visualisation data for database '%s%s%s', commit '%s', hash '%s'\n", numRows, dbOwner, dbFolder, dbName, commitID, hash)
+		log.Printf("Wrong number of rows (%v) affected while saving visualisation data for database '%s/%s', commit '%s', hash '%s'\n", numRows, dbOwner, dbName, commitID, hash)
 	}
 	return
 }
 
 // VisualisationSaveParams saves a set of visualisation parameters for later retrieval
-func VisualisationSaveParams(dbOwner, dbFolder, dbName, visName string, visParams VisParamsV2) (err error) {
+func VisualisationSaveParams(dbOwner, dbName, visName string, visParams VisParamsV2) (err error) {
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH u AS (
@@ -5209,21 +5122,20 @@ func VisualisationSaveParams(dbOwner, dbFolder, dbName, visName string, visParam
 			SELECT db.db_id
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
-				AND folder = $2
-				AND db_name = $3
+				AND db_name = $2
 		)
 		INSERT INTO vis_params (user_id, db_id, name, parameters)
-		SELECT (SELECT user_id FROM u), (SELECT db_id FROM d), $4, $5
+		SELECT (SELECT user_id FROM u), (SELECT db_id FROM d), $3, $4
 		ON CONFLICT (db_id, user_id, name)
 			DO UPDATE
-			SET parameters = $5`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbFolder, dbName, visName, visParams)
+			SET parameters = $4`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, visName, visParams)
 	if err != nil {
-		log.Printf("Saving visualisation '%s' for database '%s%s%s' failed: %v\n", SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), err)
+		log.Printf("Saving visualisation '%s' for database '%s/%s' failed: %v\n", SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while saving visualisation '%s' for database '%s%s%s'\n", numRows, SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Wrong number of rows (%v) affected while saving visualisation '%s' for database '%s/%s'\n", numRows, SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return
 }

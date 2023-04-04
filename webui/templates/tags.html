@@ -118,7 +118,6 @@
                 url: "/x/deletetag/",
                 data: $httpParamSerializerJQLike({
                         "tag": encodeURIComponent(tagName),
-                        "folder": "/",
                         "dbname": [[ .DB.Info.Database ]],
                         "username": [[ .DB.Info.Owner ]]
                     }),
@@ -163,7 +162,6 @@
                 url: "/x/updatetag/",
                 data: $httpParamSerializerJQLike({
                         "tag": encodeURIComponent(tagName),
-                        "folder": "/",
                         "dbname": [[ .DB.Info.Database ]],
                         "username": [[ .DB.Info.Owner ]],
                         "newmsg": encodeURIComponent($scope.TagText[tagName]),

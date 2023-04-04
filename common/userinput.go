@@ -89,33 +89,9 @@ func GetDatabase(r *http.Request, allowGet bool) (dbName string, err error) {
 	return dbName, nil
 }
 
-// GetFolder returns the folder name (if any) present in GET or POST/PUT data
+// GetFolder alwaysreturns "/" as we don't support folders yet
 func GetFolder(r *http.Request, allowGet bool) (folder string, err error) {
-	// Retrieve the variable from the GET or POST/PUT data
-	var f string
-	if allowGet {
-		f = r.FormValue("folder")
-	} else {
-		f = r.PostFormValue("folder")
-	}
-
-	// If no folder given, return
-	if f == "" {
-		return "", nil
-	}
-
-	// Unescape, then validate the folder name
-	folder, err = url.QueryUnescape(f)
-	if err != nil {
-		return "", err
-	}
-	err = ValidateFolder(folder)
-	if err != nil {
-		log.Printf("Validation failed for folder: '%s': %s", SanitiseLogString(folder), err)
-		return "", err
-	}
-
-	return folder, nil
+	return "/", nil
 }
 
 // GetFormBranch return the requested branch name, from get or post data

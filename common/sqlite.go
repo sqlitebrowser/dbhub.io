@@ -297,10 +297,10 @@ func OpenSQLiteDatabase(bucket, id string) (sdb *sqlite.Conn, err error) {
 // OpenSQLiteDatabaseDefensive is similar to OpenSQLiteDatabase(), but opens the database Read Only and implements
 // the recommended defensive precautions for potentially malicious user provided SQL
 // queries: https://www.sqlite.org/security.html
-func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner, dbFolder, dbName, commitID, loggedInUser string) (sdb *sqlite.Conn, err error) {
+func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner, dbName, commitID, loggedInUser string) (sdb *sqlite.Conn, err error) {
 	// Check if the user has access to the requested database
 	var bucket, id string
-	bucket, id, _, err = MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	bucket, id, _, err = MinioLocation(dbOwner, dbName, commitID, loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -310,7 +310,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	if id == "" {
 		// The requested database wasn't found, or the user doesn't have permission to access it
 		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found. Owner: '%s%s%s'", SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName))
+		log.Printf("Requested database not found. Owner: '%s/%s'", SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
@@ -1145,8 +1145,6 @@ func SQLiteSanityCheck(fileName string) (tables []string, err error) {
 // SQLiteReadDatabasePage opens a SQLite database (locally) and returns a "page" of rows from it, for display in the
 // database view page.  Note that the dbSize return value is only set for live databases.
 func SQLiteReadDatabasePage(bucket, id, loggedInUser, dbOwner, dbName, dbTable, sortCol, sortDir, commitID string, rowOffset, maxRows int, isLive bool) (tables []string, defaultTable string, rowData SQLiteRecordSet, dbSize int64, err error) {
-	dbFolder := "/"
-
 	// Get a handle from Minio for the database object
 	var sdb *sqlite.Conn
 	if isLive {
@@ -1252,7 +1250,7 @@ func SQLiteReadDatabasePage(bucket, id, loggedInUser, dbOwner, dbName, dbTable, 
 	var okCache bool
 	if !isLive {
 		rowCacheKey := TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-			loggedInUser, dbOwner, dbFolder, dbName, commitID, dbTable, maxRows)
+			loggedInUser, dbOwner, dbName, commitID, dbTable, maxRows)
 		okCache, err = GetCachedData(rowCacheKey, &rowData)
 		if err != nil {
 			log.Printf("Error retrieving page data from cache: %v", err)
@@ -1396,9 +1394,9 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 
 // SQLiteRunQueryDefensive runs a user provided SQLite query, using our "defensive" mode.  eg with limits placed on
 // what it's allowed to do.
-func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource QuerySource, dbOwner, dbFolder, dbName, commitID, loggedInUser, query string) (SQLiteRecordSet, error) {
+func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource QuerySource, dbOwner, dbName, commitID, loggedInUser, query string) (SQLiteRecordSet, error) {
 	// Retrieve the SQLite database from Minio (also doing appropriate permission/access checking)
-	sdb, err := OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	sdb, err := OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbName, commitID, loggedInUser)
 	if err != nil {
 		// The return handling was already done in OpenSQLiteDatabaseDefensive()
 		return SQLiteRecordSet{}, err
@@ -1424,7 +1422,7 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	default:
 		return SQLiteRecordSet{}, fmt.Errorf("Unknown source in SQLiteRunQueryDefensive()")
 	}
-	logID, err = LogSQLiteQueryBefore(source, dbOwner, dbFolder, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
+	logID, err = LogSQLiteQueryBefore(source, dbOwner, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
 	if err != nil {
 		return SQLiteRecordSet{}, err
 	}
@@ -1434,8 +1432,8 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	var memUsed, memHighWater int64
 	memUsed, memHighWater, dataRows, err = SQLiteRunQuery(sdb, querySource, query, false, false)
 	if err != nil {
-		log.Printf("Error when preparing statement by '%s' for database (%s%s%s): '%s'\n", SanitiseLogString(loggedInUser),
-			SanitiseLogString(dbOwner), SanitiseLogString(dbFolder), SanitiseLogString(dbName), SanitiseLogString(err.Error()))
+		log.Printf("Error when preparing statement by '%s' for database (%s/%s): '%s'\n", SanitiseLogString(loggedInUser),
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), SanitiseLogString(err.Error()))
 		return SQLiteRecordSet{}, err
 	}
 

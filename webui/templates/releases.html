@@ -130,7 +130,6 @@
                 url: "/x/deleterelease/",
                 data: $httpParamSerializerJQLike({
                         "release": encodeURIComponent(relName),
-                        "folder": "/",
                         "dbname": [[ .DB.Info.Database ]],
                         "username": [[ .DB.Info.Owner ]]
                     }),
@@ -175,7 +174,6 @@
                 url: "/x/updaterelease/",
                 data: $httpParamSerializerJQLike({
                         "release": encodeURIComponent(relName),
-                        "folder": "/",
                         "dbname": [[ .DB.Info.Database ]],
                         "username": [[ .DB.Info.Owner ]],
                         "newmsg": encodeURIComponent($scope.RelText[relName]),

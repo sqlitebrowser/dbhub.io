@@ -230,7 +230,6 @@
                     </div>
                 [[ end ]]
                 <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
-                <input type="hidden" name="folder" value="[[ .DB.Info.Folder ]]">
                 <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
                 <input type="hidden" name="commit" value="[[ .DB.Info.CommitID ]]">
                 <input type="hidden" name="public" value="{{ radioPublic }}">
@@ -343,7 +342,6 @@
                 url: "/x/tablenames/",
                 data: $httpParamSerializerJQLike({
                         "branch": encodeURIComponent(newbranch),
-                        "folder": "/",
                         "dbname": [[ .DB.Info.Database ]],
                         "username": [[ .DB.Info.Owner ]]
                     }),

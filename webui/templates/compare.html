@@ -37,7 +37,7 @@
                                 </button>
                                 <ul uib-dropdown-menu class="dropdown-menu" role="menu">
                                     <li ng-repeat="row in forkList" role="menuitem" ng-click="changeSourceDB(row)">
-                                        <a href="">{{ row.database_owner + row.database_folder + row.database_name }}</a>
+                                        <a href="">{{ row.database_owner + "/" + row.database_name }}</a>
                                     </li>
                                 </ul>
                             </span>
@@ -81,7 +81,7 @@
                                 </button>
                                 <ul uib-dropdown-menu class="dropdown-menu" role="menu">
                                     <li ng-repeat="row in forkList" role="menuitem" ng-click="changeDestDB(row)">
-                                        <a href="">{{ row.database_owner + row.database_folder + row.database_name }}</a>
+                                        <a href="">{{ row.database_owner + "/" + row.database_name }}</a>
                                     </li>
                                 </ul>
                             </span>
@@ -160,7 +160,7 @@
                         </td>
                         <td>
                             <span ng-if="Disc.open !== true" ng-bind="row.id | limitTo: 8" style="vertical-align: middle;"></span>
-                            <a ng-if="Disc.open === true" href="{{ '/' + Disc.mr_details.source_owner + Disc.mr_details.source_folder + Disc.mr_details.source_database_name + '?branch=' + Disc.mr_details.source_branch + '&commit=' + row.id }}"><span ng-bind="row.id | limitTo: 8" class="blackLink" style="vertical-align: middle;"></span></a>
+                            <a ng-if="Disc.open === true" href="{{ '/' + Disc.mr_details.source_owner + '/' + Disc.mr_details.source_database_name + '?branch=' + Disc.mr_details.source_branch + '&commit=' + row.id }}"><span ng-bind="row.id | limitTo: 8" class="blackLink" style="vertical-align: middle;"></span></a>
                         </td>
                         <td>
                             <span ng-bind="row.message" style="vertical-align: middle;"></span><span ng-if="row.message === ''" style="color: grey; vertical-align: middle;">This commit has no commit message</span>
@@ -200,18 +200,16 @@
         $scope.mr = {"desc": "", "title": ""};
         $scope.dest = {
             "owner":  [[ .DestOwner ]],
-            "folder": [[ .DestFolder ]],
             "name":   [[ .DestDBName ]]
         };
         $scope.source = {
             "owner":  [[ .SourceOwner ]],
-            "folder": [[ .SourceFolder ]],
             "name":   [[ .SourceDBName ]]
         };
 
         // Variables used for display purposes only
-        $scope.destDB = $scope.dest.owner + $scope.dest.folder + $scope.dest.name;
-        $scope.sourceDB = $scope.source.owner + $scope.source.folder + $scope.source.name;
+        $scope.destDB = $scope.dest.owner + "/" + $scope.dest.name;
+        $scope.sourceDB = $scope.source.owner + "/" + $scope.source.name;
 
         // Handler for the cancel button.  Just bounces back to the database page
         $scope.cancelCreate = function() {
@@ -236,18 +234,16 @@
                 url: "/x/branchnames",
                 params: {
                         "dbname": newRow.database_name,
-                        "folder": newRow.database_folder,
                         "username": newRow.database_owner
                     },
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // Update displayed destination database value
-                $scope.destDB = newRow.database_owner + newRow.database_folder + newRow.database_name;
+                $scope.destDB = newRow.database_owner + "/" + newRow.database_name;
 
                 // Update the values used when sending the creation request
                 $scope.dest = {
                     "owner": newRow.database_owner,
-                    "folder": newRow.database_folder,
                     "name": newRow.database_name
                 };
 
@@ -284,18 +280,16 @@
                 url: "/x/branchnames",
                 params: {
                         "dbname": newRow.database_name,
-                        "folder": newRow.database_folder,
                         "username": newRow.database_owner
                     },
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }
             }).then(function (response) {
                 // Update displayed source database value
-                $scope.sourceDB = newRow.database_owner + newRow.database_folder + newRow.database_name;
+                $scope.sourceDB = newRow.database_owner + "/" + newRow.database_name;
 
                 // Update the values used when sending the creation request
                 $scope.source = {
                     "owner": newRow.database_owner,
-                    "folder": newRow.database_folder,
                     "name": newRow.database_name
                 };
 
@@ -332,11 +326,9 @@
                         "desc": encodeURIComponent($scope.mr.desc),
                         "destbranch": encodeURIComponent($scope.meta.DestBranch),
                         "destdbname": encodeURIComponent($scope.dest.name),
-                        "destfolder": encodeURIComponent($scope.dest.folder),
                         "destowner": encodeURIComponent($scope.dest.owner),
                         "sourcebranch": encodeURIComponent($scope.meta.SourceBranch),
                         "sourcedbname": encodeURIComponent($scope.source.name),
-                        "sourcefolder": encodeURIComponent($scope.source.folder),
                         "sourceowner": encodeURIComponent($scope.source.owner),
                         "title": encodeURIComponent($scope.mr.title),
                         "username": encodeURIComponent([[ .PageMeta.LoggedInUser ]])
@@ -379,11 +371,9 @@
                 data: $httpParamSerializerJQLike({
                         "destbranch": encodeURIComponent($scope.meta.DestBranch),
                         "destdbname": encodeURIComponent($scope.dest.name),
-                        "destfolder": encodeURIComponent($scope.dest.folder),
                         "destowner": encodeURIComponent($scope.dest.owner),
                         "sourcebranch": encodeURIComponent($scope.meta.SourceBranch),
                         "sourcedbname": encodeURIComponent($scope.source.name),
-                        "sourcefolder": encodeURIComponent($scope.source.folder),
                         "sourceowner": encodeURIComponent($scope.source.owner)
                     }),
                 headers: { "Content-Type": "application/x-www-form-urlencoded" }

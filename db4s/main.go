@@ -134,14 +134,14 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract and validate the form variables
-	dbOwner, dbFolder, dbName, err := com.GetUFD(r, true)
+	dbOwner, _, dbName, err := com.GetUFD(r, true)
 	if err != nil {
 		http.Error(w, "Missing or incorrect data supplied", http.StatusBadRequest)
 		return
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbName, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -152,7 +152,7 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the branch list for the database
-	brList, err := com.BranchListResponse(dbOwner, dbFolder, dbName)
+	brList, err := com.BranchListResponse(dbOwner, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -332,9 +332,6 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	dbOwner := pathStrings[1]
 	dbName := pathStrings[2]
 
-	// TODO: Add support for folders
-	dbFolder := "/"
-
 	// Validate the dbOwner and dbName inputs
 	err := com.ValidateUser(dbOwner)
 	if err != nil {
@@ -348,14 +345,14 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbName, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if !exists {
-		http.Error(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", com.SanitiseLogString(dbOwner),
-			com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName)), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Database '%s/%s' doesn't exist", com.SanitiseLogString(dbOwner),
+			com.SanitiseLogString(dbName)), http.StatusNotFound)
 		return
 	}
 
@@ -367,7 +364,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Get the branch heads list for the database
-	branchList, err := com.GetBranches(dbOwner, dbFolder, dbName)
+	branchList, err := com.GetBranches(dbOwner, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -389,7 +386,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		branchName = bn
 	} else {
 		// No branch name was given, so retrieve the default for the database
-		branchName, err = com.GetDefaultBranchName(dbOwner, dbFolder, dbName)
+		branchName, err = com.GetDefaultBranchName(dbOwner, dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -407,7 +404,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Check that the commit is known to the database
-	commitList, err := com.GetCommitList(dbOwner, dbFolder, dbName)
+	commitList, err := com.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -419,7 +416,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// A specific database was requested, so send it to the user
-	err = retrieveDatabase(w, r, pageName, userAcc, dbOwner, dbFolder, dbName, branchName, commit)
+	err = retrieveDatabase(w, r, pageName, userAcc, dbOwner, dbName, branchName, commit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -740,26 +737,26 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract and validate the form variables
-	dbOwner, dbFolder, dbName, err := com.GetUFD(r, true)
+	dbOwner, _, dbName, err := com.GetUFD(r, true)
 	if err != nil {
 		http.Error(w, "Missing or incorrect data supplied", http.StatusBadRequest)
 		return
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbName, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if !exists {
-		http.Error(w, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName),
+		http.Error(w, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName),
 			http.StatusNotFound)
 		return
 	}
 
 	// Retrieve the metadata for the database
-	meta, err := com.MetadataResponse(dbOwner, dbFolder, dbName)
+	meta, err := com.MetadataResponse(dbOwner, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -865,11 +862,11 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 //
 //	$ curl -OL -kE ~/my.cert.pem -D headers.out -G https://db4s.dbhub.io:5550/someuser/somedb.sqlite
 func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, userAcc string, dbOwner string,
-	dbFolder string, dbName string, branchName string, commit string) (err error) {
+	dbName string, branchName string, commit string) (err error) {
 	pageName += ":retrieveDatabase()"
 
 	// Retrieve the Minio details and last modified date for the requested database
-	bucket, id, lastMod, err := com.MinioLocation(dbOwner, dbFolder, dbName, commit, userAcc)
+	bucket, id, lastMod, err := com.MinioLocation(dbOwner, dbName, commit, userAcc)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -905,7 +902,7 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 	}
 
 	// Make a record of the download
-	err = com.LogDownload(dbOwner, dbFolder, dbName, userAcc, r.RemoteAddr, "db4s", userAgent, time.Now().UTC(),
+	err = com.LogDownload(dbOwner, dbName, userAcc, r.RemoteAddr, "db4s", userAgent, time.Now().UTC(),
 		bucket+id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -929,7 +926,7 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 
 	// If downloaded by someone other than the owner, increment the download count for the database
 	if strings.ToLower(userAcc) != strings.ToLower(dbOwner) {
-		err = com.IncrementDownloadCount(dbOwner, dbFolder, dbName)
+		err = com.IncrementDownloadCount(dbOwner, dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -937,8 +934,8 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 	}
 
 	// Log the transfer
-	log.Printf("'%s%s%s' downloaded by user '%v', %v bytes", com.SanitiseLogString(dbOwner),
-		com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName), userAcc, bytesWritten)
+	log.Printf("'%s/%s' downloaded by user '%v', %v bytes", com.SanitiseLogString(dbOwner),
+		com.SanitiseLogString(dbName), userAcc, bytesWritten)
 	return nil
 }
 
@@ -1012,16 +1009,9 @@ func userDatabaseList(userAcc string, user string) (dbList []byte, err error) {
 		tempRow.Type = "database"
 		tempRow.CommitID = j.CommitID
 		tempRow.Licence = j.Licence
-		if j.Folder == "/" {
-			tempRow.Name = j.Database
-			tempRow.URL = fmt.Sprintf("%s/%s/%s?commit=%v", server, user,
-				url.PathEscape(j.Database), j.CommitID)
-		} else {
-			tempRow.Name = fmt.Sprintf("%s/%s", strings.TrimPrefix(j.Folder, "/"),
-				j.Database)
-			tempRow.URL = fmt.Sprintf("%s/%s%s/%s?commit=%v", server, user, j.Folder,
-				url.PathEscape(j.Database), j.CommitID)
-		}
+		tempRow.Name = j.Database
+		tempRow.URL = fmt.Sprintf("%s/%s/%s?commit=%v", server, user, url.PathEscape(j.Database), j.CommitID)
+		
 		if j.DefaultBranch != "" {
 			tempRow.DefBranch = j.DefaultBranch
 			tempRow.URL += fmt.Sprintf("&branch=%s", j.DefaultBranch)

@@ -225,11 +225,10 @@ func collectInfo(w http.ResponseWriter, r *http.Request) (loggedInUser, dbOwner,
 		httpStatus = http.StatusInternalServerError
 		return
 	}
-	dbFolder := "/"
 
 	// Check if the user has access to the requested database
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return
@@ -255,10 +254,9 @@ func collectInfoAndOpen(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Con
 		httpStatus = http.StatusInternalServerError
 		return
 	}
-	dbFolder := "/"
 
 	// Get Minio bucket
-	bucket, id, _, err := com.MinioLocation(dbOwner, dbFolder, dbName, commitID, loggedInUser)
+	bucket, id, _, err := com.MinioLocation(dbOwner, dbName, commitID, loggedInUser)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return
@@ -268,8 +266,8 @@ func collectInfoAndOpen(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Con
 	if id == "" {
 		// The requested database wasn't found, or the user doesn't have permission to access it
 		err = fmt.Errorf("Requested database not found")
-		log.Printf("Requested database not found. Owner: '%s%s%s'", com.SanitiseLogString(dbOwner),
-			com.SanitiseLogString(dbFolder), com.SanitiseLogString(dbName))
+		log.Printf("Requested database not found. Owner: '%s/%s'", com.SanitiseLogString(dbOwner),
+			com.SanitiseLogString(dbName))
 		httpStatus = http.StatusNotFound
 		return
 	}

@@ -44,7 +44,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer testDB.Close()
-	_, _, _, err = AddDatabase("default", "default", "/", "Assembly Election 2017.sqlite",
+	_, _, _, err = AddDatabase("default", "default", "Assembly Election 2017.sqlite",
 		false, "", "", SetToPublic, "CC-BY-SA-4.0", "Initial commit",
 		"http://data.nicva.org/dataset/assembly-election-2017", testDB, time.Now(), time.Time{},
 		"", "", "", "", nil, "")
@@ -58,7 +58,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer testDB2.Close()
-	_, _, _, err = AddDatabase("default", "default", "/", "Assembly Election 2017 with view.sqlite",
+	_, _, _, err = AddDatabase("default", "default", "Assembly Election 2017 with view.sqlite",
 		false, "", "", SetToPrivate, "CC-BY-SA-4.0", "Initial commit",
 		"http://data.nicva.org/dataset/assembly-election-2017", testDB2, time.Now(), time.Time{},
 		"", "", "", "", nil, "")

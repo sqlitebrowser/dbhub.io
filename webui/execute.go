@@ -35,14 +35,13 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the database exists and the user has access to view it
 	var exists bool
-	exists, err = com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, "/", dbName.Database, true)
+	exists, err = com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbName.Owner, dbName.Folder,
-			dbName.Database))
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s/%s' doesn't exist", dbName.Owner, dbName.Database))
 		return
 	}
 
@@ -51,7 +50,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	// Ensure this is a live database
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbName.Owner, dbName.Folder, dbName.Database)
+	isLive, liveNode, err = com.CheckDBLive(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -62,7 +61,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, "/", dbName.Database, "")
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -146,7 +145,6 @@ func execDel(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Required information is missing")
 		return
 	}
-	dbFolder := "/"
 
 	// Validate input
 	input := com.VisGetFields{
@@ -189,7 +187,7 @@ func execDel(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the logged in user has the permissions to proceed
 	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -243,7 +241,6 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err)
 		return
 	}
-	dbFolder := "/"
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
@@ -257,7 +254,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the requested database exists
 	var exists bool
-	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -265,14 +262,14 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	}
 	if !exists {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Database '%s%s%s' doesn't exist", dbOwner, dbFolder, dbName)
+		fmt.Fprintf(w, "Database '%s/%s' doesn't exist", dbOwner, dbName)
 		return
 	}
 
 	// Make sure this is a live database
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -316,7 +313,6 @@ func execGet(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Required information is missing")
 		return
 	}
-	dbFolder := "/"
 
 	// Validate input
 	input := com.VisGetFields{ // Reuse the visualisation names validation rules
@@ -350,7 +346,7 @@ func execGet(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the logged in user has the permissions to proceed
 	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, false)
+	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -387,7 +383,6 @@ func execSave(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbFolder := "/"
 
 	// SQL statement provided by the user
 	rawSQL := r.FormValue("sql")
@@ -448,7 +443,7 @@ func execSave(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the logged in user has the permissions to proceed
 	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbFolder, dbName, true)
+	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -462,7 +457,7 @@ func execSave(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure this is a live database
 	var isLive bool
-	isLive, _, err = com.CheckDBLive(dbOwner, dbFolder, dbName)
+	isLive, _, err = com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
