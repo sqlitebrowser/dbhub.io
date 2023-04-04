@@ -228,12 +228,16 @@ describe('live visualisation', () => {
 
     // Verify the changed text
     cy.get('[data-cy="usersqltext"]').should('contain',
-      'SELECT table1.Name,\n' +
-      '       table2.value\n' +
-      'FROM table1,\n' +
-      '     table2\n' +
-      'WHERE table1.id = table2.id\n' +
-      'ORDER BY table1.id')
+      'SELECT\n' +
+        '  table1.Name,\n' +
+        '  table2.value\n' +
+        'FROM\n' +
+        '  table1,\n' +
+        '  table2\n' +
+        'WHERE\n' +
+        '  table1.id = table2.id\n' +
+        'ORDER BY\n' +
+        '  table1.id;')
   })
 
   // "Run SQL" button

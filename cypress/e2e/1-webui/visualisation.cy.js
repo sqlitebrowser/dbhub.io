@@ -244,12 +244,16 @@ describe('visualisation', () => {
 
     // Verify the changed text
     cy.get('[data-cy="usersqltext"]').should('contain',
-      'SELECT Constituency_Name,\n' +
-      '       Constituency_Number,\n' +
-      '       Turnout_pct\n' +
-      'FROM Constituency_Turnout_Information\n' +
-      'ORDER BY Constituency_Name DESC\n' +
-      'LIMIT 10')
+      'SELECT\n' +
+        '  Constituency_Name,\n' +
+        '  Constituency_Number,\n' +
+        '  Turnout_pct\n' +
+        'FROM\n' +
+        '  Constituency_Turnout_Information\n' +
+        'ORDER BY\n' +
+        '  Constituency_Name DESC\n' +
+        'LIMIT\n' +
+        '  10')
   })
 
   // "Run SQL" button

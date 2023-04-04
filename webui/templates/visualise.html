@@ -4,6 +4,7 @@
 [[ template "head" . ]]
 <body>
 <script src="/js/plotly-basic-2.18.2.min.js"></script>
+<script src="/js/sql-formatter.min.js"></script>
 [[ template "header" . ]]
 <div>
     <div id="db-header-root"></div>
@@ -712,36 +713,13 @@
             )
         };
 
-        // Quick and dirty formatting of the user provided SQL
-        // Uses the external sqlformat.org API for now.  If this turns out to be used a lot, we should switch to
-        // doing this via our own server.
-        // FIXME: We should probably switch to a better formatting approach
+        // Format the user provided SQL
         $scope.formatSQL = function() {
-            // Send the string for formatting
-            $http({
-                method: "POST",
-                url: "https://sqlformat.org/api/v1/format",
-                data: $httpParamSerializerJQLike({
-                    "sql": userSQL,
-                    "reindent": 1,
-                    "keyword_case": "upper"
-                }),
-                headers: { "Content-Type": "application/x-www-form-urlencoded" }
-            }).then(function success(response) {
-                // Clear any existing status message
-                $scope.statusMessage = "";
-
-                // Update the SQL textarea with the newly formatted version
-                let txtArea = document.getElementById("usersql");
-                txtArea.textContent = response.data.result;
-                txtArea.value = response.data.result;
-                updateSQL();
-
-            }, function failure(response) {
-                // The formatting failed, so display the returned error message
-                $scope.statusMessageColour = "red";
-                $scope.statusMessage = "Formatting failed: " + response.data;
-            });
+            let formatted = window.sqlFormatter.format(userSQL, { language: 'sqlite' });
+            let txtArea = document.getElementById("usersql");
+            txtArea.textContent = formatted;
+            txtArea.value = formatted;
+            updateSQL();
         };
 
         // Save the visualisation for easy later retrieval
