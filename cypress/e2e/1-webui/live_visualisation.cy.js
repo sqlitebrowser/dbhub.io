@@ -3,8 +3,6 @@ import path from "path";
 // Sometimes we need a delay between making a change, and testing it, otherwise the AngularJS changes are missed
 let waitTime = 250;
 
-// TODO: Add a database with a 3rd column, so we can test the Y column change drop down
-
 describe('live visualisation', () => {
   before(() => {
     // Seed data
@@ -98,7 +96,7 @@ describe('live visualisation', () => {
 
   // Chart type drop down
   it('chart type drop down', () => {
-    // Start with the existing "livetest1" test
+    // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="visdropdown"]').click()
     cy.get('[data-cy="vis-livetest1"]').click()
@@ -127,7 +125,7 @@ describe('live visualisation', () => {
 
   // X axis column drop down
   it('X axis column drop down', () => {
-    // Start with the existing "livetest1" test
+    // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="visdropdown"]').click()
     cy.get('[data-cy="vis-livetest1"]').click()
@@ -154,38 +152,50 @@ describe('live visualisation', () => {
     cy.get('[data-cy="yaxiscol"]').should('contain', 'value')
   })
 
-  //// Y axis column drop down
-  // TODO: We'll need a database with a third column before this test can be done
-  //it('Y axis column drop down', () => {
-  //  // Start with the existing "livetest1" test
-  //  cy.visit('/vis/default/Join Testing with index.sqlite')
-  //  cy.get('[data-cy="visdropdown"]').click()
-  //  cy.get('[data-cy="vis-livetest1"]').click()
-  //
-  //  // Switch to the chart settings tab
-  //  cy.get('[data-cy="charttab"]').click()
-  //
-  //  // Change the Y axis column value
-  //  cy.get('[data-cy="yaxisdropdown"]').click()
-  //  cy.get('[data-cy="ycol-Turnout_pct"]').click()
-  //
-  //  // Verify the change
-  //  cy.wait(waitTime)
-  //  cy.get('[data-cy="yaxiscol"]').should('contain', 'Turnout_pct')
-  //  //cy.get('[data-cy="xaxiscol"]').should('contain', 'Constituency_Name')
-  //
-  //  // Switch to a different Y axis column value
-  //  cy.get('[data-cy="yaxisdropdown"]').click()
-  //  cy.get('[data-cy="ycol-Constituency_Number"]').click()
-  //
-  //  // Verify the change
-  //  cy.wait(waitTime)
-  //  cy.get('[data-cy="yaxiscol"]').should('contain', 'Constituency_Number')
-  //})
+  // Y axis column drop down
+  it('Y axis column drop down', () => {
+    // Add a third column to table2
+    cy.visit('/exec/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
+        'ALTER TABLE table2 ADD COLUMN value2 INTEGER DEFAULT 8')
+    cy.get('[data-cy="execsqlbtn"]').click()
+
+    // Create a visualisation with a third column
+    cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
+        'SELECT table1.Name, table2.value, table2.value2\n' +
+        'FROM table1, table2\n' +
+        'WHERE table1.id = table2.id\n' +
+        'ORDER BY table1.id')
+
+    // Click the Run SQL button
+    cy.get('[data-cy="runsqlbtn"]').click()
+
+    // Switch to the chart settings tab
+    cy.get('[data-cy="charttab"]').click()
+
+    // Change the Y axis column value
+    cy.get('[data-cy="yaxisdropdown"]').click()
+    cy.get('[data-cy="ycol-value2"]').click()
+
+    // Verify the change
+    cy.wait(waitTime)
+    cy.get('[data-cy="yaxiscol"]').should('contain', 'value2')
+
+    // Switch to a different Y axis column value
+    cy.get('[data-cy="yaxisdropdown"]').click()
+    cy.get('[data-cy="ycol-value"]').click()
+
+    // Verify the change
+    cy.wait(waitTime)
+    cy.get('[data-cy="yaxiscol"]').should('contain', 'value')
+  })
 
   // "Show result table" button works
   it('Shows results table button works', () => {
-    // Start with the existing "livetest1" test
+    // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="visdropdown"]').click()
     cy.get('[data-cy="vis-livetest1"]').click()
@@ -201,7 +211,7 @@ describe('live visualisation', () => {
   // "Download as CSV" button
   const downloadsFolder = Cypress.config('downloadsFolder')
   it('"Download as CSV" button', () => {
-    // Start with the existing "livetest1" test
+    // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="visdropdown"]').click()
     cy.get('[data-cy="vis-livetest1"]').click()
@@ -218,7 +228,7 @@ describe('live visualisation', () => {
 
   // "Format SQL" button
   it('"Format SQL" button', () => {
-    // Start with the existing "livetest1" test
+    // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="visdropdown"]').click()
     cy.get('[data-cy="vis-livetest1"]').click()
@@ -242,7 +252,7 @@ describe('live visualisation', () => {
 
   // "Run SQL" button
   it('"Run SQL" button', () => {
-    // Start with the existing "livetest1" test
+    // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="visdropdown"]').click()
     cy.get('[data-cy="vis-livetest1"]').click()
@@ -257,7 +267,6 @@ describe('live visualisation', () => {
 
   // "Delete" button
   it('Delete button', () => {
-    // Start with the existing "livetest1" test
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="visdropdown"]').click()
     cy.get('[data-cy="vis-abc"]').click()
