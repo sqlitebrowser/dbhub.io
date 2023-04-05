@@ -666,6 +666,11 @@
                     // Retrieving data failed, so display the returned error message and hide the graph
                     $scope.statusMessageColour = "red";
                     $scope.statusMessage = "Retrieving results failed: " + response.data;
+
+                    // Also hide the old (pre-save) chart, and clear the results row table
+                    $scope.showVis = false;
+                    $scope.db.ColNames = {};
+                    $scope.db.Records = {};
                 }
             )
         };
@@ -778,6 +783,11 @@
                     // The save failed, so display the returned error message
                     $scope.statusMessageColour = "red";
                     $scope.statusMessage = "Saving failed: " + response.data;
+
+                    // Also hide the old (pre-save) chart, and clear the results row table
+                    $scope.showVis = false;
+                    $scope.db.ColNames = {};
+                    $scope.db.Records = {};
                 }
             )
         };
