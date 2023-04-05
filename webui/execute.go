@@ -12,12 +12,12 @@ import (
 
 func executePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Data        com.SQLiteRecordSet
-		DB          com.SQLiteDBinfo
-		PageMeta    PageMetaInfo
-		ParamsGiven bool
-		SQL         string
-		ExecNames   []string
+		Data         com.SQLiteRecordSet
+		DB           com.SQLiteDBinfo
+		PageMeta     PageMetaInfo
+		ParamsGiven  bool
+		SQL          string
+		ExecNames    []string
 		SelectedName string
 	}
 

@@ -41,9 +41,9 @@ func aboutPage(w http.ResponseWriter, r *http.Request) {
 func branchesPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	var pageData struct {
-		Branches      map[string]com.BranchEntry
-		DB            com.SQLiteDBinfo
-		PageMeta      PageMetaInfo
+		Branches map[string]com.BranchEntry
+		DB       com.SQLiteDBinfo
+		PageMeta PageMetaInfo
 	}
 	pageData.PageMeta.Title = "Branch list"
 	pageData.PageMeta.PageSection = "db_data"
@@ -1048,9 +1048,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbFold
 			return
 		}
 		if resp.Error != "" {
+			// An error message was returned from the AMQP backend, so we pass it to the user
 			err = errors.New(resp.Error)
 			log.Println(err)
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 		if resp.Node == "" {
@@ -2142,15 +2143,12 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-	} else {
-		// Ask our AMQP backend for the list of tables and views in the database
-		pageData.DB.Info.Tables, err = com.LiveTablesAndViews(pageData.DB.Info.LiveNode, pageData.PageMeta.LoggedInUser,
-			dbName.Owner, dbName.Database)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-			return
-		}
 
+		// If the default table is blank, use the first one from the table list
+		if pageData.DB.Info.DefaultTable == "" {
+			pageData.DB.Info.DefaultTable = pageData.DB.Info.Tables[0]
+		}
+	} else {
 		// Also request the database size from our AMQP backend
 		pageData.DB.Info.DBEntry.Size, err = com.LiveSize(pageData.DB.Info.LiveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
 		if err != nil {
@@ -2158,11 +2156,6 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-	}
-
-	// If the default table is blank, use the first one from the table list
-	if pageData.DB.Info.DefaultTable == "" {
-		pageData.DB.Info.DefaultTable = pageData.DB.Info.Tables[0]
 	}
 
 	// Render the page

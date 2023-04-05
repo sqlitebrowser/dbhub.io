@@ -2270,7 +2270,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		if resp.Error != "" {
 			err = errors.New(resp.Error)
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "Internal server error")
+			fmt.Fprint(w, resp.Error)
 			log.Println(err)
 			return
 		}
@@ -4678,7 +4678,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		if resp.Error != "" {
 			err = errors.New(resp.Error)
 			log.Println(err)
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
+			errorPage(w, r, http.StatusInternalServerError, resp.Error)
 			return
 		}
 		if resp.Node == "" {
