@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -752,112 +750,20 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string) {
-	pageName := "Render database page"
-
 	var pageData struct {
-		Data     com.SQLiteRecordSet
 		DB       com.SQLiteDBinfo
 		PageMeta PageMetaInfo
-		Config   com.TomlConfig // FIXME: This seems silly to include here, when we just need to provide the server/port info
+		DB4S   com.DB4SInfo
 	}
 
 	pageData.PageMeta.PageSection = "db_data"
+	pageData.DB4S = com.Conf.DB4S
 
 	// Get all meta information
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
-	}
-
-	// Store settings
-	pageData.Config = com.Conf
-
-	// Check if a specific database commit ID was given
-	commitID, err := com.GetFormCommit(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Invalid database commit ID")
-		return
-	}
-
-	// If a table name was supplied, validate it
-	dbTable := r.FormValue("table")
-	if dbTable != "" {
-		// TODO: Figure out a better validation approach than using our current PG one.  SQLite clearly has some way
-		//       of recognising "unicode characters usable in IDs", so the optimal approach is probably to better grok
-		//       tokenize.c and replicate that:
-		//         https://github.com/sqlite/sqlite/blob/f25f8d58349db52398168579a1d696fa4937dc1f/src/tokenize.c#L31
-		err = com.ValidatePGTable(dbTable)
-		if err != nil {
-			// Validation failed, so don't pass on the table name
-			log.Printf("%s: Validation failed for table name: %s", pageName, err)
-			dbTable = ""
-		}
-	}
-
-	// Check if a branch name was requested
-	branchName, err := com.GetFormBranch(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
-		return
-	}
-
-	// Check if a named tag was requested
-	tagName, err := com.GetFormTag(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for tag name")
-		return
-	}
-
-	// Check if a specific release was requested
-	releaseName := r.FormValue("release")
-	if releaseName != "" {
-		err = com.ValidateBranchName(releaseName)
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, "Validation failed for release name")
-			return
-		}
-	}
-
-	// Extract sort column, sort direction, and offset variables if present
-	sortCol := r.FormValue("sort")
-	sortDir := r.FormValue("dir")
-	offsetStr := r.FormValue("offset")
-
-	// If an offset was provided, validate it
-	var rowOffset int
-	if offsetStr != "" {
-		rowOffset, err = strconv.Atoi(offsetStr)
-		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, err.Error())
-			return
-		}
-
-		// Ensure the row offset isn't negative
-		if rowOffset < 0 {
-			rowOffset = 0
-		}
-	}
-
-	// Sanity check the sort column name
-	if sortCol != "" {
-		// Validate the sort column text, as we use it in string smashing SQL queries so need to be even more
-		// careful than usual
-		err = com.ValidateFieldName(sortCol)
-		if err != nil {
-			log.Printf("Validation failed on requested sort field name '%v': %v\n", com.SanitiseLogString(sortCol),
-				err.Error())
-			errorPage(w, r, http.StatusBadRequest, "Validation failed on requested sort field name")
-			return
-		}
-	}
-
-	// If a sort direction was provided, validate it
-	if sortDir != "" {
-		if sortDir != "ASC" && sortDir != "DESC" {
-			errorPage(w, r, http.StatusBadRequest, "Invalid sort direction")
-			return
-		}
 	}
 
 	// Check if the database exists and the user has access to view it
@@ -871,27 +777,42 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		return
 	}
 
-	// * Execution can only get here if the user has access to the requested database *
-
-	// Increment the view counter for the database (excluding people viewing their own databases)
-	if strings.ToLower(pageData.PageMeta.LoggedInUser) != strings.ToLower(dbOwner) {
-		err = com.IncrementViewCount(dbOwner, dbName)
+	// Figure out the correct commit ID from the provided tag, branch, release name or commit id
+	// For live databases these do not exist yet, so this step is skipped.
+	var commitID string
+	branchHeads := make(map[string]com.BranchEntry)
+	if !pageData.DB.Info.IsLive {
+		// Check if a specific database commit ID was given
+		commitID, err = com.GetFormCommit(r)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			errorPage(w, r, http.StatusBadRequest, "Invalid database commit ID")
 			return
 		}
-	}
 
-	// Check if this is a live database
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
+		// Check if a branch name was requested
+		branchName, err := com.GetFormBranch(r)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+			return
+		}
 
-	// Only standard databases have commits, branches, tags (etC)
-	branchHeads := make(map[string]com.BranchEntry)
-	if !isLive {
+		// Check if a named tag was requested
+		tagName, err := com.GetFormTag(r)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Validation failed for tag name")
+			return
+		}
+
+		// Check if a specific release was requested
+		releaseName := r.FormValue("release")
+		if releaseName != "" {
+			err = com.ValidateBranchName(releaseName)
+			if err != nil {
+				errorPage(w, r, http.StatusBadRequest, "Validation failed for release name")
+				return
+			}
+		}
+
 		// If a specific commit was requested, make sure it exists in the database commit history
 		if commitID != "" {
 			commitList, err := com.GetCommitList(dbOwner, dbName)
@@ -964,6 +885,8 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 				return
 			}
 		}
+
+		pageData.DB.Info.Branch = branchName
 	}
 
 	// Retrieve the database details
@@ -973,151 +896,72 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		return
 	}
 
-	// Get the latest discussion and merge request count directly from PG, skipping the ones (incorrectly) stored in memcache
-	currentDisc, currentMRs, err := com.GetDiscussionAndMRCount(dbOwner, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// If a specific table wasn't requested, use the user specified default (if present)
-	if dbTable == "" {
-		// Ensure the default table name validates.  This catches a case where a database was uploaded with an invalid
-		// table name and somehow because selected as the default
-		a := pageData.DB.Info.DefaultTable
-		if a != "" {
-			err = com.ValidatePGTable(a)
-			if err == nil {
-				// The database table name is acceptable, so use it
-				dbTable = pageData.DB.Info.DefaultTable
-			}
+	// For non-live databases, add branch information
+	if !pageData.DB.Info.IsLive {
+		// Retrieve default branch name details
+		if pageData.DB.Info.Branch == "" {
+			pageData.DB.Info.Branch = pageData.DB.Info.DefaultBranch
 		}
-	}
 
-	// Determine the number of rows to display
-	var tempMaxRows int
-	if pageData.PageMeta.LoggedInUser != "" {
-		tempMaxRows = com.PrefUserMaxRows(pageData.PageMeta.LoggedInUser)
-		pageData.DB.MaxRows = tempMaxRows
-	} else {
-		// Not logged in, so use the default number of rows
-		tempMaxRows = com.DefaultNumDisplayRows
-		pageData.DB.MaxRows = tempMaxRows
+		for i := range branchHeads {
+			pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
+		}
+
+		pageData.DB.Info.Commits = branchHeads[pageData.DB.Info.Branch].CommitCount
 	}
 
 	// If it's a standard database then we query it directly, otherwise we query it via our AMQP backend
-	if !isLive {
-		bucket := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
-		id := pageData.DB.Info.DBEntry.Sha256[com.MinioFolderChars:]
-		pageData.DB.Info.Tables, pageData.DB.Info.DefaultTable, pageData.Data, _, err =
-			com.SQLiteReadDatabasePage(bucket, id, pageData.PageMeta.LoggedInUser, dbOwner, dbName, dbTable, sortCol, sortDir, commitID, rowOffset, pageData.DB.MaxRows, false)
+	if !pageData.DB.Info.IsLive {
+		sdb, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbName, commitID, pageData.PageMeta.LoggedInUser)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-			return
-		}
-	} else {
-		// Send the request to our AMQP backend
-		reqData := com.LiveDBRowsRequest{
-			DbTable:   dbTable,
-			SortCol:   sortCol,
-			SortDir:   sortDir,
-			CommitID:  commitID,
-			RowOffset: rowOffset,
-			MaxRows:   pageData.DB.MaxRows,
-		}
-		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "rowdata", pageData.PageMeta.LoggedInUser, dbOwner, dbName, reqData)
-		if err != nil {
-			log.Println(err)
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-			return
-		}
-
-		// Decode the response
-		var resp com.LiveDBRowsResponse
-		err = json.Unmarshal(rawResponse, &resp)
-		if err != nil {
-			log.Println(err)
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-			return
-		}
-		if resp.Error != "" {
-			// An error message was returned from the AMQP backend, so we pass it to the user
-			err = errors.New(resp.Error)
-			log.Println(err)
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		if resp.Node == "" {
-			log.Printf("In webUI (Live) databasePage().  A node responded, but didn't identify itself.")
+		defer sdb.Close()
+		pageData.DB.Info.Tables, err = com.TablesAndViews(sdb, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
-		pageData.DB.Info.DBEntry.Size = resp.DatabaseSize
-		pageData.DB.Info.Tables = resp.Tables
-		pageData.DB.Info.DefaultTable = resp.DefaultTable
-		pageData.Data = resp.RowData
+	} else {
+		pageData.DB.Info.Tables, err = com.LiveTablesAndViews(pageData.DB.Info.LiveNode, pageData.PageMeta.LoggedInUser, dbOwner, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		pageData.DB.Info.DBEntry.Size, err = com.LiveSize(pageData.DB.Info.LiveNode, pageData.PageMeta.LoggedInUser, dbOwner, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	// Fill out various metadata fields
 	pageData.PageMeta.Title = fmt.Sprintf("%s / %s", dbOwner, dbName)
 
-	// Retrieve default branch name details
-	if branchName == "" {
-		branchName = pageData.DB.Info.DefaultBranch
+	// Determine the number of rows to display
+	if pageData.PageMeta.LoggedInUser != "" {
+		pageData.DB.MaxRows = com.PrefUserMaxRows(pageData.PageMeta.LoggedInUser)
+	} else {
+		// Not logged in, so use the default number of rows
+		pageData.DB.MaxRows = com.DefaultNumDisplayRows
 	}
-
-	// Fill out the branch info
-	pageData.DB.Info.BranchList = []string{}
-	if branchName != "" {
-		// If a specific branch was requested, ensure it's the first entry of the drop down
-		pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, branchName)
-	}
-	for i := range branchHeads {
-		if i != branchName {
-			err = com.ValidateBranchName(i)
-			if err == nil {
-				pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
-			}
-		}
-	}
-
-	// Check for duplicate branch names in the returned list, and log the problem so an admin can investigate
-	bCheck2 := map[string]struct{}{}
-	for _, j := range pageData.DB.Info.BranchList {
-		_, ok := bCheck2[j]
-		if !ok {
-			// The branch name value isn't in the map already, so add it
-			bCheck2[j] = struct{}{}
-		} else {
-			// This branch name is already in the map.  Duplicate detected.  This shouldn't happen
-			log.Printf("Duplicate branch name '%s' detected in returned branch list for database '%s/%s', "+
-				"logged in user '%s'", com.SanitiseLogString(j), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), pageData.PageMeta.LoggedInUser)
-		}
-	}
-
-	pageData.DB.Info.Branch = branchName
-	pageData.DB.Info.Commits = branchHeads[branchName].CommitCount
 
 	// Render the full description as markdown
 	pageData.DB.Info.FullDesc = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
 
-	// Restore the correct discussion and MR count
-	pageData.DB.Info.Discussions = currentDisc
-	pageData.DB.Info.MRs = currentMRs
-
-	// If this is a standard database, then cache the table row data
-	if !isLive {
-		rowCacheKey := com.TableRowsCacheKey(fmt.Sprintf("tablejson/%s/%s/%d", sortCol, sortDir, rowOffset),
-			pageData.PageMeta.LoggedInUser, dbOwner, dbName, commitID, dbTable, pageData.DB.MaxRows)
-		err = com.CacheData(rowCacheKey, pageData.Data, com.Conf.Memcache.DefaultCacheTime)
+	// Increment the view counter for the database (excluding people viewing their own databases)
+	if strings.ToLower(pageData.PageMeta.LoggedInUser) != strings.ToLower(dbOwner) {
+		err = com.IncrementViewCount(dbOwner, dbName)
 		if err != nil {
-			log.Printf("%s: Error when caching page data: %v\n", pageName, err)
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
 
 	// Render the page
-	templateName := "databasePage"
-	t := tmpl.Lookup(templateName)
+	t := tmpl.Lookup("databasePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)

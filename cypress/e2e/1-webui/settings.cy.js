@@ -1,3 +1,5 @@
+let waitTime = 250;
+
 describe('settings', () => {
   before(() => {
     // Seed data
@@ -27,7 +29,7 @@ describe('settings', () => {
    // One line description
    it('one line description', () => {
      cy.visit('settings/default/Assembly%20Election%202017.sqlite')
-     cy.get('[data-cy="onelinedescinput"]').should('have.value', 'No description')
+     cy.get('[data-cy="onelinedescinput"]').should('have.value', '')
      cy.get('[data-cy="onelinedescinput"]').type('{selectall}{backspace}Some new description')
      cy.get('[data-cy="savebtn"]').click()
      cy.get('[data-cy="settingslink"]').click()
@@ -111,6 +113,7 @@ describe('settings', () => {
     // Set the database to Private
     cy.get('[data-cy="private"]').click()
     cy.get('[data-cy="savebtn"]').click()
+    cy.wait(waitTime)
 
     // Ensure the database cannot be seen by the other users
     cy.request("/x/test/switchfirst")

@@ -585,7 +585,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbName, commitID string)
 	dbQuery := `
 			SELECT db.date_created, db.last_modified, db.watchers, db.stars, db.discussions, db.merge_requests,
 				$3::text AS commit_id, db.commit_list->$3::text->'tree'->'entries'->0 AS db_entry, db.branches,
-				db.release_count, db.contributors, coalesce(db.one_line_description, 'No description'),
+				db.release_count, db.contributors, coalesce(db.one_line_description, ''),
 				coalesce(db.full_description, 'No full description'), coalesce(db.default_table, ''), db.public,
 				coalesce(db.source_url, ''), db.tags, coalesce(db.default_branch, ''), db.live_db,
 				coalesce(db.live_node, '')
@@ -1329,8 +1329,8 @@ func DiscussionComments(dbOwner, dbName string, discID, comID int) (list []Discu
 // FlushViewCount periodically flushes the database view count from Memcache to PostgreSQL
 func FlushViewCount() {
 	type dbEntry struct {
-		Owner  string
-		Name   string
+		Owner string
+		Name  string
 	}
 
 	// Log the start of the loop
@@ -2970,7 +2970,7 @@ func RenameDatabase(userName, dbName, newName string) error {
 
 	// Log the rename
 	log.Printf("Database renamed from '%s/%s' to '%s/%s'\n", SanitiseLogString(userName), SanitiseLogString(dbName),
-		   SanitiseLogString(userName),SanitiseLogString(newName))
+		SanitiseLogString(userName), SanitiseLogString(newName))
 	return nil
 }
 

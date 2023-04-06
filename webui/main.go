@@ -3200,6 +3200,14 @@ func main() {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "angular-sanitize-1.8.2.min.js.map"))
 	})))
 
+	http.Handle("/js/bootstrap.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "bootstrap.min.js"))
+	})))
+
+	http.Handle("/js/jquery-3.6.4.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "jquery-3.6.4.min.js"))
+	})))
+
 	http.Handle("/js/dbhub.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "dbhub.js"))
 	})))
@@ -4354,6 +4362,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If a sort direction was provided, validate it
+	sortDir = strings.ToUpper(sortDir)
 	if sortDir != "" {
 		if sortDir != "ASC" && sortDir != "DESC" {
 			w.WriteHeader(http.StatusBadRequest)

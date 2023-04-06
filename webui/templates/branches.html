@@ -9,11 +9,11 @@
     <div id="branches"></div>
 </div>
 [[ template "script_db_header" . ]]
-[[ template "footer" . ]]
 <script>
     const branchData = [[ .Branches ]];
     const defaultBranch = [[ .DB.Info.DefaultBranch ]];
 </script>
+[[ template "footer" . ]]
 </body>
 </html>
 [[ end ]]

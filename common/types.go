@@ -64,8 +64,7 @@ const MinioFolderChars = 6
 type QuerySource int
 
 const (
-	QuerySourceWebUI QuerySource = iota
-	QuerySourceDB4S
+	QuerySourceDB4S QuerySource = iota
 	QuerySourceVisualisation
 	QuerySourceAPI
 	QuerySourceInternal

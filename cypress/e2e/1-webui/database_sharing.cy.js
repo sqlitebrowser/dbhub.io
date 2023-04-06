@@ -1,3 +1,5 @@
+let waitTime = 250;
+
 describe('database sharing', () => {
   before(() => {
     // Seed data
@@ -16,6 +18,7 @@ describe('database sharing', () => {
     cy.get('[data-cy="sharedropdown-third"]').click()
     cy.get('[data-cy="sharerw-third"]').click({force: true})
     cy.get('[data-cy="savebtn"]').click()
+    cy.wait(waitTime)
 
     // Upload the test database to the user "first", plus setup some useful database sharing
     cy.request("/x/test/switchfirst")
@@ -35,6 +38,7 @@ describe('database sharing', () => {
     cy.get('[data-cy="sharedropdown-third"]').click()
     cy.get('[data-cy="sharero-third"]').click()
     cy.get('[data-cy="savebtn"]').click()
+    cy.wait(waitTime)
 
     // Upload the test database to the user "second", plus setup some useful database sharing
     cy.request("/x/test/switchsecond")
@@ -54,6 +58,7 @@ describe('database sharing', () => {
     cy.get('[data-cy="sharedropdown-first"]').click()
     cy.get('[data-cy="sharero-first"]').click()
     cy.get('[data-cy="savebtn"]').click()
+    cy.wait(waitTime)
 
     // Upload the test database to the user "third", plus setup some useful database sharing
     cy.request("/x/test/switchthird")
@@ -73,6 +78,7 @@ describe('database sharing', () => {
     cy.get('[data-cy="sharedropdown-second"]').click()
     cy.get('[data-cy="sharero-second"]').click()
     cy.get('[data-cy="savebtn"]').click()
+    cy.wait(waitTime)
 
     // Switch back to the default user
     cy.request("/x/test/switchdefault")

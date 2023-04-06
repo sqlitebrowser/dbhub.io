@@ -123,17 +123,17 @@ describe('database page', () => {
 
   // Table/view dropdown
   it('Table/view dropdown', () => {
-    cy.get('[data-cy="tabledropdown"]').click()
-    cy.get('[data-cy="row-Constituency_Turnout_Information"]').click()
-    cy.get('[data-cy="col-Constituency_Name"]').should('contain', 'Constituency_Name')
+    cy.get('[name="viewtable"]').parent('.react-dropdown-select').click()
+    cy.get('[name="viewtable"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('Constituency_Turnout_Information').click()
+    cy.get('[name="viewtable"]').should('have.value', 'Constituency_Turnout_Information')
   })
 
   // Branch dropdown
   it('Branch dropdown', () => {
-    cy.get('[data-cy="branchname"]').should('contain.text', 'main')
-    cy.get('[data-cy="branchdropdown"]').click()
-    cy.get('[data-cy="branch-stuff"]').click()
-    cy.get('[data-cy="branchname"]').should('contain.text', 'stuff')
+    cy.get('[name="viewbranch"]').should('have.value', 'main')
+    cy.get('[name="viewbranch"]').parent('.react-dropdown-select').click()
+    cy.get('[name="viewbranch"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('stuff').click()
+    cy.get('[name="viewbranch"]').should('have.value', 'stuff')
   })
 
   // New Merge Request button
@@ -207,57 +207,57 @@ describe('database page', () => {
 
   // Click on column header (sort ascending)
   it('Click on column header - 1st time', () => {
-    cy.get('[data-cy="col-Candidate_First_Pref_Votes"]').click()
-    cy.get('[data-cy="datarow-Candidate_First_Pref_Votes"]').should('contain', '27')
+    cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
+    cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '27')
   })
 
   // Click on column header twice (sort descending)
   it('Click on column header - 2nd time', () => {
-    cy.get('[data-cy="col-Candidate_First_Pref_Votes"]').click()
-    cy.get('[data-cy="col-Candidate_First_Pref_Votes"]').click()
-    cy.get('[data-cy="datarow-Candidate_First_Pref_Votes"]').should('contain', '10258')
+    cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
+    cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
+    cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '10258')
   })
 
   // Click on page down button
   it('Page down button', () => {
     // Initial sort to guarantee a stable order
-    cy.get('[data-cy="col-Candidate_First_Pref_Votes"]').click()
+    cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
 
     // Click the button we're testing
     cy.get('[data-cy="pgdnbtn"]').click()
-    cy.get('[data-cy="datarow-Candidate_First_Pref_Votes"]').should('contain', '85')
+    cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '85')
   })
 
   // Click on "go to the last page" button
   it('Last page button', () => {
     // Initial sort to guarantee a stable order
-    cy.get('[data-cy="col-Candidate_First_Pref_Votes"]').click()
+    cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
 
     // Click the button we're testing
     cy.get('[data-cy="lastpgbtn"]').click()
-    cy.get('[data-cy="datarow-Candidate_First_Pref_Votes"]').should('contain', '8881')
+    cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '8881')
   })
 
   // Click on page up button
   it('Page up button', () => {
     // Initial sort to guarantee a stable order
-    cy.get('[data-cy="col-Candidate_First_Pref_Votes"]').click()
+    cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
 
     // Click the button we're testing
     cy.get('[data-cy="lastpgbtn"]').click()
     cy.get('[data-cy="pgupbtn"]').click()
-    cy.get('[data-cy="datarow-Candidate_First_Pref_Votes"]').should('contain', '7786')
+    cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '7786')
   })
 
   // Click on "go to the first page" button
   it('First page button', () => {
     // Initial sort to guarantee a stable order
-    cy.get('[data-cy="col-Candidate_First_Pref_Votes"]').click()
+    cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
 
     // Click the button we're testing
     cy.get('[data-cy="lastpgbtn"]').click()
     cy.get('[data-cy="firstpgbtn"]').click()
-    cy.get('[data-cy="datarow-Candidate_First_Pref_Votes"]').should('contain', '27')
+    cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '27')
   })
 
   // Readme contents

@@ -748,7 +748,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 	}
 
 	// Execute the query and retrieve the data
-	_, _, dataRows, err = SQLiteRunQuery(sdb, QuerySourceWebUI, dbQuery, ignoreBinary, ignoreNull)
+	_, _, dataRows, err = SQLiteRunQuery(sdb, QuerySourceAPI, dbQuery, ignoreBinary, ignoreNull)
 	if err != nil {
 		return dataRows, err
 	}

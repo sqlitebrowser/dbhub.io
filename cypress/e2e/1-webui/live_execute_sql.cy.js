@@ -94,8 +94,8 @@ describe('live execute', () => {
   it('"Execute SQL" button', () => {
     // Load the data view page, and ensure the view we're about to remove is present
     cy.visit('/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="tabledropdown"]').click()
-    cy.get('[data-cy="row-joinedView"]').should('exist')
+    cy.get('[name="viewtable"]').parent('.react-dropdown-select').click()
+    cy.get('[name="viewtable"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('joinedView').should('exist')
 
     // Remove the view using the Execute SQL button
     cy.visit('/exec/default/Join Testing with index.sqlite')
@@ -106,8 +106,8 @@ describe('live execute', () => {
 
     // Verify the view has been removed
     cy.visit('/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="tabledropdown"]').click()
-    cy.get('[data-cy="row-joinedView"]').should('not.exist')
+    cy.get('[name="viewtable"]').parent('.react-dropdown-select').click()
+    cy.get('[name="viewtable"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('joinedView').should('not.exist')
   })
 
   // "Delete" button

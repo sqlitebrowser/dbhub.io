@@ -4,7 +4,9 @@
     "babel-preset-react-app": "^10.0.1",
     "cypress": "^12.3.0",
     "react": "^18.2.0",
+    "react-data-grid": "^7.0.0-beta.28",
     "react-dom": "^18.2.0",
+    "react-dropdown-select": "^4.9.3",
     "react-modal-image": "^2.6.0",
     "react-tabs": "^6.0.0",
     "yarn": "^1.22.19"
