@@ -6,5 +6,14 @@ module.exports = {
 	output: {
 		filename: "dbhub.js",
 		path: path.resolve(__dirname, "js")
+	},
+	module: {
+		rules: [{
+			test: /\.css$/,
+			use: [
+				"style-loader",
+				"css-loader"
+			]
+		}]
 	}
 };

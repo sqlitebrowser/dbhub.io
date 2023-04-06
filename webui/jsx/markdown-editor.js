@@ -2,6 +2,8 @@ const React = require("react");
 const ReactDOM = require("react-dom");
 import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 
+import "react-tabs/style/react-tabs.css";
+
 export default function MarkdownEditor({editorId, rows, placeholder, defaultIndex, initialValue, viewOnly}) {
 	const [previewHtml, setPreviewHtml] = React.useState("");
 
