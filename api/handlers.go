@@ -187,40 +187,12 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Send the columns request to our AMQP backend
-		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "columns", loggedInUser, dbOwner, dbName, table)
+		cols, err = com.LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table)
 		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
+			jsonErr(w, err.Error(), http.StatusBadRequest)
 			log.Println(err)
 			return
 		}
-
-		// Decode the response
-		var resp com.LiveDBColumnsResponse
-		err = json.Unmarshal(rawResponse, &resp)
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
-			return
-		}
-		if resp.Error != "" {
-			if resp.ErrCode == com.AMQPRequestedTableNotPresent {
-				// The AMQP backend said the requested table name isn't in the database.  So, user error rather than
-				// an "internal server error"
-				jsonErr(w, com.AMQPErrorString(resp.ErrCode), http.StatusBadRequest)
-				return
-			}
-
-			// Some other error occurred, so pass it back to the user
-			err = errors.New(resp.Error)
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if resp.Node == "" {
-			log.Printf("In API (Live) columnsHandler().  A node responded, but didn't identify itself.")
-			return
-		}
-		cols = resp.Columns
 	}
 
 	// Transfer the column info into our own structure, for better json formatting

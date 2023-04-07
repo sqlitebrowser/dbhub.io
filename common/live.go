@@ -11,6 +11,7 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	sqlite "github.com/gwenn/gosqlite"
 )
 
 const (
@@ -74,6 +75,32 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 	}
 
 	channel, err = conn.Channel()
+	return
+}
+
+// LiveColumns requests the AMQP backend to return a list of all columns of the given table
+func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns []sqlite.Column, err error) {
+	var rawResponse []byte
+	rawResponse, err = MQRequest(AmqpChan, liveNode, "columns", loggedInUser, dbOwner, dbName, table)
+	if err != nil {
+		return
+	}
+
+	// Decode the response
+	var resp LiveDBColumnsResponse
+	err = json.Unmarshal(rawResponse, &resp)
+	if err != nil {
+		return
+	}
+	if resp.Error != "" {
+		err = errors.New(resp.Error)
+		return
+	}
+	if resp.Node == "" {
+		log.Printf("A node responded to a 'columns' request, but didn't identify itself")
+		return
+	}
+	columns = resp.Columns
 	return
 }
 
