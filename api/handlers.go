@@ -187,7 +187,7 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Send the columns request to our AMQP backend
-		cols, err = com.LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table)
+		cols, _, err = com.LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusBadRequest)
 			log.Println(err)

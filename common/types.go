@@ -385,15 +385,16 @@ type SQLiteDBinfo struct {
 }
 
 type SQLiteRecordSet struct {
-	ColCount  int
-	ColNames  []string
-	Offset    int
-	Records   []DataRow
-	RowCount  int
-	SortCol   string
-	SortDir   string
-	Tablename string
-	TotalRows int
+	ColCount          int
+	ColNames          []string
+	Offset            int
+	PrimaryKeyColumns []string `json:"primaryKeyColumns,omitempty"`
+	Records           []DataRow
+	RowCount          int
+	SortCol           string
+	SortDir           string
+	Tablename         string
+	TotalRows         int
 }
 
 type StatusUpdateEntry struct {

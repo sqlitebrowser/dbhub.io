@@ -10,8 +10,8 @@ import (
 	"sort"
 	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
 	sqlite "github.com/gwenn/gosqlite"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
@@ -79,7 +79,7 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 }
 
 // LiveColumns requests the AMQP backend to return a list of all columns of the given table
-func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns []sqlite.Column, err error) {
+func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns []sqlite.Column, pk []string, err error) {
 	var rawResponse []byte
 	rawResponse, err = MQRequest(AmqpChan, liveNode, "columns", loggedInUser, dbOwner, dbName, table)
 	if err != nil {
@@ -101,6 +101,7 @@ func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns
 		return
 	}
 	columns = resp.Columns
+	pk = resp.PkColumns
 	return
 }
 

@@ -1,7 +1,7 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
-import DataGrid from "react-data-grid";
+import DataGrid, {textEditor} from "react-data-grid";
 import "react-data-grid/lib/styles.css";
 import Select from "react-dropdown-select";
 
@@ -229,6 +229,7 @@ export default function DatabaseView() {
 	const [maxRows, setMaxRows] = React.useState(meta.maxRows);
 	const [rowCount, setRowCount] = React.useState(0);
 	const [sortColumns, setSortColumns] = React.useState([]);
+	const [primaryKeyColumns, setPrimaryKeyColumns] = React.useState([]);
 
 	// Retrieves the branch being viewed
 	function changeBranch(newbranch) {
@@ -248,6 +249,9 @@ export default function DatabaseView() {
 		fetch("/x/table/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&table=" + newTable + "&sort=" + (newSortCol ? newSortCol : "") + "&dir=" + (newSortDir ? newSortDir : "") + "&offset=" + newOffset)
 			.then((response) => response.json())
 			.then(function (data) {
+				// Get primary key columns. They are an optional property
+				let pk = Object.hasOwn(data, "primaryKeyColumns") ? data.primaryKeyColumns : [];
+
 				// Convert data to format required by grid view
 				// TODO Just deliver the data in the right format to begin with
 				let cols = [];
@@ -255,6 +259,8 @@ export default function DatabaseView() {
 					// Remove the rowid column if it was added by the server
 					if (c !== "rowid") {
 						// Add the column
+						// The editing feature is enable if this is a live database and if there is
+						// a primary key here (which excludes views here)
 						cols.push({
 							key: c,
 							name: c,
@@ -265,6 +271,7 @@ export default function DatabaseView() {
 									return props.row[c];
 								}
 							},
+							editor: meta.isLive && pk.length ? textEditor : null
 						});
 					}
 				});
@@ -287,6 +294,60 @@ export default function DatabaseView() {
 				setOffset(data.Offset);
 				setRowCount(data.RowCount);
 				setSortColumns([{columnKey: data.SortCol, direction: data.SortDir}]);
+				setPrimaryKeyColumns(pk);
+			});
+	}
+
+	// This function returns the primary key of a row when it is selected in the data grid.
+	// This can be used for addressing a row
+	function rowKeyGetter(row) {
+		let key = {};
+		primaryKeyColumns.forEach(function(p) {
+			key[p] = row[p];
+		});
+		return JSON.stringify(key);
+	}
+
+	// This function is called when the user tries to edit a row
+	function updateRowData(rows, data) {
+		// Get name of updated column
+		let column = data.column.key;
+
+		// Iterate over the indexes to the changed rows
+		let updateData = [];
+		data.indexes.forEach(function(i) {
+			// Get old value
+			let oldValue = records[i];
+
+			// Get new value
+			let newValues = {};
+			newValues[column] = rows[i][column];
+
+			updateData.push({
+				key: JSON.parse(rowKeyGetter(oldValue)),
+				values: newValues,
+			});
+		});
+
+		// Send data to server
+		fetch("/x/updatedata/" + meta.owner + "/" + meta.database, {
+			method: "post",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({table: table, data: updateData})
+		})
+			.then((response) => {
+				if (!response.ok) {
+					return Promise.reject(response);
+				}
+				setRecords(rows);
+			})
+			.catch((error) => {
+				// TODO Replace this by some prettier status message bar or so
+				error.text().then((text) => {
+					alert("Error updating rows. " + text);
+				});
 			});
 	}
 
@@ -307,25 +368,6 @@ export default function DatabaseView() {
 		}
 	}, []);
 
-	// Convert data to format required by grid view
-	// TODO Just deliver the data in the right format to begin with
-	let cols = [];
-	columns.forEach(function(c) {
-		cols.push({
-			key: c,
-			name: c
-		});
-	});
-
-	let rows = [];
-	records.forEach(function(r) {
-		let row = {};
-		r.forEach(function(c) {
-			row[c.Name] = c.Value;
-		});
-		rows.push(row);
-	});
-
 	return (<>
 		<DatabaseDescription oneLineDescription={meta.oneLineDescription} sourceUrl={meta.sourceUrl} />
 		<DatabaseSubMenu />
@@ -337,10 +379,12 @@ export default function DatabaseView() {
 		<DataGrid
 			className="rdg-light"
 			renderers={{noRowsFallback: <DataGridNoRowsRender />}}
-			columns={cols}
-			rows={rows}
+			columns={columns}
+			rows={records}
 			sortColumns={sortColumns}
 			onSortColumnsChange={(s) => changeView(table, offset, s.length ? s[0].columnKey : null, s.length ? s[0].direction : null)}
+			rowKeyGetter={rowKeyGetter}
+			onRowsChange={updateRowData}
 			defaultColumnOptions={{
 				sortable: true,
 				resizable: true

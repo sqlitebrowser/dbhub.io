@@ -720,8 +720,22 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 		}
 	}
 
+	// Get information on the primary key of the table
+	pk, _, _, err := GetPrimaryKeyAndOtherColumns(sdb, "main", dbTable)
+	if err != nil {
+		log.Printf("error retrieving primary key columns: %s\n", err.Error())
+		return SQLiteRecordSet{}, err
+	}
+
+	// If there is no primary key the rowid column serves as an implicit primary key. In this case
+	// also get the rowid column
+	dbQuery := "SELECT "
+	if len(pk) == 1 && pk[0] == "rowid" {
+		dbQuery += "rowid,"
+	}
+
 	// Construct the main SQL query
-	dbQuery := sqlite.Mprintf(`SELECT * FROM "%w"`, dbTable)
+	dbQuery += sqlite.Mprintf(`* FROM "%w"`, dbTable)
 
 	// If a sort column was given, include it
 	if sortCol != "" {
@@ -761,6 +775,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 	dataRows.RowCount = tmpCount
 
 	// Fill out other data fields
+	dataRows.PrimaryKeyColumns = pk
 	dataRows.Tablename = dbTable
 	dataRows.SortCol = sortCol
 	dataRows.SortDir = sortDir
@@ -972,7 +987,7 @@ func SQLiteExecuteQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string
 }
 
 // SQLiteGetColumnsLive is used by our AMQP backend nodes to retrieve the list of columns from a SQLite database
-func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sqlite.Column, err error, errCode AMQPErrorCode) {
+func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sqlite.Column, pk []string, err error, errCode AMQPErrorCode) {
 	// Open the database on the local node
 	var sdb *sqlite.Conn
 	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
@@ -1001,6 +1016,13 @@ func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sql
 
 	// Retrieve the list of columns for the table
 	columns, err = sdb.Columns("", table)
+
+	// Retrieve a list of primary key columns
+	pk, _, _, err = GetPrimaryKeyAndOtherColumns(sdb, "main", table)
+	if err != nil {
+		return
+	}
+
 	return
 }
 
@@ -1656,17 +1678,34 @@ func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema, table string) (pks [
 	} else {
 		// Implicit primary key
 
-		implicitPk = true
+		// Views do not even have have implicit keys
+		vws, err := Views(sdb)
+		if err != nil {
+			log.Printf("Error retrieving views: %s\n", err)
+			return nil, false, nil, err
+		}
 
-		if !hasColumnRowid {
-			pks = append(pks, "rowid")
-		} else if !hasColumn_Rowid_ {
-			pks = append(pks, "_rowid_")
-		} else if !hasColumnOid {
-			pks = append(pks, "oid")
-		} else {
-			log.Printf("Unreachable rowid column in GetPrimaryKey()\n")
-			return nil, false, nil, errors.New("Unreachable rowid column")
+		isView := false
+		for _, vw := range vws {
+			if vw == table {
+				isView = true
+				break
+			}
+		}
+
+		if isView == false {
+			implicitPk = true
+
+			if !hasColumnRowid {
+				pks = append(pks, "rowid")
+			} else if !hasColumn_Rowid_ {
+				pks = append(pks, "_rowid_")
+			} else if !hasColumnOid {
+				pks = append(pks, "oid")
+			} else {
+				log.Printf("Unreachable rowid column in GetPrimaryKey()\n")
+				return nil, false, nil, errors.New("Unreachable rowid column")
+			}
 		}
 	}
 

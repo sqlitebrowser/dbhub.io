@@ -753,7 +753,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	var pageData struct {
 		DB       com.SQLiteDBinfo
 		PageMeta PageMetaInfo
-		DB4S   com.DB4SInfo
+		DB4S     com.DB4SInfo
 	}
 
 	pageData.PageMeta.PageSection = "db_data"

@@ -17,3 +17,13 @@ type PageMetaInfo struct {
 	Server           string
 	Title            string
 }
+
+type UpdateDataRequestRow struct {
+	Key    map[string]string `json:"key"`
+	Values map[string]string `json:"values"`
+}
+
+type UpdateDataRequest struct {
+	Table string                 `json:"table"`
+	Data  []UpdateDataRequestRow `json:"data"`
+}

@@ -3115,6 +3115,7 @@ func main() {
 	http.Handle("/x/tablenames/", gz.GzipHandler(logReq(tableNamesHandler)))
 	http.Handle("/x/updatebranch/", gz.GzipHandler(logReq(updateBranchHandler)))
 	http.Handle("/x/updatecomment/", gz.GzipHandler(logReq(updateCommentHandler)))
+	http.Handle("/x/updatedata/", gz.GzipHandler(logReq(updateDataHandler)))
 	http.Handle("/x/updatediscuss/", gz.GzipHandler(logReq(updateDiscussHandler)))
 	http.Handle("/x/updaterelease/", gz.GzipHandler(logReq(updateReleaseHandler)))
 	http.Handle("/x/updatetag/", gz.GzipHandler(logReq(updateTagHandler)))
@@ -4847,6 +4848,110 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Update succeeded
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, string(gfm.Markdown([]byte(newTxt))))
+}
+
+// This function updates rows in live databases
+func updateDataHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve user and database
+	dbOwner, dbName, err := com.GetOD(2, r) // 1 = Ignore "/x/updatedata/" at the start of the URL
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve session data (if any)
+	loggedInUser, _, err := checkLogin(r)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the database exists in the system, and the user has write access to it
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Make sure this is a live database
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !isLive {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Get request data
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	var data UpdateDataRequest
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Get column information for table
+	columns, pkColumns, err := com.LiveColumns(liveNode, loggedInUser, dbOwner, dbName, data.Table)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Produce an update statement for each record to update
+	for _, updateData := range data.Data {
+		// Assemble update statement. The concept here is to iterate over all existing columns of the
+		// table and check if a new value was provided for them. If yes, it is added to the update
+		// statement. Afterwards the same procedure is applied to the primary key columns. This means
+		// that all column names are taken from the actual table schema and not from the input.
+		sql := "UPDATE " + com.EscapeId(data.Table) + " SET "
+
+		for _, c := range columns {
+			if newVal, ok := updateData.Values[c.Name]; ok {
+				sql += com.EscapeId(c.Name) + "=" + com.EscapeValue(com.DataValue{Name: "", Type: com.Text, Value: newVal}) + ","
+			}
+		}
+		sql = strings.TrimSuffix(sql, ",")
+
+		sql += " WHERE "
+
+		for _, p := range pkColumns {
+			pkVal, ok := updateData.Key[p]
+			if !ok {
+				// All primary key columns must be specified
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			sql += com.EscapeId(p) + "=" + com.EscapeValue(com.DataValue{Name: "", Type: com.Text, Value: pkVal}) + " AND "
+		}
+		sql = strings.TrimSuffix(sql, " AND ")
+
+		// Send an SQL execution request to our AMQP backend
+		rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
+		if err != nil {
+			log.Println(err)
+			fmt.Fprintf(w, "%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if rowsChanged != 1 {
+			fmt.Fprintf(w, "%v rows changed", rowsChanged)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	return
 }
 
 // This function processes discussion title and body text updates.

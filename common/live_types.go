@@ -8,10 +8,11 @@ import (
 
 // LiveDBColumnsResponse holds the fields used for receiving column list responses from our AMQP backend
 type LiveDBColumnsResponse struct {
-	Node    string          `json:"node"`
-	Columns []sqlite.Column `json:"columns"`
-	Error   string          `json:"error"`
-	ErrCode AMQPErrorCode   `json:"error_code"`
+	Node      string          `json:"node"`
+	Columns   []sqlite.Column `json:"columns"`
+	PkColumns []string        `json:"pkColuns"`
+	Error     string          `json:"error"`
+	ErrCode   AMQPErrorCode   `json:"error_code"`
 }
 
 // LiveDBErrorResponse holds just the node name and any error message used in responses by our AMQP backend
