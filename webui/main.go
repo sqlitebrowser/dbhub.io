@@ -2105,6 +2105,99 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// This function deletes some records in a table of a live database
+func deleteDataHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve user and database
+	dbOwner, dbName, err := com.GetOD(2, r) // 1 = Ignore "/x/deletedata/" at the start of the URL
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve session data (if any)
+	loggedInUser, _, err := checkLogin(r)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the database exists in the system, and the user has write access to it
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Make sure this is a live database
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !isLive {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Get request data
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	var data UpdateDataRequest
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Get column information for table
+	_, pkColumns, err := com.LiveColumns(liveNode, loggedInUser, dbOwner, dbName, data.Table)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Produce an delete statement for each record to delete
+	for _, deleteData := range data.Data {
+		// Assemble delete statement. The concept here is to iterate over all primary key columns.
+		// This means that all column names are taken from the actual table schema and not from the input.
+		sql := "DELETE FROM " + com.EscapeId(data.Table) + " WHERE "
+
+		for _, p := range pkColumns {
+			pkVal, ok := deleteData.Key[p]
+			if !ok {
+				// All primary key columns must be specified
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			sql += com.EscapeId(p) + "=" + com.EscapeValue(com.DataValue{Name: "", Type: com.Text, Value: pkVal}) + " AND "
+		}
+		sql = strings.TrimSuffix(sql, " AND ")
+
+		// Send an SQL execution request to our AMQP backend
+		rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
+		if err != nil {
+			log.Println(err)
+			fmt.Fprintf(w, "%v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if rowsChanged != 1 {
+			fmt.Fprintf(w, "%v rows deleted", rowsChanged)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	return
+}
+
 // This function deletes a database.
 func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete Database handler"
@@ -3093,6 +3186,7 @@ func main() {
 	http.Handle("/x/deletebranch/", gz.GzipHandler(logReq(deleteBranchHandler)))
 	http.Handle("/x/deletecomment/", gz.GzipHandler(logReq(deleteCommentHandler)))
 	http.Handle("/x/deletecommit/", gz.GzipHandler(logReq(deleteCommitHandler)))
+	http.Handle("/x/deletedata/", gz.GzipHandler(logReq(deleteDataHandler)))
 	http.Handle("/x/deletedatabase/", gz.GzipHandler(logReq(deleteDatabaseHandler)))
 	http.Handle("/x/deleterelease/", gz.GzipHandler(logReq(deleteReleaseHandler)))
 	http.Handle("/x/deletetag/", gz.GzipHandler(logReq(deleteTagHandler)))

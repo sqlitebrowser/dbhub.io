@@ -1,9 +1,11 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
-import DataGrid, {textEditor} from "react-data-grid";
+import DataGrid, {SelectColumn, textEditor} from "react-data-grid";
 import "react-data-grid/lib/styles.css";
 import Select from "react-dropdown-select";
+import { confirmAlert } from "react-confirm-alert";
+import "react-confirm-alert/src/react-confirm-alert.css";
 
 export function DatabaseDescription({oneLineDescription, sourceUrl}) {
 	if (oneLineDescription === false && sourceUrl === false) {
@@ -86,7 +88,7 @@ export function DatabaseSubMenu() {
 	);
 }
 
-export function DatabaseActions({table, setTable, setBranch}) {
+export function DatabaseActions({table, numSelectedRows, setTable, setBranch, deleteSelectedRows}) {
 	// This function generates custom render function for rendering the dropdown field for table and branch selection.
 	// It prints the currently selected item name as usual but adds a label as a prefix
 	const dropdownContentRendererWithLabel = function(label) {
@@ -132,12 +134,8 @@ export function DatabaseActions({table, setTable, setBranch}) {
 		);
 	}
 
-	return (
-		<div className="row" style={{paddingBottom: "10px"}}>
-			<div className="col-md-8">
-				<span className="pull-left" style={{whiteSpace: "nowrap"}}>
-					{tableSelection}&nbsp;
-					{branchSelection}&nbsp;
+	return (<>
+		<div className="row" style={{paddingBottom: "10px"}}> <div className="col-md-8"> <span className="pull-left" style={{whiteSpace: "nowrap"}}> {tableSelection}&nbsp; {branchSelection}&nbsp;
 					{authInfo.loggedInUser && !meta.isLive ? <a href={"/compare/" + meta.owner + "/" + meta.database} className="btn btn-primary" data-cy="newmrbtn">New Merge Request</a> : null}&nbsp;
 					{authInfo.loggedInUser && !meta.isLive ? <a href={"/upload/?username=" + meta.owner + "&dbname=" + meta.database + "&branch=" + meta.branch} className="btn btn-primary" data-cy="uploadbtn">Upload database</a> : null}
 				</span>
@@ -167,7 +165,14 @@ export function DatabaseActions({table, setTable, setBranch}) {
 				</div>
 			) : null}
 		</div>
-	);
+		{meta.isLive ? (
+			<div className="row" style={{paddingBottom: "10px"}}><div className="col-md-12">
+				<button type="button" className="btn btn-danger btn-sm" disabled={numSelectedRows > 0 ? null : "disabled"} onClick={() => deleteSelectedRows()}>
+					<span className="glyphicon glyphicon-remove" aria-hidden="true"></span> Delete selected
+				</button>
+			</div></div>
+		) : null}
+	</>);
 }
 
 function DatabasePageControls({offset, maxRows, rowCount, setOffset}) {
@@ -230,6 +235,7 @@ export default function DatabaseView() {
 	const [rowCount, setRowCount] = React.useState(0);
 	const [sortColumns, setSortColumns] = React.useState([]);
 	const [primaryKeyColumns, setPrimaryKeyColumns] = React.useState([]);
+	const [selectedRows, setSelectedRows] = React.useState(null);
 
 	// Retrieves the branch being viewed
 	function changeBranch(newbranch) {
@@ -237,9 +243,9 @@ export default function DatabaseView() {
 	}
 
 	// Retrieves table data for a different table or offset
-	function changeView(newTable, newOffset, newSortCol, newSortDir) {
+	function changeView(newTable, newOffset, newSortCol, newSortDir, force) {
 		// If neither table nor offset have changed do nothing
-		if (table === newTable && offset === newOffset && sortColumns.length && sortColumns[0].columnKey === newSortCol && sortColumns[0].direction === newSortDir) {
+		if (force !== true && table === newTable && offset === newOffset && sortColumns.length && sortColumns[0].columnKey === newSortCol && sortColumns[0].direction === newSortDir) {
 			return;
 		}
 
@@ -252,15 +258,25 @@ export default function DatabaseView() {
 				// Get primary key columns. They are an optional property
 				let pk = Object.hasOwn(data, "primaryKeyColumns") ? data.primaryKeyColumns : [];
 
+				// The editing features are enabled if this is a live database and if there is
+				// a primary key here (which excludes views here)
+				let editable = false;
+				if (meta.isLive === true && pk.length > 0) {
+					editable = true;
+				}
+
+				// For editable tables put a select column at the beginning of a row
+				let cols = [];
+				if (editable === true) {
+					cols = [SelectColumn];
+				}
+
 				// Convert data to format required by grid view
 				// TODO Just deliver the data in the right format to begin with
-				let cols = [];
 				data.ColNames.forEach(function(c) {
 					// Remove the rowid column if it was added by the server
 					if (c !== "rowid") {
 						// Add the column
-						// The editing feature is enable if this is a live database and if there is
-						// a primary key here (which excludes views here)
 						cols.push({
 							key: c,
 							name: c,
@@ -271,7 +287,7 @@ export default function DatabaseView() {
 									return props.row[c];
 								}
 							},
-							editor: meta.isLive && pk.length ? textEditor : null
+							editor: editable ? textEditor : null
 						});
 					}
 				});
@@ -295,6 +311,7 @@ export default function DatabaseView() {
 				setRowCount(data.RowCount);
 				setSortColumns([{columnKey: data.SortCol, direction: data.SortDir}]);
 				setPrimaryKeyColumns(pk);
+				setSelectedRows(null);
 			});
 	}
 
@@ -351,6 +368,55 @@ export default function DatabaseView() {
 			});
 	}
 
+	// Delete the currently selected rows
+	function deleteSelectedRows() {
+		// Iterate over the indexes to the selected rows
+		let data = [];
+		selectedRows.forEach(function(v) {
+			data.push({key: JSON.parse(v)});
+		});
+
+		// Send data to server
+		fetch("/x/deletedata/" + meta.owner + "/" + meta.database, {
+			method: "post",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({table: table, data: data})
+		})
+			.then((response) => {
+				if (!response.ok) {
+					return Promise.reject(response);
+				}
+
+				// If the delete process was successful, reload the page
+				changeView(table, offset, sortColumns.length ? sortColumns[0].columnKey : null, sortColumns.length ? sortColumns[0].direction : null, true);
+			})
+			.catch((error) => {
+				// TODO Replace this by some prettier status message bar or so
+				error.text().then((text) => {
+					alert("Error deleting rows. " + text);
+				});
+			});
+	}
+
+	// This function wraps deleteSelectedRows to show a confirmation message box before actually deleting the data
+	function confirmDeleteSelectedRows() {
+		confirmAlert({
+			title: "Confirm delete",
+			message: "Are you sure you want to delete the " + selectedRows.size + " selected row(s)?",
+			buttons: [
+				{
+					label: 'Yes',
+					onClick: () => deleteSelectedRows()
+				},
+				{
+					label: 'No'
+				}
+			]
+		});
+	}
+
 	// Initial load of the first table when first rendering the component
 	React.useEffect(() => {
 		// If provided, we use the values from the URL as default parameters
@@ -375,6 +441,8 @@ export default function DatabaseView() {
 			table={table}
 			setBranch={changeBranch}
 			setTable={(newTable) => {if (newTable !== table) { changeView(newTable, 0); }}}
+			numSelectedRows={selectedRows ? selectedRows.size : 0}
+			deleteSelectedRows={confirmDeleteSelectedRows}
 		/>
 		<DataGrid
 			className="rdg-light"
@@ -385,6 +453,8 @@ export default function DatabaseView() {
 			onSortColumnsChange={(s) => changeView(table, offset, s.length ? s[0].columnKey : null, s.length ? s[0].direction : null)}
 			rowKeyGetter={rowKeyGetter}
 			onRowsChange={updateRowData}
+			selectedRows={selectedRows}
+			onSelectedRowsChange={setSelectedRows}
 			defaultColumnOptions={{
 				sortable: true,
 				resizable: true

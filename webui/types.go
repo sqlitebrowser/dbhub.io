@@ -20,7 +20,7 @@ type PageMetaInfo struct {
 
 type UpdateDataRequestRow struct {
 	Key    map[string]string `json:"key"`
-	Values map[string]string `json:"values"`
+	Values map[string]string `json:"values,omitempty"`
 }
 
 type UpdateDataRequest struct {
