@@ -88,7 +88,7 @@ export function DatabaseSubMenu() {
 	);
 }
 
-export function DatabaseActions({table, numSelectedRows, setTable, setBranch, deleteSelectedRows}) {
+export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, setBranch, insertRow, deleteSelectedRows}) {
 	// This function generates custom render function for rendering the dropdown field for table and branch selection.
 	// It prints the currently selected item name as usual but adds a label as a prefix
 	const dropdownContentRendererWithLabel = function(label) {
@@ -167,6 +167,9 @@ export function DatabaseActions({table, numSelectedRows, setTable, setBranch, de
 		</div>
 		{meta.isLive ? (
 			<div className="row" style={{paddingBottom: "10px"}}><div className="col-md-12">
+				<button type="button" className="btn btn-primary btn-sm" disabled={allowInsert ? null : "disabled"} onClick={() => insertRow()}>
+					<span className="glyphicon glyphicon-plus" aria-hidden="true"></span> Insert empty row
+				</button>&nbsp;
 				<button type="button" className="btn btn-danger btn-sm" disabled={numSelectedRows > 0 ? null : "disabled"} onClick={() => deleteSelectedRows()}>
 					<span className="glyphicon glyphicon-remove" aria-hidden="true"></span> Delete selected
 				</button>
@@ -417,6 +420,28 @@ export default function DatabaseView() {
 		});
 	}
 
+	// This function requests the server to insert a new empty row into the table. It then reloads the current view to
+	// allowing editing of the new row.
+	function insertRow() {
+		fetch("/x/insertdata/" + meta.owner + "/" + meta.database + "?table=" + table, {
+			method: "post",
+		})
+			.then((response) => {
+				if (!response.ok) {
+					return Promise.reject(response);
+				}
+
+				// If the insert was successful reload the page
+				changeView(table, offset, sortColumns.length ? sortColumns[0].columnKey : null, sortColumns.length ? sortColumns[0].direction : null, true);
+			})
+			.catch((error) => {
+				// TODO Replace this by some prettier status message bar or so
+				error.text().then((text) => {
+					alert("Error inserting row. " + text);
+				});
+			});
+	}
+
 	// Initial load of the first table when first rendering the component
 	React.useEffect(() => {
 		// If provided, we use the values from the URL as default parameters
@@ -439,10 +464,12 @@ export default function DatabaseView() {
 		<DatabaseSubMenu />
 		<DatabaseActions
 			table={table}
+			numSelectedRows={selectedRows ? selectedRows.size : 0}
+			allowInsert={meta.isLive && primaryKeyColumns.length}
 			setBranch={changeBranch}
 			setTable={(newTable) => {if (newTable !== table) { changeView(newTable, 0); }}}
-			numSelectedRows={selectedRows ? selectedRows.size : 0}
 			deleteSelectedRows={confirmDeleteSelectedRows}
+			insertRow={insertRow}
 		/>
 		<DataGrid
 			className="rdg-light"

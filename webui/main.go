@@ -2991,6 +2991,74 @@ func getDatabaseName(r *http.Request) (db com.DatabaseName, err error) {
 	return
 }
 
+// This function tries to insert an empty row into a table of a live database
+func insertDataHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve user, database, and table
+	dbOwner, dbName, table, err := com.GetODT(2, r) // 2 = Ignore "/x/insertdata/" at the start of the URL
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve session data (if any)
+	loggedInUser, _, err := checkLogin(r)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Make sure the database exists in the system, and the user has write access to it
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Make sure this is a live database
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !isLive {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Get column information for table
+	// We ignore this at the moment but it is going to be used later when adding support
+	// for inserting specific values. It also implies a check whether the requested table
+	// exists.
+	_, _, err = com.LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Produce an insert statement which attempts to insert a new record with default values
+	sql := "INSERT INTO " + com.EscapeId(table) + " DEFAULT VALUES"
+
+	// Send an SQL execution request to our AMQP backend
+	rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
+	if err != nil {
+		log.Println(err)
+		fmt.Fprintf(w, "%v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if rowsChanged != 1 {
+		fmt.Fprintf(w, "%v rows inserted", rowsChanged)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	return
+}
+
 // Removes the logged in users session information.
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Remove session info
@@ -3200,6 +3268,7 @@ func main() {
 	http.Handle("/x/execsql/", gz.GzipHandler(logReq(visExecuteSQL)))
 	http.Handle("/x/forkdb/", gz.GzipHandler(logReq(forkDBHandler)))
 	http.Handle("/x/gencert", gz.GzipHandler(logReq(generateCertHandler)))
+	http.Handle("/x/insertdata/", gz.GzipHandler(logReq(insertDataHandler)))
 	http.Handle("/x/markdownpreview/", gz.GzipHandler(logReq(markdownPreview)))
 	http.Handle("/x/mergerequest/", gz.GzipHandler(logReq(mergeRequestHandler)))
 	http.Handle("/x/savesettings", gz.GzipHandler(logReq(saveSettingsHandler)))
