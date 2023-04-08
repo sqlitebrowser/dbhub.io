@@ -58,7 +58,7 @@ export default function DbHeader() {
 				count={meta.numForks}
 				cyToggle="forksbtn"
 				cyPage="forkspagebtn"
-				disabled={meta.owner == authInfo.loggedInUser}
+				disabled={meta.owner === authInfo.loggedInUser}
 			/>
 		);
 
@@ -76,7 +76,7 @@ export default function DbHeader() {
 
 	let settings = null;
 	if (authInfo.loggedIn) {
-		settings = <label id="settings" className={meta.pageSection == "db_settings" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/settings/" + meta.owner + "/" + meta.database} className="blackLink" title="Settings" data-cy="settingslink"><i className="fa fa-cog"></i> Settings</a></label>;
+		settings = <label id="settings" className={meta.pageSection === "db_settings" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/settings/" + meta.owner + "/" + meta.database} className="blackLink" title="Settings" data-cy="settingslink"><i className="fa fa-cog"></i> Settings</a></label>;
 	}
 
 	let publicString = "Private";
@@ -85,17 +85,17 @@ export default function DbHeader() {
 	}
 
 	let visibility = null;
-	if (meta.owner == authInfo.loggedInUser) {
+	if (meta.owner === authInfo.loggedInUser) {
 		visibility = <><b>Visibility:</b> <a className="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="vis">{publicString}</a></>;
 	} else {
 		visibility = <><b>Visibility:</b> <span data-cy="vis">{publicString}</span></>;
 	}
 
 	let licence = null;
-	if (meta.owner == authInfo.loggedInUser) {
+	if (meta.owner === authInfo.loggedInUser) {
 		licence = <><b>Licence:</b> <a className="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="lic">{ meta.licence }</a></>;
 	} else {
-		if (meta.licenceUrl != "") {
+		if (meta.licenceUrl !== "") {
 			licence = <><b>Licence:</b> <a className="blackLink" href={ meta.licenceURL } data-cy="licurl">{ meta.licence }</a></>;
 		} else {
 			licence = <><b>Licence:</b> <span data-cy="licurl">{ meta.licence }</span></>;
@@ -146,23 +146,23 @@ export default function DbHeader() {
 		</div>
 		<div className="row" style={{paddingBottom: "5px", paddingTop: "10px"}}>
 		    <div className="col-md-6">
-			<label id="viewdata" className={meta.pageSection == "db_data" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/" + meta.owner + "/" + meta.database} className="blackLink" title="Data" data-cy="datalink"><i className="fa fa-database"></i> Data</a></label>
+			<label id="viewdata" className={meta.pageSection === "db_data" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/" + meta.owner + "/" + meta.database} className="blackLink" title="Data" data-cy="datalink"><i className="fa fa-database"></i> Data</a></label>
 
 			&nbsp; &nbsp; &nbsp;
 
-			<label id="viewvis" className={meta.pageSection == "db_vis" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/vis/" + meta.owner + "/" + meta.database} className="blackLink" title="Visualise" data-cy="vislink"><i className="fa fa-bar-chart"></i> Visualise</a></label>
+			<label id="viewvis" className={meta.pageSection === "db_vis" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/vis/" + meta.owner + "/" + meta.database} className="blackLink" title="Visualise" data-cy="vislink"><i className="fa fa-bar-chart"></i> Visualise</a></label>
 
 			&nbsp; &nbsp; &nbsp;
 
-			{meta.isLive ? <label id="viewexec" className={meta.pageSection == "db_exec" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/exec/" + meta.owner + "/" + meta.database} className="blackLink" title="Execute SQL" data-cy="execlink"><i className="fa fa-wrench"></i> Execute SQL</a></label> : null }
+			{meta.isLive ? <label id="viewexec" className={meta.pageSection === "db_exec" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/exec/" + meta.owner + "/" + meta.database} className="blackLink" title="Execute SQL" data-cy="execlink"><i className="fa fa-wrench"></i> Execute SQL</a></label> : null }
 
 			{meta.isLive ? <span>&nbsp; &nbsp; &nbsp;</span> : null }
 
-			{meta.isLive ? null : <label id="viewdiscuss" className={meta.pageSection == "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} className="blackLink" title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>}
+			{meta.isLive ? null : <label id="viewdiscuss" className={meta.pageSection === "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} className="blackLink" title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>}
 
 			{meta.isLive ? null : <span>&nbsp; &nbsp; &nbsp;</span> }
 
-			{meta.isLive ? null : <label id="viewmrs" className={meta.pageSection == "db_merge" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/merge/" + meta.owner + "/" + meta.database} className="blackLink" title="Merge Requests" data-cy="mrlink"><i className="fa fa-clone"></i> Merge Requests:</a> {meta.numMRs}</label>}
+			{meta.isLive ? null : <label id="viewmrs" className={meta.pageSection === "db_merge" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/merge/" + meta.owner + "/" + meta.database} className="blackLink" title="Merge Requests" data-cy="mrlink"><i className="fa fa-clone"></i> Merge Requests:</a> {meta.numMRs}</label>}
 
 			{meta.isLive ? null : <span>&nbsp; &nbsp; &nbsp;</span> }
 

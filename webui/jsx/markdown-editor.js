@@ -43,7 +43,7 @@ export default function MarkdownEditor({editorId, rows, placeholder, defaultInde
 	// After first rendering the component, make sure to get the markdown render from the
 	// server
 	React.useEffect(() => {
-		if (defaultIndex == 1) {
+		if (defaultIndex === 1) {
 			tabChanged(1);
 		}
 	}, []);
