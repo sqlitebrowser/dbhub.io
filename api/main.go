@@ -10,9 +10,6 @@ package main
 //        returning the commit ID for the upload.  We'll probably return that field with a blank value for live
 //        databases though.  TBD.
 
-// FIXME: We should probably add a "changelog.html" page to the API server, and record the differences between each
-//        version of the API we release
-
 // FIXME: After the API and webui pieces are done, figure out how the DB4S end
 //        point and dio should be updated to use live databases too
 
