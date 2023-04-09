@@ -4,17 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"sort"
-	"time"
 
 	sqlite "github.com/gwenn/gosqlite"
-	"github.com/minio/minio-go"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
@@ -613,85 +610,14 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Was a user agent part of the request?
-	var userAgent string
-	if ua, ok := r.Header["User-Agent"]; ok {
-		userAgent = ua[0]
-	}
-
-	// Check if the database is a live database, and get the node/queue to send the request to
-	var isLive bool
-	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Return the requested database to the user
-	if !isLive {
-		// It's a standard database
-		_, err = com.DownloadDatabase(w, r, dbOwner, dbName, commitID, loggedInUser, "api")
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		return
-	}
-
-	// It's a live database, so we tell the AMQP backend to back up it up into Minio, which we then provide to the user
-	var rawResponse []byte
-	rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "backup", loggedInUser, dbOwner, dbName, "")
+	_, err = com.DownloadDatabase(w, r, dbOwner, dbName, commitID, loggedInUser, "api")
 	if err != nil {
-		return
-	}
-
-	// Decode the response
-	var resp com.LiveDBErrorResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		log.Println(err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	return
 
-	// If the backup failed, then provide the error message to the user
-	if resp.Error != "" {
-		jsonErr(w, resp.Error, http.StatusBadRequest)
-		return
-	}
-
-	// Open a connection to Minio for the file
-	var bucket = fmt.Sprintf("live-%s", dbOwner)
-	dbData, err := com.MinioHandle(bucket, dbName)
-	if err != nil {
-		return
-	}
-	defer com.MinioHandleClose(dbData)
-
-	// Get the file details
-	var stat minio.ObjectInfo
-	stat, err = dbData.Stat()
-	if err != nil {
-		return
-	}
-
-	// Make a record of the download
-	err = com.LogDownload(dbOwner, dbName, loggedInUser, r.RemoteAddr, "api LIVE", userAgent,
-		time.Now(), fmt.Sprintf("%s/%s", dbOwner, dbName))
-	if err != nil {
-		return
-	}
-
-	// Send the database to the user
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, dbName))
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", stat.Size))
-	w.Header().Set("Content-Type", "application/x-sqlite3")
-	_, err = io.Copy(w, dbData)
-	if err != nil {
-		log.Printf("Error sending live database file to the user: %v\n", err)
-		return
-	}
 }
 
 // executeHandler executes a SQL query on a SQLite database.  It's used for running SQL queries which don't
