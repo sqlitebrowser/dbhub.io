@@ -262,6 +262,6 @@ describe('database page', () => {
 
   // Readme contents
   it('Repo description', () => {
-    cy.get('[data-cy="repodescrip"]').should('contain', 'No full description')
+    cy.get('[data-cy="repodescrip"]').should('not.exist')
   })
 })

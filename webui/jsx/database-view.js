@@ -8,7 +8,7 @@ import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 
 export function DatabaseDescription({oneLineDescription, sourceUrl}) {
-	if (oneLineDescription === false && sourceUrl === false) {
+	if (oneLineDescription === "" && sourceUrl === "") {
 		return;
 	}
 
@@ -25,6 +25,10 @@ export function DatabaseDescription({oneLineDescription, sourceUrl}) {
 }
 
 export function DatabaseFullDescription({description}) {
+	if (description === '<p>No full description</p>\n') {
+		return;
+	}
+
 	return (
 		<div className="row" style={{border: "none"}}>
 			<div className="col-md-12" style={{border: "none"}}>
