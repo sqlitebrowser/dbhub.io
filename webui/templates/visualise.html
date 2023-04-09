@@ -681,9 +681,23 @@
             let encoded = base64url(userSQL);
             $http.get("/x/execsql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
                 function success(response) {
+                    // Construct a timestamp for the success message
+                    let now = new Date();
+                    let m = now.getMinutes();
+                    let s = now.getSeconds()
+                    let mins, seconds;
+                    mins = m;
+                    seconds = s;
+                    if (m < 10) {
+                        mins = '0' + m;
+                    }
+                    if (s < 10) {
+                        seconds = '0' + s;
+                    }
+
                     // Give a useful "success" status message
                     $scope.statusMessageColour = "green";
-                    $scope.statusMessage = "SQL run successful";
+                    $scope.statusMessage = "[" + now.getHours() + ":" + mins + ":" + seconds + "] SQL run successful";
 
                     // Update table data
                     $scope.db = response.data;
