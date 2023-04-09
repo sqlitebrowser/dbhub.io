@@ -4,7 +4,11 @@ const ReactDOM = require("react-dom");
 import MarkdownEditor from "./markdown-editor";
 
 function BranchesTableRow({name, commit, description, setStatus}) {
+	// This is the branch name currently shown in the front end
 	const [branchName, setName] = React.useState(name);
+
+	// This is the branch name currently saved in the database on the server
+	const [savedBranchName, setSavedBranchName] = React.useState(name);
 
 	function updateBranch() {
 		let newDesc = document.getElementById(name + "_desc").value;
@@ -15,7 +19,7 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 				"Content-Type": "application/x-www-form-urlencoded"
 			},
 			body: new URLSearchParams({
-				"branch": name,
+				"branch": savedBranchName,
 				"dbname": meta.database,
 				"username": meta.owner,
 				"newdesc": newDesc,
@@ -26,6 +30,7 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 				return Promise.reject(response);
 			}
 
+			setSavedBranchName(newName);
 			setStatus("green", "Branch updated");
 		})
 		.catch((error) => {
