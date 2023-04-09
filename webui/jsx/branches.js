@@ -99,7 +99,7 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 			</td>
 			<td style={{borderStyle: "none"}}>
 				{authInfo.loggedInUser === meta.owner ?
-					<input name={name + "_name"} id={name + "_name"} size="20" maxlength="20" value={branchName} data-cy="nameinput" onChange={(e) => setName(e.target.value)}/>
+					<input name={name + "_name"} id={name + "_name"} size="20" maxlength="20" value={branchName} data-cy="nameinput" onChange={(e) => setName(e.target.value)} required />
 				:
 					<div style={{paddingTop: "8px"}}>
 						<a class="blackLink" href={"/" + meta.owner + "/" + meta.database + "?branch=" + name}>{name}</a>

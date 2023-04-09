@@ -440,7 +440,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	branchName, err := com.GetFormBranch(r)
-	if err != nil {
+	if err != nil || branchName == "" {
 		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect branch name")
 		return
 	}
@@ -4864,6 +4864,15 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	// For renames check if the new branch name already exists
+	if branchName != newName {
+		_, alreadyExists := branches[newName]
+		if alreadyExists {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	// If the branch being changed is the default branch, and it's being renamed, we need to update the default branch
