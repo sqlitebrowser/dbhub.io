@@ -3869,6 +3869,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get live status
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Extract the form variables
 	oneLineDesc := r.PostFormValue("onelinedesc")
 	newName := r.PostFormValue("newname")
@@ -3877,25 +3884,35 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	licences := r.PostFormValue("licences")
 	sharesRaw := r.PostFormValue("shares")
 
-	// Validate the licence names
+	// Licence and branch information is only provided for non-live databases
 	branchLics := make(map[string]string)
-	err = json.Unmarshal([]byte(licences), &branchLics)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-	for bName, lName := range branchLics {
-		err = com.ValidateLicence(lName)
+	var defBranch string
+	if !isLive {
+		// Validate the licence names
+		err = json.Unmarshal([]byte(licences), &branchLics)
 		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, fmt.Sprintf(
-				"Validation failed on licence name for branch '%s'", bName))
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		for bName, lName := range branchLics {
+			err = com.ValidateLicence(lName)
+			if err != nil {
+				errorPage(w, r, http.StatusBadRequest, fmt.Sprintf(
+					"Validation failed on licence name for branch '%s'", bName))
+				return
+			}
+		}
+
+		// Grab and validate the supplied default branch name
+		defBranch, err = com.GetFormBranch(r)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
 			return
 		}
 	}
 
 	// Validate the share information
-	// TODO - Probably need to add some logic here so that the user submitting the change can't
-	//        make changes for themselves
+	// No need to take special security precautions here because only the owner of a database is allowed to edit the settings.
 	shares := make(map[string]com.ShareDatabasePermissions)
 	err = json.Unmarshal([]byte(sharesRaw), &shares)
 	if err != nil {
@@ -3918,13 +3935,6 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Grab and validate the supplied default branch name
-	defBranch, err := com.GetFormBranch(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
-		return
-	}
-
 	// Grab and validate the supplied "public" form field
 	public, err := com.GetPub(r)
 	if err != nil {
@@ -3939,6 +3949,12 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("Validation failed for new database name '%s': %s", com.SanitiseLogString(newName), err)
 			errorPage(w, r, http.StatusBadRequest, "New database name failed validation")
+			return
+		}
+
+		// Live databases cannot be renamed yet
+		if isLive {
+			errorPage(w, r, http.StatusBadRequest, "Live databases cannot be renamed yet")
 			return
 		}
 	}
@@ -3972,42 +3988,169 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the list of branches in the database
-	branchList, err := com.GetBranches(dbOwner, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
+	// Only non-live databases have branches and licences at the moment
+	var tables []string
+	if !isLive {
+		// Get the list of branches in the database
+		branchList, err := com.GetBranches(dbOwner, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
 
-	// Retrieve the SHA256 for the database file
-	head, ok := branchList[defBranch]
-	if !ok {
-		errorPage(w, r, http.StatusInternalServerError, "Requested branch name not found")
-		return
-	}
-	bkt, id, _, err := com.MinioLocation(dbOwner, dbName, head.Commit, loggedInUser)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+		// Retrieve the SHA256 for the database file
+		head, ok := branchList[defBranch]
+		if !ok {
+			errorPage(w, r, http.StatusInternalServerError, "Requested branch name not found")
+			return
+		}
+		bkt, id, _, err := com.MinioLocation(dbOwner, dbName, head.Commit, loggedInUser)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
-	// Get a handle from Minio for the database object
-	sdb, err := com.OpenSQLiteDatabase(bkt, id)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
+		// Get a handle from Minio for the database object
+		sdb, err := com.OpenSQLiteDatabase(bkt, id)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
 
-	// Automatically close the SQLite database when this function finishes
-	defer sdb.Close()
+		// Automatically close the SQLite database when this function finishes
+		defer sdb.Close()
 
-	// Retrieve the list of tables in the database
-	// TODO: Update this to handle having a default table "per branch".  Even though it would mean looping here, it
-	// TODO  seems like the only way to be flexible and accurate enough for our purposes
-	tables, err := com.TablesAndViews(sdb, fmt.Sprintf("%s/%s", dbOwner, dbName))
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
+		// Retrieve the list of tables in the database
+		// TODO: Update this to handle having a default table "per branch".  Even though it would mean looping here, it
+		// TODO  seems like the only way to be flexible and accurate enough for our purposes
+		tables, err = com.TablesAndViews(sdb, fmt.Sprintf("%s/%s", dbOwner, dbName))
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Grab the complete commit list for the database
+		commitList, err := com.GetCommitList(dbOwner, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Loop through the branches of the database, processing the user submitted licence choice for each
+		branchesUpdated := false
+		newBranchHeads := make(map[string]com.BranchEntry)
+		for bName, bEntry := range branchList {
+			// Get the previous licence entry for the branch
+			c, ok := commitList[bEntry.Commit]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
+					"Error when retrieving commit ID '%s', branch '%s' for database '%s/%s'", bEntry.Commit,
+					bName, dbOwner, dbName))
+				return
+			}
+			dbEntry := c.Tree.Entries[0]
+			licSHA := dbEntry.LicenceSHA
+			var oldLic string
+			if licSHA != "" {
+				oldLic, _, err = com.GetLicenceInfoFromSha256(loggedInUser, licSHA)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+			}
+
+			// Get the new licence entry for the branch
+			newLic, ok := branchLics[bName]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
+					"Missing licence entry for branch '%s'", bName))
+				return
+			}
+
+			// If the new licence given for a branch is different from the old one, generate a new commit, add it to the
+			// commit list, and update the branch with it
+			if oldLic != newLic {
+				// Retrieve the SHA256 of the new licence
+				newLicSHA, err := com.GetLicenceSha256FromName(loggedInUser, newLic)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					return
+				}
+
+				// Create a new dbTree entry for the database file
+				var e com.DBTreeEntry
+				e.EntryType = com.DATABASE
+				e.LastModified = dbEntry.LastModified.UTC()
+				e.LicenceSHA = newLicSHA
+				e.Name = dbEntry.Name
+				e.Sha256 = dbEntry.Sha256
+				e.Size = dbEntry.Size
+
+				// Create a new dbTree structure for the new database entry
+				var t com.DBTree
+				t.Entries = append(t.Entries, e)
+				t.ID = com.CreateDBTreeID(t.Entries)
+
+				// Retrieve the user details
+				usr, err := com.User(loggedInUser)
+				if err != nil {
+					errorPage(w, r, http.StatusInternalServerError, "An error occurred when retrieving user details")
+				}
+
+				// Create a new commit for the new tree
+				newCom := com.CommitEntry{
+					CommitterName:  c.AuthorName,
+					CommitterEmail: c.AuthorEmail,
+					Message:        fmt.Sprintf("Licence changed from '%s' to '%s'.", oldLic, newLic),
+					Parent:         bEntry.Commit,
+					Timestamp:      time.Now().UTC(),
+					Tree:           t,
+				}
+				newCom.AuthorName = usr.DisplayName
+				newCom.AuthorEmail = usr.Email
+
+				// Calculate the new commit ID, which incorporates the updated tree ID (and thus the new licence sha256)
+				newCom.ID = com.CreateCommitID(newCom)
+
+				// Add the new commit to the commit list
+				commitList[newCom.ID] = newCom
+
+				// Add the commit to the new branch heads list, and set a flag indicating it needs to be stored to the
+				// database after the licence processing finishes
+				newBranchEntry := com.BranchEntry{
+					Commit:      newCom.ID,
+					CommitCount: bEntry.CommitCount + 1,
+					Description: bEntry.Description,
+				}
+				newBranchHeads[bName] = newBranchEntry
+				branchesUpdated = true
+			} else {
+				// Copy the old branch entry to the new list
+				newBranchHeads[bName] = branchList[bName]
+			}
+		}
+
+		// If the branches were updated, store the new commit list and branch heads
+		if branchesUpdated {
+			err = com.StoreCommits(dbOwner, dbName, commitList)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			err = com.StoreBranches(dbOwner, dbName, newBranchHeads)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+	} else {
+		// Retrieve the list of tables in the database
+		tables, err = com.LiveTablesAndViews(liveNode, loggedInUser, dbOwner, dbName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	// If a specific table was requested, check that it's present
@@ -4017,6 +4160,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		for _, tbl := range tables {
 			if tbl == defTable {
 				tablePresent = true
+				break
 			}
 		}
 		if tablePresent == false {
@@ -4024,122 +4168,6 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Requested table '%s' not present in database '%s/%s'\n",
 				com.SanitiseLogString(defTable), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
-			return
-		}
-	}
-
-	// Grab the complete commit list for the database
-	commitList, err := com.GetCommitList(dbOwner, dbName)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Loop through the branches of the database, processing the user submitted licence choice for each
-	branchesUpdated := false
-	newBranchHeads := make(map[string]com.BranchEntry)
-	for bName, bEntry := range branchList {
-		// Get the previous licence entry for the branch
-		c, ok := commitList[bEntry.Commit]
-		if !ok {
-			errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
-				"Error when retrieving commit ID '%s', branch '%s' for database '%s/%s'", bEntry.Commit,
-				bName, dbOwner, dbName))
-			return
-		}
-		dbEntry := c.Tree.Entries[0]
-		licSHA := dbEntry.LicenceSHA
-		var oldLic string
-		if licSHA != "" {
-			oldLic, _, err = com.GetLicenceInfoFromSha256(loggedInUser, licSHA)
-			if err != nil {
-				errorPage(w, r, http.StatusInternalServerError, err.Error())
-				return
-			}
-		}
-
-		// Get the new licence entry for the branch
-		newLic, ok := branchLics[bName]
-		if !ok {
-			errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf(
-				"Missing licence entry for branch '%s'", bName))
-			return
-		}
-
-		// If the new licence given for a branch is different from the old one, generate a new commit, add it to the
-		// commit list, and update the branch with it
-		if oldLic != newLic {
-			// Retrieve the SHA256 of the new licence
-			newLicSHA, err := com.GetLicenceSha256FromName(loggedInUser, newLic)
-			if err != nil {
-				errorPage(w, r, http.StatusInternalServerError, err.Error())
-				return
-			}
-
-			// Create a new dbTree entry for the database file
-			var e com.DBTreeEntry
-			e.EntryType = com.DATABASE
-			e.LastModified = dbEntry.LastModified.UTC()
-			e.LicenceSHA = newLicSHA
-			e.Name = dbEntry.Name
-			e.Sha256 = dbEntry.Sha256
-			e.Size = dbEntry.Size
-
-			// Create a new dbTree structure for the new database entry
-			var t com.DBTree
-			t.Entries = append(t.Entries, e)
-			t.ID = com.CreateDBTreeID(t.Entries)
-
-			// Retrieve the user details
-			usr, err := com.User(loggedInUser)
-			if err != nil {
-				errorPage(w, r, http.StatusInternalServerError, "An error occurred when retrieving user details")
-			}
-
-			// Create a new commit for the new tree
-			newCom := com.CommitEntry{
-				CommitterName:  c.AuthorName,
-				CommitterEmail: c.AuthorEmail,
-				Message:        fmt.Sprintf("Licence changed from '%s' to '%s'.", oldLic, newLic),
-				Parent:         bEntry.Commit,
-				Timestamp:      time.Now().UTC(),
-				Tree:           t,
-			}
-			newCom.AuthorName = usr.DisplayName
-			newCom.AuthorEmail = usr.Email
-
-			// Calculate the new commit ID, which incorporates the updated tree ID (and thus the new licence sha256)
-			newCom.ID = com.CreateCommitID(newCom)
-
-			// Add the new commit to the commit list
-			commitList[newCom.ID] = newCom
-
-			// Add the commit to the new branch heads list, and set a flag indicating it needs to be stored to the
-			// database after the licence processing finishes
-			newBranchEntry := com.BranchEntry{
-				Commit:      newCom.ID,
-				CommitCount: bEntry.CommitCount + 1,
-				Description: bEntry.Description,
-			}
-			newBranchHeads[bName] = newBranchEntry
-			branchesUpdated = true
-		} else {
-			// Copy the old branch entry to the new list
-			newBranchHeads[bName] = branchList[bName]
-		}
-	}
-
-	// If the branches were updated, store the new commit list and branch heads
-	if branchesUpdated {
-		err = com.StoreCommits(dbOwner, dbName, commitList)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		err = com.StoreBranches(dbOwner, dbName, newBranchHeads)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 	}

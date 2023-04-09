@@ -1960,30 +1960,14 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 			}
 			pageData.BranchLics[bName] = a
 		}
-
-		// Populate the licence list
-		pageData.Licences, err = com.GetLicences(pageData.PageMeta.LoggedInUser)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
-			return
-		}
-		pageData.NumLicences = len(pageData.Licences)
-
-		// Render the full description markdown
-		pageData.FullDescRendered = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
-
-		// Retrieve the share settings
-		pageData.Shares, err = com.GetShares(dbName.Owner, dbName.Database)
+	} else {
+		// Retrieve the list of tables in the database
+		pageData.DB.Info.Tables, err = com.LiveTablesAndViews(pageData.DB.Info.LiveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		// If the default table is blank, use the first one from the table list
-		if pageData.DB.Info.DefaultTable == "" {
-			pageData.DB.Info.DefaultTable = pageData.DB.Info.Tables[0]
-		}
-	} else {
 		// Also request the database size from our AMQP backend
 		pageData.DB.Info.DBEntry.Size, err = com.LiveSize(pageData.DB.Info.LiveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
 		if err != nil {
@@ -1992,6 +1976,29 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	// If the default table is blank, use the first one from the table list
+	if pageData.DB.Info.DefaultTable == "" {
+		pageData.DB.Info.DefaultTable = pageData.DB.Info.Tables[0]
+	}
+
+	// Render the full description markdown
+	pageData.FullDescRendered = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
+
+	// Retrieve the share settings
+	pageData.Shares, err = com.GetShares(dbName.Owner, dbName.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Populate the licence list
+	pageData.Licences, err = com.GetLicences(pageData.PageMeta.LoggedInUser)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
+		return
+	}
+	pageData.NumLicences = len(pageData.Licences)
 
 	// Render the page
 	pageData.PageMeta.PageSection = "db_settings"
