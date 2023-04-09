@@ -47,7 +47,7 @@
                         </th>
                     </tr>
                     [[ else ]]
-                    <tr ng-if="radioLive === 'false'">
+                    <tr>
                         <th style="vertical-align: middle;">Public?</th>
                         <td>
                             <div class="btn-group">
@@ -80,7 +80,7 @@
                     </tr>
                     [[ end ]]
                 </table>
-                <uib-accordion ng-if="radioLive === 'false'">
+                <uib-accordion>
                     <div uib-accordion-group class="panel-default" heading="Advanced" is-open="false">
                         <table class="table table-striped table-responsive settingsTable" style="width: 100%">
                             <tr>
@@ -110,7 +110,7 @@
                                 </td>
                             </tr>
                             [[ end ]]
-                            <tr>
+                            <tr ng-if="radioLive === 'false'">
                                 <th style="vertical-align: middle;">Branch:</th>
                                 <td>
                                      <input type="text" id="branch" name="branch" ng-change="updateBranchName()" ng-model="branchName" maxlength="60" style="width: 100%;" data-cy="branchinput">
