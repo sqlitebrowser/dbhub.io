@@ -139,14 +139,16 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 	}
 
 	return (<>
-		<div className="row" style={{paddingBottom: "10px"}}> <div className="col-md-8"> <span className="pull-left" style={{whiteSpace: "nowrap"}}> {tableSelection}&nbsp; {branchSelection}&nbsp;
+		<div className="row" style={{paddingBottom: "10px"}}>
+			<div className="col-md-8">
+				<span className="pull-left" style={{whiteSpace: "nowrap"}}> {tableSelection}&nbsp; {branchSelection}&nbsp;
 					{authInfo.loggedInUser && !meta.isLive ? <a href={"/compare/" + meta.owner + "/" + meta.database} className="btn btn-primary" data-cy="newmrbtn">New Merge Request</a> : null}&nbsp;
 					{authInfo.loggedInUser && !meta.isLive ? <a href={"/upload/?username=" + meta.owner + "&dbname=" + meta.database + "&branch=" + meta.branch} className="btn btn-primary" data-cy="uploadbtn">Upload database</a> : null}
 				</span>
 			</div>
-			{meta.isLive === false ? (
-				<div className="col-md-4">
-					<span className="pull-right">
+			<div className="col-md-4">
+				<span className="pull-right">
+					{meta.isLive === false ? (<>
 						<div className="btn-group">
 							<button type="button" className="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 								Clone database in DB4S <span className="caret"></span>
@@ -155,19 +157,19 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 								<li><input type="text" value={"https://" + db4s.server + (db4s.port === 443 ? null : (":" + db4s.port)) + "/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&branch=" + meta.branch} id="db4sCloneLink" readOnly /></li>
 								<li><a href="#" onClick={() => copyToClipboard('db4sCloneLink')}>Copy link <span className="glyphicon glyphicon-link"></span></a></li>
 							</ul>
-						</div>&nbsp;
-						<div className="btn-group" data-cy="dldropdown">
-							<button type="button" className="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-								Download database <span className="caret"></span>
-							</button>
-							<ul className="dropdown-menu">
-								<li><a href={"/x/download/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID} data-cy="dldb">Entire database ({Math.round(meta.size / 1024).toLocaleString()} KB)</a></li>
-								{meta.size <= 100000000 ? <li><a href={"/x/downloadcsv/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&table=" + table} data-cy="dlcsv">Selected table as CSV</a></li> : null}
-							</ul>
-						</div>
-					</span>
-				</div>
-			) : null}
+						</div>&nbsp;</>
+					) : null}
+					<div className="btn-group" data-cy="dldropdown">
+						<button type="button" className="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							Download database <span className="caret"></span>
+						</button>
+						<ul className="dropdown-menu">
+							<li><a href={"/x/download/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID} data-cy="dldb">Entire database ({Math.round(meta.size / 1024).toLocaleString()} KB)</a></li>
+							{meta.size <= 100000000  && meta.isLive === false ? <li><a href={"/x/downloadcsv/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&table=" + table} data-cy="dlcsv">Selected table as CSV</a></li> : null}
+						</ul>
+					</div>
+				</span>
+			</div>
 		</div>
 		{meta.isLive ? (
 			<div className="row" style={{paddingBottom: "10px"}}><div className="col-md-12">
