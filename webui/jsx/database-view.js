@@ -171,7 +171,7 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 				</span>
 			</div>
 		</div>
-		{meta.isLive ? (
+		{meta.isLive && tableEdit.writeEnabled ? (
 			<div className="row" style={{paddingBottom: "10px"}}><div className="col-md-12">
 				<button type="button" className="btn btn-primary btn-sm" disabled={allowInsert ? null : "disabled"} onClick={() => insertRow()}>
 					<span className="glyphicon glyphicon-plus" aria-hidden="true"></span> Insert empty row
@@ -270,7 +270,7 @@ export default function DatabaseView() {
 				// The editing features are enabled if this is a live database and if there is
 				// a primary key here (which excludes views here)
 				let editable = false;
-				if (meta.isLive === true && pk.length > 0) {
+				if (meta.isLive === true && pk.length > 0 && tableEdit.writeEnabled) {
 					editable = true;
 				}
 

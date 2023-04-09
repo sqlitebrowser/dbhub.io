@@ -751,9 +751,10 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 
 func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName string) {
 	var pageData struct {
-		DB       com.SQLiteDBinfo
-		PageMeta PageMetaInfo
-		DB4S     com.DB4SInfo
+		DB           com.SQLiteDBinfo
+		PageMeta     PageMetaInfo
+		DB4S         com.DB4SInfo
+		WriteEnabled bool
 	}
 
 	pageData.PageMeta.PageSection = "db_data"
@@ -893,6 +894,13 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbOwner, dbName, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if the current user is allowed to write to the database
+	pageData.WriteEnabled, err = com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbOwner, dbName, true)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
