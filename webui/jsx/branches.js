@@ -21,12 +21,14 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 				"newdesc": newDesc,
 				"newbranch": newName
 			})
-		}).then(function (response) {
-			// If the update succeeded, let the user know
-			if (response.status === 200) {
-				setStatus("green", "Branch updated");
+		}).then((response) => {
+			if (!response.ok) {
+				return Promise.reject(response);
 			}
-		}, function failure(response) {
+
+			setStatus("green", "Branch updated");
+		})
+		.catch((error) => {
 			// The delete failed, so display an error message
 			setStatus("red", "Branch update failed");
 		});
@@ -66,14 +68,16 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 				"dbname": meta.database,
 				"username": meta.owner
 			}),
-		}).then(function (response) {
-			// If successful, reload the page
-			if (response.status === 200) {
-				window.location = "/branches/" + meta.owner + "/" + meta.database;
+		}).then((response) => {
+			if (!response.ok) {
+				return Promise.reject(response);
 			}
-		}, function failure(response) {
+
+			window.location = "/branches/" + meta.owner + "/" + meta.database;
+		})
+		.catch((error) => {
 			// The delete failed, so display an error message
-			setStatus("red","Error: Something went wrong when trying to delete the branch.");
+			setStatus("red", "Error: Something went wrong when trying to delete the branch.");
 		});
 	}
 
