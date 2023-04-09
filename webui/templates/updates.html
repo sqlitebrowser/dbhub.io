@@ -44,11 +44,6 @@
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('updatesView', function($scope) {
         $scope.updates = [[ .Updates ]];
-
-        // Returns a nicely presented "time elapsed" string
-        $scope.getTimePeriodTxt = function(date1, includeOn) {
-            return getTimePeriod(date1, includeOn)
-        };
     });
 </script>
 </body>

@@ -8,7 +8,7 @@
     <div id="db-header-root"></div>
     <div class="row">
         <div class="col-md-1" style="padding: 0;">&nbsp;</div>
-        <div class="col-md-10" style="text-align: center;">
+        <div class="col-md-10">
             <h2 style="text-align: center;">Create a new discussion</h2>
             <form action="/x/creatediscuss" method="post">
                 <table class="table table-striped table-responsive settingsTable">
@@ -23,18 +23,7 @@
                             <b>Description</b><br /><br />
                             <i>Markdown (<a href="http://commonmark.org" target="_blank">CommonMark</a> format) is supported</i></td>
                         <td>
-                            <div>
-                                <uib-tabset active="active">
-                                    <uib-tab index="0">
-                                        <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                        <textarea id="disctxt" name="disctxt" rows="10" ng-attr-placeholder="Type in the discussion details then click the 'Create it' button"></textarea>
-                                    </uib-tab>
-                                    <uib-tab index="1" select="getMarkdown()">
-                                        <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
-                                        <div class="rendered minHeight" ng-bind-html="markDownPreview"></div>
-                                    </uib-tab>
-                                </uib-tabset>
-                            </div>
+                            <div class="markdown-editor" data-id="disctxt" data-rows="10" data-placeholder="Type in the discussion details then click the 'Create it' button" />
                         </td>
                     </tr>
                     <tr>
@@ -57,32 +46,9 @@
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('createDiscussionView', function($scope, $http, $httpParamSerializerJQLike) {
-        $scope.meta = {
-            [[ if .PageMeta.LoggedInUser ]]
-                Loggedin: "true",
-            [[ else ]]
-                Loggedin: "false",
-            [[ end ]]
-        };
-
         // Handler for the cancel button.  Just bounces back to the commits page
         $scope.cancelCreate = function() {
             window.location = "/discuss/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]";
-        };
-
-        // Render markdown preview
-        $scope.markDownPreview = "";
-        $scope.getMarkdown = function() {
-            // Retrieve latest markdown text from the text area
-            let txt = document.getElementById("disctxt").value;
-
-            // Call the server, asking for a rendered version of the markdown
-            $http({
-                method: "POST",
-                url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
-                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
-            }).then(function (response) { $scope.markDownPreview = response.data; });
         };
     });
 </script>

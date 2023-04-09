@@ -33,18 +33,7 @@
                             <b>Description</b><br /><br />
                             <i>Markdown (<a href="http://commonmark.org" target="_blank">CommonMark</a> format) is supported</i></td>
                         <td>
-                            <div>
-                                <uib-tabset active="active">
-                                    <uib-tab index="0" data-cy="edittab">
-                                        <uib-tab-heading><span style="color: #555;">Edit</span></uib-tab-heading>
-                                        <textarea id="tagdesc" name="tagdesc" rows="10" ng-attr-placeholder="A description for this tag or release" data-cy="desctext"></textarea>
-                                    </uib-tab>
-                                    <uib-tab index="1" select="getMarkdown()" data-cy="previewtab">
-                                        <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
-                                        <div class="rendered minHeight" ng-bind-html="markDownPreview" data-cy="previewdiv"></div>
-                                    </uib-tab>
-                                </uib-tabset>
-                            </div>
+                            <div class="markdown-editor" data-id="tagdesc" data-rows="10" data-placeholder="A description for this tag or release" />
                         </td>
                     </tr>
                     <tr>
@@ -72,21 +61,6 @@
         // Handler for the cancel button.  Just bounces back to the commits page
         $scope.cancelCreate = function() {
             window.location = "/commits/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]";
-        };
-
-        // Render markdown preview
-        $scope.markDownPreview = "";
-        $scope.getMarkdown = function() {
-            // Retrieve latest markdown text from the text area
-            let txt = document.getElementById("tagdesc").value;
-
-            // Call the server, asking for a rendered version of the markdown
-            $http({
-                method: "POST",
-                url: "/x/markdownpreview/",
-                data: $httpParamSerializerJQLike({"mkdown": encodeURIComponent(txt)}),
-                headers: { "Content-Type" : "application/x-www-form-urlencoded" }
-            }).then(function (response) { $scope.markDownPreview = response.data; });
         };
 
         // Set the type to tag by default

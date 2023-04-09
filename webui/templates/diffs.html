@@ -6,13 +6,6 @@
 [[ template "header" . ]]
 <div>
     <div id="db-header-root"></div>
-    <div class="row" ng-if="statusMessage != ''">
-        <div class="col-md-12">
-            <div style="text-align: center; padding-bottom: 8px;">
-                <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
-            </div>
-        </div>
-    </div>
     <div class="row">
         <div class="col-md-12" style="padding-bottom: 10px;">
         [[ if .Diffs.Diff ]]
@@ -77,29 +70,9 @@
 <script>
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('diffView', function($scope, $http) {
-        // Pre-filled data
-        $scope.meta = {
-            [[ if .PageMeta.LoggedInUser ]]
-                Loggedin: "true",
-            [[ else ]]
-                Loggedin: "false",
-            [[ end ]]
-        }
-
-        $scope.statusMessage = "";
         $scope.Diffs = [[ .Diffs.Diff ]];
         $scope.ColumnNamesBefore = [[ .ColumnNamesBefore ]];
         $scope.ColumnNamesAfter = [[ .ColumnNamesAfter ]];
-
-        // Change \u0026 to &
-        $scope.decodeAmp = function(str) {
-            return decodeURIComponent(str);
-        };
-
-        // Returns a nicely presented "time elapsed" string
-        $scope.getTimePeriodTxt = function(date1, includeOn) {
-            return getTimePeriod(date1, includeOn);
-        };
     });
 </script>
 </body>

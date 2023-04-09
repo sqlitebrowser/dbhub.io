@@ -17,13 +17,6 @@
             </div>
         </div>
     </div>
-    <div class="row" ng-if="statusMessage != ''">
-        <div class="col-md-12">
-            <div style="text-align: center; padding-bottom: 8px;">
-                <h4 style="color: {{ statusMessageColour }};">&nbsp;{{ statusMessage }}</h4>
-            </div>
-        </div>
-    </div>
     <div class="row">
         <div class="col-md-12" style="padding-bottom: 10px;">
             <table ng-if="(MRList != '') && (((radioOpen === false) && (MRCount.closed !== 0)) || ((radioOpen === true) && (MRCount.open !== 0)))" class="table table-striped table-responsive settingsTable">
@@ -68,7 +61,6 @@
             [[ end ]]
         }
 
-        $scope.statusMessage = "";
         $scope.MRList = [[ .MRList ]];
 
         // Count the number of open and closed MRs, so we can display an appropriate placeholder when one of them has

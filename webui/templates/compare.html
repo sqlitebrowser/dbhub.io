@@ -123,7 +123,7 @@
                                     <textarea rows="10" ng-attr-placeholder="Please add a summary for this merge request, describing what the new or changed data is for" ng-model="mr.desc"></textarea>
                                 </div>
                             </uib-tab>
-                            <uib-tab index="1" select="getMarkdown(Math.random())">
+                            <uib-tab index="1" select="getMarkdown()">
                                 <uib-tab-heading><span style="color: #555;">Preview</span></uib-tab-heading>
                                 <div class="rendered minHeight" style="border: 1px solid #DDD;" ng-bind-html="markDownPreview"></div>
                             </uib-tab>
