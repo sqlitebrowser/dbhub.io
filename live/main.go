@@ -296,8 +296,7 @@ func main() {
 			case "rowdata":
 				// Extract the request information
 				// FIXME: Add type checks for safety instead of blind coercing
-				var reqData = make(map[string]interface{})
-				reqData = req.Data.(map[string]interface{})
+				reqData := req.Data.(map[string]interface{})
 				dbTable := reqData["db_table"].(string)
 				sortCol := reqData["sort_col"].(string)
 				sortDir := reqData["sort_dir"].(string)
