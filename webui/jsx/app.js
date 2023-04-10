@@ -13,7 +13,7 @@ import MarkdownEditor from "./markdown-editor";
 	const rootNode = document.getElementById("db-header-root");
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
-		root.render(React.createElement(DbHeader));
+		root.render(<DbHeader />);
 	}
 }
 
@@ -21,7 +21,7 @@ import MarkdownEditor from "./markdown-editor";
 	const rootNode = document.getElementById("authcontrol");
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
-		root.render(React.createElement(Auth));
+		root.render(<Auth />);
 	}
 }
 
@@ -29,7 +29,7 @@ import MarkdownEditor from "./markdown-editor";
 	const rootNode = document.getElementById("branches");
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
-		root.render(React.createElement(BranchesTable));
+		root.render(<BranchesTable />);
 	}
 }
 
@@ -37,7 +37,7 @@ import MarkdownEditor from "./markdown-editor";
 	const rootNode = document.getElementById("database-view");
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
-		root.render(React.createElement(DatabaseView));
+		root.render(<DatabaseView />);
 	}
 }
 
@@ -51,14 +51,14 @@ import MarkdownEditor from "./markdown-editor";
 		const viewOnly = rootNode.dataset.viewOnly;
 
 		const root = ReactDOM.createRoot(rootNode);
-		root.render(React.createElement(MarkdownEditor, {
-			editorId: editorId,
-			rows: rows,
-			placeholder: placeholder,
-			defaultIndex: defaultIndex,
-			initialValue: initialValue,
-			viewOnly: viewOnly
-		}));
+		root.render(<MarkdownEditor
+			editorId={editorId}
+			rows={rows}
+			placeholder={placeholder}
+			defaultIndex={defaultIndex}
+			initialValue={initialValue}
+			viewOnly={viewOnly}
+		/>);
 	});
 }
 
@@ -69,11 +69,11 @@ import MarkdownEditor from "./markdown-editor";
 		const alt = rootNode.dataset.alt;
 
 		const root = ReactDOM.createRoot(rootNode);
-		root.render(React.createElement(ModalImage, {
-			small: small,
-			large: large,
-			alt: alt
-		}));
+		root.render(<ModalImage
+			small={small}
+			large={large}
+			alt={alt}
+		/>);
 	});
 
 }
