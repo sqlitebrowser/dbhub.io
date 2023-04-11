@@ -1,3 +1,13 @@
+// base64url encode a string
+function base64url(input) {
+    let encoded = window.btoa(input);
+    encoded = encoded.replace(/=+$/, '');
+    encoded = encoded.replace(/\+/g, '-');
+    encoded = encoded.replace(/\//g, '_');
+    return encoded
+}
+
+
 // Returns a string describing how long ago the given date was.  eg "3 seconds ago", "2 weeks ago", etc
 function getTimePeriod(date1, includeOn) {
     let d1 = new Date(date1);
@@ -53,4 +63,22 @@ function getTimePeriod(date1, includeOn) {
             return secondsElapsed+" second" + p4 + " ago";
         }
     }
+}
+
+// Construct a timestamp string for use in user messages
+function nowString() {
+    // Construct a timestamp for the success message
+    let now = new Date();
+    let m = now.getMinutes();
+    let s = now.getSeconds()
+    let mins, seconds;
+    mins = m;
+    seconds = s;
+    if (m < 10) {
+        mins = '0' + m;
+    }
+    if (s < 10) {
+        seconds = '0' + s;
+    }
+    return "[" + now.getHours() + ":" + mins + ":" + seconds + "] ";
 }

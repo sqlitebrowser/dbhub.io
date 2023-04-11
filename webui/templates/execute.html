@@ -116,6 +116,33 @@
         $scope.selectedName = "[[ .SelectedName ]]";
         $scope.execNames = [[ .ExecNames ]];
 
+        // Ensure the SQL statement name field isn't blank
+        // Returns true if a name is present, false if it's missing
+        $scope.checkName = function() {
+            let name = document.getElementById("savename").value;
+            if (name === "") {
+                $scope.statusMessageColour = "red";
+                $scope.statusMessage = nowString() + "Error: Can't do that with a blank SQL statement name";
+                return false
+            }
+            $scope.statusMessageColour = "green";
+            $scope.statusMessage = "";
+            return true
+        }
+
+        // Ensure a SQL statement has been provided
+        // Returns true if one is available, false if there's nothing
+        $scope.checkSQL = function() {
+            if (userSQL === "") {
+                $scope.statusMessageColour = "red";
+                $scope.statusMessage = nowString() + "Error: You need to write a SQL statement first";
+                return false
+            }
+            $scope.statusMessageColour = "green";
+            $scope.statusMessage = "";
+            return true
+        };
+
         // Change to a newly selected SQL statement
         $scope.changeExec = function(newExec) {
             // Retrieve the newly chosen SQL statement from the server
@@ -142,7 +169,7 @@
                 }, function failure(response) {
                     // Retrieving statement text failed, so display the returned error message
                     $scope.statusMessageColour = "red";
-                    $scope.statusMessage = "Retrieving saved SQL failed: " + response.data;
+                    $scope.statusMessage = nowString() + "Retrieving saved SQL failed: " + response.data;
                 }
             )
         }
@@ -162,6 +189,9 @@
                 return;
             }
 
+            // Ensure the SQL statement name field isn't blank
+            if (!$scope.checkName()) return;
+
             // Make sure the SQL statement is in the front end's "known" list
             let name = document.getElementById("savename").value;
             let arrIdx = $scope.execNames.indexOf(name);
@@ -169,7 +199,7 @@
                 $http.get("/x/execdel/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?sqlname="+name).then(
                     function success(response) {
                         $scope.statusMessageColour = "green";
-                        $scope.statusMessage = "SQL statement '" + name + "' deleted";
+                        $scope.statusMessage = nowString() + "SQL statement '" + name + "' deleted";
 
                         // Remove the SQL statement from the drop-down list
                         $scope.execNames.splice(arrIdx, 1);
@@ -186,39 +216,46 @@
                     }, function failure(response) {
                         // The deletion failed, so display the returned error message
                         $scope.statusMessageColour = "red";
-                        $scope.statusMessage = "Deleting '" + name + "' failed: " + response.data;
+                        $scope.statusMessage = nowString() + "Deleting '" + name + "' failed: " + response.data;
                     }
                 )
             } else {
                 $scope.statusMessageColour = "red";
-                $scope.statusMessage = "Unknown SQL statement";
+                $scope.statusMessage = nowString() + "Unknown SQL statement";
             }
         };
 
         // Execute the SQL statement
         $scope.execLiveSQL = function() {
+            // Ensure there's a SQL statement
+            if (!$scope.checkSQL()) return;
+
             // Send the SQL string to the backend
             let encoded = base64url(userSQL);
             $http.get("/x/execlivesql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
                     if (response.data["rows_changed"] === 0) {
-                        $scope.statusMessage = "Execution succeeded";
+                        $scope.statusMessage = nowString() + "Execution succeeded";
                     } else if (response.data["rows_changed"] === 1) {
-                        $scope.statusMessage = "Execution success: " + response.data["rows_changed"] + " row changed";
+                        $scope.statusMessage = nowString() + "Execution success: " + response.data["rows_changed"] + " row changed";
                     } else {
-                        $scope.statusMessage = "Execution success: " + response.data["rows_changed"] + " rows changed";
+                        $scope.statusMessage = nowString() + "Execution success: " + response.data["rows_changed"] + " rows changed";
                     }
                 }, function failure(response) {
                     // Retrieving data failed, so display the returned error message and hide the graph
                     $scope.statusMessageColour = "red";
-                    $scope.statusMessage = "Executing SQL statement failed: " + response.data;
+                    $scope.statusMessage = nowString() + "Executing SQL statement failed: " + response.data;
                 }
             )
         };
 
         // Format the user provided SQL
         $scope.formatSQL = function() {
+            // Ensure there's a SQL statement
+            if (!$scope.checkSQL()) return;
+
+            // Format the SQL
             let formatted = window.sqlFormatter.format(userSQL, { language: 'sqlite' });
             let txtArea = document.getElementById("usersql");
             txtArea.textContent = formatted;
@@ -237,13 +274,20 @@
                 return;
             }
 
+            // Ensure the SQL statement name field isn't blank
+            if (!$scope.checkName()) return;
+
+            // Ensure there's a SQL statement
+            if (!$scope.checkSQL()) return;
+
+            // Save it
             let name = document.getElementById("savename").value;
             let args = "sqlname=" + name;
             args += "&sql=" + base64url(userSQL);
             $http.get("/x/execsave/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
-                    $scope.statusMessage = "SQL statement '" + name + "' saved";
+                    $scope.statusMessage = nowString() + "SQL statement '" + name + "' saved";
 
                     // Append the new SQL statement to the drop-down list, if it's not already present
                     if ($scope.execNames.indexOf(name) === -1) {
@@ -255,7 +299,7 @@
                 }, function failure(response) {
                     // The save failed, so display the returned error message
                     $scope.statusMessageColour = "red";
-                    $scope.statusMessage = "Saving SQL statement failed: " + response.data;
+                    $scope.statusMessage = nowString() + "Saving SQL statement failed: " + response.data;
                 }
             )
         };
