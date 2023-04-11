@@ -819,10 +819,10 @@ func DeleteComment(dbOwner, dbName string, discID, comID int) error {
 }
 
 // DeleteDatabase deletes a database from PostgreSQL
+// Note that we leave a stub/placeholder entry for all uploaded databases in PG, so our stats don't miss data over time
+// and so the dependant table data doesn't go weird.  We also set the "is_deleted" boolean to true for its entry, so
+// our database query functions know to skip it
 func DeleteDatabase(dbOwner, dbName string) error {
-	// TODO: At some point we'll need to figure out a garbage collection approach to remove standard databases
-	//       from Minio which are no longer pointed to by anything
-
 	// Is this a live database
 	isLive, _, err := CheckDBLive(dbOwner, dbName)
 	if err != nil {
@@ -837,8 +837,32 @@ func DeleteDatabase(dbOwner, dbName string) error {
 	// Set up an automatic transaction roll back if the function exits without committing
 	defer tx.Rollback()
 
-	// Check if there are any forks of this database
+	// Remove all watchers for this database
 	dbQuery := `
+			DELETE FROM watchers
+			WHERE db_id = (
+					SELECT db_id
+					FROM sqlite_databases
+					WHERE user_id = (
+							SELECT user_id
+							FROM users
+							WHERE lower(user_name) = lower($1)
+						)
+						AND db_name = $2
+				)`
+	commandTag, err := tx.Exec(dbQuery, dbOwner, dbName)
+	if err != nil {
+		log.Printf("Removing all watchers for database '%s/%s' failed: Error '%s'", SanitiseLogString(dbOwner),
+			SanitiseLogString(dbName), err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong # of rows affected (%v) when removing all watchers for database '%s/%s'", numRows,
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
+	}
+
+	// Check if there are any forks of this database
+	dbQuery = `
 		WITH this_db AS (
 			SELECT db_id
 			FROM sqlite_databases
@@ -855,15 +879,11 @@ func DeleteDatabase(dbOwner, dbName string) error {
 	var numForks int
 	err = tx.QueryRow(dbQuery, dbOwner, dbName).Scan(&numForks)
 	if err != nil {
-		log.Printf("Retrieving fork list failed for database '%s/%s': %v\n", SanitiseLogString(dbOwner),
+		log.Printf("Retrieving fork list failed for database '%s/%s': %s", SanitiseLogString(dbOwner),
 			SanitiseLogString(dbName), err)
 		return err
 	}
 	if numForks == 0 {
-		// * There are no forks for this database, so we just remove its entry from sqlite_databases.  The 'ON DELETE
-		// CASCADE' definition for the database_stars table/field should automatically remove any references to the
-		// now deleted entry *
-
 		// Update the fork count for the root database
 		dbQuery = `
 			WITH root_db AS (
@@ -887,35 +907,38 @@ func DeleteDatabase(dbOwner, dbName string) error {
 			WHERE sqlite_databases.db_id = root_db.id`
 		commandTag, err := tx.Exec(dbQuery, dbOwner, dbName)
 		if err != nil {
-			log.Printf("Updating fork count for '%s/%s' in PostgreSQL failed: %v\n", SanitiseLogString(dbOwner),
+			log.Printf("Updating fork count for '%s/%s' in PostgreSQL failed: %s", SanitiseLogString(dbOwner),
 				SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 && !isLive { // Skip this check when deleting live databases
-			log.Printf("Wrong number of rows (%v) affected (spot 1) when updating fork count for database '%s/%s'\n",
+			log.Printf("Wrong number of rows (%v) affected (spot 1) when updating fork count for database '%s/%s'",
 				numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 
-		// Do the database deletion in PostgreSQL (needs to come after the above fork count update, else the fork count
-		// won't be able to find the root database id)
+		// Generate a random string to be used in the deleted database's name field, so if the user adds a database with
+		// the deleted one's name then the unique constraint on the database won't reject it
+		newName := "deleted-database-" + RandomString(20)
+
+		// Mark the database as deleted in PostgreSQL, replacing the entry with the ~randomly generated name
 		dbQuery = `
-			DELETE
-			FROM sqlite_databases
+			UPDATE sqlite_databases AS db
+			SET is_deleted = true, public = false, db_name = $3, last_modified = now()
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
 					WHERE lower(user_name) = lower($1)
 				)
 				AND db_name = $2`
-		commandTag, err = tx.Exec(dbQuery, dbOwner, dbName)
+		commandTag, err = tx.Exec(dbQuery, dbOwner, dbName, newName)
 		if err != nil {
-			log.Printf("Deleting database entry failed for database '%s/%s': %v\n", SanitiseLogString(dbOwner),
-				SanitiseLogString(dbName), err)
+			log.Printf("Deleting (forked) database entry failed for database '%s/%s': %v\n",
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
-				"Wrong number of rows (%v) affected when deleting database '%s/%s'\n", numRows,
+				"Wrong number of rows (%v) affected when deleting (forked) database '%s/%s'\n", numRows,
 				SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 
@@ -926,13 +949,9 @@ func DeleteDatabase(dbOwner, dbName string) error {
 		}
 
 		// Log the database deletion
-		log.Printf("Database '%s/%s' deleted\n", SanitiseLogString(dbOwner), SanitiseLogString(dbName))
+		log.Printf("Database '%s/%s' deleted", SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		return nil
 	}
-
-	// * If there are any forks of this database, we need to leave stub/placeholder info for its entry so the fork tree
-	// doesn't go weird.  We also set the "is_deleted" boolean to true for its entry, so our database query functions
-	// know to skip it *
 
 	// Delete all stars referencing the database stub
 	dbQuery = `
@@ -947,7 +966,7 @@ func DeleteDatabase(dbOwner, dbName string) error {
 				)
 				AND db_name = $2
 			)`
-	commandTag, err := tx.Exec(dbQuery, dbOwner, dbName)
+	commandTag, err = tx.Exec(dbQuery, dbOwner, dbName)
 	if err != nil {
 		log.Printf("Deleting (forked) database stars failed for database '%s/%s': %v\n",
 			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
@@ -1058,7 +1077,7 @@ func DeleteLicence(userName, licenceName string) (err error) {
 
 	// Note - This uses the JsQuery extension for PostgreSQL, which needs compiling on the server and adding in.
 	//        However, this seems like it'll be much more straight forward and usable for writing queries with than
-	//        than to use straight PG SQL
+	//        using straight PG SQL
 	//        JsQuery repo: https://github.com/postgrespro/jsquery
 	//        Some useful examples: https://postgrespro.ru/media/2017/04/04/jsonb-pgconf.us-2017.pdf
 	dbQuery := `
@@ -2289,6 +2308,7 @@ func GetSharesForUser(userName string) (shares []ShareDatabasePermissionsUser, e
 		WHERE shares.user_id = u.user_id
 			AND shares.db_id = db.db_id
 			AND db.user_id = users.user_id
+			AND db.is_deleted = false
 		ORDER by users.user_name, db.db_name`
 	rows, e := pdb.Query(dbQuery, userName)
 	if e != nil && e != pgx.ErrNoRows {
@@ -2876,7 +2896,6 @@ func MinioLocation(dbOwner, dbName, commitID, loggedInUser string) (minioBucket,
 			)
 			AND db.db_name = $2
 			AND db.is_deleted = false`
-
 	var sha, mod string
 	err = pdb.QueryRow(dbQuery, dbOwner, dbName, commitID).Scan(&sha, &mod)
 	if err != nil {
@@ -3258,7 +3277,6 @@ func SocialStats(dbOwner, dbName string) (wa, st, fo int, err error) {
 			SanitiseLogString(dbName), err)
 		return -1, -1, -1, err
 	}
-
 	return
 }
 
@@ -4369,7 +4387,6 @@ func ToggleDBWatch(loggedInUser, dbOwner, dbName string) error {
 						WHERE lower(user_name) = lower($1)
 					)
 					AND db_name = $2
-					AND is_deleted = false
 			)
 			AND user_id = (
 				SELECT user_id
@@ -4874,6 +4891,7 @@ func UserStarredDBs(userName string) (list []DBEntry, err error) {
 			SELECT db.user_id, db.db_name, stars.date_starred
 			FROM sqlite_databases AS db, stars
 			WHERE db.db_id = stars.db_id
+			AND db.is_deleted = false
 		)
 		SELECT users.user_name, db_users.db_name, db_users.date_starred
 		FROM users, db_users
@@ -5011,6 +5029,7 @@ func UserWatchingDBs(userName string) (list []DBEntry, err error) {
 			SELECT db.user_id, db.db_name, watching.date_watched
 			FROM sqlite_databases AS db, watching
 			WHERE db.db_id = watching.db_id
+			AND db.is_deleted = false
 		)
 		SELECT users.user_name, db_users.db_name, db_users.date_watched
 		FROM users, db_users
