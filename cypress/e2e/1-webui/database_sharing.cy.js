@@ -10,13 +10,13 @@ describe('database sharing', () => {
     cy.get('[data-cy="settingslink"]').click()
     cy.get('[data-cy="usernameinput"]').type('second')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-second"]').click()
-    cy.get('[data-cy="sharero-second"]').click()
+    cy.get('input[name="shareperm-second"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-second"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read only').click({force: true})
 
     cy.get('[data-cy="usernameinput"]').type('third')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-third"]').click()
-    cy.get('[data-cy="sharerw-third"]').click({force: true})
+    cy.get('input[name="shareperm-third"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-third"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read and write').click({force: true})
     cy.get('[data-cy="savebtn"]').click()
     cy.wait(waitTime)
 
@@ -25,13 +25,13 @@ describe('database sharing', () => {
     cy.get('[data-cy="settingslink"]').click()
     cy.get('[data-cy="usernameinput"]').type('second')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-second"]').click()
-    cy.get('[data-cy="sharero-second"]').click()
+    cy.get('input[name="shareperm-second"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-second"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read only').click({force: true})
 
     cy.get('[data-cy="usernameinput"]').type('third')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-third"]').click()
-    cy.get('[data-cy="sharerw-third"]').click({force: true})
+    cy.get('input[name="shareperm-third"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-third"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read and write').click({force: true})
     cy.get('[data-cy="savebtn"]').click()
     cy.wait(waitTime)
 
@@ -45,13 +45,13 @@ describe('database sharing', () => {
 
     cy.get('[data-cy="usernameinput"]').type('second')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-second"]').click()
-    cy.get('[data-cy="sharerw-second"]').click({force: true})
+    cy.get('input[name="shareperm-second"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-second"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read and write').click({force: true})
 
     cy.get('[data-cy="usernameinput"]').type('third')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-third"]').click()
-    cy.get('[data-cy="sharero-third"]').click()
+    cy.get('input[name="shareperm-third"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-third"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read only').click({force: true})
     cy.get('[data-cy="savebtn"]').click()
     cy.wait(waitTime)
 
@@ -64,13 +64,13 @@ describe('database sharing', () => {
 
     cy.get('[data-cy="usernameinput"]').type('default')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-default"]').click()
-    cy.get('[data-cy="sharerw-default"]').click({force: true})
+    cy.get('input[name="shareperm-default"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-default"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read and write').click({force: true})
 
     cy.get('[data-cy="usernameinput"]').type('third')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-third"]').click()
-    cy.get('[data-cy="sharero-third"]').click()
+    cy.get('input[name="shareperm-third"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-third"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read only').click({force: true})
     cy.get('[data-cy="savebtn"]').click()
     cy.wait(waitTime)
 
@@ -84,13 +84,13 @@ describe('database sharing', () => {
 
     cy.get('[data-cy="usernameinput"]').type('default')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-default"]').click()
-    cy.get('[data-cy="sharerw-default"]').click({force: true})
+    cy.get('input[name="shareperm-default"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-default"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read and write').click({force: true})
 
     cy.get('[data-cy="usernameinput"]').type('first')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-first"]').click()
-    cy.get('[data-cy="sharero-first"]').click()
+    cy.get('input[name="shareperm-first"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-first"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read only').click({force: true})
     cy.get('[data-cy="savebtn"]').click()
     cy.wait(waitTime)
 
@@ -104,13 +104,13 @@ describe('database sharing', () => {
 
     cy.get('[data-cy="usernameinput"]').type('first')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-first"]').click()
-    cy.get('[data-cy="sharerw-first"]').click({force: true})
+    cy.get('input[name="shareperm-first"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-first"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read and write').click({force: true})
 
     cy.get('[data-cy="usernameinput"]').type('second')
     cy.get('[data-cy="adduserbtn"]').click()
-    cy.get('[data-cy="sharedropdown-second"]').click()
-    cy.get('[data-cy="sharero-second"]').click()
+    cy.get('input[name="shareperm-second"]').parents('.react-dropdown-select').click()
+    cy.get('input[name="shareperm-second"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read only').click({force: true})
     cy.get('[data-cy="savebtn"]').click()
     cy.wait(waitTime)
 

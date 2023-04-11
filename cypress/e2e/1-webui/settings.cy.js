@@ -53,34 +53,34 @@ describe('settings', () => {
    //        appear to revert to the default setting.  Not sure if this is gotcha we should change or not (?)
    it('default table or view', () => {
      cy.visit('settings/default/Assembly%20Election%202017.sqlite')
-     cy.get('[data-cy="deftblname"]').should('contain.text', 'Candidate_Information')
-     cy.get('[data-cy="deftbldropdown"]').click()
-     cy.get('[data-cy="tbl-Constituency_Turnout_Information"]').click()
+     cy.get('[name="selectdefaulttable"]').should('have.value', 'Candidate_Information')
+     cy.get('[name="selectdefaulttable"]').parents('.react-dropdown-select').click()
+     cy.get('[name="selectdefaulttable"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Constituency_Turnout_Information').click({force: true})
      cy.get('[data-cy="savebtn"]').click()
      cy.get('[data-cy="settingslink"]').click()
-     cy.get('[data-cy="deftblname"]').should('contain.text', 'Constituency_Turnout_Information')
+     cy.get('[name="selectdefaulttable"]').should('have.value', 'Constituency_Turnout_Information')
    })
 
    // Default branch
    it('default branch', () => {
      cy.visit('settings/default/Assembly%20Election%202017.sqlite')
-     cy.get('[data-cy="defbranchname"]').should('contain.text', 'main')
-     cy.get('[data-cy="defbranchdropdown"]').click()
-     cy.get('[data-cy="branch-stuff"]').click()
+     cy.get('[name="selectbranch"]').should('have.value', 'main')
+     cy.get('[name="selectbranch"]').parents('.react-dropdown-select').click()
+     cy.get('[name="selectbranch"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('stuff').click({force: true})
      cy.get('[data-cy="savebtn"]').click()
      cy.get('[data-cy="settingslink"]').click()
-     cy.get('[data-cy="defbranchname"]').should('contain.text', 'stuff')
+     cy.get('[name="selectbranch"]').should('have.value', 'stuff')
    })
 
    // Source URL
    it('source url', () => {
      cy.visit('settings/default/Assembly%20Election%202017.sqlite')
-     cy.get('[data-cy="srcurlinput"]').should('have.value', 'http://data.nicva.org/dataset/assembly-election-2017')
-     cy.get('[data-cy="srcurlinput"]').type('{selectall}{backspace}https://example.org')
+     cy.get('[data-cy="sourceurl"]').should('have.value', 'http://data.nicva.org/dataset/assembly-election-2017')
+     cy.get('[data-cy="sourceurl"]').type('{selectall}{backspace}https://example.org')
      cy.get('[data-cy="savebtn"]').click()
      cy.get('[data-cy="settingslink"]').click()
-     cy.get('[data-cy="srcurlinput"]').should('have.value', 'https://example.org')
-     cy.get('[data-cy="srcurlinput"]').type('{selectall}{backspace}http://data.nicva.org/dataset/assembly-election-2017')
+     cy.get('[data-cy="sourceurl"]').should('have.value', 'https://example.org')
+     cy.get('[data-cy="sourceurl"]').type('{selectall}{backspace}http://data.nicva.org/dataset/assembly-election-2017')
      cy.get('[data-cy="savebtn"]').click()
    })
 
@@ -88,21 +88,21 @@ describe('settings', () => {
    it('licence', () => {
      // Test the main branch
      cy.visit('settings/default/Assembly%20Election%202017.sqlite')
-     cy.get('[data-cy="main-licname"]').should('contain.text', 'CC-BY-SA-4.0')
-     cy.get('[data-cy="main-licdropdown"]').click()
-     cy.get('[data-cy="lic-main-Not specified"]').click()
+     cy.get('[name="main-licence"]').should('have.value', 'CC-BY-SA-4.0')
+     cy.get('[name="main-licence"]').parents('.react-dropdown-select').click()
+     cy.get('[name="main-licence"]').parents('.react-dropdown-select').find('.react-dropdown-select-dropdown').find('span').contains('Not specified').click({force: true})
      cy.get('[data-cy="savebtn"]').click()
      cy.get('[data-cy="settingslink"]').click()
-     cy.get('[data-cy="main-licname"]').should('contain.text', 'Not specified')
+     cy.get('[name="main-licence"]').should('have.value', 'Not specified')
 
      // Test the 2nd branch
-     cy.get('[data-cy="stuff-licname"]').should('contain.text', 'CC-BY-SA-4.0')
-     cy.get('[data-cy="stuff-licdropdown"]').click()
+     cy.get('[name="stuff-licence"]').should('have.value', 'CC-BY-SA-4.0')
+     cy.get('[name="stuff-licence"]').parents('.react-dropdown-select').click()
      // Note - scrollIntoView() seems like it should work instead of forcing this click on Firefox.  But it doesn't.
-     cy.get('[data-cy="lic-stuff-CC0"]').click({force: true}) // Firefox sizing seems to have this *slightly* clipped, but otherwise usable
+     cy.get('[name="stuff-licence"]').parents('.react-dropdown-select').find('.react-dropdown-select-dropdown').find('span').contains('CC0').click({force: true}) // Firefox sizing seems to have this *slightly* clipped, but otherwise usable
      cy.get('[data-cy="savebtn"]').click()
      cy.get('[data-cy="settingslink"]').click()
-     cy.get('[data-cy="stuff-licname"]').should('contain.text', 'CC0')
+     cy.get('[name="stuff-licence"]').should('have.value', 'CC0')
    })
 
   // Share Database
@@ -134,8 +134,8 @@ describe('settings', () => {
     cy.get('[data-cy="adduserbtn"]').click()
     cy.wait(waitTime)
 
-    cy.get('[data-cy="sharedropdown-first"]').click()
-    cy.get('[data-cy="sharerw-first"]').click({force: true})
+    cy.get('[name="shareperm-first"]').parents('.react-dropdown-select').click()
+    cy.get('[name="shareperm-first"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read and write').click({force: true})
 
     cy.get('[data-cy="usernameinput"]').type('second')
     cy.get('[data-cy="adduserbtn"]').click()
@@ -145,20 +145,20 @@ describe('settings', () => {
     cy.get('[data-cy="adduserbtn"]').click()
     cy.wait(waitTime)
 
-    cy.get('[data-cy="sharedropdown-third"]').click()
-    cy.get('[data-cy="sharerw-third"]').click({force: true})
+    cy.get('[name="shareperm-third"]').parents('.react-dropdown-select').click()
+    cy.get('[name="shareperm-third"]').parents('.react-dropdown-select').find('.react-dropdown-select-item').contains('Read and write').click({force: true})
 
     cy.get('[data-cy="savebtn"]').click()
     cy.get('[data-cy="settingslink"]').click()
 
     cy.get('[data-cy="shareuser-first"]').should('contain.text', 'first')
-    cy.get('[data-cy="shareperm-first"]').should('contain.text', 'Read and write')
+    cy.get('[name="shareperm-first"]').should('have.value', 'Read and write')
 
     cy.get('[data-cy="shareuser-second"]').should('contain.text', 'second')
-    cy.get('[data-cy="shareperm-second"]').should('contain.text', 'Read only')
+    cy.get('[name="shareperm-second"]').should('have.value', 'Read only')
 
     cy.get('[data-cy="shareuser-third"]').should('contain.text', 'third')
-    cy.get('[data-cy="shareperm-third"]').should('contain.text', 'Read and write')
+    cy.get('[name="shareperm-third"]').should('have.value', 'Read and write')
 
     // Switch to the different users and verify they have read access to the database
     cy.request("/x/test/switchfirst")
@@ -182,22 +182,23 @@ describe('settings', () => {
    // Full description
    it('full description', () => {
      cy.visit('settings/default/Assembly%20Election%202017.sqlite')
-     cy.get('[data-cy="rendereddiv"]').should('contain.text', 'No full description')
-     cy.get('[data-cy="edittab"]').click()
-     cy.get('[data-cy="desctext"]').should('contain.text', 'No full description')
-     cy.get('[data-cy="desctext"]').type('{selectall}{backspace}Some new description')
-     cy.get('[data-cy="renderedtab"]').click()
-     cy.get('[data-cy="rendereddiv"]').should('contain.text', 'Some new description')
+     cy.get('[data-cy="fulldesc-preview"]').should('contain.text', 'No full description')
+     cy.get('[data-cy="fulldesc-edit-tab"]').click()
+     cy.get('[data-cy="fulldesc"]').should('contain.text', 'No full description')
+     cy.get('[data-cy="fulldesc"]').type('{selectall}{backspace}Some new description')
+     cy.get('[data-cy="fulldesc-preview-tab"]').click()
+     cy.get('[data-cy="fulldesc-preview"]').should('contain.text', 'Some new description')
      cy.get('[data-cy="savebtn"]').click()
      cy.get('[data-cy="settingslink"]').click()
-     cy.get('[data-cy="rendereddiv"]').should('contain.text', 'Some new description')
+     cy.get('[data-cy="fulldesc-preview"]').should('contain.text', 'Some new description')
    })
 
    // Delete database
    it('delete database', () => {
      cy.visit('settings/default/Assembly%20Election%202017.sqlite')
      cy.get('[data-cy="delbtn"]').click()
-     cy.get('[data-cy="confirmbtn"]').click()
+     cy.wait(waitTime)	// Some animation played here
+     cy.get('button[label="Yes, delete it"]').click()
      cy.get('[data-cy="pubdbs"]').should('not.contain', 'Assembly Election 2017.sqlite')
      cy.get('[data-cy="privdbs"]').should('not.contain', 'Assembly Election 2017.sqlite')
    })

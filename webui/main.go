@@ -3198,7 +3198,6 @@ func main() {
 	http.Handle("/branches/", gz.GzipHandler(logReq(branchesPage)))
 	http.Handle("/commits/", gz.GzipHandler(logReq(commitsPage)))
 	http.Handle("/compare/", gz.GzipHandler(logReq(comparePage)))
-	http.Handle("/confirmdelete/", gz.GzipHandler(logReq(confirmDeletePage)))
 	http.Handle("/contributors/", gz.GzipHandler(logReq(contributorsPage)))
 	http.Handle("/createbranch/", gz.GzipHandler(logReq(createBranchPage)))
 	http.Handle("/creatediscuss/", gz.GzipHandler(logReq(createDiscussionPage)))

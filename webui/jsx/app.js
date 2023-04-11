@@ -5,6 +5,7 @@ import ModalImage from "react-modal-image";
 
 import Auth from "./auth";
 import BranchesTable from "./branches";
+import DatabaseSettings from "./database-settings";
 import DatabaseView from "./database-view";
 import DbHeader from "./db-header";
 import MarkdownEditor from "./markdown-editor";
@@ -30,6 +31,14 @@ import MarkdownEditor from "./markdown-editor";
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<BranchesTable />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("database-settings");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<DatabaseSettings />);
 	}
 }
 

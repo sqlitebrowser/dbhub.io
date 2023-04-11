@@ -439,54 +439,6 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Displays a web page asking the user to confirm deleting their database.
-func confirmDeletePage(w http.ResponseWriter, r *http.Request) {
-	var pageData struct {
-		DB       com.SQLiteDBinfo
-		PageMeta PageMetaInfo
-	}
-	pageData.PageMeta.Title = "Confirm database deletion"
-
-	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
-	if err != nil {
-		errorPage(w, r, errCode, err.Error())
-		return
-	}
-	dbName, err := getDatabaseName(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Require login
-	errCode, err = requireLogin(pageData.PageMeta)
-	if err != nil {
-		errorPage(w, r, errCode, err.Error())
-		return
-	}
-
-	// Check if the user has access to the requested database (and get it's details if available)
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, "")
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// Make sure the database owner matches the logged in user
-	if strings.ToLower(pageData.PageMeta.LoggedInUser) != strings.ToLower(dbName.Owner) {
-		errorPage(w, r, http.StatusUnauthorized, "You can't delete databases you don't own")
-		return
-	}
-
-	// Render the page
-	t := tmpl.Lookup("confirmDeletePage")
-	err = t.Execute(w, pageData)
-	if err != nil {
-		log.Printf("Error: %s", err)
-	}
-}
-
 // Render the contributors page, which lists the contributors to a database.
 func contributorsPage(w http.ResponseWriter, r *http.Request) {
 	// Structures to hold page data
@@ -1966,6 +1918,11 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
+		}
+
+		// Store list of all branch names
+		for i := range branchHeads {
+			pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
 		}
 
 		// Retrieve all the commits for the database
