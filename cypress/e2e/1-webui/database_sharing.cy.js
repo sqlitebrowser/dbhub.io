@@ -5,7 +5,7 @@ describe('database sharing', () => {
     // Seed data
     cy.request('/x/test/seed')
 
-    // Setup some shares to this public database
+    // Setup some shares for this public database
     cy.visit('default/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="settingslink"]').click()
     cy.get('[data-cy="usernameinput"]').type('second')
@@ -20,7 +20,22 @@ describe('database sharing', () => {
     cy.get('[data-cy="savebtn"]').click()
     cy.wait(waitTime)
 
-    // Upload the test database to the user "first", plus setup some useful database sharing
+    // Set up some shares for the live database too
+    cy.visit('settings/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="settingslink"]').click()
+    cy.get('[data-cy="usernameinput"]').type('second')
+    cy.get('[data-cy="adduserbtn"]').click()
+    cy.get('[data-cy="sharedropdown-second"]').click()
+    cy.get('[data-cy="sharero-second"]').click()
+
+    cy.get('[data-cy="usernameinput"]').type('third')
+    cy.get('[data-cy="adduserbtn"]').click()
+    cy.get('[data-cy="sharedropdown-third"]').click()
+    cy.get('[data-cy="sharerw-third"]').click({force: true})
+    cy.get('[data-cy="savebtn"]').click()
+    cy.wait(waitTime)
+
+    // Upload a standard database to the user "first", plus setup some useful database sharing
     cy.request("/x/test/switchfirst")
     cy.visit('upload')
     cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
@@ -40,7 +55,26 @@ describe('database sharing', () => {
     cy.get('[data-cy="savebtn"]').click()
     cy.wait(waitTime)
 
-    // Upload the test database to the user "second", plus setup some useful database sharing
+    // Upload a live database to the user "first", plus setup some useful database sharing
+    cy.visit('upload')
+    cy.get('input[type=file]').selectFile('cypress/test_data/Join Testing with index.sqlite')
+    cy.get('[data-cy="livebtn"]').click()
+    cy.get('[data-cy="uploadbtn"]').click()
+    cy.get('[data-cy="settingslink"]').click()
+
+    cy.get('[data-cy="usernameinput"]').type('default')
+    cy.get('[data-cy="adduserbtn"]').click()
+    cy.get('[data-cy="sharedropdown-default"]').click()
+    cy.get('[data-cy="sharerw-default"]').click({force: true})
+
+    cy.get('[data-cy="usernameinput"]').type('third')
+    cy.get('[data-cy="adduserbtn"]').click()
+    cy.get('[data-cy="sharedropdown-third"]').click()
+    cy.get('[data-cy="sharero-third"]').click()
+    cy.get('[data-cy="savebtn"]').click()
+    cy.wait(waitTime)
+
+    // Upload a test database to the user "second", plus setup some useful database sharing
     cy.request("/x/test/switchsecond")
     cy.visit('upload')
     cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
@@ -60,7 +94,7 @@ describe('database sharing', () => {
     cy.get('[data-cy="savebtn"]').click()
     cy.wait(waitTime)
 
-    // Upload the test database to the user "third", plus setup some useful database sharing
+    // Upload a test database to the user "third", plus setup some useful database sharing
     cy.request("/x/test/switchthird")
     cy.visit('upload')
     cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
@@ -105,10 +139,19 @@ describe('database sharing', () => {
     // Verify the right entries are showing up for the default user
     cy.visit("default")
 
-    // Ensure the other test databases are only listed on the profile page where appropriate
+    // Ensure the standard test databases are listed on the profile page where appropriate
     cy.get('[data-cy="sharedwithyoutbl"').should('not.contain', 'first/Assembly Election 2017.sqlite')
     cy.get('[data-cy="sharedwithyoutbl"').should('contain', 'second/Assembly Election 2017.sqlite')
     cy.get('[data-cy="sharedwithyoutbl"').should('not.contain', 'third/Assembly Election 2017.sqlite')
+
+    // Ensure the live test database is listed correctly in the "Databases shared with you" section
+    cy.get('[data-cy="sharedwithyoutbl"').should('contain', 'first/Join Testing with index.sqlite')
+    cy.get('[data-cy="swuperm-row0"').should('contain', 'Read Write')
+    cy.get('[data-cy="swulive-row0"').should('contain', 'live database')
+
+    // Ensure the live test database is listed correctly in the "Databases shared with others" section
+    cy.get('[data-cy="sharedwithotherstbl"').should('contain', 'Join Testing with index.sqlite')
+    cy.get('[data-cy="swolive-Join Testing with index.sqlite-row1"').should('contain', 'live database')
 
     // Ensure trying to load the test databases only works where appropriate
     cy.visit('default/Assembly%20Election%202017.sqlite')
@@ -207,8 +250,8 @@ describe('database sharing', () => {
     cy.get('[data-cy="errormsg"').should('contain', 'don\'t have write access')
   })
 
-  // Upload to shared read-write private database (should succeed)
-  it('Upload to shared read-write private database succeeds', () => {
+  // Upload to shared read-write private standard database (should succeed)
+  it('Upload to shared read-write private standard database succeeds', () => {
     cy.request("/x/test/switchdefault")
     cy.visit('second/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="uploadbtn"').click()
@@ -231,8 +274,8 @@ describe('database sharing', () => {
     cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/first/Assembly Election 2017.sqlite')
   })
 
-  // Upload to shared read-write public database (should succeed)
-  it('Upload to shared read-write public database succeeds', () => {
+  // Upload to shared read-write public standard database (should succeed)
+  it('Upload to shared read-write public standard database succeeds', () => {
     cy.request("/x/test/switchthird")
     cy.visit('default/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="uploadbtn"').click()
@@ -240,5 +283,6 @@ describe('database sharing', () => {
     cy.get('[data-cy="uploadbtn"').click()
     cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/default/Assembly Election 2017.sqlite')
     cy.get('[data-cy="vis"]').should('have.text', 'Public')
+    cy.request("/x/test/switchdefault")
   })
 })

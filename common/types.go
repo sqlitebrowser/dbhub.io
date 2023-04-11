@@ -367,6 +367,7 @@ const (
 // ShareDatabasePermissionsOthers contains a list of user permissions for a given database
 type ShareDatabasePermissionsOthers struct {
 	DBName string                              `json:"database_name"`
+	IsLive bool                                `json:"is_live"`
 	Perms  map[string]ShareDatabasePermissions `json:"user_permissions"`
 }
 
@@ -374,6 +375,7 @@ type ShareDatabasePermissionsOthers struct {
 type ShareDatabasePermissionsUser struct {
 	OwnerName  string                   `json:"owner_name"`
 	DBName     string                   `json:"database_name"`
+	IsLive     bool                     `json:"is_live"`
 	Permission ShareDatabasePermissions `json:"permission"`
 }
 

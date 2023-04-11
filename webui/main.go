@@ -5712,11 +5712,9 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Log the successful database upload
+		// Log the successful database upload, and bounce the user to the database view page
 		log.Printf("%s: Username: '%s', database '%s/%s' uploaded', bytes: %v\n", pageName, loggedInUser,
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
-
-		// As the upload was for a standard database, bounce the user to the database view page for it
 		http.Redirect(w, r, fmt.Sprintf("/%s/%s?branch=%s", html.EscapeString(dbOwner), html.EscapeString(dbName), html.EscapeString(branchName)), http.StatusSeeOther)
 		return
 	}
@@ -5764,8 +5762,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// As the upload was for a live database, bounce the user to their profile page
-	http.Redirect(w, r, fmt.Sprintf("/%s", html.EscapeString(dbOwner)), http.StatusSeeOther)
+	// Bounce the user to the database view page for the uploaded database
+	http.Redirect(w, r, fmt.Sprintf("/%s/%s?branch=%s", html.EscapeString(dbOwner), html.EscapeString(dbName), html.EscapeString(branchName)), http.StatusSeeOther)
 	return
 }
 

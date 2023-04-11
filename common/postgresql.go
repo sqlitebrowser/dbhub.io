@@ -2284,7 +2284,7 @@ func GetSharesForUser(userName string) (shares []ShareDatabasePermissionsUser, e
 			FROM users
 			WHERE lower(user_name) = lower($1)
 		)
-		SELECT users.user_name, db.db_name, shares.access
+		SELECT users.user_name, db.db_name, db.live_db, shares.access
 		FROM database_shares AS shares, sqlite_databases AS db, u, users
 		WHERE shares.user_id = u.user_id
 			AND shares.db_id = db.db_id
@@ -2297,7 +2297,7 @@ func GetSharesForUser(userName string) (shares []ShareDatabasePermissionsUser, e
 	defer rows.Close()
 	var x ShareDatabasePermissionsUser
 	for rows.Next() {
-		err = rows.Scan(&x.OwnerName, &x.DBName, &x.Permission)
+		err = rows.Scan(&x.OwnerName, &x.DBName, &x.IsLive, &x.Permission)
 		if err != nil {
 			return
 		}

@@ -1658,7 +1658,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		})
 	}
 
-	// For each of the standard databases owned by the user, retrieve any share information
+	// For each of the databases owned by the user, retrieve any share information
 	var rawList []com.ShareDatabasePermissionsOthers
 	for _, db := range pageData.PublicDBs {
 		var z com.ShareDatabasePermissionsOthers
@@ -1684,6 +1684,20 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 			rawList = append(rawList, z)
 		}
 	}
+	for _, db := range pageData.LiveDBS {
+		var z com.ShareDatabasePermissionsOthers
+		z.DBName = db.DBName
+		z.IsLive = true
+		z.Perms, err = com.GetShares(userName, z.DBName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if len(z.Perms) > 0 {
+			rawList = append(rawList, z)
+		}
+	}
+
 	// Sort the entries
 	sort.SliceStable(rawList, func(i, j int) bool {
 		return rawList[i].DBName < rawList[j].DBName

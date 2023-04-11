@@ -128,7 +128,7 @@
                 <table class="table table-striped table-responsive profileTable" data-cy="livedbstbl">
                     <tr ng-repeat="row in livedbs">
                         <td style="border: 1px solid #ddd">
-                            <h4><a class="blackLink" href="/settings/{{ row.owner_name + '/' + row.database_name }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ row.owner_name + '/' + row.database_name }}" data-cy="livedb-{{ row.owner_name }}-{{ row.database_name }}">{{ row.owner_name }}/{{ row.database_name }}</a></h4>
+                            <h4><a class="blackLink" href="/settings/{{ row.owner_name + '/' + row.database_name }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ row.owner_name + '/' + row.database_name }}" data-cy="livedb-row{{ $index }}">{{ row.owner_name }}/{{ row.database_name }}</a></h4>
                         </td>
                     </tr>
                 </table>
@@ -221,7 +221,7 @@
                 <table class="table table-striped table-responsive profileTable" data-cy="sharedwithyoutbl">
                     <tr ng-repeat="row in sharedWithYou">
                         <td>
-                            <h4><a class="blackLink" href="/{{ row.owner_name + '/' + row.database_name }}" data-cy="swudb-{{ row.owner_name }}-{{ row.database_name }}">{{ row.owner_name }}/{{ row.database_name }}</a> : <span data-cy="swuperm-{{ row.owner_name }}-{{ row.database_name }}">{{ permText(row.permission) }}</span></h4>
+                            <h4 data-cy="swuh-row{{ $index }}"><a class="blackLink" href="/{{ row.owner_name + '/' + row.database_name }}" data-cy="swudb-row{{ $index }}">{{ row.owner_name }}/{{ row.database_name }}</a> : <span data-cy="swuperm-row{{ $index }}">{{ permText(row.permission) }}</span><span ng-if="row.is_live === true" data-cy="swulive-row{{ $index }}"> (<i>live database</i>)</span></h4>
                         </td>
                     </tr>
                 </table>
@@ -239,7 +239,7 @@
             [[ if .SharedWithOthers ]]
                 <table class="table table-striped table-responsive profileTable" data-cy="sharedwithotherstbl">
                     <tr ng-repeat="row in sharedWithOthers">
-                        <td><h4><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.database_name }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner }}/{{ row.database_name }}">{{ row.database_name }}</a></h4>
+                        <td><h4 data-cy="swoh-row{{ $index }}"><a class="blackLink" href="/settings/{{ meta.Owner + '/' + row.database_name }}" data-cy="swodb-{{ row.database_name }}-row{{ $index }}"><i class="fa fa-cog"></i></a> &nbsp;<a class="blackLink" href="/{{ meta.Owner }}/{{ row.database_name }}">{{ row.database_name }}</a><span ng-if="row.is_live === true" data-cy="swolive-{{ row.database_name }}-row{{ $index }}"> (<i>live database</i>)</span></h4>
                             <div uib-collapse="isCollapsedSharedWithOthers" style="padding-top: 5px;">
 
                                 <div class="row">
@@ -247,8 +247,8 @@
                                     <div class="col-md-8" style="text-decoration: underline;"><b>Permission</b></div>
                                 </div>
                                 <div class="row" ng-repeat="(user, perm) in row.user_permissions">
-                                    <div class="col-md-4"><a class="blackLink" href="/{{ user }}">{{ user }}</a></div>
-                                    <div class="col-md-8">{{ permText(perm) }}</div>
+                                    <div class="col-md-4"><a class="blackLink" href="/{{ user }}" data-cy="swouser-{{ row.database_name }}-row{{ $index }}">{{ user }}</a></div>
+                                    <div class="col-md-8" data-cy="swoperm-{{ row.database_name }}-row{{ $index }}">{{ permText(perm) }}</div>
                                 </div>
                             </div>
                         </td>
