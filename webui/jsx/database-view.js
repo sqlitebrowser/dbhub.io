@@ -193,6 +193,12 @@ function DatabasePageControls({offset, maxRows, rowCount, setOffset}) {
 			end = rowCount;
 		}
 
+		// The offset is off by one for display purposes because internally we start counting at 0.
+		// For the user the first row should get the number 1 however. For empty tables leave it at 0.
+		if (rowCount > 0) {
+			offset += 1;
+		}
+
 		return offset.toLocaleString() + "-" + end.toLocaleString() + " of " + rowCount.toLocaleString() + " total rows";
 	}
 
