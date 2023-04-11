@@ -1011,7 +1011,7 @@ func userDatabaseList(userAcc string, user string) (dbList []byte, err error) {
 		tempRow.Licence = j.Licence
 		tempRow.Name = j.Database
 		tempRow.URL = fmt.Sprintf("%s/%s/%s?commit=%v", server, user, url.PathEscape(j.Database), j.CommitID)
-		
+
 		if j.DefaultBranch != "" {
 			tempRow.DefBranch = j.DefaultBranch
 			tempRow.URL += fmt.Sprintf("&branch=%s", j.DefaultBranch)

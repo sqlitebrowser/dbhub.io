@@ -7,7 +7,6 @@ function base64url(input) {
     return encoded
 }
 
-
 // Returns a string describing how long ago the given date was.  eg "3 seconds ago", "2 weeks ago", etc
 function getTimePeriod(date1, includeOn) {
     let d1 = new Date(date1);
