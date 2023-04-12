@@ -302,7 +302,9 @@ func MQResponse(requestType string, msg amqp.Delivery, channel *amqp.Channel, no
 	z, err = json.Marshal(responseData)
 	if err != nil {
 		log.Println(err)
-		return
+		// It's super unlikely we can safely return here without ack-ing the message.  So as something has gone
+		// wrong with json.Marshall() we'd better just attempt passing back info about that error message instead (!)
+		z = []byte(fmt.Sprintf(`{"node":"%s","error":"%s"}`, nodeName, err.Error())) // This is a LiveDBErrorResponse structure
 	}
 
 	// Send the message
@@ -317,7 +319,13 @@ func MQResponse(requestType string, msg amqp.Delivery, channel *amqp.Channel, no
 	if err != nil {
 		log.Println(err)
 	}
-	msg.Ack(false)
+
+	// Acknowledge the request, so it doesn't stick around in the queue
+	err = msg.Ack(false)
+	if err != nil {
+		log.Println(err)
+	}
+
 	if AmqpDebug > 0 {
 		log.Printf("[%s] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", requestType, nodeName, msg.CorrelationId, msg.ReplyTo)
 	}
