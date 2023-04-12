@@ -75,7 +75,7 @@ export default function DbHeader() {
 	}
 
 	let settings = null;
-	if (authInfo.loggedIn) {
+	if (authInfo.loggedIn && (meta.owner === authInfo.loggedInUser)) {
 		settings = <label id="settings" className={meta.pageSection === "db_settings" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/settings/" + meta.owner + "/" + meta.database} className="blackLink" title="Settings" data-cy="settingslink"><i className="fa fa-cog"></i> Settings</a></label>;
 	}
 
@@ -154,9 +154,9 @@ export default function DbHeader() {
 
 			&nbsp; &nbsp; &nbsp;
 
-			{meta.isLive ? <label id="viewexec" className={meta.pageSection === "db_exec" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/exec/" + meta.owner + "/" + meta.database} className="blackLink" title="Execute SQL" data-cy="execlink"><i className="fa fa-wrench"></i> Execute SQL</a></label> : null }
+			{meta.isLive && (meta.owner === authInfo.loggedInUser) ? <label id="viewexec" className={meta.pageSection === "db_exec" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/exec/" + meta.owner + "/" + meta.database} className="blackLink" title="Execute SQL" data-cy="execlink"><i className="fa fa-wrench"></i> Execute SQL</a></label> : null }
 
-			{meta.isLive ? <span>&nbsp; &nbsp; &nbsp;</span> : null }
+			{meta.isLive && (meta.owner === authInfo.loggedInUser) ? <span>&nbsp; &nbsp; &nbsp;</span> : null }
 
 			<label id="viewdiscuss" className={meta.pageSection === "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} className="blackLink" title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>
 
