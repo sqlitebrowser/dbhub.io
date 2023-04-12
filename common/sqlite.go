@@ -385,7 +385,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		},
 		{
 			name: sqlite.LimitColumn,
-			val:  100,
+			val:  400,
 		},
 		{
 			name: sqlite.LimitExprDepth,
@@ -557,7 +557,7 @@ func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, 
 		},
 		{
 			name: sqlite.LimitColumn,
-			val:  100,
+			val:  400,
 		},
 		{
 			name: sqlite.LimitExprDepth,
