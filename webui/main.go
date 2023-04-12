@@ -4655,17 +4655,17 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 						time.Sleep(3 * time.Second)
 						tables, err = sdb.Tables("")
 						if err != nil {
-							log.Printf("Error retrieving table names: %s", err)
+							log.Printf("Error retrieving table names for '%s/%s': '%s'", dbOwner, dbName, err)
 							w.WriteHeader(http.StatusLocked)
 							return
 						}
 					} else {
-						log.Printf("Error retrieving table names: %s", err)
+						log.Printf("Error retrieving table names for '%s/%s': '%s'", dbOwner, dbName, err)
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
 				} else {
-					log.Printf("Error retrieving table names: %s", err)
+					log.Printf("Error retrieving table names for '%s/%s': '%s'", dbOwner, dbName, err)
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
