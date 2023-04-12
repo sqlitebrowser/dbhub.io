@@ -2523,24 +2523,36 @@ func IncrementDownloadCount(dbOwner, dbName string) error {
 }
 
 // LiveAddDatabasePG adds the details for a live database to PostgreSQL
-func LiveAddDatabasePG(dbOwner, dbName, liveNode string) (err error) {
+func LiveAddDatabasePG(dbOwner, dbName, liveNode string, accessType SetAccessType) (err error) {
+	// Figure out new public/private access setting
+	var public bool
+	switch accessType {
+	case SetToPublic:
+		public = true
+	case SetToPrivate:
+		public = false
+	default:
+		err = errors.New("Error: Unknown public/private setting requested for a new live database.  Aborting.")
+		return
+	}
+
 	var commandTag pgx.CommandTag
 	dbQuery := `
 		WITH root AS (
 			SELECT nextval('sqlite_databases_db_id_seq') AS val
 		)
-		INSERT INTO sqlite_databases (user_id, db_id, db_name, live_db, live_node)
+		INSERT INTO sqlite_databases (user_id, db_id, db_name, public, live_db, live_node)
 		SELECT (
 			SELECT user_id
 			FROM users
-			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), $2, true, $3`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, liveNode)
+			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), $2, $3, true, $4`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, public, liveNode)
 	if err != nil {
-		log.Printf("Storing LIVE database '%s/%s' failed: %v\n", SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
+		log.Printf("Storing LIVE database '%s/%s' failed: %s", SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return err
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%v) affected while storing LIVE database '%s/%s'\n", numRows,
+		log.Printf("Wrong number of rows (%v) affected while storing LIVE database '%s/%s'", numRows,
 			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return nil
@@ -2665,7 +2677,7 @@ func LiveExecuteSQLSave(dbOwner, sqlName, sqlText string) (err error) {
 // LiveUserDBs returns the list of live databases owned by the user
 func LiveUserDBs(dbOwner string) (list []DBInfo, err error) {
 	dbQuery := `
-		SELECT db_name, date_created
+		SELECT db_name, date_created, public
 		FROM sqlite_databases AS db, users
 		WHERE users.user_id = db.user_id
 			AND lower(users.user_name) = lower($1)
@@ -2680,7 +2692,7 @@ func LiveUserDBs(dbOwner string) (list []DBInfo, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var oneRow DBInfo
-		err = rows.Scan(&oneRow.Database, &oneRow.DateCreated)
+		err = rows.Scan(&oneRow.Database, &oneRow.DateCreated, &oneRow.Public)
 		if err != nil {
 			log.Printf("Error when retrieving list of live databases for user '%s': %v\n", dbOwner, err)
 			return nil, err
@@ -4784,7 +4796,7 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		ORDER BY last_modified DESC`
 	rows, err := pdb.Query(dbQuery, userName)
 	if err != nil {
-		log.Printf("Getting list of databases for user failed: %v\n", err)
+		log.Printf("Getting list of databases for user failed: %s", err)
 		return nil, err
 	}
 	defer rows.Close()

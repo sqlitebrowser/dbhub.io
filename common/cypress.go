@@ -85,7 +85,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send the live database file to our AMQP backend for setup
-	err = LiveCreateDB(AmqpChan, "default", "Join Testing with index.sqlite")
+	err = LiveCreateDB(AmqpChan, "default", "Join Testing with index.sqlite", SetToPrivate)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -314,7 +314,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 		return
 	}
 
-	// If the database already existed, update it's contributor count
+	// If the database already existed, update its contributor count
 	if exists {
 		err = UpdateContributorsCount(dbOwner, dbName)
 		if err != nil {

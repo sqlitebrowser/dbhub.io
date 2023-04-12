@@ -83,13 +83,12 @@ func GetDatabase(r *http.Request, allowGet bool) (dbName string, err error) {
 	}
 	err = ValidateDB(dbName)
 	if err != nil {
-		log.Printf("Validation failed for database name '%s': %s", SanitiseLogString(dbName), err)
 		return "", errors.New("Invalid database name")
 	}
 	return dbName, nil
 }
 
-// GetFolder alwaysreturns "/" as we don't support folders yet
+// GetFolder always returns "/" as we don't support folders yet
 func GetFolder(r *http.Request, allowGet bool) (folder string, err error) {
 	return "/", nil
 }

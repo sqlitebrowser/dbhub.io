@@ -106,7 +106,7 @@ func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns
 }
 
 // LiveCreateDB requests the AMQP backend create a new live SQLite database
-func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string) (err error) {
+func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string, accessType SetAccessType) (err error) {
 	// Send the database setup request to our AMQP backend
 	var rawResponse []byte
 	rawResponse, err = MQRequest(channel, "create_queue", "createdb", "", dbOwner, dbName, "")
@@ -136,7 +136,13 @@ func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string) (err error) {
 	}
 
 	// Update PG, so it has a record of this database existing and knows the node/queue name for querying it
-	err = LiveAddDatabasePG(dbOwner, dbName, resp.Node)
+	err = LiveAddDatabasePG(dbOwner, dbName, resp.Node, accessType)
+	if err != nil {
+		return
+	}
+
+	// Enable the watch flag for the uploader for this database
+	err = ToggleDBWatch(dbOwner, dbOwner, dbName)
 	return
 }
 

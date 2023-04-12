@@ -1585,10 +1585,11 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 
 func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	var pageData struct {
-		LiveDBS          []com.LiveDBs
 		PageMeta         PageMetaInfo
 		PrivateDBs       []com.DBInfo
+		PrivateLiveDBS   []com.LiveDBs
 		PublicDBs        []com.DBInfo
+		PublicLiveDBS    []com.LiveDBs
 		SharedWithOthers []com.ShareDatabasePermissionsOthers
 		SharedWithYou    []com.ShareDatabasePermissionsUser
 		Stars            []com.DBEntry
@@ -1651,11 +1652,19 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		return
 	}
 	for _, z := range l {
-		pageData.LiveDBS = append(pageData.LiveDBS, com.LiveDBs{
-			DBOwner:     userName,
-			DBName:      z.Database,
-			DateCreated: z.DateCreated,
-		})
+		if z.Public {
+			pageData.PublicLiveDBS = append(pageData.PublicLiveDBS, com.LiveDBs{
+				DBOwner:     userName,
+				DBName:      z.Database,
+				DateCreated: z.DateCreated,
+			})
+		} else {
+			pageData.PrivateLiveDBS = append(pageData.PrivateLiveDBS, com.LiveDBs{
+				DBOwner:     userName,
+				DBName:      z.Database,
+				DateCreated: z.DateCreated,
+			})
+		}
 	}
 
 	// For each of the databases owned by the user, retrieve any share information
@@ -1684,7 +1693,20 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 			rawList = append(rawList, z)
 		}
 	}
-	for _, db := range pageData.LiveDBS {
+	for _, db := range pageData.PublicLiveDBS {
+		var z com.ShareDatabasePermissionsOthers
+		z.DBName = db.DBName
+		z.IsLive = true
+		z.Perms, err = com.GetShares(userName, z.DBName)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if len(z.Perms) > 0 {
+			rawList = append(rawList, z)
+		}
+	}
+	for _, db := range pageData.PrivateLiveDBS {
 		var z com.ShareDatabasePermissionsOthers
 		z.DBName = db.DBName
 		z.IsLive = true
@@ -2322,6 +2344,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		DBRows        []com.DBInfo
 		FullName      string
 		PageMeta      PageMetaInfo
+		PublicLiveDBS []com.DBInfo
 		UserAvatarURL string
 		UserName      string
 	}
@@ -2365,11 +2388,38 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 		pageData.UserAvatarURL = usr.AvatarURL + "&s=48"
 	}
 
-	// Retrieve list of public databases for the user
+	// Retrieve list of public standard databases owned by the user
 	pageData.DBRows, err = com.UserDBs(userName, com.DB_PUBLIC)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
+	}
+
+	// Retrieve the list of public live databases created by the user
+	var l []com.DBInfo
+	l, err = com.LiveUserDBs(userName)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
+		return
+	}
+	for _, z := range l {
+		if z.Public {
+			var x com.SQLiteDBinfo
+			err = com.DBDetails(&x, pageData.PageMeta.LoggedInUser, userName, z.Database, "")
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			// Ask the AMQP backend for the database file size
+			x.Info.Size, err = com.LiveSize(x.Info.LiveNode, pageData.PageMeta.LoggedInUser, userName, z.Database)
+			if err != nil {
+				log.Println(err)
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			pageData.PublicLiveDBS = append(pageData.PublicLiveDBS, x.Info)
+		}
 	}
 
 	// Render the page

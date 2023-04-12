@@ -316,7 +316,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", com.GetCurrentFunctionName(), err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -1905,8 +1905,6 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function deletes the latest commit from a given branch.
 func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Delete commit handler"
-
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -1955,7 +1953,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -2337,8 +2335,6 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function deletes a release.
 func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Delete Release handler"
-
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -2380,7 +2376,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -2420,8 +2416,6 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function deletes a tag.
 func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Delete Tag handler"
-
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -2463,7 +2457,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -2536,7 +2530,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = com.ValidateDB(srcDBName)
 	if err != nil {
-		log.Printf("Validation failed for database name '%s': %s", com.SanitiseLogString(srcDBName), err)
+		log.Printf("%s: Validation failed for database name '%s': %s", com.GetCurrentFunctionName(), com.SanitiseLogString(srcDBName), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		return
@@ -2584,7 +2578,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = com.ValidateDB(destDBName)
 	if err != nil {
-		log.Printf("Validation failed for database name '%s': %s", com.SanitiseLogString(destDBName), err)
+		log.Printf("%s: Validation failed for database name '%s': %s", com.GetCurrentFunctionName(), com.SanitiseLogString(destDBName), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err.Error())
 		return
@@ -4220,8 +4214,6 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function sets a branch as the default for a given database.
 func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Set default branch handler"
-
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -4263,7 +4255,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -4397,7 +4389,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", com.GetCurrentFunctionName(), err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -4801,8 +4793,6 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function processes branch rename and description updates.
 func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Update Branch handler"
-
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -4875,7 +4865,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -4946,8 +4936,6 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function processes comment text updates.
 func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Update Comment handler"
-
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -5032,7 +5020,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -5267,8 +5255,6 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function processes release rename and description updates.
 func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Update Release handler"
-
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -5341,7 +5327,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -5383,8 +5369,6 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 // This function processes tag rename and description updates.
 func updateTagHandler(w http.ResponseWriter, r *http.Request) {
-	pageName := "Update Tag handler"
-
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
@@ -5457,7 +5441,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Unknown database requested: %s", com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -5499,9 +5483,6 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 // This function processes new database data submitted through the upload form.
 func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Upload DB handler"
-
-	// TODO: Investigate getting the last modified timestamp of the database file selected for upload
-	// TODO   * https://developer.mozilla.org/en-US/docs/Web/API/File/lastModified
 
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
@@ -5620,17 +5601,15 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	defer tempFile.Close()
 
 	// If a database owner and name was passed in separately, we use that instead of the filename
-	{
-		usr, _, db, err := com.GetUFD(r, true)
-		if err != nil {
-			if db != "" {
-				errorPage(w, r, http.StatusInternalServerError, "Something seems to be wrong with the owner name or database name")
-			}
+	usr, _, db, err := com.GetUFD(r, true)
+	if err != nil {
+		if db != "" {
+			errorPage(w, r, http.StatusInternalServerError, "Something seems to be wrong with the owner name or database name")
 		}
-		if usr != "" || db != "" {
-			dbOwner = usr
-			dbName = db
-		}
+	}
+	if usr != "" || db != "" {
+		dbOwner = usr
+		dbName = db
 	}
 	if dbOwner == "" {
 		dbOwner = loggedInUser
@@ -5639,7 +5618,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate the database name
 	err = com.ValidateDB(dbName)
 	if err != nil {
-		log.Printf("%s: Validation failed for database name: %s", pageName, err)
+		log.Printf("%s: Validation failed for database name: %s", com.GetCurrentFunctionName(), err)
 		errorPage(w, r, http.StatusBadRequest, "Invalid database name")
 		return
 	}
@@ -5751,11 +5730,11 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the successful database upload
-	log.Printf("%s: Username: '%s', LIVE database '%s/%s' uploaded', bytes: %v\n", pageName, loggedInUser,
+	log.Printf("%s: Username: '%s', LIVE database '%s/%s' uploaded', bytes: %v", pageName, loggedInUser,
 		com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 	// Send a request to the AMQP backend to set up the database there, ready for querying
-	err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+	err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, accessType)
 	if err != nil {
 		log.Println(err)
 		errorPage(w, r, http.StatusInternalServerError, err.Error())

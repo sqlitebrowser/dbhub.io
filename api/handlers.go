@@ -125,7 +125,7 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
 	if isLive && liveNode == "" {
 		// Send a request to the AMQP backend to setup a node with the database
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -687,7 +687,7 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
 	if isLive && liveNode == "" {
 		// Send a request to the AMQP backend to set up the database there, ready for querying
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
 		if err != nil {
 			log.Println(err) // FIXME: Debug output while developing
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -740,7 +740,7 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
 	if isLive && liveNode == "" {
 		// Send a request to the AMQP backend to set up a node with the database
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -940,7 +940,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
 	if isLive && liveNode == "" {
 		// Send a request to the AMQP backend to set up the database there, ready for querying
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
 		if err != nil {
 			log.Println(err) // FIXME: Debug output while developing
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -1071,7 +1071,7 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
 	if isLive && liveNode == "" {
 		// Send a request to the AMQP backend to setup a node with the database
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1346,7 +1346,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 		// Send a request to the AMQP backend to set up the database there, ready for querying
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
 		if err != nil {
 			log.Println(err)
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -1408,7 +1408,7 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
 	if isLive && liveNode == "" {
 		// Send a request to the AMQP backend to setup a node with the database
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName)
+		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
