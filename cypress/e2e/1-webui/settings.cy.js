@@ -132,14 +132,19 @@ describe('settings', () => {
     cy.get('[data-cy="settingslink"]').click()
     cy.get('[data-cy="usernameinput"]').type('first')
     cy.get('[data-cy="adduserbtn"]').click()
+    cy.wait(waitTime)
+
     cy.get('[data-cy="sharedropdown-first"]').click()
     cy.get('[data-cy="sharerw-first"]').click({force: true})
 
     cy.get('[data-cy="usernameinput"]').type('second')
     cy.get('[data-cy="adduserbtn"]').click()
+    cy.wait(waitTime)
 
     cy.get('[data-cy="usernameinput"]').type('third')
     cy.get('[data-cy="adduserbtn"]').click()
+    cy.wait(waitTime)
+
     cy.get('[data-cy="sharedropdown-third"]').click()
     cy.get('[data-cy="sharerw-third"]').click({force: true})
 
