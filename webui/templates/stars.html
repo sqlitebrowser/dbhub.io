@@ -28,7 +28,7 @@
 [[ template "script_db_header" . ]]
 [[ template "footer" . ]]
 <script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ngSanitize']);
         app.controller('starsView', function($scope) {
             $scope.stars = { Stars: [[ .Stars ]] }
 

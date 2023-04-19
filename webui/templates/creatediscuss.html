@@ -44,7 +44,7 @@
 [[ template "script_db_header" . ]]
 [[ template "footer" . ]]
 <script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ngSanitize']);
     app.controller('createDiscussionView', function($scope, $http, $httpParamSerializerJQLike) {
         // Handler for the cancel button.  Just bounces back to the commits page
         $scope.cancelCreate = function() {

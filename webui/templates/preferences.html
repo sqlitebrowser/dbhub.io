@@ -88,7 +88,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ngSanitize']);
     app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
         // API Keys
         $scope.apiKeys = [[ .APIKeys ]];

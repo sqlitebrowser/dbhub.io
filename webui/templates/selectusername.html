@@ -38,7 +38,7 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
+    let app = angular.module('DBHub', ['ngSanitize']);
     app.controller('selectusernameView', function($scope, $http) {
         $scope.checkMsg = "";
 
