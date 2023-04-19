@@ -242,7 +242,7 @@ export default function DatabaseSettings() {
 		});
 	}
 
-	// Delete the databasw
+	// Delete the database
 	function deleteDatabase() {
 		fetch("/x/deletedatabase/", {
 			method: "post",
@@ -271,14 +271,14 @@ export default function DatabaseSettings() {
 	function confirmDelete() {
 		confirmAlert({
 			title: "Confirm delete",
-			message: "Are you sure you want to delete " + meta.owner + "/" + meta.database + "? There is no \"undo\" if you proceed.",
+			message: "Are you sure you want to delete '" + meta.owner + "/" + meta.database + "'? There is no \"undo\" if you proceed.",
 			buttons: [
 				{
 					label: "Yes, delete it",
 					onClick: () => deleteDatabase()
 				},
 				{
-					label: "Canel"
+					label: "Cancel"
 				}
 			]
 		});
