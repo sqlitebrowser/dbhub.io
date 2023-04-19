@@ -78,14 +78,14 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	defer liveDB1.Close()
 
 	// Store the live database in Minio
-	err = LiveStoreDatabaseMinio(liveDB1, "default", "Join Testing with index.sqlite", 16384)
+	objectID, err := LiveStoreDatabaseMinio(liveDB1, "default", "Join Testing with index.sqlite", 16384)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Send the live database file to our AMQP backend for setup
-	err = LiveCreateDB(AmqpChan, "default", "Join Testing with index.sqlite", SetToPrivate)
+	err = LiveCreateDB(AmqpChan, "default", "Join Testing with index.sqlite", objectID, SetToPrivate)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

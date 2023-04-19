@@ -457,7 +457,8 @@ CREATE TABLE public.sqlite_databases (
     download_count bigint DEFAULT 0,
     page_views bigint DEFAULT 0,
     live_db boolean DEFAULT false NOT NULL,
-    live_node text
+    live_node text,
+    live_minio_object_id text
 );
 
 
@@ -497,7 +498,8 @@ CREATE TABLE public.users (
     default_licence integer,
     display_name text,
     avatar_url text,
-    status_updates jsonb
+    status_updates jsonb,
+    live_minio_bucket_name text
 );
 
 

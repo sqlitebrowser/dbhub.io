@@ -440,6 +440,7 @@ type UserDetails struct {
 	DateJoined  time.Time
 	DisplayName string
 	Email       string
+	MinioBucket string
 	Password    string
 	PHash       []byte
 	PVerify     string

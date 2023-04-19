@@ -588,7 +588,7 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbName, commitID string)
 				db.release_count, db.contributors, coalesce(db.one_line_description, ''),
 				coalesce(db.full_description, 'No full description'), coalesce(db.default_table, ''), db.public,
 				coalesce(db.source_url, ''), db.tags, coalesce(db.default_branch, ''), db.live_db,
-				coalesce(db.live_node, '')
+				coalesce(db.live_node, ''), coalesce(db.live_minio_object_id, '')
 			FROM sqlite_databases AS db
 			WHERE db.user_id = (
 					SELECT user_id
@@ -603,10 +603,10 @@ func DBDetails(DB *SQLiteDBinfo, loggedInUser, dbOwner, dbName, commitID string)
 		&DB.Info.Watchers, &DB.Info.Stars, &DB.Info.Discussions, &DB.Info.MRs, &DB.Info.CommitID, &DB.Info.DBEntry,
 		&DB.Info.Branches, &DB.Info.Releases, &DB.Info.Contributors, &DB.Info.OneLineDesc, &DB.Info.FullDesc,
 		&DB.Info.DefaultTable, &DB.Info.Public, &DB.Info.SourceURL, &DB.Info.Tags, &DB.Info.DefaultBranch,
-		&DB.Info.IsLive, &DB.Info.LiveNode)
+		&DB.Info.IsLive, &DB.Info.LiveNode, &DB.MinioId)
 
 	if err != nil {
-		log.Printf("Error when retrieving database details: %v\n", err.Error())
+		log.Printf("Error when retrieving database details: %v", err.Error())
 		return errors.New("The requested database doesn't exist")
 	}
 
@@ -2523,7 +2523,7 @@ func IncrementDownloadCount(dbOwner, dbName string) error {
 }
 
 // LiveAddDatabasePG adds the details for a live database to PostgreSQL
-func LiveAddDatabasePG(dbOwner, dbName, liveNode string, accessType SetAccessType) (err error) {
+func LiveAddDatabasePG(dbOwner, dbName, bucketName, liveNode string, accessType SetAccessType) (err error) {
 	// Figure out new public/private access setting
 	var public bool
 	switch accessType {
@@ -2541,12 +2541,12 @@ func LiveAddDatabasePG(dbOwner, dbName, liveNode string, accessType SetAccessTyp
 		WITH root AS (
 			SELECT nextval('sqlite_databases_db_id_seq') AS val
 		)
-		INSERT INTO sqlite_databases (user_id, db_id, db_name, public, live_db, live_node)
+		INSERT INTO sqlite_databases (user_id, db_id, db_name, public, live_db, live_node, live_minio_object_id)
 		SELECT (
 			SELECT user_id
 			FROM users
-			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), $2, $3, true, $4`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, public, liveNode)
+			WHERE lower(user_name) = lower($1)), (SELECT val FROM root), $2, $3, true, $4, $5`
+	commandTag, err = pdb.Exec(dbQuery, dbOwner, dbName, public, liveNode, bucketName)
 	if err != nil {
 		log.Printf("Storing LIVE database '%s/%s' failed: %s", SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return err
@@ -2670,6 +2670,71 @@ func LiveExecuteSQLSave(dbOwner, sqlName, sqlText string) (err error) {
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%d) affected while saving SQL statement '%s' for user '%s'", numRows, SanitiseLogString(sqlName), SanitiseLogString(dbOwner))
+	}
+	return
+}
+
+// LiveGenerateMinioNames generates Minio bucket and object names for a live database
+func LiveGenerateMinioNames(userName string) (bucketName, objectName string, err error) {
+	// If the user already has a Minio bucket name assigned, then we use it
+	z, err := User(userName)
+	if err != nil {
+		return
+	}
+	if z.MinioBucket != "" {
+		bucketName = z.MinioBucket
+	} else {
+		// They don't have a bucket name assigned yet, so we generate one and assign it to them
+		bucketName = fmt.Sprintf("live-%s", RandomString(10))
+
+		// Add this bucket name to the user's details in the PG backend
+		dbQuery := `
+			UPDATE users
+			SET live_minio_bucket_name = $2
+			WHERE user_name = $1
+			AND live_minio_bucket_name is null` // This should ensure we never overwrite an existing bucket name for the user
+		var commandTag pgx.CommandTag
+		commandTag, err = pdb.Exec(dbQuery, userName, bucketName)
+		if err != nil {
+			log.Printf("Updating Minio bucket name for user '%s' failed: %v", userName, err)
+			return
+		}
+		if numRows := commandTag.RowsAffected(); numRows != 1 {
+			log.Printf("Wrong number of rows (%v) affected while updating the Minio bucket name for user '%s'",
+				numRows, userName)
+		}
+	}
+
+	// We only generate the name here, we *do not* try to update anything in the database with it.  This is because
+	// when this function is called, the SQLite database may not yet have a record in the PG backend
+	objectName = RandomString(6)
+	return
+}
+
+// LiveGetMinioNames retrieves the Minio bucket and object names for a live database
+func LiveGetMinioNames(loggedInUser, dbOwner, dbName string) (bucketName, objectName string, err error) {
+	// Retrieve user details
+	usr, err := User(dbOwner)
+	if err != nil {
+		return
+	}
+
+	// Retrieve database details
+	var db SQLiteDBinfo
+	err = DBDetails(&db, loggedInUser, dbOwner, dbName, "")
+	if err != nil {
+		return
+	}
+
+	// If either the user bucket name or the minio object name is empty, then the database is likely stored using
+	// the initial naming scheme
+	if usr.MinioBucket == "" || db.MinioId == "" {
+		bucketName = fmt.Sprintf("live-%s", dbOwner)
+		objectName = dbName
+	} else {
+		// It's using the new naming scheme
+		bucketName = usr.MinioBucket
+		objectName = db.MinioId
 	}
 	return
 }
@@ -4716,12 +4781,12 @@ func UpdateMergeRequestCommits(dbOwner, dbName string, discID int, mrCommits []C
 // User returns details for a user
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
-		SELECT user_name, display_name, email, avatar_url, password_hash, date_joined, client_cert
+		SELECT user_name, coalesce(display_name, ''), coalesce(email, ''), coalesce(avatar_url, ''), password_hash,
+		       date_joined, client_cert, coalesce(live_minio_bucket_name, '')
 		FROM users
 		WHERE lower(user_name) = lower($1)`
-	var av, dn, em pgx.NullString
-	err = pdb.QueryRow(dbQuery, userName).Scan(&user.Username, &dn, &em, &av, &user.PHash, &user.DateJoined,
-		&user.ClientCert)
+	err = pdb.QueryRow(dbQuery, userName).Scan(&user.Username, &user.DisplayName, &user.Email, &user.AvatarURL,
+		&user.PHash, &user.DateJoined, &user.ClientCert, &user.MinioBucket)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			// The error was just "no such user found"
@@ -4733,18 +4798,8 @@ func User(userName string) (user UserDetails, err error) {
 		return user, nil
 	}
 
-	// Return the display name and email values (if not empty)
-	if dn.Valid {
-		user.DisplayName = dn.String
-	}
-	if em.Valid {
-		user.Email = em.String
-	}
-
-	// Determine an appropriate URL to the users's profile pic
-	if av.Valid {
-		user.AvatarURL = av.String
-	} else {
+	// Determine an appropriate URL for the users' profile pic
+	if user.AvatarURL == "" {
 		// No avatar URL is presently stored, so default to a gravatar based on users email (if known)
 		if user.Email != "" {
 			picHash := md5.Sum([]byte(user.Email))

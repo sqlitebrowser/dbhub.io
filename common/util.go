@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -875,37 +874,29 @@ func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbName, c
 	// Depending on whether this is a live database there's different ways to get a handle
 	// to the minio file
 	var userDB *minio.Object
-	var logSha string
+	var logStr string
 	if isLive {
-		// It's a live database, so we tell the AMQP backend to back up it up into Minio, which we then provide to the user
-		var rawResponse []byte
-		rawResponse, err = MQRequest(AmqpChan, liveNode, "backup", loggedInUser, dbOwner, dbName, "")
+		// It's a live database, so we tell the AMQP backend to back it up into Minio, which we then provide to the user
+		err = LiveBackup(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			return
 		}
 
-		// Decode the response
-		var resp LiveDBErrorResponse
-		err = json.Unmarshal(rawResponse, &resp)
+		// Retrieve the Minio bucket info for the database
+		var bucket, objectId string
+		bucket, objectId, err = LiveGetMinioNames(dbOwner, dbOwner, dbName)
 		if err != nil {
-			return
-		}
-
-		// If the backup failed, then provide the error message to the user
-		if resp.Error != "" {
-			err = errors.New(resp.Error)
 			return
 		}
 
 		// Open a connection to Minio for the file
-		var bucket = fmt.Sprintf("live-%s", dbOwner)
-		userDB, err = MinioHandle(bucket, dbName)
+		userDB, err = MinioHandle(bucket, objectId)
 		if err != nil {
 			return
 		}
 
 		// Identifier of database for logging
-		logSha = fmt.Sprintf("%s/%s", dbOwner, dbName)
+		logStr = fmt.Sprintf("%s/%s", dbOwner, dbName)
 	} else {
 		// Verify the given database exists and is ok to be downloaded (and get the Minio bucket + id while at it)
 		var bucket, id string
@@ -921,7 +912,7 @@ func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbName, c
 		}
 
 		// Identifier of database for logging
-		logSha = bucket + id
+		logStr = bucket + id
 	}
 
 	// Close the object handle when this function finishes
@@ -942,7 +933,7 @@ func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbName, c
 	}
 
 	// Make a record of the download
-	err = LogDownload(dbOwner, dbName, loggedInUser, r.RemoteAddr, sourceSw, userAgent, time.Now(), logSha)
+	err = LogDownload(dbOwner, dbName, loggedInUser, r.RemoteAddr, sourceSw, userAgent, time.Now(), logStr)
 	if err != nil {
 		return
 	}

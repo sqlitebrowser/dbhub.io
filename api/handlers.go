@@ -122,14 +122,11 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
+	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
+	// should never happen
 	if isLive && liveNode == "" {
-		// Send a request to the AMQP backend to setup a node with the database
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		return
 	}
 
 	// If it's a standard database, process it locally.  Else send the query to our AMQP backend
@@ -366,18 +363,17 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Delete the database
-	err = com.DeleteDatabase(dbOwner, dbName)
-	if err != nil {
-		jsonErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// For a live database, delete it from both Minio and our AMQP backend
+	var bucket, id string
 	if isLive {
+		// Get the Minio bucket and object names for this database
+		bucket, id, err = com.LiveGetMinioNames(loggedInUser, dbOwner, dbName)
+		if err != nil {
+			jsonErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		// Delete the database from Minio
-		bucket := fmt.Sprintf("live-%s", dbOwner)
-		id := dbName
 		err = com.MinioDeleteDatabase("API server", dbOwner, dbName, bucket, id)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -385,38 +381,25 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Delete the database from our AMQP backend
-		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "delete", loggedInUser, dbOwner, dbName, "")
+		err = com.LiveDelete(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
 			return
 		}
+	}
 
-		// Decode the response
-		var resp com.LiveDBErrorResponse
-		err = json.Unmarshal(rawResponse, &resp)
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
-			return
-		}
-		if resp.Error != "" {
-			err = errors.New(resp.Error)
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if resp.Node == "" {
-			log.Printf("In API (Live) deleteHandler().  A node responded, but didn't identify itself.")
-			return
-		}
+	// Delete the database in PostgreSQL
+	err = com.DeleteDatabase(dbOwner, dbName)
+	if err != nil {
+		jsonErr(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Return a "success" message
 	z := com.StatusResponseContainer{Status: "OK"}
 	jsonData, err := json.MarshalIndent(z, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in deleteHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in deleteHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -684,15 +667,11 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
+	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
+	// should never happen
 	if isLive && liveNode == "" {
-		// Send a request to the AMQP backend to set up the database there, ready for querying
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
-		if err != nil {
-			log.Println(err) // FIXME: Debug output while developing
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		return
 	}
 
 	// Send the SQL execution request to our AMQP backend
@@ -737,14 +716,11 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
+	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
+	// should never happen
 	if isLive && liveNode == "" {
-		// Send a request to the AMQP backend to set up a node with the database
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		return
 	}
 
 	// If it's a standard database, process it locally.  Else send the query to our AMQP backend
@@ -937,15 +913,11 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
+	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
+	// should never happen
 	if isLive && liveNode == "" {
-		// Send a request to the AMQP backend to set up the database there, ready for querying
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
-		if err != nil {
-			log.Println(err) // FIXME: Debug output while developing
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		return
 	}
 
 	// Run the query
@@ -1068,14 +1040,11 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
+	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
+	// should never happen
 	if isLive && liveNode == "" {
-		// Send a request to the AMQP backend to setup a node with the database
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		return
 	}
 
 	// If it's a standard database, process it locally.  Else send the query to our AMQP backend
@@ -1335,7 +1304,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Store the database in Minio
-		err = com.LiveStoreDatabaseMinio(tempDB, dbOwner, dbName, numBytes)
+		objectID, err := com.LiveStoreDatabaseMinio(tempDB, dbOwner, dbName, numBytes)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1346,7 +1315,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 		// Send a request to the AMQP backend to set up the database there, ready for querying
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
+		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID, com.SetToPrivate)
 		if err != nil {
 			log.Println(err)
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -1405,14 +1374,11 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If a live database has been uploaded but doesn't have a live node handling its requests, then create one
+	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
+	// should never happen
 	if isLive && liveNode == "" {
-		// Send a request to the AMQP backend to setup a node with the database
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, com.SetToPrivate)
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		return
 	}
 
 	// If it's a standard database, process it locally.  Else send the query to our AMQP backend

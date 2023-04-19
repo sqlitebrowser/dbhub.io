@@ -94,8 +94,18 @@ func main() {
 				continue
 			}
 
+			// Verify that the object ID was passed through the interface correctly
+			objectID, ok := req.Data.(string)
+			if !ok {
+				err = com.MQCreateResponse(d, ch, com.Conf.Live.Nodename, "failure")
+				if err != nil {
+					log.Printf("Error: occurred on live node '%s' in the create db code, while converting the Minio object ID to a string: '%s'", com.Conf.Live.Nodename, err)
+				}
+				continue
+			}
+
 			// Set up the live database locally
-			err = setupLiveDB(req.DBOwner, req.DBName)
+			_, err = com.LiveRetrieveDatabaseMinio(com.Conf.Live.StorageDir, req.DBOwner, req.DBName, objectID)
 			if err != nil {
 				log.Println(err)
 				err = com.MQCreateResponse(d, ch, com.Conf.Live.Nodename, "failure")
@@ -307,7 +317,7 @@ func main() {
 				// Open the SQLite database and read the row data
 				resp := com.LiveDBRowsResponse{Node: com.Conf.Live.Nodename, RowData: com.SQLiteRecordSet{}}
 				resp.Tables, resp.DefaultTable, resp.RowData, resp.DatabaseSize, err =
-					com.SQLiteReadDatabasePage(fmt.Sprintf("live-%s", req.DBOwner), req.DBName, req.RequestingUser, req.DBOwner, req.DBName, dbTable, sortCol, sortDir, commitID, rowOffset, maxRows, true)
+					com.SQLiteReadDatabasePage("", "", req.RequestingUser, req.DBOwner, req.DBName, dbTable, sortCol, sortDir, commitID, rowOffset, maxRows, true)
 				if err != nil {
 					resp := com.LiveDBErrorResponse{Node: com.Conf.Live.Nodename, Error: err.Error()}
 					err = com.MQResponse("ROWDATA", msg, ch, com.Conf.Live.Nodename, resp)
@@ -452,12 +462,5 @@ func removeLiveDB(dbOwner, dbName string) (err error) {
 		log.Printf("Live node '%s': Database file '%s/%s' removed from filesystem path: '%s'",
 			com.Conf.Live.Nodename, dbOwner, dbName, dbPath)
 	}
-	return
-}
-
-// setupLiveDB sets up a new instance of a given live database on the local node
-func setupLiveDB(dbOwner, dbName string) (err error) {
-	// Retrieve the uploaded database file from Minio, and save it to local disk
-	_, err = com.LiveRetrieveDatabaseMinio(com.Conf.Live.StorageDir, dbOwner, dbName)
 	return
 }

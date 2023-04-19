@@ -904,22 +904,18 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		return
 	}
 
-	// For non-live databases, add branch information
+	// For non-live databases, add branch, table and view information by querying it directly, otherwise we get the details from our AMQP backend
 	if !pageData.DB.Info.IsLive {
 		// Retrieve default branch name details
 		if pageData.DB.Info.Branch == "" {
 			pageData.DB.Info.Branch = pageData.DB.Info.DefaultBranch
 		}
-
 		for i := range branchHeads {
 			pageData.DB.Info.BranchList = append(pageData.DB.Info.BranchList, i)
 		}
-
 		pageData.DB.Info.Commits = branchHeads[pageData.DB.Info.Branch].CommitCount
-	}
 
-	// If it's a standard database then we query it directly, otherwise we query it via our AMQP backend
-	if !pageData.DB.Info.IsLive {
+		// Query the database
 		sdb, err := com.OpenSQLiteDatabaseDefensive(w, r, dbOwner, dbName, commitID, pageData.PageMeta.LoggedInUser)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())

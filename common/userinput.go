@@ -488,7 +488,7 @@ func GetUsername(r *http.Request, allowGet bool) (userName string, err error) {
 		return "", nil
 	}
 
-	// Unescape, then validate the user name
+	// Unescape, then validate the username
 	userName, err = url.QueryUnescape(u)
 	if err != nil {
 		return "", err

@@ -31,7 +31,7 @@ func ConnectMinio() (err error) {
 }
 
 // LiveRetrieveDatabaseMinio retrieves a live SQLite database from Minio, and places it on the local filesystem
-func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName string) (dbPath string, err error) {
+func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName, objectID string) (dbPath string, err error) {
 	// Create the directory to hold the live database
 	// NOTE: It's probably best to use both dbOwner and dbName in the path, calling the database something like
 	//       "live.sqlite".  That should avoid any potential conflicts with creative database names having
@@ -43,9 +43,20 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName string) (dbPath string, 
 		return
 	}
 
+	// Get the users' minio bucket name
+	usr, err := User(dbOwner)
+	if err != nil {
+		return
+	}
+	var bkt string
+	if usr.MinioBucket == "" {
+		bkt = fmt.Sprintf("live-%s", dbOwner)
+	} else {
+		bkt = usr.MinioBucket
+	}
+
 	// Get a handle from Minio for the database object
-	var userDB *minio.Object
-	userDB, err = MinioHandle(fmt.Sprintf("live-%s", dbOwner), dbName)
+	userDB, err := MinioHandle(bkt, objectID)
 	if err != nil {
 		return
 	}
@@ -54,15 +65,13 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName string) (dbPath string, 
 	defer MinioHandleClose(userDB)
 
 	// Save the database file locally
-	var f *os.File
-	var bytesWritten int64
 	dbPath = filepath.Join(dbDir, "live.sqlite")
-	f, err = os.OpenFile(dbPath, os.O_CREATE|os.O_WRONLY, 0750)
+	f, err := os.OpenFile(dbPath, os.O_CREATE|os.O_WRONLY, 0750)
 	if err != nil {
 		return
 	}
 	defer f.Close()
-	bytesWritten, err = io.Copy(f, userDB)
+	bytesWritten, err := io.Copy(f, userDB)
 	if err != nil {
 		return
 	}
@@ -80,36 +89,55 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName string) (dbPath string, 
 }
 
 // LiveStoreDatabaseMinio stores a live SQLite database in Minio
-func LiveStoreDatabaseMinio(db *os.File, dbOwner, dbName string, dbSize int64) (err error) {
+func LiveStoreDatabaseMinio(db *os.File, dbOwner, dbName string, dbSize int64) (minioObjectID string, err error) {
+	// If the database doesn't already exist in the PG backend, then we generate a new Minio object id for it
+	exists, err := CheckDBExists(dbOwner, dbName)
+	if err != nil {
+		return
+	}
+	var bkt string
+	if exists {
+		// The database already exists in PG, so we reuse the existing minio bucket name and object id
+		bkt, minioObjectID, err = LiveGetMinioNames(dbOwner, dbOwner, dbName)
+		if err != nil {
+			return
+		}
+	} else {
+		// This is a new database, so we need to generate the Minio bucket name and object id for it
+		bkt, minioObjectID, err = LiveGenerateMinioNames(dbOwner)
+		if err != nil {
+			return
+		}
+	}
+
 	// If a Minio bucket with the desired name doesn't already exist, create it
 	var found bool
-	var bkt = fmt.Sprintf("live-%s", dbOwner)
 	found, err = minioClient.BucketExists(bkt)
 	if err != nil {
-		return err
+		return
 	}
 	if !found {
-		err := minioClient.MakeBucket(bkt, "us-east-1")
+		err = minioClient.MakeBucket(bkt, "us-east-1")
 		if err != nil {
-			return err
+			return
 		}
 	}
 
 	// Store the SQLite database file in Minio
-	numBytes, err := minioClient.PutObject(bkt, dbName, db, dbSize, minio.PutObjectOptions{ContentType: "application/x-sqlite3"})
+	numBytes, err := minioClient.PutObject(bkt, minioObjectID, db, dbSize, minio.PutObjectOptions{ContentType: "application/x-sqlite3"})
 	if err != nil {
-		return err
+		return
 	}
 
 	// Sanity check.  Make sure the # of bytes written is equal to the size of the database we were given
 	if dbSize != numBytes {
-		err = errors.New(fmt.Sprintf("Something went wrong storing the database file.  dbSize = %v, numBytes = %v",
+		err = errors.New(fmt.Sprintf("Something went wrong storing the database file.  dbSize = %d, numBytes = %d",
 			dbSize, numBytes))
-		return err
+		return
 	}
 
 	if AmqpDebug > 0 {
-		log.Printf("Added Minio LIVE database object '%s/%s', using bucket '%s' and id '%s'", dbOwner, dbName, bkt, dbName)
+		log.Printf("Added Minio LIVE database object '%s/%s', using bucket '%s' and id '%s'", dbOwner, dbName, bkt, minioObjectID)
 	}
 	return
 }

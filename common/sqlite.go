@@ -940,7 +940,7 @@ func SQLiteBackupLive(baseDir, dbOwner, dbName string) (err error) {
 	// Copy the local backup file into Minio
 	var z *os.File
 	z, err = os.Open(tmpName)
-	err = LiveStoreDatabaseMinio(z, dbOwner, dbName, fileInfo.Size())
+	_, err = LiveStoreDatabaseMinio(z, dbOwner, dbName, fileInfo.Size())
 	if err != nil {
 		z.Close()
 		return

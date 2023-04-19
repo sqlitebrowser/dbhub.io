@@ -2106,7 +2106,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 // This function deletes some records in a table of a live database
 func deleteDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve user and database
-	dbOwner, dbName, err := com.GetOD(2, r) // 1 = Ignore "/x/deletedata/" at the start of the URL
+	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/deletedata/" at the start of the URL
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -4506,7 +4506,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Table data handler"
 
 	// Retrieve user, database, table, and commit ID
-	dbOwner, dbName, requestedTable, commitID, err := com.GetODTC(2, r) // 1 = Ignore "/x/table/" at the start of the URL
+	dbOwner, dbName, requestedTable, commitID, err := com.GetODTC(2, r) // 2 = Ignore "/x/table/" at the start of the URL
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -4753,33 +4753,12 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			RowOffset: rowOffset,
 			MaxRows:   maxRows,
 		}
-		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "rowdata", loggedInUser, dbOwner, dbName, reqData)
+		dataRows, err = com.LiveRowData(liveNode, loggedInUser, dbOwner, dbName, reqData)
 		if err != nil {
 			log.Println(err)
 			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
 			return
 		}
-
-		// Decode the response
-		var resp com.LiveDBRowsResponse
-		err = json.Unmarshal(rawResponse, &resp)
-		if err != nil {
-			log.Println(err)
-			errorPage(w, r, http.StatusInternalServerError, "Error when reading from the database")
-			return
-		}
-		if resp.Error != "" {
-			err = errors.New(resp.Error)
-			log.Println(err)
-			errorPage(w, r, http.StatusInternalServerError, resp.Error)
-			return
-		}
-		if resp.Node == "" {
-			log.Printf("In webUI (Live) databasePage().  A node responded, but didn't identify itself.")
-			return
-		}
-		dataRows = resp.RowData
 	}
 
 	// Format the output.  Use json.MarshalIndent() for nicer looking output
@@ -5041,7 +5020,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 // This function updates rows in live databases
 func updateDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve user and database
-	dbOwner, dbName, err := com.GetOD(2, r) // 1 = Ignore "/x/updatedata/" at the start of the URL
+	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/updatedata/" at the start of the URL
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -5723,7 +5702,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store the database in Minio
-	err = com.LiveStoreDatabaseMinio(tempDB, dbOwner, dbName, numBytes)
+	objectID, err := com.LiveStoreDatabaseMinio(tempDB, dbOwner, dbName, numBytes)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -5734,7 +5713,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 	// Send a request to the AMQP backend to set up the database there, ready for querying
-	err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, accessType)
+	err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID, accessType)
 	if err != nil {
 		log.Println(err)
 		errorPage(w, r, http.StatusInternalServerError, err.Error())

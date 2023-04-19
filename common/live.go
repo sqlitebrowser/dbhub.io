@@ -78,6 +78,33 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 	return
 }
 
+// LiveBackup asks the AMQP backend to store the given database back into Minio
+func LiveBackup(liveNode, loggedInUser, dbOwner, dbName string) (err error) {
+	var rawResponse []byte
+	rawResponse, err = MQRequest(AmqpChan, liveNode, "backup", loggedInUser, dbOwner, dbName, "")
+	if err != nil {
+		return
+	}
+
+	// Decode the response
+	var resp LiveDBErrorResponse
+	err = json.Unmarshal(rawResponse, &resp)
+	if err != nil {
+		return
+	}
+
+	// If the backup failed, then provide the error message to the user
+	if resp.Error != "" {
+		err = errors.New(resp.Error)
+		return
+	}
+	if resp.Node == "" {
+		log.Println("A node responded to a 'backup' request, but didn't identify itself.")
+		return
+	}
+	return
+}
+
 // LiveColumns requests the AMQP backend to return a list of all columns of the given table
 func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns []sqlite.Column, pk []string, err error) {
 	var rawResponse []byte
@@ -97,7 +124,7 @@ func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns
 		return
 	}
 	if resp.Node == "" {
-		log.Printf("A node responded to a 'columns' request, but didn't identify itself")
+		log.Println("A node responded to a 'columns' request, but didn't identify itself.")
 		return
 	}
 	columns = resp.Columns
@@ -106,10 +133,10 @@ func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns
 }
 
 // LiveCreateDB requests the AMQP backend create a new live SQLite database
-func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string, accessType SetAccessType) (err error) {
+func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName, objectID string, accessType SetAccessType) (err error) {
 	// Send the database setup request to our AMQP backend
 	var rawResponse []byte
-	rawResponse, err = MQRequest(channel, "create_queue", "createdb", "", dbOwner, dbName, "")
+	rawResponse, err = MQRequest(channel, "create_queue", "createdb", "", dbOwner, dbName, objectID)
 	if err != nil {
 		return
 	}
@@ -126,7 +153,7 @@ func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string, accessType SetA
 		return
 	}
 	if resp.Node == "" {
-		err = errors.New("A node responded, but didn't identify itself. :(")
+		log.Println("A node responded to a 'create' request, but didn't identify itself.")
 		return
 	}
 	if resp.Result != "success" {
@@ -136,13 +163,41 @@ func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName string, accessType SetA
 	}
 
 	// Update PG, so it has a record of this database existing and knows the node/queue name for querying it
-	err = LiveAddDatabasePG(dbOwner, dbName, resp.Node, accessType)
+	err = LiveAddDatabasePG(dbOwner, dbName, objectID, resp.Node, accessType)
 	if err != nil {
 		return
 	}
 
 	// Enable the watch flag for the uploader for this database
 	err = ToggleDBWatch(dbOwner, dbOwner, dbName)
+	return
+}
+
+// LiveDelete asks our AMQP backend to delete a database
+func LiveDelete(liveNode, loggedInUser, dbOwner, dbName string) (err error) {
+	// Delete the database from our AMQP backend
+	var rawResponse []byte
+	rawResponse, err = MQRequest(AmqpChan, liveNode, "delete", loggedInUser, dbOwner, dbName, "")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// Decode the response
+	var resp LiveDBErrorResponse
+	err = json.Unmarshal(rawResponse, &resp)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if resp.Error != "" {
+		err = errors.New(resp.Error)
+		return
+	}
+	if resp.Node == "" {
+		log.Println("A node responded to a 'delete' request, but didn't identify itself.")
+		return
+	}
 	return
 }
 
@@ -195,6 +250,35 @@ func LiveQueryDB(channel *amqp.Channel, nodeName, requestingUser, dbOwner, dbNam
 	return
 }
 
+// LiveRowData asks our AMQP backend to send us the SQLite table data for a given range of rows
+func LiveRowData(liveNode, loggedInUser, dbOwner, dbName string, reqData LiveDBRowsRequest) (rowData SQLiteRecordSet, err error) {
+	var rawResponse []byte
+	rawResponse, err = MQRequest(AmqpChan, liveNode, "rowdata", loggedInUser, dbOwner, dbName, reqData)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	// Decode the response
+	var resp LiveDBRowsResponse
+	err = json.Unmarshal(rawResponse, &resp)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if resp.Error != "" {
+		err = errors.New(resp.Error)
+		log.Println(err)
+		return
+	}
+	if resp.Node == "" {
+		log.Println("A node responded to a 'rowdata' request, but didn't identify itself.")
+		return
+	}
+	rowData = resp.RowData
+	return
+}
+
 // LiveSize asks our AMQP backend for the file size of a database
 func LiveSize(liveNode, loggedInUser, dbOwner, dbName string) (size int64, err error) {
 	// Send the size request to our AMQP backend
@@ -215,7 +299,7 @@ func LiveSize(liveNode, loggedInUser, dbOwner, dbName string) (size int64, err e
 		return
 	}
 	if resp.Node == "" {
-		log.Printf("A node responded to a 'size' request, but didn't identify itself")
+		log.Println("A node responded to a 'size' request, but didn't identify itself.")
 		return
 	}
 	size = resp.Size
@@ -242,7 +326,7 @@ func LiveTables(liveNode, loggedInUser, dbOwner, dbName string) (tables []string
 		return
 	}
 	if resp.Node == "" {
-		log.Printf("A node responded to a 'tables' request, but didn't identify itself")
+		log.Println("A node responded to a 'tables' request, but didn't identify itself.")
 		return
 	}
 	tables = resp.Tables
@@ -289,7 +373,7 @@ func LiveViews(liveNode, loggedInUser, dbOwner, dbName string) (views []string, 
 		return
 	}
 	if resp.Node == "" {
-		log.Printf("A node responded to a 'views' request, but didn't identify itself")
+		log.Println("A node responded to a 'views' request, but didn't identify itself.")
 		return
 	}
 	views = resp.Views
