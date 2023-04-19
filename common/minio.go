@@ -50,6 +50,7 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName, objectID string) (dbPat
 	}
 	var bkt string
 	if usr.MinioBucket == "" {
+		// No bucket name is stored for the user, so the database will be using the initial "live-username" approach
 		bkt = fmt.Sprintf("live-%s", dbOwner)
 	} else {
 		bkt = usr.MinioBucket

@@ -2269,27 +2269,25 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 		if err != nil {
 			// Something went wrong when invalidating memcached entries for the database
-			log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+			log.Printf("Error when invalidating memcache entries: %s", err.Error())
 			return
 		}
 	}
 
-	// Delete the database
-	err = com.DeleteDatabase(dbOwner, dbName)
-	if err != err {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, "Internal server error")
-		return
-	}
-
 	// For a live database, delete it from both Minio and our AMQP backend
-	// FIXME: This code to delete the live database from the AMQP backend was directly copied from
-	// FIXME  api/main.go.  Move the code into a shared function at some point
 	if isLive {
+		// Get the Minio bucket name and object id
+		var bucket, objectID string
+		bucket, objectID, err = com.LiveGetMinioNames(dbOwner, dbOwner, dbName)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Internal server error")
+			log.Println(err)
+			return
+		}
+
 		// Delete the database from Minio
-		bucket := fmt.Sprintf("live-%s", dbOwner)
-		id := dbName
-		err = com.MinioDeleteDatabase("webUI", dbOwner, dbName, bucket, id)
+		err = com.MinioDeleteDatabase("webUI", dbOwner, dbName, bucket, objectID)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, "Internal server error")
@@ -2298,35 +2296,22 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Delete the database from our AMQP backend
-		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "delete", loggedInUser, dbOwner, dbName, "")
+		err = com.LiveDelete(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, "Internal server error")
 			log.Println(err)
 			return
 		}
+	}
 
-		// Decode the response
-		var resp com.LiveDBErrorResponse
-		err = json.Unmarshal(rawResponse, &resp)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "Internal server error")
-			log.Println(err)
-			return
-		}
-		if resp.Error != "" {
-			err = errors.New(resp.Error)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, resp.Error)
-			log.Println(err)
-			return
-		}
-		if resp.Node == "" {
-			log.Printf("In webUI (Live) deleteDatabaseHandler().  A node responded, but didn't identify itself.")
-			return
-		}
+	// Delete the database in PostgreSQL
+	err = com.DeleteDatabase(dbOwner, dbName)
+	if err != err {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Internal server error")
+		log.Println(err)
+		return
 	}
 
 	// Update succeeded
