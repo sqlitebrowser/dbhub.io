@@ -150,6 +150,7 @@ func main() {
 	}
 	srv := &http.Server{
 		Addr:         com.Conf.Api.BindAddress,
+		ErrorLog:     com.HttpErrorLog(),
 		TLSConfig:    newTLSConfig,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}

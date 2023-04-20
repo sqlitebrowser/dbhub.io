@@ -107,6 +107,7 @@ func main() {
 	}
 	newServer := &http.Server{
 		Addr:         ":" + fmt.Sprint(com.Conf.DB4S.Port),
+		ErrorLog:     com.HttpErrorLog(),
 		Handler:      gz.GzipHandler(mux),
 		TLSConfig:    newTLSConfig,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),

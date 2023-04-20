@@ -3506,7 +3506,8 @@ func main() {
 	// Start webUI server
 	log.Printf("WebUI server starting on https://%s\n", com.Conf.Web.ServerName)
 	srv := &http.Server{
-		Addr: com.Conf.Web.BindAddress,
+		Addr:     com.Conf.Web.BindAddress,
+		ErrorLog: com.HttpErrorLog(),
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS12, // TLS 1.2 is now the lowest acceptable level
 		},
