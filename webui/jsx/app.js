@@ -6,6 +6,7 @@ import ModalImage from "react-modal-image";
 import Auth from "./auth";
 import BranchesTable from "./branches";
 import DatabaseSettings from "./database-settings";
+import DatabaseTags from "./database-tags";
 import DatabaseView from "./database-view";
 import DatabaseWatchers from "./database-watchers";
 import DbHeader from "./db-header";
@@ -40,6 +41,16 @@ import MarkdownEditor from "./markdown-editor";
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<DatabaseSettings />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("database-tags");
+	if (rootNode) {
+		const releases = rootNode.dataset.releases;
+
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<DatabaseTags releases={releases} />);
 	}
 }
 

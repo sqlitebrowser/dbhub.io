@@ -2341,8 +2341,8 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	dbOwner := strings.ToLower(usr)
 
-	// Ensure a release name was supplied
-	relName, err := com.GetFormRelease(r)
+	// Ensure a release name was supplied in the tag parameter
+	relName, err := com.GetFormTag(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -5238,7 +5238,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	dbOwner := strings.ToLower(usr)
 
 	// Validate new release name
-	a := r.PostFormValue("newrel")
+	a := r.PostFormValue("newtag")
 	nr, err := url.QueryUnescape(a)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -5268,8 +5268,8 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		newDesc = nd
 	}
 
-	// Ensure a release name was supplied
-	relName, err := com.GetFormRelease(r)
+	// Ensure a release name was supplied in the tag parameter
+	relName, err := com.GetFormTag(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

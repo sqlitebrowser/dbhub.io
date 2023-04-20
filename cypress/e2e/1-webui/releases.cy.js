@@ -28,13 +28,13 @@ describe('releases', () => {
     cy.get('[data-cy="nameinput"]').should('have.value', 'Some release name')
 
     // Description
-    cy.get('[data-cy="rendereddiv"]').should('contain', 'Some release description')
+    cy.get('[data-cy="Some release name_desc-preview"]').should('contain', 'Some release description')
 
     // Edit description field
-    cy.get('[data-cy="desctext"]').should('have.value', 'Some release description')
+    cy.get('[data-cy="Some release name_desc"]').should('have.value', 'Some release description')
 
     // URL for tag creator
-    cy.get('[data-cy="releaserlnk"]').click()
+    cy.get('[data-cy="taggerlnk"]').click()
     cy.location('pathname').should('equal', '/default')
 
     // URL for commit id
@@ -59,18 +59,18 @@ describe('releases', () => {
   // Change description text
   it('change release description', () => {
     cy.visit('releases/default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="rendereddiv"]').should('contain', 'Some release description')
-    cy.get('[data-cy="edittab"]').click()
-    cy.get('[data-cy="desctext"]').type('{selectall}{backspace}').type('A new description').should('have.value', 'A new description')
+    cy.get('[data-cy="Some other name_desc-preview"]').should('contain', 'Some release description')
+    cy.get('[data-cy="Some other name_desc-edit-tab"]').click()
+    cy.get('[data-cy="Some other name_desc"]').type('{selectall}{backspace}').type('A new description').should('have.value', 'A new description')
     cy.get('[data-cy="updatebtn"]').click()
     cy.reload()
-    cy.get('[data-cy="rendereddiv"]').should('contain', 'A new description')
+    cy.get('[data-cy="Some other name_desc-preview"]').should('contain', 'A new description')
   })
 
   // Delete release
   it('delete release', () => {
     cy.visit('releases/default/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="delbtn"]').click()
-    cy.get('[data-cy="norelstxt"]').should('not.have.attr', 'hidden')
+    cy.get('[data-cy="notagstxt"]').should('not.have.attr', 'hidden')
   })
 })

@@ -1701,20 +1701,19 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 // Render the releases page, which displays the releases for a database.
 func releasesPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
-	type relEntry struct {
+	type tgEntry struct {
 		AvatarURL           string    `json:"avatar_url"`
 		Commit              string    `json:"commit"`
 		Date                time.Time `json:"date"`
 		Description         string    `json:"description"`
-		DescriptionMarkdown string    `json:"description_markdown"`
-		ReleaserUserName    string    `json:"releaser_user_name"`
-		ReleaserDisplayName string    `json:"releaser_display_name"`
 		Size                int64     `json:"size"`
+		TaggerUserName    string      `json:"tagger_user_name"`
+		TaggerDisplayName string      `json:"tagger_display_name"`
 	}
 	var pageData struct {
 		DB          com.SQLiteDBinfo
 		PageMeta    PageMetaInfo
-		ReleaseList map[string]relEntry
+		TagList     map[string]tgEntry
 	}
 	pageData.PageMeta.Title = "Release list"
 	pageData.PageMeta.PageSection = "db_data"
@@ -1754,7 +1753,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 	userNameCache := make(map[string]userCacheEntry)
 
 	// Fill out the metadata
-	pageData.ReleaseList = make(map[string]relEntry)
+	pageData.TagList = make(map[string]tgEntry)
 	if len(releases) > 0 {
 		for i, j := range releases {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
@@ -1772,21 +1771,14 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Create the tag info we pass to the tag list rendering page
-			var r string
-			if j.Description == "" {
-				r = "No description"
-			} else {
-				r = string(gfm.Markdown([]byte(j.Description)))
-			}
-			pageData.ReleaseList[i] = relEntry{
+			pageData.TagList[i] = tgEntry{
 				AvatarURL:           userNameCache[j.ReleaserEmail].AvatarURL,
 				Commit:              j.Commit,
 				Date:                j.Date,
 				Description:         j.Description,
-				DescriptionMarkdown: r,
-				ReleaserUserName:    userNameCache[j.ReleaserEmail].Email,
-				ReleaserDisplayName: j.ReleaserName,
 				Size:                j.Size,
+				TaggerUserName:      userNameCache[j.ReleaserEmail].Email,
+				TaggerDisplayName:   j.ReleaserName,
 			}
 		}
 	}
@@ -2057,7 +2049,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 		Commit              string    `json:"commit"`
 		Date                time.Time `json:"date"`
 		Description         string    `json:"description"`
-		DescriptionMarkdown string    `json:"description_markdown"`
+		Size                int       `json:"size"`
 		TaggerUserName      string    `json:"tagger_user_name"`
 		TaggerDisplayName   string    `json:"tagger_display_name"`
 	}
@@ -2122,18 +2114,11 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Create the tag info we pass to the tag list rendering page
-			var r string
-			if j.Description == "" {
-				r = "No description"
-			} else {
-				r = string(gfm.Markdown([]byte(j.Description)))
-			}
 			pageData.TagList[i] = tgEntry{
 				AvatarURL:           userNameCache[j.TaggerEmail].AvatarURL,
 				Commit:              j.Commit,
 				Date:                j.Date,
 				Description:         j.Description,
-				DescriptionMarkdown: r,
 				TaggerUserName:      userNameCache[j.TaggerEmail].Email,
 				TaggerDisplayName:   j.TaggerName,
 			}

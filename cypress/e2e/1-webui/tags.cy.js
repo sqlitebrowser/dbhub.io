@@ -27,10 +27,10 @@ describe('tags', () => {
     cy.get('[data-cy="nameinput"]').should('have.value', 'Some tag name')
 
     // Description
-    cy.get('[data-cy="rendereddiv"]').should('contain', 'Some tag description')
+    cy.get('[data-cy="Some tag name_desc-preview"]').should('contain', 'Some tag description')
 
-    // Edit description tag
-    cy.get('[data-cy="desctext"]').should('have.value', 'Some tag description')
+    // Edit description field
+    cy.get('[data-cy="Some tag name_desc"]').should('have.value', 'Some tag description')
 
     // URL for tag creator
     cy.get('[data-cy="taggerlnk"]').click()
@@ -58,12 +58,12 @@ describe('tags', () => {
   // Change description text
   it('change tag description', () => {
     cy.visit('tags/default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="rendereddiv"]').should('contain', 'Some tag description')
-    cy.get('[data-cy="edittab"]').click()
-    cy.get('[data-cy="desctext"]').type('{selectall}{backspace}').type('A new description').should('have.value', 'A new description')
+    cy.get('[data-cy="Some other name_desc-preview"]').should('contain', 'Some tag description')
+    cy.get('[data-cy="Some other name_desc-edit-tab"]').click()
+    cy.get('[data-cy="Some other name_desc"]').type('{selectall}{backspace}').type('A new description').should('have.value', 'A new description')
     cy.get('[data-cy="updatebtn"]').click()
     cy.reload()
-    cy.get('[data-cy="rendereddiv"]').should('contain', 'A new description')
+    cy.get('[data-cy="Some other name_desc-preview"]').should('contain', 'A new description')
   })
 
   // Delete tag
