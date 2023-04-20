@@ -55,6 +55,7 @@ webui/js/auth.js
 webui/js/branches.js
 webui/js/database-settings.js
 webui/js/database-view.js
+webui/js/database-watchers.js
 webui/js/db-header.js
 webui/js/markdown-editor.js
 

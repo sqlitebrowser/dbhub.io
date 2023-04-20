@@ -7,6 +7,7 @@ import Auth from "./auth";
 import BranchesTable from "./branches";
 import DatabaseSettings from "./database-settings";
 import DatabaseView from "./database-view";
+import DatabaseWatchers from "./database-watchers";
 import DbHeader from "./db-header";
 import MarkdownEditor from "./markdown-editor";
 
@@ -47,6 +48,16 @@ import MarkdownEditor from "./markdown-editor";
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<DatabaseView />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("database-watchers");
+	if (rootNode) {
+		const stars = rootNode.dataset.stars;
+
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<DatabaseWatchers stars={stars} />);
 	}
 }
 

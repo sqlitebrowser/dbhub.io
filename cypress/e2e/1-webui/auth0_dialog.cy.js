@@ -91,7 +91,7 @@ describe('ensure auth0 dialog is available on all pages', () => {
 
   it('stars page', () => {
     cy.visit('stars/default/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="stars"]').should('contain.text', 'People who starred')
+    cy.title().should('include', 'Stars')
     cy.get('[data-cy="loginlnk"]').click()
     cy.get('.auth0-lock-name').should('contain.text', 'Auth0')
   })
@@ -112,7 +112,7 @@ describe('ensure auth0 dialog is available on all pages', () => {
 
   it('watchers page', () => {
     cy.visit('watchers/default/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="pplwatch"]').should('contain.text', 'People watching')
+    cy.title().should('include', 'Watchers')
     cy.get('[data-cy="loginlnk"]').click()
     cy.get('.auth0-lock-name').should('contain.text', 'Auth0')
   })
