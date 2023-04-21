@@ -210,51 +210,22 @@ function DatabasePageControls({position, offset, maxRows, rowCount, setOffset}) 
 		bRadius = "7px 7px 0 0";
 	}
 
+	// Hide or show the page controls depending on the current position while maintaining their width
+	const disabledUp = offset > 0 ? null : "disabled";
+	const disabledDown = (offset + maxRows) < rowCount ? null : "disabled";
+
 	return (
-		<div className="row">
-			<div className="col-md-12">
-				<div style={{maxWidth: "100%", overflow: "auto", border: "1px solid #DDD", borderRadius: bRadius}}>
-					<table className="table table-responsive" style={{margin: 0}}>
-						<thead>
-							<tr>
-								<th style={{textAlign: "center", padding: 0, borderBottom: "1px"}}>
-									{offset > 0 ? (<>
-										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#/" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(0)} data-cy="firstpgbtn"><i className='fa fa-fast-backward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i> </a>
-										</span>
-										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#/" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset - maxRows)} data-cy="pgupbtn"><i className='fa fa-backward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px 2px 2px 0"}}></i> </a>
-										</span>
-									</>) : (<>
-										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<i className='fa fa-fast-backward' style={{color: "white", background: "white", border: "1px solid white", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i>
-										</span>
-										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<i className='fa fa-backward' style={{color: "white", background: "white", border: "1px solid white", borderRadius: "3px", marginTop: "4px", padding: "2px 2px 2px 0"}}></i>
-										</span>
-									</>)}
-									{offset + maxRows < rowCount ? (<>
-										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#/" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset + maxRows)} data-cy="pgdnbtn"> <i className='fa fa-forward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px 0 2px 2px"}}></i></a>
-										</span>
-										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#/" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(rowCount - maxRows)} data-cy="lastpgbtn"> <i className="fa fa-fast-forward" style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i></a>
-										</span>
-									</>) : (<>
-										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											 <i className='fa fa-forward' style={{color: "white", background: "white", border: "1px solid white", borderRadius: "3px", marginTop: "4px", padding: "2px 0 2px 2px"}}></i>
-										</span>
-										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											 <i className="fa fa-fast-forward" style={{color: "white", background: "white", border: "1px solid white", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i>
-										</span>
-									</>)}
-									<span style={{verticalAlign: "middle"}}> &nbsp; {totalRowCountText(offset, maxRows, rowCount)}</span>
-								</th>
-							</tr>
-						</thead>
-					</table>
+		<div className="text-center" style={{padding: "2px", border: "1px solid #DDD", borderRadius: bRadius}}>
+				<div className="btn-group" role="group">
+					<button type="button" className="btn btn-default" disabled={disabledUp} onClick={() => setOffset(0)} data-cy="firstpgbtn"><i className="fa fa-fast-backward"></i></button>
+					<button type="button" className="btn btn-default" disabled={disabledUp} onClick={() => setOffset(offset - maxRows)} data-cy="pgupbtn"><i className="fa fa-backward"></i></button>
 				</div>
-			</div>
+				&nbsp;
+				<div className="btn-group" role="group">
+					<button type="button" className="btn btn-default" disabled={disabledDown} onClick={() => setOffset(offset + maxRows)} data-cy="pgdnbtn"><i className="fa fa-forward"></i></button>
+					<button type="button" className="btn btn-default" disabled={disabledDown} onClick={() => setOffset(rowCount - maxRows)} data-cy="lastpgbtn"><i className="fa fa-fast-forward"></i></button>
+				</div>
+				<span> &nbsp; {totalRowCountText(offset, maxRows, rowCount)}</span>
 		</div>
 	);
 }
