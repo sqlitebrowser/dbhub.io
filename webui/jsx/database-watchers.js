@@ -6,9 +6,9 @@ export default function DatabaseWatchers({stars}) {
 
 	if (data === null) {
 		if (stars) {
-			return <h3>No-one has starred {meta.owner + "/" + meta.database} yet</h3>;
+			return <h3 style={{textAlign: "center"}}>No-one has starred '{meta.owner + "/" + meta.database}' yet</h3>;
 		} else {
-			return <h3>No-one is watching {meta.owner + "/" + meta.database} yet</h3>;
+			return <h3 style={{textAlign: "center"}}>No-one is watching '{meta.owner + "/" + meta.database}' yet</h3>;
 		}
 	}
 
