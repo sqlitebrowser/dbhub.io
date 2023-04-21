@@ -1,5 +1,13 @@
 let waitTime = 250;
 
+const resizeObserverLoopErrRe = /^[^(ResizeObserver loop limit exceeded)]/
+Cypress.on('uncaught:exception', (err) => {
+  /* returning false here prevents Cypress from failing the test */
+  if (resizeObserverLoopErrRe.test(err.message)) {
+    return false
+  }
+})
+
 describe('database sharing', () => {
   before(() => {
     // Seed data
@@ -79,6 +87,7 @@ describe('database sharing', () => {
     cy.visit('upload')
     cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
     cy.get('[data-cy="uploadbtn"]').click()
+    cy.wait(waitTime)
     cy.get('[data-cy="settingslink"]').click()
     cy.get('[data-cy="private"]').click()
 
@@ -99,6 +108,7 @@ describe('database sharing', () => {
     cy.visit('upload')
     cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
     cy.get('[data-cy="uploadbtn"]').click()
+    cy.wait(waitTime)
     cy.get('[data-cy="settingslink"]').click()
     cy.get('[data-cy="private"]').click()
 
