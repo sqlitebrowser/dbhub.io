@@ -224,7 +224,7 @@ describe('database page', () => {
     cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
 
     // Click the button we're testing
-    cy.get('[data-cy="pgdnbtn"]').click()
+    cy.get('[data-cy="pgdnbtn"]').first().click()
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '85')
   })
 
@@ -234,7 +234,7 @@ describe('database page', () => {
     cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
 
     // Click the button we're testing
-    cy.get('[data-cy="lastpgbtn"]').click()
+    cy.get('[data-cy="lastpgbtn"]').first().click()
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '8881')
   })
 
@@ -244,8 +244,8 @@ describe('database page', () => {
     cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
 
     // Click the button we're testing
-    cy.get('[data-cy="lastpgbtn"]').click()
-    cy.get('[data-cy="pgupbtn"]').click()
+    cy.get('[data-cy="lastpgbtn"]').first().click()
+    cy.get('[data-cy="pgupbtn"]').first().click()
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '7786')
   })
 
@@ -255,8 +255,8 @@ describe('database page', () => {
     cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
 
     // Click the button we're testing
-    cy.get('[data-cy="lastpgbtn"]').click()
-    cy.get('[data-cy="firstpgbtn"]').click()
+    cy.get('[data-cy="lastpgbtn"]').first().click()
+    cy.get('[data-cy="firstpgbtn"]').first().click()
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '27')
   })
 

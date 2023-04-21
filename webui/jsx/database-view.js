@@ -184,7 +184,7 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 	</>);
 }
 
-function DatabasePageControls({offset, maxRows, rowCount, setOffset}) {
+function DatabasePageControls({position, offset, maxRows, rowCount, setOffset}) {
 	// Returns a text string with row count information for the table
 	function totalRowCountText(offset, maxRows, rowCount) {
 		// Update the end value if it's pointing past the last row
@@ -202,31 +202,53 @@ function DatabasePageControls({offset, maxRows, rowCount, setOffset}) {
 		return offset.toLocaleString() + "-" + end.toLocaleString() + " of " + rowCount.toLocaleString() + " total rows";
 	}
 
+	// Adjust the style of the border for top vs bottom control placement
+	let bRadius;
+	if (position === "bottom") {
+		bRadius = "0 0 7px 7px";
+	} else {
+		bRadius = "7px 7px 0 0";
+	}
+
 	return (
 		<div className="row">
 			<div className="col-md-12">
-				<div style={{maxWidth: "100%", overflow: "auto", border: "1px solid #DDD", borderRadius: "0 0 7px 7px"}}>
+				<div style={{maxWidth: "100%", overflow: "auto", border: "1px solid #DDD", borderRadius: bRadius}}>
 					<table className="table table-responsive" style={{margin: 0}}>
 						<thead>
 							<tr>
-								<th style={{textAlign: "center", padding: 0}}>
+								<th style={{textAlign: "center", padding: 0, borderBottom: "1px"}}>
 									{offset > 0 ? (<>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(0)} data-cy="firstpgbtn">⏮</a>
+											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(0)} data-cy="firstpgbtn"><i className='fa fa-fast-backward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i> </a>
 										</span>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset - maxRows)} data-cy="pgupbtn">⏴</a>
+											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset - maxRows)} data-cy="pgupbtn"><i className='fa fa-backward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px 2px 2px 0"}}></i> </a>
 										</span>
-									</>) : null}
-									<span style={{verticalAlign: "middle"}}>{totalRowCountText(offset, maxRows, rowCount)}</span>
+									</>) : (<>
+										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
+											<i className='fa fa-fast-backward' style={{color: "white", background: "white", border: "1px solid white", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i>
+										</span>
+										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
+											<i className='fa fa-backward' style={{color: "white", background: "white", border: "1px solid white", borderRadius: "3px", marginTop: "4px", padding: "2px 2px 2px 0"}}></i>
+										</span>
+									</>)}
 									{offset + maxRows < rowCount ? (<>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset + maxRows)} data-cy="pgdnbtn">⏵️</a>
+											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset + maxRows)} data-cy="pgdnbtn"> <i className='fa fa-forward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px 0 2px 2px"}}></i></a>
 										</span>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(rowCount - maxRows)} data-cy="lastpgbtn">⏭</a>
+											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(rowCount - maxRows)} data-cy="lastpgbtn"> <i className="fa fa-fast-forward" style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i></a>
 										</span>
-									</>) : null}
+									</>) : (<>
+										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
+											 <i className='fa fa-forward' style={{color: "white", background: "white", border: "1px solid white", borderRadius: "3px", marginTop: "4px", padding: "2px 0 2px 2px"}}></i>
+										</span>
+										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
+											 <i className="fa fa-fast-forward" style={{color: "white", background: "white", border: "1px solid white", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i>
+										</span>
+									</>)}
+									<span style={{verticalAlign: "middle"}}> &nbsp; {totalRowCountText(offset, maxRows, rowCount)}</span>
 								</th>
 							</tr>
 						</thead>
@@ -483,7 +505,10 @@ export default function DatabaseView() {
 			deleteSelectedRows={confirmDeleteSelectedRows}
 			insertRow={insertRow}
 		/>
+		<DatabasePageControls position="top" offset={offset} maxRows={maxRows} rowCount={rowCount} setOffset={(newOffset) => changeView(table, newOffset, sortColumns.length ? sortColumns[0].columnKey : null, sortColumns.length ? sortColumns[0].direction : null)} />
 		<DataGrid
+			// The "+ 1" includes the header row.  The 35 is the default row height size in pixels.
+			style={{height: ((maxRows + 1) * 35) + "px", overflow: "hidden"}}
 			className="rdg-light"
 			renderers={{noRowsFallback: <DataGridNoRowsRender />}}
 			columns={columns}
@@ -499,7 +524,7 @@ export default function DatabaseView() {
 				resizable: true
 			}}
 		/>
-		<DatabasePageControls offset={offset} maxRows={maxRows} rowCount={rowCount} setOffset={(newOffset) => changeView(table, newOffset, sortColumns.length ? sortColumns[0].columnKey : null, sortColumns.length ? sortColumns[0].direction : null)} />
+		<DatabasePageControls position="bottom" offset={offset} maxRows={maxRows} rowCount={rowCount} setOffset={(newOffset) => changeView(table, newOffset, sortColumns.length ? sortColumns[0].columnKey : null, sortColumns.length ? sortColumns[0].direction : null)} />
 		<div className="row" style={{border: "none"}}>&nbsp;</div>
 		<DatabaseFullDescription description={meta.fullDescription} />
 		<div className="row" style={{border: "none"}}>&nbsp;</div>
