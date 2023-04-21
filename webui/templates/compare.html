@@ -391,6 +391,11 @@
                 $scope.statusMessage = "The selected source and destination can't be merged.  Please choose a different source and destination.";
             });
         };
+
+        // Returns a nicely presented "time elapsed" string
+        $scope.getTimePeriodTxt = function(date1, includeOn) {
+            return getTimePeriod(date1, includeOn)
+        };
     });
 </script>
 </body>
