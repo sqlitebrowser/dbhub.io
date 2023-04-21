@@ -155,7 +155,7 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 							</button>
 							<ul className="dropdown-menu">
 								<li><input type="text" value={"https://" + db4s.server + (db4s.port === 443 ? null : (":" + db4s.port)) + "/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&branch=" + meta.branch} id="db4sCloneLink" readOnly /></li>
-								<li><a href="#" onClick={() => copyToClipboard('db4sCloneLink')}>Copy link <span className="glyphicon glyphicon-link"></span></a></li>
+								<li><a href="#/" onClick={() => copyToClipboard('db4sCloneLink')}>Copy link <span className="glyphicon glyphicon-link"></span></a></li>
 							</ul>
 						</div>&nbsp;</>
 					) : null}
@@ -220,10 +220,10 @@ function DatabasePageControls({position, offset, maxRows, rowCount, setOffset}) 
 								<th style={{textAlign: "center", padding: 0, borderBottom: "1px"}}>
 									{offset > 0 ? (<>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(0)} data-cy="firstpgbtn"><i className='fa fa-fast-backward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i> </a>
+											<a href="#/" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(0)} data-cy="firstpgbtn"><i className='fa fa-fast-backward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i> </a>
 										</span>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset - maxRows)} data-cy="pgupbtn"><i className='fa fa-backward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px 2px 2px 0"}}></i> </a>
+											<a href="#/" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset - maxRows)} data-cy="pgupbtn"><i className='fa fa-backward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px 2px 2px 0"}}></i> </a>
 										</span>
 									</>) : (<>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
@@ -235,10 +235,10 @@ function DatabasePageControls({position, offset, maxRows, rowCount, setOffset}) 
 									</>)}
 									{offset + maxRows < rowCount ? (<>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset + maxRows)} data-cy="pgdnbtn"> <i className='fa fa-forward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px 0 2px 2px"}}></i></a>
+											<a href="#/" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(offset + maxRows)} data-cy="pgdnbtn"> <i className='fa fa-forward' style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px 0 2px 2px"}}></i></a>
 										</span>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
-											<a href="#" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(rowCount - maxRows)} data-cy="lastpgbtn"> <i className="fa fa-fast-forward" style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i></a>
+											<a href="#/" style={{color: "black", textDecoration: "none"}} onClick={() => setOffset(rowCount - maxRows)} data-cy="lastpgbtn"> <i className="fa fa-fast-forward" style={{border: "1px solid #aaa", borderRadius: "3px", marginTop: "4px", padding: "2px"}}></i></a>
 										</span>
 									</>) : (<>
 										<span style={{fontSize: "x-large", verticalAlign: "middle", marginBottom: "10px"}}>
