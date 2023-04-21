@@ -139,3 +139,7 @@ textarea {
     width: 100%;
     padding: 6px;
 }
+
+.rdg-checkbox-label {
+    display: flex;
+}
