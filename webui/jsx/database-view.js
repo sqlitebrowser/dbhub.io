@@ -507,8 +507,8 @@ export default function DatabaseView() {
 		/>
 		<DatabasePageControls position="top" offset={offset} maxRows={maxRows} rowCount={rowCount} setOffset={(newOffset) => changeView(table, newOffset, sortColumns.length ? sortColumns[0].columnKey : null, sortColumns.length ? sortColumns[0].direction : null)} />
 		<DataGrid
-			// The "+ 1" includes the header row.  The 35 is the default row height size in pixels.
-			style={{height: ((maxRows + 1) * 35) + "px", overflow: "hidden"}}
+			// We are showing one page of rows unless this is the last page with a smaller number of rows.  The "+ 1" includes the header row.  The 35 is the default row height size in pixels.
+			style={{height: ((Math.min(rowCount - offset, maxRows) + 1) * 35) + "px", overflow: "hidden"}}
 			className="rdg-light"
 			renderers={{noRowsFallback: <DataGridNoRowsRender />}}
 			columns={columns}
