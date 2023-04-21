@@ -1487,7 +1487,7 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 		MaxRows     int
 		PageMeta    PageMetaInfo
 	}
-	pageData.PageMeta.Title = "Settings"
+	pageData.PageMeta.Title = "Preferences"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())

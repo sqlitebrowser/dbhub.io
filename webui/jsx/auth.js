@@ -26,7 +26,7 @@ export default function Auth() {
 			&nbsp;
 			{updates}
 			&nbsp;
-			<a href="/pref" style={{color: "black", verticalAlign: "middle"}}>Settings</a> | <a href={"/" + authInfo.loggedInUser} style={{color: "black", verticalAlign: "middle"}}>Home</a> | <a href="/logout" style={{color: "black", verticalAlign: "middle"}}>Log out</a>
+			<a href="/pref" style={{color: "black", verticalAlign: "middle"}}>Preferences</a> | <a href={"/" + authInfo.loggedInUser} style={{color: "black", verticalAlign: "middle"}}>Home</a> | <a href="/logout" style={{color: "black", verticalAlign: "middle"}}>Log out</a>
 			</>
 		);
 	} else {
