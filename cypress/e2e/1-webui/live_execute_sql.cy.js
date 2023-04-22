@@ -85,6 +85,7 @@ describe('live execute', () => {
     cy.get('[data-cy="formatsqlbtn"]').click()
 
     // Verify the changed text
+    cy.wait(waitTime)
     cy.get('[data-cy="usersqltext"]').should('contain',
       'CREATE TABLE\n' +
         '  livetest1 (field1 INTEGER, field2 TEXT, field3 INTEGER)')
