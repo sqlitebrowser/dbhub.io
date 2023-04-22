@@ -237,6 +237,7 @@ describe('live visualisation', () => {
     cy.get('[data-cy="formatsqlbtn"]').click()
 
     // Verify the changed text
+    cy.wait(waitTime)
     cy.get('[data-cy="usersqltext"]').should('contain',
       'SELECT\n' +
         '  table1.Name,\n' +

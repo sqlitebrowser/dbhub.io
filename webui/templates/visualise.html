@@ -436,8 +436,10 @@
             // Retrieve the SQL and chart settings for the newly chosen visualisation from the server
             $http.get("/x/visget/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?visname="+newVis).then(
                 function success(response) {
-                    // Clear any existing status message
-                    $scope.statusMessage = "";
+                    if (execNewVis) {
+                        // Clear any existing status message
+                        $scope.statusMessage = "";
+                    }
 
                     // Apply the retrieved information
                     document.getElementById("savename").value = newVis;
@@ -554,10 +556,12 @@
                         $scope.db.Records = {};
                     }
                 }, function failure(response) {
-                    // Retrieving visualisation text failed, so display the returned error message
-                    $scope.statusMessageColour = "red";
-                    $scope.statusMessage = nowString() + "Retrieving visualisation failed: " + response.data;
-                    $scope.showVis = false;
+                    if (execNewVis) {
+                        // Retrieving visualisation text failed, so display the returned error message
+                        $scope.statusMessageColour = "red";
+                        $scope.statusMessage = nowString() + "Retrieving visualisation failed: " + response.data;
+                        $scope.showVis = false;
+                    }
                 }
             )
         }
