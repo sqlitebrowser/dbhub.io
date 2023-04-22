@@ -4,7 +4,7 @@ import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
 
 import "react-tabs/style/react-tabs.css";
 
-export default function MarkdownEditor({editorId, rows, placeholder, defaultIndex, initialValue, viewOnly}) {
+export default function MarkdownEditor({editorId, rows, placeholder, defaultIndex, initialValue, viewOnly, onChange}) {
 	const [previewHtml, setPreviewHtml] = React.useState("");
 
 	if (rows === undefined) {
@@ -53,7 +53,7 @@ export default function MarkdownEditor({editorId, rows, placeholder, defaultInde
 	// This is the editor and the preview area for the markdown.
 	// The editor is set to invisible in view only mode
 	let editor = (
-		<textarea id={editorId} name={editorId} rows={rows} placeholder={placeholder} data-cy={editorId} style={{display: viewOnly ? "none" : null}}>
+		<textarea id={editorId} name={editorId} rows={rows} placeholder={placeholder} data-cy={editorId} style={{display: viewOnly ? "none" : null}} onChange={e => onChange !== undefined ? onChange(e.target.value) : null}>
 			{initialValue}
 		</textarea>
 	);

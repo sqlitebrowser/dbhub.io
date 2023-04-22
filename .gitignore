@@ -59,6 +59,7 @@ webui/js/database-tags.js
 webui/js/database-view.js
 webui/js/database-watchers.js
 webui/js/db-header.js
+webui/js/discussion-comments.js
 webui/js/discussion-list.js
 webui/js/markdown-editor.js
 

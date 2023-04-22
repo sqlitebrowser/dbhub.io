@@ -11,6 +11,7 @@ import DatabaseTags from "./database-tags";
 import DatabaseView from "./database-view";
 import DatabaseWatchers from "./database-watchers";
 import DbHeader from "./db-header";
+import DiscussionComments from "./discussion-comments";
 import DiscussionList from "./discussion-list";
 import MarkdownEditor from "./markdown-editor";
 
@@ -83,6 +84,14 @@ import MarkdownEditor from "./markdown-editor";
 }
 
 {
+	const rootNode = document.getElementById("discussion-comments");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<DiscussionComments />);
+	}
+}
+
+{
 	const rootNode = document.getElementById("discussion-list");
 	if (rootNode) {
 		const mergeRequests = rootNode.dataset.mergeRequests;
@@ -100,6 +109,7 @@ import MarkdownEditor from "./markdown-editor";
 		const defaultIndex = rootNode.dataset.defaultIndex;
 		const initialValue = rootNode.dataset.initialValue;
 		const viewOnly = rootNode.dataset.viewOnly;
+		const onChange = rootNode.dataset.onChange;
 
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<MarkdownEditor
@@ -109,6 +119,7 @@ import MarkdownEditor from "./markdown-editor";
 			defaultIndex={defaultIndex}
 			initialValue={initialValue}
 			viewOnly={viewOnly}
+			onChange={onChange}
 		/>);
 	});
 }
