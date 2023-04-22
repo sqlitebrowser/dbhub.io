@@ -786,7 +786,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 // ReadSQLiteDBCSV is a specialised variation of the ReadSQLiteDB() function, just for our CSV exporting code.  It may
 // be merged with that in future.
 func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
-	// Retrieve all of the data from the selected database table
+	// Retrieve all the data from the selected database table
 	stmt, err := sdb.Prepare(`SELECT * FROM "` + dbTable + `"`)
 	if err != nil {
 		log.Printf("Error when preparing statement for database: %s\n", err)
@@ -965,18 +965,8 @@ func SQLiteExecuteQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string
 	// TODO: Probably add in the before and after logging info at some point (as per query function),
 	//       so we can analyse query execution times, memory use, etc
 
-	// Prepare the statement
-	// FIXME: Do we need to do this prepare step?  Am suspecting "no", as we don't (yet) have a way to
-	//        batch call the matching stmt.Exec() below.  Not remembering what else it might benefit though.
-	var stmt *sqlite.Stmt
-	stmt, err = sdb.Prepare(query)
-	if err != nil {
-		return
-	}
-	defer stmt.Finalize()
-
 	// Execute the statement
-	rowsChanged, err = stmt.ExecDml()
+	rowsChanged, err = sdb.ExecDml(query)
 	if err != nil {
 		log.Printf("Error when executing query by '%s' for LIVE database (%s/%s): '%s'\n",
 			SanitiseLogString(loggedInUser), SanitiseLogString(dbOwner), SanitiseLogString(dbName),
