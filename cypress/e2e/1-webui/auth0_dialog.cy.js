@@ -56,7 +56,7 @@ describe('ensure auth0 dialog is available on all pages', () => {
 
   it('discussion page', () => {
     cy.visit('discuss/default/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="nodisc"]').should('contain.text', 'This database doesn\'t have any discussions yet')
+    cy.get('[data-cy="nodisc"]').should('contain.text', 'This database does not have any discussions yet')
     cy.get('[data-cy="loginlnk"]').click()
     cy.get('.auth0-lock-name').should('contain.text', 'Auth0')
   })

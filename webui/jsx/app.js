@@ -10,6 +10,7 @@ import DatabaseTags from "./database-tags";
 import DatabaseView from "./database-view";
 import DatabaseWatchers from "./database-watchers";
 import DbHeader from "./db-header";
+import DiscussionList from "./discussion-list";
 import MarkdownEditor from "./markdown-editor";
 
 {
@@ -69,6 +70,16 @@ import MarkdownEditor from "./markdown-editor";
 
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<DatabaseWatchers stars={stars} />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("discussion-list");
+	if (rootNode) {
+		const mergeRequests = rootNode.dataset.mergeRequests;
+
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<DiscussionList mergeRequests={mergeRequests} />);
 	}
 }
 
