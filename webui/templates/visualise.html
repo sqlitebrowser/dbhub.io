@@ -422,6 +422,12 @@
             $scope.statusMessage = "";
         }
 
+        // Clear out any existing table data
+        $scope.clearData = function() {
+            $scope.db.ColNames = [];
+            $scope.db.Records = [];
+        }
+
         // Handle browser resize events
         function resizeEvent() {
             if (dataReceived === true) {
@@ -433,14 +439,16 @@
         // Change to a newly selected visualisation
         // Note, the 'execNewVis' parameter controls whether to execute and display the visualisation after loading it
         $scope.changeVis = function(newVis, execNewVis) {
+            // Clear out any existing table data and chart
+            $scope.showVis = false;
+            $scope.clearData();
+
             // Retrieve the SQL and chart settings for the newly chosen visualisation from the server
             $http.get("/x/visget/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?visname="+newVis).then(
                 function success(response) {
                     if (execNewVis) {
-                        // Clear any existing status message, chart, and table data
+                        // Clear any existing status message
                         $scope.statusMessage = "";
-                        $scope.showVis = true;
-                        $scope.clearData();
                     }
 
                     // Apply the retrieved information
@@ -460,6 +468,7 @@
 
                     // If requested, we execute the newly loaded visualisation
                     if (execNewVis) {
+                        $scope.showVis = true;
                         $scope.execSQL();
                     }
                 }, function failure(response) {
@@ -467,7 +476,6 @@
                         // Retrieving visualisation text failed, so display the returned error message
                         $scope.statusMessageColour = "red";
                         $scope.statusMessage = nowString() + "Retrieving visualisation failed: " + response.data;
-                        $scope.showVis = false;
                     }
                 }
             )
@@ -525,12 +533,6 @@
             $scope.doChart(true);
         };
 
-        // Clear out any existing table data
-        $scope.clearData = function() {
-            $scope.db.ColNames = [];
-            $scope.db.Records = [];
-        }
-
         // Deletes a saved visualisation
         $scope.deleteVis = function() {
             // Check if the user is logged in
@@ -554,6 +556,10 @@
 
                         // Remove the visualisation from the drop-down list
                         $scope.visNames.splice(arrIdx, 1);
+
+                        // Clear out any existing table data, and remove any chart
+                        $scope.showVis = false;
+                        $scope.clearData();
 
                         // If the currently selected visualisation was the deleted one, pick the first in the remaining
                         // visualisation list as the new selection
