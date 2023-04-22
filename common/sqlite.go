@@ -263,7 +263,7 @@ func GetSQLiteRowCount(sdb *sqlite.Conn, dbTable string) (rowCount int, err erro
 	dbQuery := `SELECT count(*) FROM "` + dbTable + `"`
 	err = sdb.OneValue(dbQuery, &rowCount)
 	if err != nil {
-		log.Printf("Error occurred when counting total rows for table '%s'.  Error: %s\n", SanitiseLogString(dbTable), err)
+		log.Printf("Error occurred when counting total rows for table '%s'.  Error: %s", SanitiseLogString(dbTable), err)
 		return 0, errors.New("Database query failure")
 	}
 	return
@@ -288,7 +288,7 @@ func OpenSQLiteDatabase(bucket, id string) (sdb *sqlite.Conn, err error) {
 	}
 	err = sdb.EnableExtendedResultCodes(true)
 	if err != nil {
-		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
+		log.Printf("Couldn't enable extended result codes! Error: %v", err.Error())
 		return
 	}
 	return
@@ -331,7 +331,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		return nil, err
 	}
 	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes! Error: %v\n", err.Error())
+		log.Printf("Couldn't enable extended result codes! Error: %v", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return nil, err
@@ -340,7 +340,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 	// Enable the defensive flag
 	var enabled bool
 	if enabled, err = sdb.EnableDefensive(true); !enabled || err != nil {
-		log.Printf("Couldn't enable the defensive flag: %v\n", err)
+		log.Printf("Couldn't enable the defensive flag: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return nil, err
@@ -348,7 +348,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 
 	// Verify the defensive flag was enabled
 	if enabled, err = sdb.IsDefensiveEnabled(); !enabled || err != nil {
-		log.Printf("The defensive flag wasn't enabled after all: %v\n", err)
+		log.Printf("The defensive flag wasn't enabled after all: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return nil, err
@@ -356,7 +356,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 
 	// Turn off the trusted schema flag
 	if enabled, err = sdb.EnableTrustedSchema(false); enabled || err != nil {
-		log.Printf("Couldn't disable the trusted schema flag: %v\n", err)
+		log.Printf("Couldn't disable the trusted schema flag: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return nil, err
@@ -364,7 +364,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 
 	// Verify the trusted schema flag was turned off
 	if enabled, err = sdb.IsTrustedSchema(); enabled || err != nil {
-		log.Printf("The trusted schema flag wasn't disabled after all: %v\n", err)
+		log.Printf("The trusted schema flag wasn't disabled after all: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s", err.Error())
 		return nil, err
@@ -463,7 +463,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 
 	// Check for a failure
 	if !ok || err != nil {
-		log.Printf("Error when disabling mmap on the LIVE database: %s\n", err)
+		log.Printf("Error when disabling mmap on the LIVE database: %s", err)
 		return
 	}
 
@@ -513,32 +513,32 @@ func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, 
 		return
 	}
 	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes for LIVE database query! Error: %v\n", err.Error())
+		log.Printf("Couldn't enable extended result codes for LIVE database query! Error: %v", err.Error())
 		return
 	}
 
 	// Enable the defensive flag
 	var enabled bool
 	if enabled, err = sdb.EnableDefensive(true); !enabled || err != nil {
-		log.Printf("Couldn't enable the defensive flag for LIVE database query: %v\n", err)
+		log.Printf("Couldn't enable the defensive flag for LIVE database query: %v", err)
 		return
 	}
 
 	// Verify the defensive flag was enabled
 	if enabled, err = sdb.IsDefensiveEnabled(); !enabled || err != nil {
-		log.Printf("The defensive flag wasn't enabled for LIVE database query after all: %v\n", err)
+		log.Printf("The defensive flag wasn't enabled for LIVE database query after all: %v", err)
 		return
 	}
 
 	// Turn off the trusted schema flag
 	if enabled, err = sdb.EnableTrustedSchema(false); enabled || err != nil {
-		log.Printf("Couldn't disable the trusted schema flag for LIVE database query: %v\n", err)
+		log.Printf("Couldn't disable the trusted schema flag for LIVE database query: %v", err)
 		return
 	}
 
 	// Verify the trusted schema flag was turned off
 	if enabled, err = sdb.IsTrustedSchema(); enabled || err != nil {
-		log.Printf("The trusted schema flag wasn't disabled for LIVE database query after all: %v\n", err)
+		log.Printf("The trusted schema flag wasn't disabled for LIVE database query after all: %v", err)
 		return
 	}
 
@@ -633,7 +633,7 @@ func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, 
 
 	// Check for a failure
 	if !ok || err != nil {
-		log.Printf("Error when disabling mmap on the LIVE database: %s\n", err)
+		log.Printf("Error when disabling mmap on the LIVE database: %s", err)
 		return
 	}
 
@@ -713,7 +713,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 			dbQuery += sqlite.Mprintf(" (`%s`)", sortCol)
 			err = sdb.Exec(dbQuery)
 			if err != nil {
-				log.Printf("Error occurred when creating index: %s\n", err.Error())
+				log.Printf("Error occurred when creating index: %s", err.Error())
 				return SQLiteRecordSet{}, err
 			}
 			sdb.Commit()
@@ -723,7 +723,7 @@ func ReadSQLiteDBCols(sdb *sqlite.Conn, dbTable, sortCol, sortDir string, ignore
 	// Get information on the primary key of the table
 	pk, _, _, err := GetPrimaryKeyAndOtherColumns(sdb, "main", dbTable)
 	if err != nil {
-		log.Printf("error retrieving primary key columns: %s\n", err.Error())
+		log.Printf("error retrieving primary key columns: %s", err.Error())
 		return SQLiteRecordSet{}, err
 	}
 
@@ -789,7 +789,7 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 	// Retrieve all the data from the selected database table
 	stmt, err := sdb.Prepare(`SELECT * FROM "` + dbTable + `"`)
 	if err != nil {
-		log.Printf("Error when preparing statement for database: %s\n", err)
+		log.Printf("Error when preparing statement for database: %s", err)
 		return nil, err
 	}
 
@@ -815,7 +815,7 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 				var val int
 				val, isNull, err = s.ScanInt(i)
 				if err != nil {
-					log.Printf("Something went wrong with ScanInt(): %v\n", err)
+					log.Printf("Something went wrong with ScanInt(): %v", err)
 					break
 				}
 				if !isNull {
@@ -825,7 +825,7 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 				var val float64
 				val, isNull, err = s.ScanDouble(i)
 				if err != nil {
-					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
+					log.Printf("Something went wrong with ScanDouble(): %v", err)
 					break
 				}
 				if !isNull {
@@ -856,7 +856,7 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error when reading data from database: %s\n", err)
+		log.Printf("Error when reading data from database: %s", err)
 		return nil, err
 	}
 	defer stmt.Finalize()
@@ -882,7 +882,7 @@ func SQLiteBackupLive(baseDir, dbOwner, dbName string) (err error) {
 		return
 	}
 	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes for LIVE database query! Error: %v\n", err.Error())
+		log.Printf("Couldn't enable extended result codes for LIVE database query! Error: %v", err.Error())
 		return
 	}
 	defer sdb.Close()
@@ -968,7 +968,7 @@ func SQLiteExecuteQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string
 	// Execute the statement
 	rowsChanged, err = sdb.ExecDml(query)
 	if err != nil {
-		log.Printf("Error when executing query by '%s' for LIVE database (%s/%s): '%s'\n",
+		log.Printf("Error when executing query by '%s' for LIVE database (%s/%s): '%s'",
 			SanitiseLogString(loggedInUser), SanitiseLogString(dbOwner), SanitiseLogString(dbName),
 			SanitiseLogString(err.Error()))
 		return
@@ -1129,10 +1129,10 @@ func SQLiteSanityCheck(fileName string) (tables []string, err error) {
 
 	// Check for a failure
 	if !ok || err != nil {
-		log.Printf("Error when running an integrity check on the database: %s\n", err)
+		log.Printf("Error when running an integrity check on the database: %s", err)
 		if len(results) > 0 {
 			for _, b := range results {
-				log.Printf("  * %v\n", b)
+				log.Printf("  * %v", b)
 			}
 		}
 		return
@@ -1229,7 +1229,7 @@ func SQLiteReadDatabasePage(bucket, id, loggedInUser, dbOwner, dbName, dbTable, 
 		var colList []sqlite.Column
 		colList, err = sdb.Columns("", dbTable)
 		if err != nil {
-			log.Printf("Error when reading column names for table '%s': %v\n", SanitiseLogString(dbTable), err.Error())
+			log.Printf("Error when reading column names for table '%s': %v", SanitiseLogString(dbTable), err.Error())
 			return
 		}
 		colExists := false
@@ -1318,7 +1318,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 				var val int64
 				val, isNull, err = s.ScanInt64(i)
 				if err != nil {
-					log.Printf("Something went wrong with ScanInt64(): %v\n", err)
+					log.Printf("Something went wrong with ScanInt64(): %v", err)
 					break
 				}
 				if !isNull {
@@ -1329,7 +1329,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 				var val float64
 				val, isNull, err = s.ScanDouble(i)
 				if err != nil {
-					log.Printf("Something went wrong with ScanDouble(): %v\n", err)
+					log.Printf("Something went wrong with ScanDouble(): %v", err)
 					break
 				}
 				if !isNull {
@@ -1394,7 +1394,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error when retrieving select data from database: %s\n", err)
+		log.Printf("Error when retrieving select data from database: %s", err)
 		return 0, 0, dataRows, errors.New("Error when reading data from the SQLite database")
 	}
 
@@ -1444,7 +1444,7 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	var memUsed, memHighWater int64
 	memUsed, memHighWater, dataRows, err = SQLiteRunQuery(sdb, querySource, query, false, false)
 	if err != nil {
-		log.Printf("Error when preparing statement by '%s' for database (%s/%s): '%s'\n", SanitiseLogString(loggedInUser),
+		log.Printf("Error when preparing statement by '%s' for database (%s/%s): '%s'", SanitiseLogString(loggedInUser),
 			SanitiseLogString(dbOwner), SanitiseLogString(dbName), SanitiseLogString(err.Error()))
 		return SQLiteRecordSet{}, err
 	}
@@ -1473,7 +1473,7 @@ func SQLiteRunQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (r
 	// Execute the SQLite select query (or queries)
 	_, _, records, err = SQLiteRunQuery(sdb, QuerySourceAPI, query, false, false)
 	if err != nil {
-		log.Printf("Error when preparing statement by '%s' for LIVE database (%s/%s): '%s'\n", SanitiseLogString(loggedInUser),
+		log.Printf("Error when preparing statement by '%s' for LIVE database (%s/%s): '%s'", SanitiseLogString(loggedInUser),
 			SanitiseLogString(dbOwner), SanitiseLogString(dbName), SanitiseLogString(err.Error()))
 		return SQLiteRecordSet{}, err
 	}
@@ -1546,14 +1546,14 @@ func Views(sdb *sqlite.Conn) (vw []string, err error) {
 	// Retrieve the list of views in the database
 	vw, err = sdb.Views("")
 	if err != nil {
-		log.Printf("Error retrieving view names: %v\n", err)
+		log.Printf("Error retrieving view names: %v", err)
 		if cerr, ok := err.(sqlite.ConnError); ok {
-			log.Printf("Error code: %v\n", cerr.Code())
-			log.Printf("Extended error code: %v\n", cerr.ExtendedCode())
-			log.Printf("Extended error message: %v\n", cerr.Error())
-			log.Printf("Extended error filename: %v\n", cerr.Filename())
+			log.Printf("Error code: %v", cerr.Code())
+			log.Printf("Extended error code: %v", cerr.ExtendedCode())
+			log.Printf("Extended error message: %v", cerr.Error())
+			log.Printf("Extended error filename: %v", cerr.Filename())
 		} else {
-			log.Printf("Expected a connection error, but got a '%v'\n", reflect.TypeOf(cerr))
+			log.Printf("Expected a connection error, but got a '%v'", reflect.TypeOf(cerr))
 		}
 		return
 	}
@@ -1605,7 +1605,7 @@ func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema, table string) (pks [
 	var stmt *sqlite.Stmt
 	stmt, err = sdb.Prepare("PRAGMA " + EscapeId(schema) + ".table_info(" + EscapeId(table) + ")")
 	if err != nil {
-		log.Printf("Error when preparing statement in GetPrimaryKeyAndOtherColumns(): %s\n", err)
+		log.Printf("Error when preparing statement in GetPrimaryKeyAndOtherColumns(): %s", err)
 		return nil, false, nil, err
 	}
 	defer stmt.Finalize()
@@ -1638,7 +1638,7 @@ func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema, table string) (pks [
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error when retrieving rows in GetPrimaryKeyAndOtherColumns(): %s\n", err)
+		log.Printf("Error when retrieving rows in GetPrimaryKeyAndOtherColumns(): %s", err)
 		return nil, false, nil, err
 	}
 
@@ -1668,10 +1668,10 @@ func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema, table string) (pks [
 	} else {
 		// Implicit primary key
 
-		// Views do not even have have implicit keys
+		// Views do not even have implicit keys
 		vws, err := Views(sdb)
 		if err != nil {
-			log.Printf("Error retrieving views: %s\n", err)
+			log.Printf("Error retrieving views: %s", err)
 			return nil, false, nil, err
 		}
 
@@ -1693,7 +1693,7 @@ func GetPrimaryKeyAndOtherColumns(sdb *sqlite.Conn, schema, table string) (pks [
 			} else if !hasColumnOid {
 				pks = append(pks, "oid")
 			} else {
-				log.Printf("Unreachable rowid column in GetPrimaryKey()\n")
+				log.Println("Unreachable rowid column in GetPrimaryKey()")
 				return nil, false, nil, errors.New("Unreachable rowid column")
 			}
 		}

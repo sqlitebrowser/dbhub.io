@@ -112,7 +112,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	var handler *multipart.FileHeader
 	tempFile, handler, err = r.FormFile("file")
 	if err != nil && err.Error() != "http: no such file" {
-		log.Printf("Uploading file failed: %v\n", err)
+		log.Printf("Uploading file failed: %v", err)
 		httpStatus = http.StatusBadRequest
 		err = fmt.Errorf("Something went wrong when grabbing the file data: '%s'", err.Error())
 		return
@@ -122,7 +122,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 			// Check for a 'file1' FormFile too, as some clients can't use 'file' (without a number) due to a design bug
 			tempFile, handler, err = r.FormFile("file1")
 			if err != nil {
-				log.Printf("Uploading file failed: %v\n", err)
+				log.Printf("Uploading file failed: %v", err)
 				httpStatus = http.StatusBadRequest
 				err = fmt.Errorf("Something went wrong when grabbing the file data: '%s'", err.Error())
 				return

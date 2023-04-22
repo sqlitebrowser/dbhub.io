@@ -1046,7 +1046,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	if a != "" && a != "{{ row.disc_id }}" { // Search engines have a habit of passing AngularJS tags, so we ignore when the field has the AngularJS tag in it
 		pageData.SelectedID, err = strconv.Atoi(a)
 		if err != nil {
-			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
+			log.Printf("Error converting string '%s' to integer in function '%s': %s", com.SanitiseLogString(a),
 				com.GetCurrentFunctionName(), err)
 			errorPage(w, r, http.StatusBadRequest, "Error when parsing discussion id value")
 			return
@@ -1249,7 +1249,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		var err error
 		pageData.SelectedID, err = strconv.Atoi(a)
 		if err != nil {
-			log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
+			log.Printf("Error converting string '%s' to integer in function '%s': %s", com.SanitiseLogString(a),
 				com.GetCurrentFunctionName(), err)
 			errorPage(w, r, http.StatusBadRequest, "Error when parsing discussion id value")
 			return
@@ -1702,18 +1702,18 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 func releasesPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	type tgEntry struct {
-		AvatarURL           string    `json:"avatar_url"`
-		Commit              string    `json:"commit"`
-		Date                time.Time `json:"date"`
-		Description         string    `json:"description"`
-		Size                int64     `json:"size"`
-		TaggerUserName    string      `json:"tagger_user_name"`
-		TaggerDisplayName string      `json:"tagger_display_name"`
+		AvatarURL         string    `json:"avatar_url"`
+		Commit            string    `json:"commit"`
+		Date              time.Time `json:"date"`
+		Description       string    `json:"description"`
+		Size              int64     `json:"size"`
+		TaggerUserName    string    `json:"tagger_user_name"`
+		TaggerDisplayName string    `json:"tagger_display_name"`
 	}
 	var pageData struct {
-		DB          com.SQLiteDBinfo
-		PageMeta    PageMetaInfo
-		TagList     map[string]tgEntry
+		DB       com.SQLiteDBinfo
+		PageMeta PageMetaInfo
+		TagList  map[string]tgEntry
 	}
 	pageData.PageMeta.Title = "Release list"
 	pageData.PageMeta.PageSection = "db_data"
@@ -1772,13 +1772,13 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 
 			// Create the tag info we pass to the tag list rendering page
 			pageData.TagList[i] = tgEntry{
-				AvatarURL:           userNameCache[j.ReleaserEmail].AvatarURL,
-				Commit:              j.Commit,
-				Date:                j.Date,
-				Description:         j.Description,
-				Size:                j.Size,
-				TaggerUserName:      userNameCache[j.ReleaserEmail].Email,
-				TaggerDisplayName:   j.ReleaserName,
+				AvatarURL:         userNameCache[j.ReleaserEmail].AvatarURL,
+				Commit:            j.Commit,
+				Date:              j.Date,
+				Description:       j.Description,
+				Size:              j.Size,
+				TaggerUserName:    userNameCache[j.ReleaserEmail].Email,
+				TaggerDisplayName: j.ReleaserName,
 			}
 		}
 	}
@@ -2045,13 +2045,13 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 func tagsPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	type tgEntry struct {
-		AvatarURL           string    `json:"avatar_url"`
-		Commit              string    `json:"commit"`
-		Date                time.Time `json:"date"`
-		Description         string    `json:"description"`
-		Size                int       `json:"size"`
-		TaggerUserName      string    `json:"tagger_user_name"`
-		TaggerDisplayName   string    `json:"tagger_display_name"`
+		AvatarURL         string    `json:"avatar_url"`
+		Commit            string    `json:"commit"`
+		Date              time.Time `json:"date"`
+		Description       string    `json:"description"`
+		Size              int       `json:"size"`
+		TaggerUserName    string    `json:"tagger_user_name"`
+		TaggerDisplayName string    `json:"tagger_display_name"`
 	}
 	var pageData struct {
 		DB       com.SQLiteDBinfo
@@ -2115,12 +2115,12 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 
 			// Create the tag info we pass to the tag list rendering page
 			pageData.TagList[i] = tgEntry{
-				AvatarURL:           userNameCache[j.TaggerEmail].AvatarURL,
-				Commit:              j.Commit,
-				Date:                j.Date,
-				Description:         j.Description,
-				TaggerUserName:      userNameCache[j.TaggerEmail].Email,
-				TaggerDisplayName:   j.TaggerName,
+				AvatarURL:         userNameCache[j.TaggerEmail].AvatarURL,
+				Commit:            j.Commit,
+				Date:              j.Date,
+				Description:       j.Description,
+				TaggerUserName:    userNameCache[j.TaggerEmail].Email,
+				TaggerDisplayName: j.TaggerName,
 			}
 		}
 	}

@@ -55,7 +55,7 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 			if err != nil {
 				return
 			}
-			log.Printf("%s connected to AMQP server using mutual TLS (mTLS): %v:%d\n", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
+			log.Printf("%s connected to AMQP server using mutual TLS (mTLS): %v:%d", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
 		} else {
 			// Fallback to just verifying the server certs for TLS.  This is needed by the DB4S end point, as it
 			// uses certs from our own CA, so mTLS won't easily work with it.
@@ -63,7 +63,7 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 			if err != nil {
 				return
 			}
-			log.Printf("%s connected to AMQP server with server-only TLS: %v:%d\n", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
+			log.Printf("%s connected to AMQP server with server-only TLS: %v:%d", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
 		}
 	} else {
 		// Everywhere else (eg docker container) doesn't *have* to use TLS
@@ -71,7 +71,7 @@ func ConnectMQ() (channel *amqp.Channel, err error) {
 		if err != nil {
 			return
 		}
-		log.Printf("%s connected to AMQP server without encryption: %v:%d\n", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
+		log.Printf("%s connected to AMQP server without encryption: %v:%d", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
 	}
 
 	channel, err = conn.Channel()

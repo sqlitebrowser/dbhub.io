@@ -310,7 +310,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 			commitCount++
 			c2, ok = commitList[c2.Parent]
 			if !ok {
-				m := fmt.Sprintf("Error when counting commits in branch '%s' of database '%s/%s'\n", branchName,
+				m := fmt.Sprintf("Error when counting commits in branch '%s' of database '%s/%s'", branchName,
 					dbOwner, dbName)
 				log.Print(SanitiseLogString(m))
 				return 0, "", "", errors.New(m)
@@ -322,7 +322,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	var newOffset int64
 	newOffset, err = tempDB.Seek(0, 0)
 	if err != nil {
-		log.Printf("Seeking on the temporary file (2nd time) failed: %v\n", err.Error())
+		log.Printf("Seeking on the temporary file (2nd time) failed: %v", err.Error())
 		return
 	}
 	if newOffset != 0 {
@@ -391,7 +391,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	err = InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -399,7 +399,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	err = InvalidateCacheEntry(loggedInUser, dbOwner, dbName, c.ID) // An empty string indicates "for all commits"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for any previous database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -533,7 +533,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 		c, ok = commitList[c.Parent]
 		if !ok {
 			err = fmt.Errorf("Broken commit history encountered for branch '%s' in '%s/%s', when looking for "+
-				"commit '%s'\n", branchName, dbOwner, dbName, c.Parent)
+				"commit '%s'", branchName, dbOwner, dbName, c.Parent)
 			log.Printf(err.Error())
 			return
 		}
@@ -597,7 +597,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 			c, ok = commitList[bEntry.Commit]
 			if !ok {
 				err = fmt.Errorf("Broken commit history encountered when checking for isolated tags while "+
-					"deleting commits in branch '%s' of database '%s/%s'\n", branchName, dbOwner, dbName)
+					"deleting commits in branch '%s' of database '%s/%s'", branchName, dbOwner, dbName)
 				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 				return
 			}
@@ -613,7 +613,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 				c, ok = commitList[c.Parent]
 				if !ok {
 					err = fmt.Errorf("Broken commit history encountered when checking for isolated tags "+
-						"while deleting commits in branch '%s' of database '%s/%s'\n", branchName, dbOwner,
+						"while deleting commits in branch '%s' of database '%s/%s'", branchName, dbOwner,
 						dbName)
 					log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 					return
@@ -650,7 +650,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 			c, ok = commitList[bEntry.Commit]
 			if !ok {
 				err = fmt.Errorf("Broken commit history encountered when checking for isolated releases "+
-					"while deleting commits in branch '%s' of database '%s/%s'\n", branchName, dbOwner,
+					"while deleting commits in branch '%s' of database '%s/%s'", branchName, dbOwner,
 					dbName)
 				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 				return
@@ -667,7 +667,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 				c, ok = commitList[c.Parent]
 				if !ok {
 					err = fmt.Errorf("Broken commit history encountered when checking for isolated releases "+
-						"while deleting commits in branch '%s' of database '%s/%s'\n", branchName, dbOwner,
+						"while deleting commits in branch '%s' of database '%s/%s'", branchName, dbOwner,
 						dbName)
 					log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 					return
@@ -713,7 +713,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 			c, ok = commitList[bEntry.Commit]
 			if !ok {
 				err = fmt.Errorf("Broken commit history encountered when checking for commits to remove in "+
-					"branch '%s' of database '%s/%s'\n", branchName, dbOwner, dbName)
+					"branch '%s' of database '%s/%s'", branchName, dbOwner, dbName)
 				log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 				return
 			}
@@ -725,7 +725,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 				c, ok = commitList[c.Parent]
 				if !ok {
 					err = fmt.Errorf("Broken commit history encountered when checking for commits to remove "+
-						"in branch '%s' of database '%s/%s'\n", branchName, dbOwner, dbName)
+						"in branch '%s' of database '%s/%s'", branchName, dbOwner, dbName)
 					log.Print(err.Error()) // Broken commit history is pretty serious, so we log it for admin investigation
 					return
 				}
@@ -744,7 +744,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 		commitCount++
 		c, ok = commitList[c.Parent]
 		if !ok {
-			log.Printf("Error when counting # of commits while rewriting branch '%s' of database '%s/%s'\n",
+			log.Printf("Error when counting # of commits while rewriting branch '%s' of database '%s/%s'",
 				SanitiseLogString(branchName), SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 			err = fmt.Errorf("Error when counting commits during branch history rewrite")
 			return
@@ -971,7 +971,7 @@ func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbName, c
 	w.Header().Set("Content-Type", "application/x-sqlite3")
 	bytesWritten, err = io.Copy(w, userDB)
 	if err != nil {
-		log.Printf("Error returning DB file: %v\n", err)
+		log.Printf("Error returning DB file: %v", err)
 		return
 	}
 
@@ -1028,7 +1028,7 @@ func IsCommitInBranchHistory(dbOwner, dbName, branchName, commitID string) (bool
 		c, ok = commitList[c.Parent]
 		if !ok {
 			log.Printf("Broken commit history encountered for branch '%s' in '%s/%s', when looking for "+
-				"commit '%s'\n", SanitiseLogString(branchName), SanitiseLogString(dbOwner), SanitiseLogString(dbName), c.Parent)
+				"commit '%s'", SanitiseLogString(branchName), SanitiseLogString(dbOwner), SanitiseLogString(dbName), c.Parent)
 			return false, fmt.Errorf("Broken commit history encountered for branch '%s' when looking up "+
 				"commit details", branchName)
 		}
@@ -1159,7 +1159,7 @@ func WriteDBtoDisk(loggedInUser, dbOwner, dbName string, newDB io.Reader) (numBy
 	// Create a temporary file to store the database in
 	tempDB, err = os.CreateTemp(Conf.DiskCache.Directory, "dbhub-upload-")
 	if err != nil {
-		log.Printf("Error creating temporary file. User: '%s', Database: '%s/%s', Error: %v\n", loggedInUser,
+		log.Printf("Error creating temporary file. User: '%s', Database: '%s/%s', Error: %v", loggedInUser,
 			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return
 	}
@@ -1171,7 +1171,7 @@ func WriteDBtoDisk(loggedInUser, dbOwner, dbName string, newDB io.Reader) (numBy
 	numBytes, err = io.CopyBuffer(tempDB, newDB, buf)
 	if err != nil {
 		log.Printf("Error when writing the uploaded db to a temp file. User: '%s', Database: '%s/%s' "+
-			"Error: %v\n", loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
+			"Error: %v", loggedInUser, SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return
 	}
 	if numBytes == 0 {
@@ -1189,7 +1189,7 @@ func WriteDBtoDisk(loggedInUser, dbOwner, dbName string, newDB io.Reader) (numBy
 	var newOffSet int64
 	newOffSet, err = tempDB.Seek(0, 0)
 	if err != nil {
-		log.Printf("Seeking on the temporary file failed: %s\n", err.Error())
+		log.Printf("Seeking on the temporary file failed: %s", err.Error())
 		return
 	}
 	if newOffSet != 0 {

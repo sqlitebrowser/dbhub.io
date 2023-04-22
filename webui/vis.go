@@ -441,7 +441,7 @@ func visDownloadResults(w http.ResponseWriter, r *http.Request) {
 	output.UseCRLF = win
 	err = output.WriteAll(newData)
 	if err != nil {
-		log.Printf("Error when generating CSV: %v\n", err)
+		log.Printf("Error when generating CSV: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
 		return
@@ -676,7 +676,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	// Validate the X axis field name
 	err = com.ValidateFieldName(xAxis)
 	if err != nil {
-		log.Printf("Validation failed on requested X axis field name '%v': %v\n", com.SanitiseLogString(xAxis), err.Error())
+		log.Printf("Validation failed on requested X axis field name '%v': %v", com.SanitiseLogString(xAxis), err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -684,7 +684,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	// Validate the Y axis field name
 	err = com.ValidateFieldName(yAxis)
 	if err != nil {
-		log.Printf("Validation failed on requested Y axis field name '%v': %v\n", com.SanitiseLogString(yAxis), err.Error())
+		log.Printf("Validation failed on requested Y axis field name '%v': %v", com.SanitiseLogString(yAxis), err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -796,23 +796,11 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	// Save the SQLite visualisation parameters
 	err = com.VisualisationSaveParams(dbOwner, dbName, visName, vParams)
 	if err != nil {
-		log.Printf("Error occurred when saving visualisation '%s' for' '%s/%s', commit '%s': %s\n", com.SanitiseLogString(visName),
+		log.Printf("Error occurred when saving visualisation '%s' for' '%s/%s', commit '%s': %s", com.SanitiseLogString(visName),
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	// TODO: Cache the SQLite visualisation data
-	//         * We'll probably need to update the SQLite authoriser code to catch SQLite functions which shouldn't be
-	//           cached - such as random() - and not cache those results
-	//hash := visHash(dbOwner, dbName, commitID, visName, vParams)
-	//err = com.VisualisationSaveData(dbOwner, dbName, commitID, hash, visData)
-	//if err != nil {
-	//	log.Printf("Error occurred when saving visualisation '%s' for' '%s%s%s', commit '%s': %s\n", visName,
-	//		dbOwner, dbName, commitID, err.Error())
-	//	w.WriteHeader(http.StatusInternalServerError)
-	//	return
-	//}
 
 	// Save succeeded
 	w.WriteHeader(http.StatusOK)

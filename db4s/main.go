@@ -121,7 +121,7 @@ func main() {
 	}
 
 	// Start server
-	log.Printf("Starting DB4S end point on %s\n", server)
+	log.Printf("Starting DB4S end point on %s", server)
 	log.Fatal(newServer.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey))
 }
 
@@ -162,7 +162,7 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the list as JSON
 	jsonList, err := json.MarshalIndent(brList, "", "  ")
 	if err != nil {
-		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
+		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v", err)
 		log.Print(errMsg)
 		http.Error(w, errMsg, http.StatusBadRequest)
 		return
@@ -248,7 +248,7 @@ func generateDefaultList(pageName string, userAcc string) (defaultList []byte, e
 		// Use json.MarshalIndent() for nicer looking output
 		defaultList, err = json.MarshalIndent(linkRows, "", "  ")
 		if err != nil {
-			log.Printf("%s: Error when JSON marshalling the default list: %v\n", pageName, err)
+			log.Printf("%s: Error when JSON marshalling the default list: %v", pageName, err)
 			return nil, errors.Wrap(err, fmt.Sprintf("%s: Error when JSON marshalling the default list",
 				pageName))
 		}
@@ -448,7 +448,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w,
 			fmt.Sprintf("Licence file is too large. Maximum licence upload size is %d MB, yours is %d MB",
 				com.MaxLicenceSize, r.ContentLength/1024/1024), http.StatusBadRequest)
-		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized licence %d MB in size.  Limit is %d MB\n",
+		log.Println(fmt.Sprintf("'%s' attempted to upload an oversized licence %d MB in size.  Limit is %d MB",
 			userAcc, r.ContentLength/1024/1024, com.MaxLicenceSize))
 		return
 	}
@@ -533,7 +533,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 	// Grab the uploaded file and form variables
 	tempFile, _, err := r.FormFile("file1")
 	if err != nil {
-		log.Printf("Uploading licence failed: %v\n", err)
+		log.Printf("Uploading licence failed: %v", err)
 		http.Error(w, fmt.Sprintf("Something went wrong when extracting the licence text: '%s'", err.Error()),
 			http.StatusBadRequest)
 		return
@@ -574,8 +574,8 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	_, _ = fmt.Fprintf(w, "Success")
 
-	// Log the new license addition
-	log.Printf("New licence '%s' added to the server by user '%v'\n", com.SanitiseLogString(licID), userAcc)
+	// Log the new licence addition
+	log.Printf("New licence '%s' added to the server by user '%v'", com.SanitiseLogString(licID), userAcc)
 	return
 }
 
@@ -636,13 +636,13 @@ func licenceGetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", mimeType)
 	bytesWritten, err := fmt.Fprint(w, lic)
 	if err != nil {
-		log.Printf("Error returning licence file: %v\n", err)
+		log.Printf("Error returning licence file: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Log the transfer
-	log.Printf("Licence '%s' downloaded by user '%v', %d bytes\n", com.SanitiseLogString(licenceName), userAcc, bytesWritten)
+	log.Printf("Licence '%s' downloaded by user '%v', %d bytes", com.SanitiseLogString(licenceName), userAcc, bytesWritten)
 	return
 }
 
@@ -659,7 +659,7 @@ func licenceListHandler(w http.ResponseWriter, r *http.Request) {
 	licList, err := com.GetLicences(userAcc)
 	jsonLicList, err := json.MarshalIndent(licList, "", "  ")
 	if err != nil {
-		errMsg := fmt.Sprintf("Error when JSON marshalling the licence list: %v\n", err)
+		errMsg := fmt.Sprintf("Error when JSON marshalling the licence list: %v", err)
 		log.Print(errMsg)
 		http.Error(w, errMsg, http.StatusBadRequest)
 		return
@@ -724,7 +724,7 @@ func licenceRemoveHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Success")
 
 	// Log the transfer
-	log.Printf("Licence '%s' removed by user '%v'\n", com.SanitiseLogString(licenceName), userAcc)
+	log.Printf("Licence '%s' removed by user '%v'", com.SanitiseLogString(licenceName), userAcc)
 	return
 }
 
@@ -766,7 +766,7 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the list as JSON
 	jsonList, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {
-		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
+		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v", err)
 		log.Print(errMsg)
 		http.Error(w, errMsg, http.StatusBadRequest)
 		return
@@ -831,7 +831,7 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 			http.Error(w,
 				fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
 					com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
-			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
+			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB",
 				userAcc, r.ContentLength/1024/1024, com.MaxDatabaseSize))
 			return
 		}
@@ -884,7 +884,7 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 	defer func() {
 		err := com.MinioHandleClose(userDB)
 		if err != nil {
-			log.Printf("%s: Error closing object handle: %v\n", pageName, err)
+			log.Printf("%s: Error closing object handle: %v", pageName, err)
 		}
 	}()
 
@@ -920,7 +920,7 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 	w.Header().Set("Commit-ID", commit)
 	bytesWritten, err := io.Copy(w, userDB)
 	if err != nil {
-		log.Printf("%s: Error returning DB file: %v\n", pageName, err)
+		log.Printf("%s: Error returning DB file: %v", pageName, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -958,8 +958,8 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		postHandler(w, r, userAcc)
 	default:
-		log.Printf("%s: Unknown request method received from '%v\n", pageName, userAcc)
-		http.Error(w, fmt.Sprintf("Unknown request type: %v\n", reqType), http.StatusBadRequest)
+		log.Printf("%s: Unknown request method received from '%v", pageName, userAcc)
+		http.Error(w, fmt.Sprintf("Unknown request type: %v", reqType), http.StatusBadRequest)
 	}
 	return
 }

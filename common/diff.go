@@ -134,7 +134,7 @@ func dbDiff(dbA string, dbB string, merge MergeStrategy, includeData bool) (Diff
 	}
 	defer sdb.Close()
 	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes in dbDiff(): %v\n", err.Error())
+		log.Printf("Couldn't enable extended result codes in dbDiff(): %v", err.Error())
 		return Diffs{}, err
 	}
 
@@ -152,7 +152,7 @@ func dbDiff(dbA string, dbB string, merge MergeStrategy, includeData bool) (Diff
 		"SELECT name, type FROM aux.sqlite_master WHERE name NOT LIKE 'sqlite_%' AND (type != 'table' OR (type = 'table' AND sql NOT LIKE 'CREATE VIRTUAL%%'))\n" +
 		" ORDER BY name")
 	if err != nil {
-		log.Printf("Error when preparing statement for object list in dbDiff(): %s\n", err)
+		log.Printf("Error when preparing statement for object list in dbDiff(): %s", err)
 		return Diffs{}, err
 	}
 	defer stmt.Finalize()
@@ -169,7 +169,7 @@ func dbDiff(dbA string, dbB string, merge MergeStrategy, includeData bool) (Diff
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error when diffing single object in dbDiff: %s\n", err)
+		log.Printf("Error when diffing single object in dbDiff: %s", err)
 		return Diffs{}, err
 	}
 
@@ -319,7 +319,7 @@ func dataDiffForAllTableRows(sdb *sqlite.Conn, schemaName string, tableName stri
 	// Retrieve data and add it to the data diff object
 	_, _, data, err := SQLiteRunQuery(sdb, QuerySourceInternal, query, false, false)
 	if err != nil {
-		log.Printf("Error getting rows in dataDiffForAllTableRows(): %s\n", err)
+		log.Printf("Error getting rows in dataDiffForAllTableRows(): %s", err)
 		return nil, err
 	}
 	for _, row := range data.Records {
@@ -504,7 +504,7 @@ func dataDiffForModifiedTableRows(sdb *sqlite.Conn, tableName string, merge Merg
 	// Retrieve data and generate a new DataDiff object for each row
 	_, _, data, err := SQLiteRunQuery(sdb, QuerySourceInternal, query, false, false)
 	if err != nil {
-		log.Printf("Error getting rows in dataDiffForModifiedTableRows(): %s\n", err)
+		log.Printf("Error getting rows in dataDiffForModifiedTableRows(): %s", err)
 		return nil, err
 	}
 	for _, row := range data.Records {

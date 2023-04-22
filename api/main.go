@@ -53,10 +53,10 @@ func main() {
 	// Open the request log for writing
 	reqLog, err = os.OpenFile(com.Conf.Api.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
 	if err != nil {
-		log.Fatalf("Error when opening request log: %s\n", err)
+		log.Fatalf("Error when opening request log: %s", err)
 	}
 	defer reqLog.Close()
-	log.Printf("Request log opened: %s\n", com.Conf.Api.RequestLog)
+	log.Printf("Request log opened: %s", com.Conf.Api.RequestLog)
 
 	// Parse our template files
 	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
@@ -103,12 +103,12 @@ func main() {
 	ourCAPool = x509.NewCertPool()
 	certFile, err := os.ReadFile(com.Conf.DB4S.CAChain)
 	if err != nil {
-		fmt.Printf("Error opening Certificate Authority chain file: %v\n", err)
+		log.Printf("Error opening Certificate Authority chain file: %v", err)
 		return
 	}
 	ok := ourCAPool.AppendCertsFromPEM(certFile)
 	if !ok {
-		fmt.Println("Error appending certificate file")
+		log.Println("Error appending certificate file")
 		return
 	}
 
@@ -159,7 +159,7 @@ func main() {
 	server = fmt.Sprintf("https://%s", com.Conf.Api.ServerName)
 
 	// Start API server
-	log.Printf("API server starting on %s\n", server)
+	log.Printf("API server starting on %s", server)
 	err = srv.ListenAndServeTLS(com.Conf.Api.Certificate, com.Conf.Api.CertificateKey)
 
 	// Shut down nicely
@@ -283,7 +283,7 @@ func collectInfoAndOpen(w http.ResponseWriter, r *http.Request) (sdb *sqlite.Con
 		return
 	}
 	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes in collectInfoAndOpen(): %v\n", err.Error())
+		log.Printf("Couldn't enable extended result codes in collectInfoAndOpen(): %v", err.Error())
 		httpStatus = http.StatusInternalServerError
 		return
 	}
@@ -320,7 +320,7 @@ func extractUserFromClientCert(w http.ResponseWriter, r *http.Request) (userAcc 
 	// Verify the running server matches the one in the certificate
 	db4sServer := com.Conf.DB4S.Server
 	if certServer != db4sServer {
-		err = fmt.Errorf("Server name in certificate '%s' doesn't match DB4S server '%s'\n", certServer,
+		err = fmt.Errorf("Server name in certificate '%s' doesn't match DB4S server '%s'", certServer,
 			db4sServer)
 		return
 	}
@@ -348,7 +348,7 @@ func jsonErr(w http.ResponseWriter, msg string, statusCode int) {
 	}
 	jsonData, err := json.MarshalIndent(je, "", "  ")
 	if err != nil {
-		errMsg := fmt.Sprintf("A 2nd error occurred when JSON marshalling an error structure: %v\n", err)
+		errMsg := fmt.Sprintf("A 2nd error occurred when JSON marshalling an error structure: %v", err)
 		log.Print(errMsg)
 		http.Error(w, errMsg, http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"error":"An error occurred when marshalling JSON inside jsonErr()"}`)

@@ -54,7 +54,7 @@ func branchesHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the list as JSON
 	jsonList, err := json.MarshalIndent(brList, "", "  ")
 	if err != nil {
-		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v\n", err)
+		errMsg := fmt.Sprintf("Error when JSON marshalling the branch list: %v", err)
 		log.Print(errMsg)
 		jsonErr(w, errMsg, http.StatusBadRequest)
 		return
@@ -205,7 +205,7 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the results
 	jsonData, err := json.MarshalIndent(jsonCols, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in columnsHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in columnsHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -248,7 +248,7 @@ func commitsHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the tags as JSON
 	jsonData, err := json.MarshalIndent(commits, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in commitsHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in commitsHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -306,7 +306,7 @@ func databasesHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the results
 	jsonData, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in databasesHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in databasesHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -571,7 +571,7 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the results
 	jsonData, err := json.MarshalIndent(diffs, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in diffHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in diffHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -687,7 +687,7 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 	z := com.ExecuteResponseContainer{RowsChanged: rowsChanged, Status: "OK"}
 	jsonData, err := json.MarshalIndent(z, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in executeHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in executeHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -810,7 +810,7 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the results
 	jsonData, err := json.MarshalIndent(indexes, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in indexesHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in indexesHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -853,7 +853,7 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the list as JSON
 	jsonList, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {
-		errMsg := fmt.Sprintf("Error when JSON marshalling the metadata: %v\n", err)
+		errMsg := fmt.Sprintf("Error when JSON marshalling the metadata: %v", err)
 		log.Print(errMsg)
 		jsonErr(w, errMsg, http.StatusBadRequest)
 		return
@@ -933,7 +933,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		// Send the query to the appropriate backend live node
 		data, err = com.LiveQueryDB(com.AmqpChan, liveNode, loggedInUser, dbOwner, dbName, query)
 		if err != nil {
-			log.Println(err) // FIXME: Debug output while developing
+			log.Println(err)
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -942,7 +942,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the results
 	jsonData, err := json.MarshalIndent(data.Records, "", "  ")
 	if err != nil {
-		jsonErr(w, fmt.Sprintf("Error when JSON marshalling the returned data: %v\n", err),
+		jsonErr(w, fmt.Sprintf("Error when JSON marshalling the returned data: %v", err),
 			http.StatusBadRequest)
 		return
 	}
@@ -985,7 +985,7 @@ func releasesHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the list as JSON
 	jsonData, err := json.MarshalIndent(rels, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in releasesHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in releasesHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1092,7 +1092,7 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(tables)
 	jsonData, err := json.MarshalIndent(tables, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in tablesHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in tablesHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1135,7 +1135,7 @@ func tagsHandler(w http.ResponseWriter, r *http.Request) {
 	// Return the tags as JSON
 	jsonData, err := json.MarshalIndent(tags, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in tagsHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in tagsHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1199,11 +1199,10 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	// Check whether the uploaded database is too large
 	if !oversizeAllowed {
 		if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
-			jsonErr(w,
-				fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
-					com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
-			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
-				loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
+			jsonErr(w, fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
+				com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
+			log.Printf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB",
+				loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize)
 			return
 		}
 	}
@@ -1344,7 +1343,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 	z := com.UploadResponseContainer{CommitID: newCommit, URL: newURL}
 	jsonData, err := json.MarshalIndent(z, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in uploadHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in uploadHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1426,7 +1425,7 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(views)
 	jsonData, err := json.MarshalIndent(views, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in viewsHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in viewsHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1453,7 +1452,7 @@ func webpageHandler(w http.ResponseWriter, r *http.Request) {
 	z.WebPage = "https://" + com.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName
 	jsonData, err := json.MarshalIndent(z, "", "  ")
 	if err != nil {
-		log.Printf("Error when JSON marshalling returned data in webpageHandler(): %v\n", err)
+		log.Printf("Error when JSON marshalling returned data in webpageHandler(): %v", err)
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

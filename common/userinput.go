@@ -327,7 +327,7 @@ func GetOD(ignoreLeading int, r *http.Request) (dbOwner string, dbName string, e
 
 	// Check that at least an owner/database combination was requested
 	if len(pathStrings) < (3 + ignoreLeading) {
-		log.Printf("Something wrong with the requested URL: %v\n", SanitiseLogString(r.URL.Path))
+		log.Printf("Something wrong with the requested URL: %v", SanitiseLogString(r.URL.Path))
 		return "", "", errors.New("Invalid URL")
 	}
 	dbOwner = pathStrings[1+ignoreLeading]
@@ -421,7 +421,7 @@ func GetPub(r *http.Request) (public bool, err error) {
 	}
 	public, err = strconv.ParseBool(p)
 	if err != nil {
-		log.Printf("Error when converting public value to boolean: %v\n", err)
+		log.Printf("Error when converting public value to boolean: %v", err)
 		return false, err
 	}
 

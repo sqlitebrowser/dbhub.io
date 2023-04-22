@@ -72,7 +72,7 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the key creation
-	log.Printf("New API key created for user '%s', key: '%s'\n", loggedInUser, key)
+	log.Printf("New API key created for user '%s', key: '%s'", loggedInUser, key)
 
 	// Return the API key to the caller
 	d := com.APIKey{
@@ -108,14 +108,14 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		log.Printf("Login failure from '%v', probably due to blocked 3rd party cookies\n", r.RemoteAddr)
+		log.Printf("Login failure from '%v', probably due to blocked 3rd party cookies", r.RemoteAddr)
 		errorPage(w, r, http.StatusInternalServerError,
 			"Login failure.  Please allow 3rd party cookies from https://dbhub.eu.auth0.com then try again (it should then work).")
 		return
 	}
 	token, err := conf.Exchange(oauth2.NoContext, code)
 	if err != nil {
-		log.Printf("Login failure: %s\n", err.Error())
+		log.Printf("Login failure: %s", err.Error())
 		errorPage(w, r, http.StatusInternalServerError, "Login failed")
 		return
 	}
@@ -152,7 +152,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		auth0ID = au.(string)
 	}
 	if auth0ID == "" {
-		log.Printf("Auth0 callback error: Auth0 ID string was empty. Email: %s\n", email)
+		log.Printf("Auth0 callback error: Auth0 ID string was empty. Email: %s", email)
 		errorPage(w, r, http.StatusInternalServerError, "Error: Auth0 ID string was empty")
 		return
 	}
@@ -498,7 +498,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		commitCount++
 		c, ok = commitList[c.Parent]
 		if !ok {
-			log.Printf("Error when counting commits in new branch '%s' of database '%s/%s'\n", com.SanitiseLogString(branchName),
+			log.Printf("Error when counting commits in new branch '%s' of database '%s/%s'", com.SanitiseLogString(branchName),
 				com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			return
 		}
@@ -521,7 +521,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -562,7 +562,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	discID, err := strconv.Atoi(a)
 	if err != nil {
-		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
+		log.Printf("Error converting string '%s' to integer in function '%s': %s", com.SanitiseLogString(a),
 			com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Error when parsing discussion id value")
@@ -630,7 +630,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 		if err != nil {
 			// Something went wrong when invalidating memcached entries for the database
-			log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+			log.Printf("Error when invalidating memcache entries: %s", err.Error())
 			return
 		}
 	}
@@ -715,7 +715,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = com.NewEvent(details)
 	if err != nil {
-		log.Printf("Error when creating a new event: %s\n", err.Error())
+		log.Printf("Error when creating a new event: %s", err.Error())
 		return
 	}
 
@@ -723,7 +723,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -970,7 +970,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = com.NewEvent(details)
 	if err != nil {
-		log.Printf("Error when creating a new event: %s\n", err.Error())
+		log.Printf("Error when creating a new event: %s", err.Error())
 		return
 	}
 
@@ -978,7 +978,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, destOwner, destDBName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -1104,7 +1104,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 		if err != nil {
 			// Something went wrong when invalidating memcached entries for the database
-			log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+			log.Printf("Error when invalidating memcache entries: %s", err.Error())
 			return
 		}
 
@@ -1149,7 +1149,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -1201,7 +1201,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Gather submitted form data (if any)
 	err = r.ParseForm()
 	if err != nil {
-		log.Printf("Error when parsing user creation data: %s\n", err)
+		log.Printf("Error when parsing user creation data: %s", err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing user creation data")
 		return
 	}
@@ -1284,7 +1284,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	if displayName != "" {
 		err = com.Validate.Var(displayName, "required,displayname,min=1,max=80")
 		if err != nil {
-			log.Printf("Display name value failed validation: %s\n", err)
+			log.Printf("Display name value failed validation: %s", err)
 			errorPage(w, r, http.StatusBadRequest, "Error when parsing full name value")
 			return
 		}
@@ -1299,7 +1299,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 			serverName := strings.Split(com.Conf.Web.ServerName, ":")
 			em := fmt.Sprintf("%s@%s", userName, serverName[0])
 			if email != em {
-				log.Printf("Email value failed validation: %s\n", err)
+				log.Printf("Email value failed validation: %s", err)
 				errorPage(w, r, http.StatusBadRequest, "Error when parsing email value")
 				return
 			}
@@ -1518,7 +1518,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		c, ok := commitList[branch.Commit]
 		if !ok {
 			log.Printf("Error when checking for isolated tags while deleting branch '%s' of database "+
-				"'%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
+				"'%s/%s'", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -1533,7 +1533,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 			c, ok = commitList[c.Parent]
 			if !ok {
 				log.Printf("Error when checking for isolated tags while deleting branch '%s' of database "+
-					"'%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
+					"'%s/%s'", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -1570,7 +1570,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 					c, ok = commitList[c.Parent]
 					if !ok {
 						log.Printf("Error when checking for isolated tags while deleting branch '%s' of "+
-							"database '%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
+							"database '%s/%s'", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
@@ -1615,7 +1615,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		c, ok := commitList[branch.Commit]
 		if !ok {
 			log.Printf("Error when checking for isolated releases while deleting branch '%s' of database "+
-				"'%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
+				"'%s/%s'", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -1630,7 +1630,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 			c, ok = commitList[c.Parent]
 			if !ok {
 				log.Printf("Error when checking for isolated releases while deleting branch '%s' of database "+
-					"'%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
+					"'%s/%s'", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -1667,7 +1667,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 					c, ok = commitList[c.Parent]
 					if !ok {
 						log.Printf("Error when checking for isolated releases while deleting branch '%s' of "+
-							"database '%s/%s'\n", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
+							"database '%s/%s'", com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
@@ -1708,7 +1708,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	lst := map[string]bool{}
 	c, ok := commitList[branch.Commit]
 	if !ok {
-		log.Printf("Error when creating commit list while deleting branch '%s' of database '%s/%s'\n",
+		log.Printf("Error when creating commit list while deleting branch '%s' of database '%s/%s'",
 			com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1717,7 +1717,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	for c.Parent != "" {
 		c, ok = commitList[c.Parent]
 		if !ok {
-			log.Printf("Error when creating commit list while deleting branch '%s' of database '%s/%s'\n",
+			log.Printf("Error when creating commit list while deleting branch '%s' of database '%s/%s'",
 				com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -1782,7 +1782,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = com.StoreCommits(dbOwner, dbName, commitList)
 	if err != nil {
-		log.Printf("Error when updating commit list while deleting branch '%s' of database '%s/%s': %s\n",
+		log.Printf("Error when updating commit list while deleting branch '%s' of database '%s/%s': %s",
 			com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1792,7 +1792,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -1833,7 +1833,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	discID, err := strconv.Atoi(a)
 	if err != nil {
-		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
+		log.Printf("Error converting string '%s' to integer in function '%s': %s", com.SanitiseLogString(a),
 			com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Error when parsing discussion id value")
@@ -1849,7 +1849,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	comID, err := strconv.Atoi(a)
 	if err != nil {
-		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
+		log.Printf("Error converting string '%s' to integer in function '%s': %s", com.SanitiseLogString(a),
 			com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Error when parsing comment id value")
@@ -2095,7 +2095,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -2238,7 +2238,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
-		log.Printf("%s: Missing database for '%s/%s' when attempting deletion\n", pageName, com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
+		log.Printf("%s: Missing database for '%s/%s' when attempting deletion", pageName, com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "Internal server error")
 		return
@@ -2391,7 +2391,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -2472,7 +2472,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -2723,7 +2723,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Abort if the table name was missing
 	if dbTable == "" {
-		log.Printf("%s: Missing table name\n", pageName)
+		log.Printf("%s: Missing table name", pageName)
 		errorPage(w, r, http.StatusBadRequest, "Missing table name")
 		return
 	}
@@ -2788,7 +2788,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	csvFile.UseCRLF = win
 	err = csvFile.WriteAll(resultSet)
 	if err != nil {
-		log.Printf("%s: Error when generating CSV: %v\n", pageName, err)
+		log.Printf("%s: Error when generating CSV: %v", pageName, err)
 		errorPage(w, r, http.StatusInternalServerError, "Error when generating CSV")
 		return
 	}
@@ -2903,12 +2903,12 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
 	// Log the database fork
-	log.Printf("Database '%s/%s' forked to user '%s'\n", com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), loggedInUser)
+	log.Printf("Database '%s/%s' forked to user '%s'", com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), loggedInUser)
 
 	// Bounce to the page of the forked database
 	http.Redirect(w, r, fmt.Sprintf("/%s/%s", loggedInUser, dbName), http.StatusSeeOther)
@@ -2933,7 +2933,7 @@ func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Generate a new certificate
 	newCert, err := com.GenerateClientCert(loggedInUser)
 	if err != nil {
-		log.Printf("Error generating client certificate for user '%s': %s!\n", loggedInUser, err)
+		log.Printf("Error generating client certificate for user '%s': %s!", loggedInUser, err)
 		errorPage(w, r, http.StatusInternalServerError, "Error generating client certificate")
 		return
 	}
@@ -3137,7 +3137,7 @@ func main() {
 		log.Fatalf("Error when opening request log: %s\n", err)
 	}
 	defer reqLog.Close()
-	log.Printf("Request log opened: %s\n", com.Conf.Web.RequestLog)
+	log.Printf("Request log opened: %s", com.Conf.Web.RequestLog)
 
 	// Parse our template files
 	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
@@ -3501,7 +3501,7 @@ func main() {
 	})))
 
 	// Start webUI server
-	log.Printf("WebUI server starting on https://%s\n", com.Conf.Web.ServerName)
+	log.Printf("WebUI server starting on https://%s", com.Conf.Web.ServerName)
 	srv := &http.Server{
 		Addr:     com.Conf.Web.BindAddress,
 		ErrorLog: com.HttpErrorLog(),
@@ -3632,7 +3632,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mrID, err := strconv.Atoi(a)
 	if err != nil {
-		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
+		log.Printf("Error converting string '%s' to integer in function '%s': %s", com.SanitiseLogString(a),
 			com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Error when parsing merge request id value")
@@ -3695,7 +3695,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -3744,19 +3744,19 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate submitted form data
 	err = com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
 	if err != nil {
-		log.Printf("%s: Maximum rows value failed validation: %s\n", pageName, err)
+		log.Printf("%s: Maximum rows value failed validation: %s", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing maximum rows preference value")
 		return
 	}
 	maxRowsNum, err := strconv.Atoi(maxRows)
 	if err != nil {
-		log.Printf("%s: Error converting string '%v' to integer: %s\n", pageName, com.SanitiseLogString(maxRows), err)
+		log.Printf("%s: Error converting string '%v' to integer: %s", pageName, com.SanitiseLogString(maxRows), err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing preference data")
 		return
 	}
 	err = com.ValidateDisplayName(displayName)
 	if err != nil {
-		log.Printf("%s: Display name '%s' failed validation: %s\n", pageName, com.SanitiseLogString(displayName), err)
+		log.Printf("%s: Display name '%s' failed validation: %s", pageName, com.SanitiseLogString(displayName), err)
 		errorPage(w, r, http.StatusBadRequest, "Error when parsing full name value")
 		return
 	}
@@ -3767,7 +3767,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 		serverName := strings.Split(com.Conf.Web.ServerName, ":")
 		em := fmt.Sprintf("%s@%s", loggedInUser, serverName[0])
 		if email != em {
-			log.Printf("%s: Email value failed validation: %s\n", pageName, err)
+			log.Printf("%s: Email value failed validation: %s", pageName, err)
 			errorPage(w, r, http.StatusBadRequest, "Error when parsing email value")
 			return
 		}
@@ -3914,7 +3914,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// Grab and validate the supplied "public" form field
 	public, err := com.GetPub(r)
 	if err != nil {
-		log.Printf("Error when converting public value to boolean: %v\n", err)
+		log.Printf("Error when converting public value to boolean: %v", err)
 		errorPage(w, r, http.StatusBadRequest, "Public value incorrect")
 		return
 	}
@@ -4141,7 +4141,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if tablePresent == false {
 			// The requested table doesn't exist in the database
-			log.Printf("Requested table '%s' not present in database '%s/%s'\n",
+			log.Printf("Requested table '%s' not present in database '%s/%s'",
 				com.SanitiseLogString(defTable), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName))
 			errorPage(w, r, http.StatusBadRequest, "Requested table not present")
 			return
@@ -4272,7 +4272,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -4315,7 +4315,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -4520,7 +4520,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 		// careful than usual
 		err = com.ValidateFieldName(sortCol)
 		if err != nil {
-			log.Printf("Validation failed on requested sort field name '%v': %v\n", com.SanitiseLogString(sortCol),
+			log.Printf("Validation failed on requested sort field name '%v': %v", com.SanitiseLogString(sortCol),
 				err.Error())
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -4684,7 +4684,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 				var colList []sqlite.Column
 				colList, err = sdb.Columns("", requestedTable)
 				if err != nil {
-					log.Printf("Error when reading column names for table '%s': %v\n", com.SanitiseLogString(requestedTable),
+					log.Printf("Error when reading column names for table '%s': %v", com.SanitiseLogString(requestedTable),
 						err.Error())
 					w.WriteHeader(http.StatusInternalServerError)
 					return
@@ -4705,7 +4705,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			dataRows, err = com.ReadSQLiteDB(sdb, requestedTable, sortCol, sortDir, maxRows, rowOffset)
 			if err != nil {
 				// Some kind of error when reading the database data
-				log.Printf("Error occurred when reading table data for '%s/%s', commit '%s': %s\n", com.SanitiseLogString(dbOwner),
+				log.Printf("Error occurred when reading table data for '%s/%s', commit '%s': %s", com.SanitiseLogString(dbOwner),
 					com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -4721,7 +4721,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			// Cache the data in memcache
 			err = com.CacheData(dataCacheKey, dataRows, com.Conf.Memcache.DefaultCacheTime)
 			if err != nil {
-				log.Printf("%s: Error when caching table data for '%s/%s': %v\n", pageName, com.SanitiseLogString(dbOwner),
+				log.Printf("%s: Error when caching table data for '%s/%s': %v", pageName, com.SanitiseLogString(dbOwner),
 					com.SanitiseLogString(dbName), err)
 			}
 		}
@@ -4887,7 +4887,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
 
@@ -4927,7 +4927,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	discID, err := strconv.Atoi(a)
 	if err != nil {
-		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
+		log.Printf("Error converting string '%s' to integer in function '%s': %s", com.SanitiseLogString(a),
 			com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Error when parsing discussion id value")
@@ -4943,7 +4943,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	comID, err := strconv.Atoi(b)
 	if err != nil {
-		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
+		log.Printf("Error converting string '%s' to integer in function '%s': %s", com.SanitiseLogString(a),
 			com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Error when parsing comment id value")
@@ -5136,7 +5136,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	discID, err := strconv.Atoi(a)
 	if err != nil {
-		log.Printf("Error converting string '%s' to integer in function '%s': %s\n", com.SanitiseLogString(a),
+		log.Printf("Error converting string '%s' to integer in function '%s': %s", com.SanitiseLogString(a),
 			com.GetCurrentFunctionName(), err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Error when parsing discussion id value")
@@ -5473,7 +5473,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 			errorPage(w, r, http.StatusBadRequest,
 				fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
 					com.MaxDatabaseSize, r.ContentLength/1024/1024))
-			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB\n",
+			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB",
 				loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
 			return
 		}
@@ -5487,7 +5487,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = r.ParseForm(); err != nil {
-		log.Printf("%s: ParseForm() error: %v\n", pageName, err)
+		log.Printf("%s: ParseForm() error: %v", pageName, err)
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -5497,7 +5497,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	var public bool
 	public, err = com.GetPub(r)
 	if err != nil {
-		log.Printf("%s: Error when converting public value to boolean: %v\n", pageName, err)
+		log.Printf("%s: Error when converting public value to boolean: %v", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Public value '%v' incorrect", html.EscapeString(r.PostFormValue("public"))))
 		return
 	}
@@ -5511,7 +5511,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	var isLiveDB bool
 	isLiveDB, err = com.GetFormLive(r)
 	if err != nil {
-		log.Printf("%s: Error when converting live value to boolean: %v\n", pageName, err)
+		log.Printf("%s: Error when converting live value to boolean: %v", pageName, err)
 		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Live value '%v' incorrect", html.EscapeString(r.PostFormValue("live"))))
 		return
 	}
@@ -5545,7 +5545,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate the (optional) branch name
 	branchName, err := com.GetFormBranch(r)
 	if err != nil {
-		log.Printf("%s: Error when validating branch name '%s': %v\n", pageName, com.SanitiseLogString(branchName), err)
+		log.Printf("%s: Error when validating branch name '%s': %v", pageName, com.SanitiseLogString(branchName), err)
 		errorPage(w, r, http.StatusBadRequest, "Branch name value failed validation")
 		return
 	}
@@ -5554,7 +5554,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	tempFile, handler, err := r.FormFile("database")
 	if err != nil {
-		log.Printf("%s: Uploading file failed: %v\n", pageName, err)
+		log.Printf("%s: Uploading file failed: %v", pageName, err)
 		errorPage(w, r, http.StatusInternalServerError, "Database file missing from upload data?")
 		return
 	}
@@ -5653,7 +5653,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Log the successful database upload, and bounce the user to the database view page
-		log.Printf("%s: Username: '%s', database '%s/%s' uploaded', bytes: %v\n", pageName, loggedInUser,
+		log.Printf("%s: Username: '%s', database '%s/%s' uploaded', bytes: %v", pageName, loggedInUser,
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 		http.Redirect(w, r, fmt.Sprintf("/%s/%s?branch=%s", html.EscapeString(dbOwner), html.EscapeString(dbName), html.EscapeString(branchName)), http.StatusSeeOther)
 		return
@@ -5742,7 +5742,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.InvalidateCacheEntry(loggedInUser, dbOwner, dbName, "") // Empty string indicates "for all versions"
 	if err != nil {
 		// Something went wrong when invalidating memcached entries for the database
-		log.Printf("Error when invalidating memcache entries: %s\n", err.Error())
+		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
