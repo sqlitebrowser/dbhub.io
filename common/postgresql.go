@@ -4723,7 +4723,7 @@ func UpdateDiscussion(dbOwner, dbName, loggedInUser string, discID int, newTitle
 				AND db_name = $2
 		)
 		UPDATE discussions AS disc
-		SET title = $4, description = $6, last_modified = now()
+		SET title = $4, description = $5, last_modified = now()
 		WHERE disc.db_id = (SELECT db_id FROM d)
 			AND disc.disc_id = $3`
 	commandTag, err := tx.Exec(dbQuery, dbOwner, dbName, discID, newTitle, newText)
