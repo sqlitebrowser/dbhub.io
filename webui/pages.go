@@ -97,8 +97,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 		Tree           com.DBTree `json:"tree"`
 	}
 	var pageData struct {
-		Branch   string
-		Branches []string
+		Branches map[string]com.BranchEntry
 		DB       com.SQLiteDBinfo
 		History  []HistEntry
 		PageMeta PageMetaInfo
@@ -134,7 +133,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read the branch heads list from the database
-	branches, err := com.GetBranches(dbName.Owner, dbName.Database)
+	pageData.Branches, err = com.GetBranches(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -146,7 +145,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Work out the head commit ID for the requested branch
-	headCom, ok := branches[branchName]
+	headCom, ok := pageData.Branches[branchName]
 	if !ok {
 		// Unknown branch
 		errorPage(w, r, http.StatusInternalServerError, fmt.Sprintf("Branch '%s' not found", branchName))
@@ -251,12 +250,6 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
-	}
-
-	// Fill out the metadata
-	pageData.Branch = branchName
-	for i := range branches {
-		pageData.Branches = append(pageData.Branches, i)
 	}
 
 	// Render the page

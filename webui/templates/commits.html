@@ -1,167 +1,19 @@
 [[ define "commitsPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="commitsView">
+<html>
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
 <div>
     <div id="db-header-root"></div>
-    <div class="row">
-        <div class="col-md-12">
-            <div style="text-align: center; margin: 1% 0">
-                <span data-cy="commithist">Commit history for branch</span>
-                <span class="dropdown">
-                    <span class="btn-group" uib-dropdown keyboard-nav="true">
-                        <button id="branchname" type="button" class="btn" data-cy="branchdropdown">{{ meta.Branch }}</button>
-
-                        <button type="button" uib-dropdown-toggle class="btn btn-default">
-                            <span class="caret"></span>
-                        </button>
-                        <ul uib-dropdown-menu class="dropdown-menu" role="menu">
-                            <li ng-repeat="row in meta.Branches" role="menuitem" ng-click="changeBranch(row)" data-cy="commit-{{ row }}">
-                                <a href="">{{ row }}</a>
-                            </li>
-                        </ul>
-                    </span>
-                </span>
-            </div>
-        </div>
-    </div>
-    <div class="row" ng-if="statusMessage != ''">
-        <div class="col-md-12">
-            <div style="text-align: center; padding-bottom: 8px;">
-                <h4 style="color: red;">&nbsp;{{ statusMessage }}</h4>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            <div style="border: 1px solid #DDD; border-radius: 7px; margin-bottom: 10px; padding: 0;">
-                <table id="contents" class="table table-striped table-responsive" style="margin: 0;">
-                    <thead>
-                        <tr>
-                            [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
-                                <th>Actions</th>
-                            [[ end ]]
-                            <th width="25%" colspan="2">Author</th><th>Date</th><th>Commit ID</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr ng-repeat-start="row in meta.History">
-                            [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
-                                <td style="border-style: none;">
-                                    <button class="btn btn-primary" ng-click="createBranch(row.id)" data-cy="createbranchbtn">Create Branch</button>
-                                </td>
-                            [[ end ]]
-                            <td width="15%" style="border-style: none;">
-                                <img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="30" width="30" style="border: 1px solid #8c8c8c;"/>
-                                <a class="blackLink" href="/{{ row.author_user_name }}">{{ row.author_name }}</a>
-                            </td>
-                            <td width="10%" style="border-style: none;">&nbsp;</td>
-                            <td style="border-style: none;">
-                                <span title="{{ row.timestamp | date : 'medium' }}">{{ getTimePeriodTxt(row.timestamp, false) }}</span>
-                            </td>
-                            <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
-                                <a class="blackLink" href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?branch={{ meta.Branch }}&commit={{ row.id }}">{{ row.id }}</a>
-                            </td>
-                        </tr>
-                        <tr ng-repeat-end class="tableRow">
-                            <td style="border-style: none;">
-                              <span ng-if="row.id != lastCommit">
-                                <button class="btn btn-primary" ng-click="viewChanges(meta.History[$index + 1].id, row.id)">View Changes</button>
-                                <br /><br />
-                              </span>  
-                              [[ if eq .DB.Info.Owner .PageMeta.LoggedInUser ]]
-                                    <button class="btn btn-primary" ng-click="createTag(row.id)" data-cy="createtagrelbtn">Create Tag or Release</button>
-                                    <span ng-if="(row.id == headCommit) && (row.id != lastCommit)">
-                                            <br /><br />
-                                            <button class="btn btn-danger" ng-click="deleteCommit(row.id)" data-cy="delcommitbtn">Delete Commit</button>
-                                        </span>&nbsp;
-                              [[ end ]]
-                            </td>
-                            <td width="15%" style="border-style: none;">&nbsp;</td>
-                            <td colspan="3" style="border-style: none; vertical-align: top;">
-                                <span ng-bind-html="row.message"></span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    <div id="database-commits"></div>
 </div>
 [[ template "script_db_header" . ]]
-[[ template "footer" . ]]
 <script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('commitsView', function($scope, $http, $httpParamSerializerJQLike) {
-        $scope.meta = {
-            Branch: "[[ .Branch ]]",
-            Branches: [[ .Branches ]],
-            History: [[ .History ]]
-        }
-
-        // Take note of the first and last commit IDs, so we can compare against them
-        let numCommits = $scope.meta.History.length;
-        $scope.headCommit = $scope.meta.History[0].id;
-        $scope.lastCommit = $scope.meta.History[numCommits - 1].id;
-
-        // Change the branch being viewed
-        $scope.changeBranch = function(branchName){
-            window.location = "/commits/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?branch=" + branchName;
-        };
-
-        // Bounce to the page for creating branches
-        $scope.createBranch = function(commit){
-            window.location = "/createbranch/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=" + commit;
-        };
-
-        // Bounce to the page for creating tags
-        $scope.createTag = function(commit){
-            window.location = "/createtag/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=" + commit;
-        };
-
-        // Bounce to the page for viewing changes
-        $scope.viewChanges = function(commit_a, commit_b){
-            window.location = "/diffs/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit_a=" + commit_a + "&commit_b=" + commit_b;
-        };
-
-        // Change \u0026 to &
-        $scope.decodeAmp = function(str) {
-            return decodeURIComponent(str);
-        };
-
-        // Delete a commit from the viewed branch
-        $scope.statusMessage = "";
-        $scope.deleteCommit = function(commit) {
-            $http({
-                method: "POST",
-                url: "/x/deletecommit/",
-                data: $httpParamSerializerJQLike({
-                        "branch": $scope.meta.Branch,
-                        "commit": commit,
-                        "dbname": [[ .DB.Info.Database ]],
-                        "username": [[ .DB.Info.Owner ]]
-                    }),
-                headers: { "Content-Type": "application/x-www-form-urlencoded" }
-            }).then(function success(response) {
-                // The delete was successful, so reload the page
-                let status = response.status;
-                if (status === 200) {
-                    window.location = '/commits/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?branch=' + $scope.meta.Branch;
-                }
-            }, function failure(response) {
-                // The delete failed, so display the returned error message
-                $scope.statusMessage = "Error: " + response.data;
-            });
-        };
-
-        // Returns a nicely presented "time elapsed" string
-        $scope.getTimePeriodTxt = function(date1, includeOn) {
-            return getTimePeriod(date1, includeOn)
-        };
-    });
+    const commitData = [[ .History ]];
+    const branchData = [[ .Branches ]];
 </script>
+[[ template "footer" . ]]
 </body>
 </html>
 [[ end ]]

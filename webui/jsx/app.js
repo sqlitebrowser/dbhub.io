@@ -5,6 +5,7 @@ import ModalImage from "react-modal-image";
 
 import Auth from "./auth";
 import BranchesTable from "./branches";
+import DatabaseCommits from "./database-commits";
 import DatabaseSettings from "./database-settings";
 import DatabaseTags from "./database-tags";
 import DatabaseView from "./database-view";
@@ -34,6 +35,14 @@ import MarkdownEditor from "./markdown-editor";
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<BranchesTable />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("database-commits");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<DatabaseCommits />);
 	}
 }
 
