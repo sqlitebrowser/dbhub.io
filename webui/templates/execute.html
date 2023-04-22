@@ -198,9 +198,6 @@
             if (arrIdx > -1) {
                 $http.get("/x/execdel/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?sqlname="+name).then(
                     function success(response) {
-                        $scope.statusMessageColour = "green";
-                        $scope.statusMessage = nowString() + "SQL statement '" + name + "' deleted";
-
                         // Remove the SQL statement from the drop-down list
                         $scope.execNames.splice(arrIdx, 1);
 
@@ -211,8 +208,17 @@
                                 $scope.selectedName = newSelected;
                                 document.getElementById("savename").value = newSelected;
                                 $scope.changeExec(newSelected);
+
+                                // We need to set the status message here too, otherwise the ~async changeExec() above
+                                // can overwrite it
+                                $scope.statusMessageColour = "green";
+                                $scope.statusMessage = nowString() + "SQL statement '" + name + "' deleted";
                             }
                         }
+
+                        // Display a success message
+                        $scope.statusMessageColour = "green";
+                        $scope.statusMessage = nowString() + "SQL statement '" + name + "' deleted";
                     }, function failure(response) {
                         // The deletion failed, so display the returned error message
                         $scope.statusMessageColour = "red";
