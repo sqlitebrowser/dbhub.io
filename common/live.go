@@ -226,11 +226,11 @@ func LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql string) (rowsChang
 	return
 }
 
-// LiveQueryDB sends a SQLite query to a live database on its hosting node
-func LiveQueryDB(channel *amqp.Channel, nodeName, requestingUser, dbOwner, dbName, query string) (rows SQLiteRecordSet, err error) {
+// LiveQuery sends a SQLite query to a live database on its hosting node
+func LiveQuery(nodeName, requestingUser, dbOwner, dbName, query string) (rows SQLiteRecordSet, err error) {
 	// Send the query request to our AMQP backend
 	var rawResponse []byte
-	rawResponse, err = MQRequest(channel, nodeName, "query", requestingUser, dbOwner, dbName, query)
+	rawResponse, err = MQRequest(AmqpChan, nodeName, "query", requestingUser, dbOwner, dbName, query)
 	if err != nil {
 		return
 	}

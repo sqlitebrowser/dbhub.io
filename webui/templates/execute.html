@@ -37,6 +37,23 @@
                 <uib-tab index="0" data-cy="sqltab">
                     <uib-tab-heading><span style="color: #555;">SQL</span></uib-tab-heading>
                     <textarea id="usersql" rows="8" onchange="updateSQL()" ng-attr-placeholder="Your SQL statement here..." data-cy="usersqltext">[[ .SQL ]]</textarea>
+
+                    <button type="button" class="btn btn-default" ng-if="db.Records.length > 0" ng-click="toggleResultTable()" data-cy="resultsbtn">{{ toggleLabel }}</button>
+                    <div uib-collapse="isCollapsed">
+                        <div style="max-width: 100%; overflow: auto; border: 1px solid #DDD; border-radius: 7px 7px 0 0;">
+                            <table class="table table-bordered table-striped table-responsive" style="margin-bottom: 0; padding-bottom: 0;" data-cy="resultstbl">
+                                <thead>
+                                <tr>
+                                    <th ng-repeat="col in db.ColNames" style="padding: 7px 0 6px 6px;">{{ col }}</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="row in db.Records">
+                                    <td ng-repeat="val in row" dir="auto"><pre style="background-color: transparent; border: none; padding: 0px; margin: 0px;" ng-bind-html="val.Value | fixSpaces"></pre></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                 </uib-tab>
             </uib-tabset>
         </div>
@@ -115,6 +132,24 @@
         // Initialise things with safe defaults (these are potentially filled out further down the page)
         $scope.selectedName = "[[ .SelectedName ]]";
         $scope.execNames = [[ .ExecNames ]];
+        $scope.toggleLabel = "Show result table"
+        $scope.isCollapsed = true;
+
+        // Create empty stub to hold returned query data
+        $scope.db = {"ColCount":0,"ColNames":[],"Offset":0,"Records":[],"RowCount":0,"SortCol":"","SortDir":"","Tablename":"","TotalRows":0};
+
+        // Functions for toggling on/off various display elements
+        $scope.toggleResultTable = function() {
+            $scope.isCollapsed = !$scope.isCollapsed;
+            if ($scope.isCollapsed) {
+                $scope.toggleLabel = "Show result table"
+            } else {
+                $scope.toggleLabel = "Hide result table"
+            }
+
+            // Clear any existing status message
+            $scope.statusMessage = "";
+        }
 
         // Ensure the SQL statement name field isn't blank
         // Returns true if a name is present, false if it's missing
@@ -178,6 +213,12 @@
             )
         }
 
+        // Clear out any existing table data
+        $scope.clearData = function() {
+            $scope.db.ColNames = [];
+            $scope.db.Records = [];
+        }
+
         // If there are saved SQL statements but none of them is named "default", then change the Saved SQL drop down
         // selector to use the first one
         if (($scope.execNames.length > 0) && (!$scope.execNames.includes("default"))) {
@@ -218,15 +259,24 @@
                         // Display a success message
                         $scope.statusMessageColour = "green";
                         $scope.statusMessage = nowString() + "SQL statement '" + name + "' deleted";
+
+                        // Clear out any existing table data
+                        $scope.clearData();
                     }, function failure(response) {
                         // The deletion failed, so display the returned error message
                         $scope.statusMessageColour = "red";
                         $scope.statusMessage = nowString() + "Deleting '" + name + "' failed: " + response.data;
+
+                        // Clear out any existing table data
+                        $scope.clearData();
                     }
                 )
             } else {
                 $scope.statusMessageColour = "red";
                 $scope.statusMessage = nowString() + "Unknown SQL statement";
+
+                // Clear out any existing table data
+                $scope.clearData();
             }
         };
 
@@ -239,18 +289,38 @@
             let encoded = base64url(userSQL);
             $http.get("/x/execlivesql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
                 function success(response) {
-                    $scope.statusMessageColour = "green";
-                    if (response.data["rows_changed"] === 0) {
-                        $scope.statusMessage = nowString() + "Execution succeeded";
-                    } else if (response.data["rows_changed"] === 1) {
-                        $scope.statusMessage = nowString() + "Execution success: " + response.data["rows_changed"] + " row changed";
+                    // We can potentially receive either "Execute SQL" or Query responses here
+                    if ("rows_changed" in response.data) {
+                        // Handle the response as for Execute SQL
+                        $scope.statusMessageColour = "green";
+                        if (response.data["rows_changed"] === 0) {
+                            $scope.statusMessage = nowString() + "Execution succeeded";
+                        } else if (response.data["rows_changed"] === 1) {
+                            $scope.statusMessage = nowString() + "Execution success: " + response.data["rows_changed"] + " row changed";
+                        } else {
+                            $scope.statusMessage = nowString() + "Execution success: " + response.data["rows_changed"] + " rows changed";
+                        }
+
+                        // Clear out any existing table data
+                        $scope.clearData();
                     } else {
-                        $scope.statusMessage = nowString() + "Execution success: " + response.data["rows_changed"] + " rows changed";
+                        // Give a useful "success" status message
+                        $scope.statusMessageColour = "green";
+                        if (response.data["RowCount"] === 0) {
+                            $scope.statusMessage = nowString() + "SQL query ran without error, but returned no records";
+                            $scope.clearData();
+                        } else {
+                            $scope.statusMessage = nowString() + "SQL query ran successfully";
+                            $scope.db = response.data;
+                        }
                     }
                 }, function failure(response) {
                     // Retrieving data failed, so display the returned error message and hide the graph
                     $scope.statusMessageColour = "red";
                     $scope.statusMessage = nowString() + "Executing SQL statement failed: " + response.data;
+
+                    // Clear out any existing table data
+                    $scope.clearData();
                 }
             )
         };

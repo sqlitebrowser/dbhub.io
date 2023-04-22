@@ -283,7 +283,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 				//	data, ok, err := com.GetVisualisationData(dbName.Owner, "/", dbName.Database, commitID, hash)
 			} else {
 				// It's a live database, so run the query via our AMQP backend
-				data, err = com.LiveQueryDB(com.AmqpChan, liveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, params.SQL)
+				data, err = com.LiveQuery(liveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, params.SQL)
 				if err != nil {
 					log.Println(err)
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -537,7 +537,7 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 		}
 	} else {
 		// Send the query to the appropriate backend live node
-		data, err = com.LiveQueryDB(com.AmqpChan, liveNode, loggedInUser, dbOwner, dbName, decodedStr)
+		data, err = com.LiveQuery(liveNode, loggedInUser, dbOwner, dbName, decodedStr)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err.Error())
@@ -767,10 +767,9 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Run the visualisation query, to ensure it returns valid data
-	var visData com.SQLiteRecordSet
+	// Run the visualisation query, to ensure it doesn't generate an error
 	if !isLive {
-		visData, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, dbOwner, dbName, commitID, loggedInUser, decodedStr)
+		_, err = com.SQLiteRunQueryDefensive(w, r, com.QuerySourceVisualisation, dbOwner, dbName, commitID, loggedInUser, decodedStr)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err)
@@ -778,19 +777,12 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Send the query to the appropriate backend live node
-		visData, err = com.LiveQueryDB(com.AmqpChan, liveNode, loggedInUser, dbOwner, dbName, decodedStr)
+		_, err = com.LiveQuery(liveNode, loggedInUser, dbOwner, dbName, decodedStr)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err)
 			return
 		}
-	}
-
-	// If the # of rows returned from the query is 0, let the user know + don't save
-	if len(visData.Records) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Can't save query, it returns no data")
-		return
 	}
 
 	// Save the SQLite visualisation parameters

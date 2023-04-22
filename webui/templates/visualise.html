@@ -437,8 +437,10 @@
             $http.get("/x/visget/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?visname="+newVis).then(
                 function success(response) {
                     if (execNewVis) {
-                        // Clear any existing status message
+                        // Clear any existing status message, chart, and table data
                         $scope.statusMessage = "";
+                        $scope.showVis = true;
+                        $scope.clearData();
                     }
 
                     // Apply the retrieved information
@@ -457,103 +459,8 @@
                     updateSQL();
 
                     // If requested, we execute the newly loaded visualisation
-                    // TODO: We can probably merge this and the execSQL() code into one function
                     if (execNewVis) {
-                        let xLabel = response.data["x_axis_label"];
-                        let yLabel = response.data["y_axis_label"];
-                        let showX = response.data["show_x_label"];
-                        let showY = response.data["show_y_label"];
-                        let chartType = response.data["chart_type"];
-
-                        // Execute the retrieved SQL
-                        let sql = response.data["sql"];
-                        let encoded = base64url(sql);
-                        $http.get("/x/execsql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
-                            function success(response) {
-                                // Clear any existing status message
-                                $scope.statusMessage = "";
-
-                                // Update table data
-                                $scope.db = response.data;
-
-                                // Update the list of available X column names
-                                $scope.XColumnNames = $scope.db.ColNames;
-
-                                // Older versions of this code were able to save the placeholder "None available yet"
-                                // string to the backend, thereby returning it from the backend too.  So we catch that
-                                // problem, and work around it by choosing the first column in our list.
-                                if (xLabel === "None available yet") {
-                                    // Placeholder value found
-                                    if ($scope.XColumnNames.length > 0) {
-                                        let newCol = $scope.XColumnNames[0];
-                                        $scope.changeXAxisColumn(newCol);
-                                    }
-                                } else {
-                                    // Update X axis label
-                                    $scope.changeXAxisColumn(xLabel);
-                                }
-
-                                // Update the list of available Y column names
-                                $scope.updateYAxisColumnList();
-
-                                // If a real Y axis column value was provided then we use it
-                                if (yLabel !== "None available yet") {
-                                    $scope.YAxisColumn = yLabel;
-                                    chartData.YAxisLabel = yLabel;
-                                }
-
-                                // Update remaining chart info
-                                $scope.radioXAxisShowLabels = showX;
-                                $scope.radioYAxisShowLabels = showY;
-                                switch (chartType) {
-                                case "hbc":
-                                    $scope.ChartType = "Horizontal bar chart";
-                                    plotData[0].type = "bar";
-                                    plotData[0].orientation = "h";
-                                    break;
-                                case "vbc":
-                                    $scope.ChartType = "Vertical bar chart";
-                                    plotData[0].type = "bar";
-                                    plotData[0].orientation = "v";
-                                    break;
-                                case "lc":
-                                    $scope.ChartType = "Line chart";
-                                    plotData[0].type = "scatter";
-                                    plotData[0].orientation = "v";
-                                    break;
-                                case "pie":
-                                    $scope.ChartType = "Pie chart";
-                                    plotData[0].type = "pie";
-                                }
-
-                                // Set chart title to the visualisation name
-                                chartData.Title = newVis
-
-                                // Try displaying the chart
-                                dataReceived = true;
-                                if ($scope.db.ColNames.length > 1) {
-                                    $scope.showVis = true;
-                                    $scope.doChart(true);
-                                }
-                            }, function failure(response) {
-                                // Retrieving data failed, so display the returned error message and hide the graph
-                                $scope.statusMessageColour = "red";
-                                $scope.statusMessage = nowString() + "Retrieving data failed: " + response.data;
-                                $scope.showVis = false;
-
-                                // Clear out any existing table data too
-                                $scope.db.ColNames = {};
-                                $scope.db.Records = {};
-                            }
-                        )
-                    } else {
-                        // We've loaded the parameters for a new visualisation, but not executed it.  So, we should
-                        // stop displaying the old visualisation data
-                        $scope.showVis = false;
-
-                        // Clear out the old table data too
-                        $scope.db.ColNames = {};
-                        $scope.db.Records = {};
+                        $scope.execSQL();
                     }
                 }, function failure(response) {
                     if (execNewVis) {
@@ -617,6 +524,12 @@
             }
             $scope.doChart(true);
         };
+
+        // Clear out any existing table data
+        $scope.clearData = function() {
+            $scope.db.ColNames = [];
+            $scope.db.Records = [];
+        }
 
         // Deletes a saved visualisation
         $scope.deleteVis = function() {
@@ -693,11 +606,8 @@
                     // Retrieving data failed, so display the returned error message and hide the graph
                     $scope.statusMessageColour = "red";
                     $scope.statusMessage = nowString() + "Retrieving results failed: " + response.data;
-
-                    // Also hide the old (pre-save) chart, and clear the results row table
                     $scope.showVis = false;
-                    $scope.db.ColNames = {};
-                    $scope.db.Records = {};
+                    $scope.clearData();
                 }
             )
         };
@@ -713,9 +623,13 @@
                 function success(response) {
                     // Give a useful "success" status message
                     $scope.statusMessageColour = "green";
-                    $scope.statusMessage = nowString() + "SQL run successful";
-
-                    // Update table data
+                    if (response.data["RowCount"] === 0) {
+                        $scope.statusMessage = nowString() + "SQL query ran without error, but returned no records";
+                        $scope.showVis = false;
+                        $scope.clearData();
+                        return;
+                    }
+                    $scope.statusMessage = nowString() + "SQL query ran successfully";
                     $scope.db = response.data;
 
                     // Update the list of available X column names
@@ -732,7 +646,7 @@
 
                     // Try displaying the chart
                     dataReceived = true;
-                    if ($scope.db.ColNames.length > 1) {
+                    if ($scope.db.Records.length > 0) {
                         $scope.showVis = true;
                         $scope.doChart(true);
                     }
@@ -741,10 +655,7 @@
                     $scope.statusMessageColour = "red";
                     $scope.statusMessage = nowString() + "Retrieving data failed: " + response.data;
                     $scope.showVis = false;
-
-                    // Clear out any existing table data too
-                    $scope.db.ColNames = {};
-                    $scope.db.Records = {};
+                    $scope.clearData();
                 }
             )
         };
@@ -825,11 +736,8 @@
                     // The save failed, so display the returned error message
                     $scope.statusMessageColour = "red";
                     $scope.statusMessage = nowString() + "Saving failed: " + response.data;
-
-                    // Also hide the old (pre-save) chart, and clear the results row table
                     $scope.showVis = false;
-                    $scope.db.ColNames = {};
-                    $scope.db.Records = {};
+                    $scope.clearData();
                 }
             )
         };

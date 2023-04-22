@@ -16,6 +16,6 @@ describe('002-visualisation-base64url-padding-bug', () => {
       'LIMIT 10')
     cy.get('[data-cy="runsqlbtn"]').click()
     cy.wait(150) // Needs a bit of a delay here, otherwise any error status message may be missed
-    cy.get('[data-cy="statusmsg"]').should('contain.text', 'SQL run successful')
+    cy.get('[data-cy="statusmsg"]').should('contain.text', 'SQL query ran successfully')
   })
 })

@@ -931,7 +931,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Send the query to the appropriate backend live node
-		data, err = com.LiveQueryDB(com.AmqpChan, liveNode, loggedInUser, dbOwner, dbName, query)
+		data, err = com.LiveQuery(liveNode, loggedInUser, dbOwner, dbName, query)
 		if err != nil {
 			log.Println(err)
 			jsonErr(w, err.Error(), http.StatusInternalServerError)

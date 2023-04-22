@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/sessions"
 	com "github.com/sqlitebrowser/dbhub.io/common"
@@ -283,16 +284,29 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 
 	// Send the SQL execution request to our AMQP backend
 	var rowsChanged int
+	var z interface{}
 	rowsChanged, err = com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
 	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
-		return
+		if !strings.HasPrefix(err.Error(), "don't use exec with") {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err)
+			return
+		}
+
+		// The user tried to run a SELECT query.  Let's just run with it...
+		z, err = com.LiveQuery(liveNode, loggedInUser, dbOwner, dbName, sql)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+	} else {
+		// The SQL statement execution succeeded, so pass along the # of rows changed
+		z = com.ExecuteResponseContainer{RowsChanged: rowsChanged, Status: "OK"}
 	}
 
-	// The SQL statement execution succeeded, so pass along the # of rows changed
-	z := com.ExecuteResponseContainer{RowsChanged: rowsChanged, Status: "OK"}
+	// Return the success message
 	jsonData, err := json.Marshal(z)
 	if err != nil {
 		log.Println(err)
