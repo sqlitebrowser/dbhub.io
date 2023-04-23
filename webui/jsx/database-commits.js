@@ -7,25 +7,25 @@ function DatabaseCommitRow({data, index, branch, setStatusMessage, setStatusMess
 	const [commitIndex, setCommitIndex] = React.useState(Number(index));
 
 	// Bounce to the page for creating branches
-        function createBranch() {
+	function createBranch() {
 		window.location = "/createbranch/" + meta.owner + "/" + meta.database + "?commit=" + data.id;
-        }
+	}
 
-        // Bounce to the page for creating tags
-        function createTag() {
+	// Bounce to the page for creating tags
+	function createTag() {
 		window.location = "/createtag/" + meta.owner + "/" + meta.database + "?commit=" + data.id;
-        }
+	}
 
-        // Bounce to the page for viewing changes
-        function viewChanges() {
+	// Bounce to the page for viewing changes
+	function viewChanges() {
 		window.location = "/diffs/" + meta.owner + "/" + meta.database + "?commit_a=" + commitData[commitIndex + 1].id + "&commit_b=" + data.id;
-        }
+	}
 
 	// Delete a commit from the viewed branch
-        function deleteCommit() {
+	function deleteCommit() {
 		fetch("/x/deletecommit/", {
 			method: "post",
-	                headers: {
+			headers: {
 				"Content-Type": "application/x-www-form-urlencoded"
 			},
 			body: new URLSearchParams({
@@ -46,7 +46,7 @@ function DatabaseCommitRow({data, index, branch, setStatusMessage, setStatusMess
 			setStatusMessageColour("red");
 			setStatusMessage("Error: " + error.text());
 		});
-        }
+	}
 
 	// Is this the last and/or head commit?
 	const isHeadCommit = data.id == commitData[0].id;

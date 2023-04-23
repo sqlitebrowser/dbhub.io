@@ -21,7 +21,7 @@ function DiscussionTopComment({setStatusMessage, setStatusMessageColour}) {
 		// Send the new discussion text to the server
 		fetch("/x/updatediscuss/", {
 			method: "post",
-	                headers: {
+			headers: {
 				"Content-Type": "application/x-www-form-urlencoded"
 			},
 			body: new URLSearchParams({
@@ -58,7 +58,7 @@ function DiscussionTopComment({setStatusMessage, setStatusMessageColour}) {
 	function mergeRequest() {
 		fetch("/x/mergerequest/", {
 			method: "post",
-	                headers: {
+			headers: {
 				"Content-Type": "application/x-www-form-urlencoded"
 			},
 			body: new URLSearchParams({
@@ -87,7 +87,7 @@ function DiscussionTopComment({setStatusMessage, setStatusMessageColour}) {
 		// Send the comment text to the server
 		fetch("/x/createcomment/", {
 			method: "post",
-	                headers: {
+			headers: {
 				"Content-Type": "application/x-www-form-urlencoded"
 			},
 			body: new URLSearchParams({
@@ -217,7 +217,7 @@ function DiscussionComment({commentData, setStatusMessage, setStatusMessageColou
 
 		fetch("/x/updatecomment/", {
 			method: "post",
-	                headers: {
+			headers: {
 				"Content-Type": "application/x-www-form-urlencoded"
 			},
 			body: new URLSearchParams({
@@ -277,11 +277,11 @@ function DiscussionComment({commentData, setStatusMessage, setStatusMessageColou
 							// Deleting the comment succeeded, so reload the page
 							window.location = "/" + (mrData === null ? "discuss" : "merge") + "/" + meta.owner + "/" + meta.database + "?id=" + discussionData.disc_id;
 						})
-							.catch((error) => {
-								// Deleting the comment failed, so display an error message
-								setStatusMessageColour("red");
-								setStatusMessage("Deleting comment failed");
-							});
+						.catch((error) => {
+							// Deleting the comment failed, so display an error message
+							setStatusMessageColour("red");
+							setStatusMessage("Deleting comment failed");
+						});
 					}
 				},
 				{
@@ -369,7 +369,7 @@ export default function DiscussionComments() {
 
 		fetch("/x/createcomment/", {
 			method: "post",
-	                headers: {
+			headers: {
 				"Content-Type": "application/x-www-form-urlencoded"
 			},
 			body: new URLSearchParams({
