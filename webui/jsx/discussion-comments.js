@@ -319,7 +319,7 @@ function DiscussionComment({commentData, setStatusMessage, setStatusMessageColou
 	return (
 		<div className="panel panel-default">
 			<div className="panel-heading">
-				<a className="blackLink" href={"/" + commentData.creator}>{commentData.avatar_url !== "" ? <img style={{border: "1px solid #8c8c8c"}} src={commentData.avatar_url} height="30" width="30" /> : null}</a>&nbsp;
+				<a className="blackLink" href={"/" + commentData.commenter}>{commentData.avatar_url !== "" ? <img style={{border: "1px solid #8c8c8c"}} src={commentData.avatar_url} height="30" width="30" /> : null}</a>&nbsp;
 				<a className="blackLink" href={"/" + commentData.commenter}>{commentData.commenter}</a>&nbsp;
 				<a name={"c" + commentData.com_id} href={"#c" + commentData.com_id} className="blackLink">commented</a>&nbsp;
 				<span title={new Date(commentData.creation_date).toLocaleString()} className="text-info">{getTimePeriod(commentData.creation_date, true)}</span>
