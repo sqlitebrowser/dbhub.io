@@ -394,7 +394,7 @@ export default function DiscussionComments() {
 	}
 
 	// Render all the discussion comments
-	const comments = commentsData.map(c => DiscussionComment({commentData: c, setStatusMessage: setStatusMessage, setStatusMessageColour: setStatusMessageColour}));
+	const comments = commentsData !== null ? commentsData.map(c => DiscussionComment({commentData: c, setStatusMessage: setStatusMessage, setStatusMessageColour: setStatusMessageColour})) : [];
 
 	// Decide on the text for the close button
 	let closeButtonText = "";
