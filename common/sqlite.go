@@ -393,7 +393,7 @@ func OpenSQLiteDatabaseDefensive(w http.ResponseWriter, r *http.Request, dbOwner
 		},
 		{
 			name: sqlite.LimitCompoundSelect,
-			val:  3,
+			val:  30,
 		},
 		{
 			name: sqlite.LimitVdbeOp,
@@ -565,7 +565,7 @@ func OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName string) (sdb *sqlite.Conn, 
 		},
 		{
 			name: sqlite.LimitCompoundSelect,
-			val:  3,
+			val:  30,
 		},
 		{
 			name: sqlite.LimitVdbeOp,
