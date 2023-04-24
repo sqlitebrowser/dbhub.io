@@ -1,8 +1,6 @@
 #!/bin/sh
 
-# TODO: Consider adding the same extensions to the SQLite compile here, that we use
-#       in our macOS, AppImage (etc) builds.  Then add the function names to the allowed
-#       list for the API Query() function
+# TODO: Add the function names from the SQLite extensions to AuthorizerSelect()
 
 # Useful variables
 DEST=${PWD}/local
@@ -42,7 +40,7 @@ if [ ! -e "${DEST}/lib/libsqlite3.so" ]; then
   echo "Compiling local SQLite"
   tar xfz sqlite.tar.gz
   cd sqlite-autoconf-* || exit 4
-  ./configure --prefix=${DEST} --enable-dynamic-extensions=no
+  CPPFLAGS="-DSQLITE_ENABLE_COLUMN_METADATA=1 -DSQLITE_MAX_VARIABLE_NUMBER=250000 -DSQLITE_ENABLE_RTREE=1 -DSQLITE_ENABLE_GEOPOLY=1 -DSQLITE_ENABLE_FTS3=1 -DSQLITE_ENABLE_FTS3_PARENTHESIS=1 -DSQLITE_ENABLE_FTS5=1 -DSQLITE_ENABLE_STAT4=1 -DSQLITE_ENABLE_JSON1=1 -DSQLITE_SOUNDEX=1 -DSQLITE_ENABLE_MATH_FUNCTIONS=1 -DSQLITE_MAX_ATTACHED=125 -DSQLITE_ENABLE_MEMORY_MANAGEMENT=1 -DSQLITE_ENABLE_SNAPSHOT=1" ./configure --prefix=${DEST} --enable-dynamic-extensions=no
   make -j9
   make install
   cd ..
