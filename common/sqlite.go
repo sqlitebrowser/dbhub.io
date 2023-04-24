@@ -33,6 +33,7 @@ const (
 	fnGlob                    function = "glob"
 	fnHex                     function = "hex"
 	fnIfNull                  function = "ifnull"
+	fnIif                     function = "iif"
 	fnInstr                   function = "instr"
 	fnLastInsertRowID         function = "last_insert_rowid"
 	fnLength                  function = "length"
@@ -51,6 +52,7 @@ const (
 	fnReplace                 function = "replace"
 	fnRound                   function = "round"
 	fnRTrim                   function = "rtrim"
+	fnSign                    function = "sign"
 	fnSoundEx                 function = "soundex"
 	fnSQLiteCompileOptionGet  function = "sqlite_compileoption_get"
 	fnSQLiteCompileOptionUsed function = "sqlite_compileoption_used"
@@ -58,9 +60,11 @@ const (
 	fnSQLiteSourceID          function = "sqlite_source_id"
 	fnSQLiteVersion           function = "sqlite_version"
 	fnSubstr                  function = "substr"
+	fnSubstring               function = "substring"
 	fnTotalChanges            function = "total_changes"
 	fnTrim                    function = "trim"
 	fnTypeOf                  function = "typeof"
+	fnUnhex                   function = "unhex"
 	fnUnlikely                function = "unlikely"
 	fnUpper                   function = "upper"
 	fnZeroBlob                function = "zeroblob"
@@ -145,6 +149,7 @@ var SQLiteFunctions = []function{
 	fnGlob,
 	fnHex,
 	fnIfNull,
+	fnIif,
 	fnInstr,
 	fnLastInsertRowID,
 	fnLength,
@@ -163,6 +168,7 @@ var SQLiteFunctions = []function{
 	fnReplace,
 	fnRound,
 	fnRTrim,
+	fnSign,
 	fnSoundEx,
 	fnSQLiteCompileOptionGet,
 	fnSQLiteCompileOptionUsed,
@@ -170,9 +176,11 @@ var SQLiteFunctions = []function{
 	fnSQLiteSourceID,
 	fnSQLiteVersion,
 	fnSubstr,
+	fnSubstring,
 	fnTotalChanges,
 	fnTrim,
 	fnTypeOf,
+	fnUnhex,
 	fnUnlikely,
 	fnUpper,
 	fnZeroBlob,
