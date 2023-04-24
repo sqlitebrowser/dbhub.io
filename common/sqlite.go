@@ -67,6 +67,7 @@ const (
 	fnTime      function = "time"
 	fnDateTime  function = "datetime"
 	fnJulianDay function = "julianday"
+	fnUnixEpoch function = "unixepoch"
 	fnStrfTime  function = "strftime"
 
 	// Aggregate functions: https://sqlite.org/lang_aggfunc.html
@@ -156,6 +157,7 @@ var SQLiteFunctions = []function{
 	fnTime,
 	fnDateTime,
 	fnJulianDay,
+	fnUnixEpoch,
 	fnStrfTime,
 	fnAvg,
 	fnCount,
