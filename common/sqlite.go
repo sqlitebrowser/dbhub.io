@@ -136,6 +136,21 @@ const (
 	fnRTreei32   function = "rtree_i32"
 	fnRTreeCheck function = "rtreecheck"
 
+	// Geopoly functions: https://www.sqlite.org/geopoly.html
+	fnGeopoly              function = "geopoly"
+	fnGeopolyArea          function = "geopoly_area"
+	fnGeopolyBBox          function = "geopoly_bbox"
+	fnGeopolyBlob          function = "geopoly_blob"
+	fnGeopolyCCW           function = "geopoly_ccw"
+	fnGeopolyContainsPoint function = "geopoly_contains_point"
+	fnGeopolyGroupBBox     function = "geopoly_group_bbox"
+	fnGeopolyJson          function = "geopoly_json"
+	fnGeopolyOverlap       function = "geopoly_overlap"
+	fnGeopolyRegular       function = "geopoly_regular"
+	fnGeopolySvg           function = "geopoly_svg"
+	fnGeopolyWithin        function = "geopoly_within"
+	fnGeopolyXForm         function = "geopoly_xform"
+
 	// Other functions we should allow
 	fnVersion function = "sqlite_version"
 )
@@ -237,6 +252,19 @@ var SQLiteFunctions = []function{
 	fnRTree,
 	fnRTreei32,
 	fnRTreeCheck,
+	fnGeopoly,
+	fnGeopolyArea,
+	fnGeopolyBBox,
+	fnGeopolyBlob,
+	fnGeopolyCCW,
+	fnGeopolyContainsPoint,
+	fnGeopolyGroupBBox,
+	fnGeopolyJson,
+	fnGeopolyOverlap,
+	fnGeopolyRegular,
+	fnGeopolySvg,
+	fnGeopolyWithin,
+	fnGeopolyXForm,
 	fnVersion,
 }
 
