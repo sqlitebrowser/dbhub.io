@@ -112,9 +112,17 @@ const (
 	fnJsonEach        function = "json_each"
 	fnJsonTree        function = "json_tree"
 
-	// FTS5 functions
+	// FTS3 & FTS4 functions: https://www.sqlite.org/fts3.html
+	fnFts3         function = "fts3"
+	fnFts3Tokenize function = "fts3tokenize"
+	fnFts4         function = "fts4"
+	fnFts4Aux      function = "fts4aux"
+	fnMatchinfo    function = "matchinfo"
+	fnOffsets      function = "offsets"
+
+	// FTS5 functions: https://www.sqlite.org/fts5.html
 	fnBm25      function = "bm25"
-	fnFts       function = "fts5"
+	fnFts5      function = "fts5"
 	fnFts5Vocab function = "fts5vocab"
 	fnHighlight function = "highlight"
 	fnSnippet   function = "snippet"
@@ -202,8 +210,14 @@ var SQLiteFunctions = []function{
 	fnJsonGroupObject,
 	fnJsonEach,
 	fnJsonTree,
+	fnFts3,
+	fnFts3Tokenize,
+	fnFts4,
+	fnFts4Aux,
+	fnMatchinfo,
+	fnOffsets,
 	fnBm25,
-	fnFts,
+	fnFts5,
 	fnFts5Vocab,
 	fnHighlight,
 	fnSnippet,
@@ -218,7 +232,8 @@ func init() {
 }
 
 // AuthorizerLive is a SQLite authorizer callback intended to allow almost anything.  Except for loading extensions,
-// and running pragmas.
+// and running pragmas.  Note that the "page_size" pragma is always allowed by SQLite, and can't be overridden (any
+// attempt to AuthDeny it is ignored)
 func AuthorizerLive(d interface{}, action sqlite.Action, tableName, funcName, dbName, triggerName string) sqlite.Auth {
 	if SqliteDebug > 0 {
 		// Display some useful debug info
