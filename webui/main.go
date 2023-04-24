@@ -747,19 +747,6 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract and validate the form variables
-	userName, err := com.GetUsername(r, false)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, err.Error())
-		return
-	}
-	if userName == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Missing username in supplied fields")
-		return
-	}
-
 	// Retrieve source owner
 	o := r.PostFormValue("sourceowner")
 	srcOwner, err := url.QueryUnescape(o)

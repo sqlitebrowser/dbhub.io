@@ -2,6 +2,7 @@ const React = require("react");
 const ReactDOM = require("react-dom");
 
 import MarkdownEditor from "./markdown-editor";
+import CommitList from "./commit-list";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 
@@ -113,32 +114,6 @@ function DiscussionTopComment({setStatusMessage, setStatusMessageColour}) {
 		});
 	}
 
-	// Prepare rendered rows for commit table for merge requests
-	const commitRows = (mrData === null ? [] : mrData.commitList.map(function(row) {
-		return (
-			<tr>
-				<td>
-					<a href={"/" + row.author_username} className="blackLink">
-						{row.author_avatar !== "" ? <img src={row.author_avatar} height="18" width="18" style={{border: "1px solid #8c8c8c"}} /> : null}&nbsp;
-						{row.author_name}
-					</a>
-				</td>
-				<td>
-					<a className="blackLink" href={discussionData.open ? ("/diffs/" + discussionData.mr_details.source_owner + "/" + discussionData.mr_details.source_database_name + "?commit_a=" + row.parent + "&commit_b=" + row.id) : null}>
-						{row.id.substring(0, 8)}
-					</a>
-				</td>
-				<td>
-					{row.message === "" ? <span className="text-muted">This commit has no commit message</span> : row.message}
-					{row.licence_change !== "" ? <span className="text-danger">{row.licence_change}</span> : null}
-				</td>
-				<td>
-					<span title={new Date(row.timestamp).toLocaleString()}>{getTimePeriod(row.timestamp, true)}</span>
-				</td>
-			</tr>
-		);
-	}));
-
 	return (
 		<div className="panel panel-default">
 			<div className="panel-heading">
@@ -187,14 +162,7 @@ function DiscussionTopComment({setStatusMessage, setStatusMessageColour}) {
 					<h4>Commit list</h4>
 					{discussionData.open ? <a href={"/diffs/" + discussionData.mr_details.source_owner + "/" + discussionData.mr_details.source_database_name + "?commit_a=" + mrData.commitList[mrData.commitList.length - 1].parent + "&commit_b=" + mrData.commitList[0].id}>View changes</a> : null}
 				</div>
-				<table className="table">
-					<thead>
-						<tr><th>Author</th><th>Commit ID</th><th>Commit message</th><th>Date</th></tr>
-					</thead>
-					<tbody>
-						{commitRows}
-					</tbody>
-				</table>
+				<CommitList commits={mrData === null ? null : mrData.commitList} owner={discussionData.mr_details.source_owner} database={discussionData.mr_details.source_database_name} />
 				{discussionData.mr_details.state !== 1 && (discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser) ?
 					<div className="panel-body">
 						{discussionData.open === true && meta.owner === authInfo.loggedInUser && mrData.destBranchNameOk === true && mrData.destBranchUsable === true ? <><input className="btn btn-success" value="Merge the request" onClick={() => mergeRequest()} />&nbsp;</> : null}
