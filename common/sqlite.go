@@ -211,6 +211,11 @@ func AuthorizerLive(d interface{}, action sqlite.Action, tableName, funcName, db
 		if tableName == "index_info" || tableName == "table_info" {
 			return sqlite.AuthOk
 		}
+
+		// The "data_version" Pragma is needed when creating FTS5 virtual tables
+		if tableName == "data_version" {
+			return sqlite.AuthOk
+		}
 		return sqlite.AuthDeny
 	case sqlite.Function:
 		if funcName == "load_extension" {
