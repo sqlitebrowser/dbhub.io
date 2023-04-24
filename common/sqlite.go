@@ -16,6 +16,9 @@ import (
 	sqlite "github.com/gwenn/gosqlite"
 )
 
+// SqliteDebug displays some SQLite related debugging information (on the backend), when set to a non-0 value
+const SqliteDebug = 0
+
 // SQLite Functions
 type function string
 
@@ -109,6 +112,13 @@ const (
 	fnJsonEach        function = "json_each"
 	fnJsonTree        function = "json_tree"
 
+	// FTS5 functions
+	fnBm25      function = "bm25"
+	fnFts       function = "fts5"
+	fnFts5Vocab function = "fts5vocab"
+	fnHighlight function = "highlight"
+	fnSnippet   function = "snippet"
+
 	// Other functions we should allow
 	fnVersion function = "sqlite_version"
 )
@@ -192,6 +202,11 @@ var SQLiteFunctions = []function{
 	fnJsonGroupObject,
 	fnJsonEach,
 	fnJsonTree,
+	fnBm25,
+	fnFts,
+	fnFts5Vocab,
+	fnHighlight,
+	fnSnippet,
 	fnVersion,
 }
 
@@ -205,6 +220,11 @@ func init() {
 // AuthorizerLive is a SQLite authorizer callback intended to allow almost anything.  Except for loading extensions,
 // and running pragmas.
 func AuthorizerLive(d interface{}, action sqlite.Action, tableName, funcName, dbName, triggerName string) sqlite.Auth {
+	if SqliteDebug > 0 {
+		// Display some useful debug info
+		log.Printf("AuthorizerLive - action: '%s', table: '%s', function: '%s'", action, tableName, funcName)
+	}
+
 	switch action {
 	case sqlite.Pragma:
 		// The "index_info"  and "table_info" Pragmas are allowed, as they're used by SQLite internally for things we need
