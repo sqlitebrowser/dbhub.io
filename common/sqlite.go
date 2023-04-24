@@ -151,6 +151,37 @@ const (
 	fnGeopolyWithin        function = "geopoly_within"
 	fnGeopolyXForm         function = "geopoly_xform"
 
+	// Math functions: https://www.sqlite.org/lang_mathfunc.html
+	fnACos     function = "acos"
+	fnACosH    function = "acosh"
+	fnASin     function = "asin"
+	fnASinH    function = "asinh"
+	fnATan     function = "atan"
+	fnATan2    function = "atan2"
+	fnATanh    function = "atanh"
+	fnACeil    function = "ceil"
+	fnACeiling function = "ceiling"
+	fnCos      function = "cos"
+	fnCosH     function = "cosh"
+	fnDegrees  function = "degrees"
+	fnExp      function = "exp"
+	fnFloor    function = "floor"
+	fnLn       function = "ln"
+	fnLog      function = "log"
+	fnLog10    function = "log10"
+	fnLog2     function = "log2"
+	fnMod      function = "mod"
+	fnPi       function = "pi"
+	fnPow      function = "pow"
+	fnPower    function = "power"
+	fnRadians  function = "radians"
+	fnSin      function = "sin"
+	fnSinH     function = "sinh"
+	fnSqrt     function = "sqrt"
+	fnTan      function = "tan"
+	fnTanH     function = "tanh"
+	fnTrunc    function = "trunc"
+
 	// Other functions we should allow
 	fnVersion function = "sqlite_version"
 )
@@ -265,6 +296,35 @@ var SQLiteFunctions = []function{
 	fnGeopolySvg,
 	fnGeopolyWithin,
 	fnGeopolyXForm,
+	fnACos,
+	fnACosH,
+	fnASin,
+	fnASinH,
+	fnATan,
+	fnATan2,
+	fnATanh,
+	fnACeil,
+	fnACeiling,
+	fnCos,
+	fnCosH,
+	fnDegrees,
+	fnExp,
+	fnFloor,
+	fnLn,
+	fnLog,
+	fnLog10,
+	fnLog2,
+	fnMod,
+	fnPi,
+	fnPow,
+	fnPower,
+	fnRadians,
+	fnSin,
+	fnSinH,
+	fnSqrt,
+	fnTan,
+	fnTanH,
+	fnTrunc,
 	fnVersion,
 }
 
