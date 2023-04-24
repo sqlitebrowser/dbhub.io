@@ -7,7 +7,7 @@ LABEL maintainer="Justin Clift <justin@postgresql.org>"
 RUN  \
     apk update && \
     apk upgrade && \
-    apk add --no-cache ca-certificates 'curl>7.61.0' git go libc-dev memcached minio openrc postgresql sqlite-dev yarn && \
+    apk add --no-cache ca-certificates 'curl>7.61.0' file git go libc-dev make memcached minio openrc openssl openssl-dev postgresql yarn && \
     apk add rabbitmq-server --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ && \
     rc-update add memcached default && \
     rc-update add minio default && \
@@ -75,19 +75,39 @@ RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/l
     echo "done" >> /usr/local/bin/start.sh && \
     chmod +x /usr/local/bin/start.sh
 
+# Compile our own customised version of SQLite
+RUN echo "Downloading SQLite source code" && \
+    mkdir /sqlite && \
+    cd /sqlite && \
+    TARBALL=$(curl -s https://sqlite.org/download.html | awk '/<!--/,/-->/ {print}' | grep 'sqlite-autoconf' | cut -d ',' -f 3) && \
+    SHA3=$(curl -s https://sqlite.org/download.html | awk '/<!--/,/-->/ {print}' | grep 'sqlite-autoconf' | cut -d ',' -f 5) && \
+    curl -LsS -o sqlite.tar.gz https://sqlite.org/${TARBALL} && \
+    VERIFY=$(openssl dgst -sha3-256 sqlite.tar.gz | cut -d ' ' -f 2) && \
+    if [ "$SHA3" != "$VERIFY" ]; then exit 1 ; fi && \
+    if [ ! -f sqlite.tar.gz ]; then echo "Downloading the SQLite source code did not work" ; exit 3 ; fi && \
+    echo "Compiling local SQLite" && \
+    tar xfz sqlite.tar.gz && \
+    cd sqlite-autoconf-* || exit 4 && \
+    CPPFLAGS="-DSQLITE_ENABLE_COLUMN_METADATA=1 -DSQLITE_MAX_VARIABLE_NUMBER=250000 -DSQLITE_ENABLE_RTREE=1 -DSQLITE_ENABLE_GEOPOLY=1 -DSQLITE_ENABLE_FTS3=1 -DSQLITE_ENABLE_FTS3_PARENTHESIS=1 -DSQLITE_ENABLE_FTS5=1 -DSQLITE_ENABLE_STAT4=1 -DSQLITE_ENABLE_JSON1=1 -DSQLITE_SOUNDEX=1 -DSQLITE_ENABLE_MATH_FUNCTIONS=1 -DSQLITE_MAX_ATTACHED=125 -DSQLITE_ENABLE_MEMORY_MANAGEMENT=1 -DSQLITE_ENABLE_SNAPSHOT=1" ./configure --prefix=/sqlite --enable-dynamic-extensions=no && \
+    make -j9 && \
+    make install && \
+    cd .. && \
+    rm -rf sqlite-autoconf-* && \
+    echo "/sqlite/lib:/lib:/usr/local/lib:/usr/lib" > /etc/ld-musl-x86_64.path
+
 # Create script to compile DBHub.io daemons
 RUN echo "cd ${DBHUB_SOURCE}" >> /usr/local/bin/compile.sh && \
     echo "yarn" >> /usr/local/bin/compile.sh && \
     echo "yarn run babel ${DBHUB_SOURCE}/webui/jsx --out-dir ${DBHUB_SOURCE}/webui/js --presets babel-preset-react-app/prod" >> /usr/local/bin/compile.sh && \
     echo "yarn run webpack -c ${DBHUB_SOURCE}/webui/webpack.config.js" >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/api" >> /usr/local/bin/compile.sh && \
-    echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-api ." >> /usr/local/bin/compile.sh && \
+    echo "PKG_CONFIG_PATH=/sqlite/lib/pkgconfig go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-api ." >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/db4s" >> /usr/local/bin/compile.sh && \
-    echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-db4s ." >> /usr/local/bin/compile.sh && \
+    echo "PKG_CONFIG_PATH=/sqlite/lib/pkgconfig go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-db4s ." >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/live" >> /usr/local/bin/compile.sh && \
-    echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-live ." >> /usr/local/bin/compile.sh && \
+    echo "PKG_CONFIG_PATH=/sqlite/lib/pkgconfig go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-live ." >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/webui" >> /usr/local/bin/compile.sh && \
-    echo "go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-webui ." >> /usr/local/bin/compile.sh && \
+    echo "PKG_CONFIG_PATH=/sqlite/lib/pkgconfig go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-webui ." >> /usr/local/bin/compile.sh && \
     echo "/usr/local/bin/restart.sh" >> /usr/local/bin/compile.sh && \
     chmod +x /usr/local/bin/compile.sh
 
