@@ -127,6 +127,11 @@ const (
 	fnHighlight function = "highlight"
 	fnSnippet   function = "snippet"
 
+	// R*Tree functions: https://www.sqlite.org/rtree.html
+	fnRTree      function = "rtree"
+	fnRTreei32   function = "rtree_i32"
+	fnRTreeCheck function = "rtreecheck"
+
 	// Other functions we should allow
 	fnVersion function = "sqlite_version"
 )
@@ -221,6 +226,9 @@ var SQLiteFunctions = []function{
 	fnFts5Vocab,
 	fnHighlight,
 	fnSnippet,
+	fnRTree,
+	fnRTreei32,
+	fnRTreeCheck,
 	fnVersion,
 }
 
@@ -232,11 +240,9 @@ func init() {
 }
 
 // AuthorizerLive is a SQLite authorizer callback intended to allow almost anything.  Except for loading extensions,
-// and running pragmas.  Note that the "page_size" pragma is always allowed by SQLite, and can't be overridden (any
-// attempt to AuthDeny it is ignored)
+// and running pragmas.
 func AuthorizerLive(d interface{}, action sqlite.Action, tableName, funcName, dbName, triggerName string) sqlite.Auth {
 	if SqliteDebug > 0 {
-		// Display some useful debug info
 		log.Printf("AuthorizerLive - action: '%s', table: '%s', function: '%s'", action, tableName, funcName)
 	}
 
@@ -250,6 +256,17 @@ func AuthorizerLive(d interface{}, action sqlite.Action, tableName, funcName, db
 		// The "data_version" Pragma is needed when creating FTS5 virtual tables
 		if tableName == "data_version" {
 			return sqlite.AuthOk
+		}
+
+		// The "page_size" Pragma is needed when creating R*Tree virtual tables.  Ironically, SQLite (3.41.2) ignores
+		// any "Deny" of the "page_size" pragma when creating FTS tables.  No idea why this difference in behaviour
+		// exists, but it doesn't seem to hurt anything.
+		if tableName == "page_size" {
+			return sqlite.AuthOk
+		}
+
+		if SqliteDebug > 0 {
+			log.Printf("Denying pragma: '%s'", tableName)
 		}
 		return sqlite.AuthDeny
 	case sqlite.Function:
