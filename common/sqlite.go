@@ -25,7 +25,6 @@ type function string
 const (
 	// Core functions: https://sqlite.org/lang_corefunc.html
 	//fnLoadExtension           function = "load_extension" // Loading extensions is definitely not allowed
-	//fnUnicode                 function = "unicode"        // Disabling, at least for now, as it might be possible to construct unsafe strings with it
 	fnAbs                     function = "abs"
 	fnChanges                 function = "changes"
 	fnChar                    function = "char"
@@ -65,6 +64,7 @@ const (
 	fnTrim                    function = "trim"
 	fnTypeOf                  function = "typeof"
 	fnUnhex                   function = "unhex"
+	fnUnicode                 function = "unicode"
 	fnUnlikely                function = "unlikely"
 	fnUpper                   function = "upper"
 	fnZeroBlob                function = "zeroblob"
@@ -227,6 +227,7 @@ var SQLiteFunctions = []function{
 	fnTrim,
 	fnTypeOf,
 	fnUnhex,
+	fnUnicode,
 	fnUnlikely,
 	fnUpper,
 	fnZeroBlob,
