@@ -166,9 +166,11 @@
         <input type="submit" class="btn" value="Download as CSV" ng-click="downloadResults()" data-cy="downcsvbtn">
         <input type="submit" class="btn" value="Format SQL" ng-click="formatSQL()" data-cy="formatsqlbtn">
         <input type="submit" class="btn btn-success" value="Run SQL" ng-click="execSQL()" data-cy="runsqlbtn">
-        <input type="submit" class="btn btn-primary" value="Save as:" ng-click="saveAs()" data-cy="savebtn">
-        <input type="text" id="savename" value="default" data-cy="nameinput">
-        <input type="submit" class="btn btn-danger" value="Delete" ng-click="deleteVis()" data-cy="delvisbtn">
+        [[ if eq .PageMeta.LoggedInUser .DB.Info.Owner ]]
+            <input type="submit" class="btn btn-primary" value="Save as:" ng-click="saveAs()" data-cy="savebtn">
+            <input type="text" id="savename" value="default" data-cy="nameinput">
+            <input type="submit" class="btn btn-danger" value="Delete" ng-click="deleteVis()" data-cy="delvisbtn">
+        [[ end ]]
     </div>
     <div class="row">
         <div class="col-md-2">&nbsp;</div>

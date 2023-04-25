@@ -322,4 +322,40 @@ describe('visualisation', () => {
     // Switch back to the default user
     cy.request('/x/test/switchdefault')
   })
+
+  // Ensure the save and delete buttons are only shown to the database owner
+  it('Ensure save/delete buttons are only shown to database owner', () => {
+    // Switch to a different user
+    cy.request('/x/test/switchfirst')
+
+    // Load a public page
+    cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
+
+    // Test if the Save and Delete fields are visible.  They shouldn't be
+    cy.get('[data-cy="savebtn"').should('not.exist')
+    cy.get('[data-cy="nameinput"').should('not.exist')
+    cy.get('[data-cy="delvisbtn"').should('not.exist')
+
+    // Log out
+    cy.request('/x/test/logout')
+
+    // Reload the page
+    cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
+
+    // Test if the Save and Delete fields are visible.  They shouldn't be
+    cy.get('[data-cy="savebtn"').should('not.exist')
+    cy.get('[data-cy="nameinput"').should('not.exist')
+    cy.get('[data-cy="delvisbtn"').should('not.exist')
+
+    // Switch back to the default user
+    cy.request('/x/test/switchdefault')
+
+    // Reload the page again
+    cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
+
+    // Ensure the Save and Delete fields are visible.  They should be this time
+    cy.get('[data-cy="savebtn"').should('exist')
+    cy.get('[data-cy="nameinput"').should('exist')
+    cy.get('[data-cy="delvisbtn"').should('exist')
+  })
 })
