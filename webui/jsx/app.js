@@ -15,6 +15,7 @@ import DiscussionComments from "./discussion-comments";
 import DiscussionCreateMr from "./discussion-create-mr";
 import DiscussionList from "./discussion-list";
 import MarkdownEditor from "./markdown-editor";
+import UserPage from "./user-page";
 
 {
 	const rootNode = document.getElementById("db-header-root");
@@ -147,4 +148,12 @@ import MarkdownEditor from "./markdown-editor";
 		/>);
 	});
 
+}
+
+{
+	const rootNode = document.getElementById("user-page");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<UserPage />);
+	}
 }
