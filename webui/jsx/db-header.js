@@ -1,6 +1,8 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
+import {getTimePeriod} from "./format";
+
 function ToggleButton({icon, textSet, textUnset, redirectUrl, updateUrl, pageUrl, isSet, count, cyToggle, cyPage, disabled}) {
 	const [state, setState] = React.useState(isSet);
 	const [number, setNumber] = React.useState(count);

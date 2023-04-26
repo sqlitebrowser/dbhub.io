@@ -3,6 +3,7 @@ const ReactDOM = require("react-dom");
 
 import MarkdownEditor from "./markdown-editor";
 import CommitList from "./commit-list";
+import {getTimePeriod} from "./format";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 

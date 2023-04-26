@@ -1,6 +1,8 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
+import {getTimePeriod} from "./format";
+
 function DiscussionListRow({data, mergeRequests}) {
 	return (
 		<tr>

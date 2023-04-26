@@ -2,6 +2,7 @@ const React = require("react");
 const ReactDOM = require("react-dom");
 
 import MarkdownEditor from "./markdown-editor";
+import {getTimePeriod} from "./format";
 
 function DatabaseTagRow({name, data, releases, setStatusMessage, setStatusMessageColour}) {
 	// This is the tag name currently shown in the front end

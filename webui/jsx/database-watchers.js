@@ -1,6 +1,8 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
+import {getTimePeriod} from "./format";
+
 export default function DatabaseWatchers({stars}) {
 	let data = stars ? starsData : watchersData;
 

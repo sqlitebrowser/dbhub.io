@@ -1,6 +1,8 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
+import {getTimePeriod} from "./format";
+
 function DatabasePanel({data, username}) {
 	const [isExpanded, setExpanded] = React.useState(false);
 

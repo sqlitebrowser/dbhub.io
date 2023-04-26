@@ -2,6 +2,7 @@ const React = require("react");
 const ReactDOM = require("react-dom");
 
 import Select from "react-dropdown-select";
+import {getTimePeriod} from "./format";
 
 function DatabaseCommitRow({data, index, branch, setStatusMessage, setStatusMessageColour}) {
 	const [commitIndex, setCommitIndex] = React.useState(Number(index));

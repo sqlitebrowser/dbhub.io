@@ -1,6 +1,8 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
+import {getTimePeriod} from "./format";
+
 export default function CommitList({commits, owner, database}) {
 	// Prepare rendered rows for commit table
 	const commitRows = (commits === null ? null : commits.map(row => (

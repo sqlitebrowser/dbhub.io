@@ -2,6 +2,7 @@ const React = require("react");
 const ReactDOM = require("react-dom");
 
 import {DatabasePanelGroup} from "./user-page";
+import {getTimePeriod} from "./format";
 
 function WatchPanel({data, dateText}) {
 	const [isExpanded, setExpanded] = React.useState(false);
