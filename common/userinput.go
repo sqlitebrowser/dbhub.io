@@ -503,9 +503,8 @@ func GetUsername(r *http.Request, allowGet bool) (userName string, err error) {
 }
 
 func SanitiseLogString(v string) (result string) {
-	result = strings.Replace(v, "\n", "", -1)
+	result = strings.Replace(v, "\n", " ", -1)
 	result = strings.Replace(result, "\r", "", -1)
 	result = strings.Replace(result, "'", "\\'", -1)
-
 	return result
 }
