@@ -1285,11 +1285,17 @@ func SQLiteSanityCheck(fileName string) (tables []string, err error) {
 
 	// Check for a failure
 	if !ok || err != nil {
-		log.Printf("Error when running an integrity check on the database: %s", err)
+		if err != nil {
+			log.Printf("Error when running a SQLite integrity check on the file '%s': %s", fileName, err)
+		} else {
+			err = errors.New("SQLite integrity check failed on file")
+		}
 		if len(results) > 0 {
+			log.Printf("SQLite integrity check failed on file: '%s'.  Results below:", fileName)
 			for _, b := range results {
 				log.Printf("  * %v", b)
 			}
+			log.Printf("End of SQLite integrity check results for '%s'", fileName)
 		}
 		return
 	}
