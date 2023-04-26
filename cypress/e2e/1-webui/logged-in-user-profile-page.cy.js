@@ -18,7 +18,7 @@ describe('logged-in user profile page', () => {
 
   // Confirm test database has the expected details
   it('assembly election 2017 database has expected details', () => {
-    cy.get('[data-cy="pubexpand"]').click()
+    cy.get('[data-cy="pubdbs"]').find(".fa-plus").click()
     cy.get('[data-cy="pubdbs"]').contains('Source:').next().should('contain', 'http://data.nicva.org/dataset/assembly-election-2017')
     cy.get('[data-cy="pubdbs"]').contains('Size:').next().should('contain', '72 KB')
     cy.get('[data-cy="pubdbs"]').contains('Contributors:').next().should('contain', '1')
@@ -54,7 +54,7 @@ describe('logged-in user profile page', () => {
 
   // Confirm the details for the test database are now showing up correctly in the private list
   it('private database has expected details', () => {
-    cy.get('[data-cy="privexpand"]').click()
+    cy.get('[data-cy="privdbs"]').find(".fa-plus").first().click()
     cy.get('[data-cy="privdbs"]').contains('Source:').next().should('contain', 'http://data.nicva.org/dataset/assembly-election-2017')
     cy.get('[data-cy="privdbs"]').contains('Size:').next().should('contain', '72 KB')
     cy.get('[data-cy="privdbs"]').contains('Contributors:').next().should('contain', '1')

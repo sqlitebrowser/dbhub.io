@@ -150,18 +150,16 @@ describe('database sharing', () => {
     cy.visit("default")
 
     // Ensure the standard test databases are listed on the profile page where appropriate
-    cy.get('[data-cy="sharedwithyoutbl"').should('not.contain', 'first/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="sharedwithyoutbl"').should('contain', 'second/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="sharedwithyoutbl"').should('not.contain', 'third/Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('not.contain', 'first / Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('contain', 'second / Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('not.contain', 'third / Assembly Election 2017.sqlite')
 
     // Ensure the live test database is listed correctly in the "Databases shared with you" section
-    cy.get('[data-cy="sharedwithyoutbl"').should('contain', 'first/Join Testing with index.sqlite')
-    cy.get('[data-cy="swuperm-row0"').should('contain', 'Read Write')
-    cy.get('[data-cy="swulive-row0"').should('contain', 'live database')
+    cy.get('[data-cy="sharedwithyou"]').should('contain', 'first / Join Testing with index.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('contain', 'Read Write')
 
     // Ensure the live test database is listed correctly in the "Databases shared with others" section
-    cy.get('[data-cy="sharedwithotherstbl"').should('contain', 'Join Testing with index.sqlite')
-    cy.get('[data-cy="swolive-Join Testing with index.sqlite-row1"').should('contain', 'live database')
+    cy.get('[data-cy="sharedwithothers"]').should('contain', 'Join Testing with index.sqlite')
 
     // Ensure trying to load the test databases only works where appropriate
     cy.visit('default/Assembly%20Election%202017.sqlite')
@@ -180,9 +178,9 @@ describe('database sharing', () => {
     cy.visit("first")
 
     // Ensure the other test databases are only listed on the profile page where appropriate
-    cy.get('[data-cy="sharedwithyoutbl"').should('not.contain', 'default/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="sharedwithyoutbl"').should('contain', 'second/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="sharedwithyoutbl"').should('contain', 'third/Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('not.contain', 'default / Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('contain', 'second / Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('contain', 'third / Assembly Election 2017.sqlite')
 
     // Ensure trying to load the other test databases only works where appropriate
     cy.visit('second/Assembly%20Election%202017.sqlite')
@@ -198,8 +196,8 @@ describe('database sharing', () => {
     cy.visit("second")
 
     // Ensure the other test databases are only listed on the profile page where appropriate
-    cy.get('[data-cy="sharedwithyoutbl"').should('contain', 'first/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="sharedwithyoutbl"').should('contain', 'third/Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('contain', 'first / Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('contain', 'third / Assembly Election 2017.sqlite')
 
     // Ensure trying to load the other test databases only works where appropriate
     cy.visit('first/Assembly%20Election%202017.sqlite')
@@ -215,8 +213,8 @@ describe('database sharing', () => {
     cy.visit("third")
 
     // Ensure the other test databases are only listed on the profile page where appropriate
-    cy.get('[data-cy="sharedwithyoutbl"').should('contain', 'first/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="sharedwithyoutbl"').should('not.contain', 'second/Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('contain', 'first / Assembly Election 2017.sqlite')
+    cy.get('[data-cy="sharedwithyou"]').should('not.contain', 'second / Assembly Election 2017.sqlite')
 
     // Ensure trying to load the other test databases only works where appropriate
     cy.visit('first/Assembly%20Election%202017.sqlite')

@@ -290,7 +290,7 @@ func databasesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Get the list of live databases
-		databases, err = com.LiveUserDBs(loggedInUser)
+		databases, err = com.LiveUserDBs(loggedInUser, com.DB_BOTH)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return

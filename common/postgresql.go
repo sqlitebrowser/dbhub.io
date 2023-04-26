@@ -2741,15 +2741,34 @@ func LiveGetMinioNames(loggedInUser, dbOwner, dbName string) (bucketName, object
 }
 
 // LiveUserDBs returns the list of live databases owned by the user
-func LiveUserDBs(dbOwner string) (list []DBInfo, err error) {
+func LiveUserDBs(dbOwner string, public AccessType) (list []DBInfo, err error) {
 	dbQuery := `
-		SELECT db_name, date_created, public
+		SELECT db_name, date_created, last_modified, public, live_db, live_node,
+			db.watchers, db.stars, discussions, contributors,
+			coalesce(one_line_description, ''), coalesce(source_url, ''),
+			download_count, page_views
 		FROM sqlite_databases AS db, users
 		WHERE users.user_id = db.user_id
 			AND lower(users.user_name) = lower($1)
 			AND is_deleted = false
-			AND live_db = true
-		ORDER BY date_created DESC`
+			AND live_db = true`
+
+	switch public {
+	case DB_PUBLIC:
+		// Only public databases
+		dbQuery += ` AND public = true`
+	case DB_PRIVATE:
+		// Only private databases
+		dbQuery += ` AND public = false`
+	case DB_BOTH:
+		// Both public and private, so no need to add a query clause
+	default:
+		// This clause shouldn't ever be reached
+		return nil, fmt.Errorf("Incorrect 'public' value '%v' passed to LiveUserDBs() function.", public)
+	}
+	dbQuery += " ORDER BY date_created DESC"
+
+
 	rows, err := pdb.Query(dbQuery, dbOwner)
 	if err != nil {
 		log.Printf("Database query failed: %v", err)
@@ -2758,11 +2777,22 @@ func LiveUserDBs(dbOwner string) (list []DBInfo, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var oneRow DBInfo
-		err = rows.Scan(&oneRow.Database, &oneRow.DateCreated, &oneRow.Public)
+		var liveNode string
+		err = rows.Scan(&oneRow.Database, &oneRow.DateCreated, &oneRow.RepoModified, &oneRow.Public, &oneRow.IsLive, &liveNode,
+				&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.Contributors,
+				&oneRow.OneLineDesc, &oneRow.SourceURL, &oneRow.Downloads, &oneRow.Views)
 		if err != nil {
 			log.Printf("Error when retrieving list of live databases for user '%s': %v", dbOwner, err)
 			return nil, err
 		}
+
+		// Ask the AMQP backend for the database file size
+		oneRow.Size, err = LiveSize(liveNode, dbOwner, dbOwner, oneRow.Database)
+		if err != nil {
+			log.Printf("Error when retrieving size of live databases for user '%s': %v", dbOwner, err)
+			return nil, err
+		}
+
 		list = append(list, oneRow)
 	}
 	return

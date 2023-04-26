@@ -1,16 +1,18 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
-function DatabasePanel({data}) {
+function DatabasePanel({data, username}) {
 	const [isExpanded, setExpanded] = React.useState(false);
 
 	return (
 		<div className="panel panel-default">
 			<div className="panel-heading">
 				<h3 className="panel-title">
-					<a className="blackLink" href={"/" + userData.name + "/" + data.Database}>{data.Database}</a>
+					{username === authInfo.loggedInUser ? (<a className="blackLink" href={"/settings/" + username + "/" + data.Database}><i className="fa fa-cog"></i></a>) : null}
+					&nbsp;
+					<a className="blackLink" href={"/" + username + "/" + data.Database}>{data.Database}</a>
 					<span className="pull-right">
-						<a className="blackLink" onClick={() => setExpanded(!isExpanded)}><i className={isExpanded ? "fa fa-minus" : "fa fa-plus"}></i></a>
+						<a href="#/" className="blackLink" onClick={() => setExpanded(!isExpanded)}><i className={isExpanded ? "fa fa-minus" : "fa fa-plus"}></i></a>
 					</span>
 				</h3>
 			</div>
@@ -33,6 +35,8 @@ function DatabasePanel({data}) {
 						{data.IsLive ? null : <><strong>Branches: </strong><span className="text-info"><a className="blackLink" href={"/branches/" + userData.name + "/" + data.Database}>{data.Branches}</a></span>&nbsp;&nbsp;</>}
 						{data.IsLive ? null : <><strong>Releases: </strong><span className="text-info"><a className="blackLink" href={"/releases/" + userData.name + "/" + data.Database}>{data.Releases}</a></span>&nbsp;&nbsp;</>}
 						{data.IsLive ? null : <><strong>Tags: </strong><span className="text-info"><a className="blackLink" href={"/tags/" + userData.name + "/" + data.Database}>{data.Tags}</a></span>&nbsp;</>}
+						{data.Downloads === undefined ? null : <><strong>Downloads: </strong><span className="text-info">{data.Downloads}</span>&nbsp;</>}
+						{data.Views === undefined ? null : <><strong>Views: </strong><span className="text-info">{data.Views}</span>&nbsp;</>}
 					</p>
 					{data.SourceURL === "" ? null : <p><strong>Source: </strong><span className="text-info"><a className="blackLink" href={data.SourceURL}>{data.SourceURL}</a></span></p>}
 				</>) : null}
@@ -41,8 +45,8 @@ function DatabasePanel({data}) {
 	);
 }
 
-function DatabasePanelGroup({title, noDatabasesMessage, databases}) {
-	const databaseRows = databases === null ? null : databases.map(d => DatabasePanel({data: d}));
+export function DatabasePanelGroup({title, noDatabasesMessage, databases, username}) {
+	const databaseRows = databases === null ? null : databases.map(d => DatabasePanel({data: d, username: username}));
 
 	return (<>
 		<h3>{title}</h3>
@@ -58,10 +62,10 @@ export default function UserPage() {
 		</h2>
 		<div className="row">
 			<div className="col-md-6">
-				<DatabasePanelGroup title="Public standard databases" noDatabasesMessage="No public standard databases yet" databases={userData.databases} />
+				<DatabasePanelGroup title="Public standard databases" noDatabasesMessage="No public standard databases yet" databases={userData.databases} username={userData.name} />
 			</div>
 			<div className="col-md-6">
-				<DatabasePanelGroup title="Public live databases" noDatabasesMessage="No public live databases yet" databases={userData.liveDatabases} />
+				<DatabasePanelGroup title="Public live databases" noDatabasesMessage="No public live databases yet" databases={userData.liveDatabases} username={userData.name} />
 			</div>
 		</div>
 	</>);

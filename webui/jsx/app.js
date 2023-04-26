@@ -15,6 +15,7 @@ import DiscussionComments from "./discussion-comments";
 import DiscussionCreateMr from "./discussion-create-mr";
 import DiscussionList from "./discussion-list";
 import MarkdownEditor from "./markdown-editor";
+import ProfilePage from "./profile-page";
 import UserPage from "./user-page";
 
 {
@@ -155,5 +156,13 @@ import UserPage from "./user-page";
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<UserPage />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("profile-page");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<ProfilePage />);
 	}
 }

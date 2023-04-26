@@ -64,6 +64,7 @@ webui/js/discussion-comments.js
 webui/js/discussion-create-mr.js
 webui/js/discussion-list.js
 webui/js/markdown-editor.js
+webui/js/profile-page.js
 webui/js/user-page.js
 
 # Local secrets

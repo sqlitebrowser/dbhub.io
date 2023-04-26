@@ -1,8 +1,6 @@
 package common
 
 import (
-	"time"
-
 	sqlite "github.com/gwenn/gosqlite"
 )
 
@@ -77,13 +75,6 @@ type LiveDBRowsResponse struct {
 	RowData      SQLiteRecordSet `json:"row_data"`
 	Tables       []string        `json:"tables"`
 	Error        string          `json:"error"`
-}
-
-// LiveDBs is used for general purpose holding of details about live databases
-type LiveDBs struct {
-	DBOwner     string    `json:"owner_name"`
-	DBName      string    `json:"database_name"`
-	DateCreated time.Time `json:"date_created"`
 }
 
 // LiveDBSizeResponse holds the fields used for receiving database size responses from our AMQP backend
