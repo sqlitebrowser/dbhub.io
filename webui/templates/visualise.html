@@ -195,6 +195,20 @@
 [[ template "script_db_header" . ]]
 [[ template "footer" . ]]
 <script>
+    // Construct a timestamp string for use in user messages
+    function nowString() {
+        const now = new Date();
+        let mins = now.getMinutes();
+        let secs = now.getSeconds();
+        if (mins < 10) {
+            mins = "0" + mins;
+        }
+        if (secs < 10) {
+            secs = "0" + secs;
+        }
+        return "[" + now.getHours() + ":" + mins + ":" + secs + "] ";
+    }
+
     // Pre-filled table row data
     let chartData = {
         XAxisLabel: "",
