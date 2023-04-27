@@ -374,3 +374,12 @@ func ValidateUserEmail(user, email string) error {
 	}
 	return nil
 }
+
+// ValidateVisualisationName validates the provided name of a saved visualisation query
+func ValidateVisualisationName(name string) error {
+	err := Validate.Var(name, "required,visname,min=1,max=63")
+	if err != nil {
+		return err
+	}
+	return nil
+}

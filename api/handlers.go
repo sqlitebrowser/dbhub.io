@@ -663,7 +663,7 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
 	var sql string
-	sql, err = com.CheckUnicode(rawInput)
+	sql, err = com.CheckUnicode(rawInput, true)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusBadRequest)
 		return
@@ -927,7 +927,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
-	query, err := com.CheckUnicode(rawInput)
+	query, err := com.CheckUnicode(rawInput, true)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusBadRequest)
 		return

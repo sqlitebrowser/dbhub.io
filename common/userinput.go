@@ -24,21 +24,25 @@ func CheckAPIKey(apiKey string) (err error) {
 }
 
 // CheckUnicode checks if a given string is unicode, and safe for using in SQLite queries (eg no SQLite control characters)
-func CheckUnicode(rawInput string) (str string, err error) {
+func CheckUnicode(rawInput string, decodeBase64 bool) (str string, err error) {
 	var decoded []byte
-	decoded, err = base64.StdEncoding.DecodeString(rawInput)
-	if err != nil {
-		// When base64 decoding fails, automatically try again with base64url formats instead
-		var err2 error // We use err2, to not overwrite the initial error message
-		decoded, err2 = base64.URLEncoding.DecodeString(rawInput)
-		if err2 != nil {
-			// Try base64URL with no padding character(s) this time
-			decoded, err2 = base64.RawURLEncoding.DecodeString(rawInput)
+	if decodeBase64 {
+		decoded, err = base64.StdEncoding.DecodeString(rawInput)
+		if err != nil {
+			// When base64 decoding fails, automatically try again with base64url formats instead
+			var err2 error // We use err2, to not overwrite the initial error message
+			decoded, err2 = base64.URLEncoding.DecodeString(rawInput)
 			if err2 != nil {
-				// Nope.  Seems like a genuine decoding problem
-				return
+				// Try base64URL with no padding character(s) this time
+				decoded, err2 = base64.RawURLEncoding.DecodeString(rawInput)
+				if err2 != nil {
+					// Nope.  Seems like a genuine decoding problem
+					return
+				}
 			}
 		}
+	} else {
+		decoded = []byte(rawInput)
 	}
 
 	// Ensure the decoded string is valid UTF-8

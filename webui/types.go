@@ -27,3 +27,12 @@ type UpdateDataRequest struct {
 	Table string                 `json:"table"`
 	Data  []UpdateDataRequestRow `json:"data"`
 }
+
+type ExecuteSqlRequest struct {
+	Sql string `json:"sql"`
+}
+
+type SaveSqlRequest struct {
+	Sql     string `json:"sql"`
+	SqlName string `json:"sql_name"`
+}

@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -494,9 +495,21 @@ func visExecuteSQLShared(w http.ResponseWriter, r *http.Request) (data com.SQLit
 	}
 
 	// Grab the incoming SQLite query
-	rawInput := r.FormValue("sql")
-	var decodedStr string
-	decodedStr, err = com.CheckUnicode(rawInput)
+	bodyData, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+	var reqData ExecuteSqlRequest
+	err = json.Unmarshal([]byte(bodyData), &reqData)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	decodedStr, err := com.CheckUnicode(reqData.Sql, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err)
@@ -642,26 +655,43 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	chartType := r.FormValue("charttype")
 	xAxis := r.FormValue("xaxis")
 	yAxis := r.FormValue("yaxis")
-	sqlStr := r.FormValue("sql")
 	showXStr := r.FormValue("showxlabel")
 	showYStr := r.FormValue("showylabel")
 
 	// Initial sanity check of the visualisation name
-	// TODO: Maybe expand this approach out to the other fields
-	input := com.VisGetFields{ // TODO: Create a new com.VisSaveFields{} type
-		VisName: r.FormValue("visname"),
-	}
-	err = com.Validate.Struct(input)
+	visName := r.FormValue("visname")
+	err = com.ValidateVisualisationName(visName)
 	if err != nil {
 		log.Printf("Input validation error for visSave(): %s", err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "Error when validating input: %s", err)
 		return
 	}
-	visName := input.VisName
+
+	// Get and check SQL query
+	bodyData, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+	var data ExecuteSqlRequest
+	err = json.Unmarshal([]byte(bodyData), &data)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	decodedStr, err := com.CheckUnicode(data.Sql, false)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
 
 	// Ensure minimum viable parameters are present
-	if chartType == "" || xAxis == "" || yAxis == "" || visName == "" || sqlStr == "" {
+	if chartType == "" || xAxis == "" || yAxis == "" || visName == "" || decodedStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -696,15 +726,6 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	}
 	if showYStr == "true" {
 		showY = true
-	}
-
-	// Make sure the incoming SQLite query is "safe"
-	var decodedStr string
-	decodedStr, err = com.CheckUnicode(sqlStr)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err.Error())
-		return
 	}
 
 	// Retrieve session data (if any)

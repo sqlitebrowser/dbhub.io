@@ -595,8 +595,12 @@
             if (!$scope.checkSQL()) return;
 
             // Generate the csv
-            let encoded = base64url(userSQL);
-            $http.get("/x/visdlresults/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
+            $http({
+                url: "/x/visdlresults/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]",
+                method: "post",
+                data: {sql: userSQL},
+                headers: {'Content-Type': 'application/json'}
+            }).then(
                 function success(response) {
                     // Clear any existing status message
                     $scope.statusMessage = "";
@@ -630,8 +634,12 @@
             if (!$scope.checkSQL()) return;
 
             // Send the SQL string to the backend
-            let encoded = base64url(userSQL);
-            $http.get("/x/execsql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
+            $http({
+                url: "/x/execsql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]",
+                method: "post",
+                data: {sql: userSQL},
+                headers: {'Content-Type': 'application/json'}
+            }).then(
                 function success(response) {
                     // Give a useful "success" status message
                     $scope.statusMessageColour = "green";
@@ -707,7 +715,6 @@
             let args = "xaxis=" + $scope.XAxisColumn;
             args += "&yaxis=" + $scope.YAxisColumn;
             args += "&visname=" + name;
-            args += "&sql=" + base64url(userSQL);
             switch ($scope.ChartType) {
                 case "Horizontal bar chart":
                     args += "&charttype=hbc";
@@ -729,7 +736,12 @@
                 args += "&showxlabel=" + $scope.radioXAxisShowLabels;
                 args += "&showylabel=" + $scope.radioYAxisShowLabels;
             }
-            $http.get("/x/vissave/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
+            $http({
+                url: "/x/vissave/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&" + args,
+                method: "post",
+                data: {sql: userSQL},
+                headers: {'Content-Type': 'application/json'}
+            }).then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
                     $scope.statusMessage = nowString() + "Visualisation '" + name + "' saved";

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -235,8 +236,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve user and database info
-	var dbOwner, dbName string
-	dbOwner, dbName, _, err = com.GetODC(2, r) // 2 = Ignore "/x/execlivesql/" at the start of the URL
+	dbOwner, dbName, _, err := com.GetODC(2, r) // 2 = Ignore "/x/execlivesql/" at the start of the URL
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err)
@@ -244,9 +244,21 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Grab the incoming SQLite query
-	rawInput := r.FormValue("sql")
-	var sql string
-	sql, err = com.CheckUnicode(rawInput)
+	bodyData, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+	var data ExecuteSqlRequest
+	err = json.Unmarshal([]byte(bodyData), &data)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	sql, err := com.CheckUnicode(data.Sql, false)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, err)
@@ -254,8 +266,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	var exists bool
-	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -268,9 +279,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure this is a live database
-	var isLive bool
-	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -283,9 +292,8 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send the SQL execution request to our AMQP backend
-	var rowsChanged int
 	var z interface{}
-	rowsChanged, err = com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
+	rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
 	if err != nil {
 		if !strings.HasPrefix(err.Error(), "don't use exec with") {
 			log.Println(err)
@@ -398,34 +406,38 @@ func execSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// SQL statement provided by the user
-	rawSQL := r.FormValue("sql")
-
-	// Initial sanity check of the SQL statements' name
-	input := com.VisGetFields{ // Reuse the validation rules for saved visualisation names
-		VisName: r.FormValue("sqlname"),
-	}
-	err = com.Validate.Struct(input)
+	// SQL statement and name provided by the user
+	bodyData, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("Input validation error for execSave(): %s", err)
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Error when validating input: %s", err)
+		fmt.Fprint(w, err)
 		return
 	}
-	sqlName := input.VisName
+	var data SaveSqlRequest
+	err = json.Unmarshal([]byte(bodyData), &data)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	decodedStr, err := com.CheckUnicode(data.Sql, false)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	err = com.ValidateVisualisationName(data.SqlName)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
 
 	// Ensure minimum viable parameters are present
-	if sqlName == "" || rawSQL == "" {
+	if data.SqlName == "" || decodedStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// Make sure the incoming SQLite query is "safe"
-	var decodedStr string
-	decodedStr, err = com.CheckUnicode(rawSQL)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err.Error())
 		return
 	}
 
@@ -456,8 +468,7 @@ func execSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the logged in user has the permissions to proceed
-	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -470,8 +481,7 @@ func execSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure this is a live database
-	var isLive bool
-	isLive, _, err = com.CheckDBLive(dbOwner, dbName)
+	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -484,10 +494,10 @@ func execSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the SQL statement
-	err = com.LiveExecuteSQLSave(dbOwner, sqlName, decodedStr)
+	err = com.LiveExecuteSQLSave(dbOwner, data.SqlName, decodedStr)
 	if err != nil {
 		log.Printf("Error occurred when saving SQL statement '%s' for' '%s/%s': %s",
-			com.SanitiseLogString(sqlName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), err.Error())
+			com.SanitiseLogString(data.SqlName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -81,15 +81,6 @@
 [[ template "script_db_header" . ]]
 [[ template "footer" . ]]
 <script>
-    // base64url encode a string
-    function base64url(input) {
-        let encoded = window.btoa(input);
-        encoded = encoded.replace(/=+$/, '');
-        encoded = encoded.replace(/\+/g, '-');
-        encoded = encoded.replace(/\//g, '_');
-        return encoded
-    }
-
     // Pre-filled table row data
     let dataReceived = false;
 
@@ -286,8 +277,12 @@
             if (!$scope.checkSQL()) return;
 
             // Send the SQL string to the backend
-            let encoded = base64url(userSQL);
-            $http.get("/x/execlivesql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&sql="+encoded).then(
+            $http({
+                url: "/x/execlivesql/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]",
+                method: "post",
+                data: {sql: userSQL},
+                headers: {'Content-Type': 'application/json'}
+            }).then(
                 function success(response) {
                     // We can potentially receive either "Execute SQL" or Query responses here
                     if ("rows_changed" in response.data) {
@@ -356,10 +351,13 @@
             if (!$scope.checkSQL()) return;
 
             // Save it
-            let name = document.getElementById("savename").value;
-            let args = "sqlname=" + name;
-            args += "&sql=" + base64url(userSQL);
-            $http.get("/x/execsave/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]?commit=[[ .DB.Info.CommitID ]]&"+args).then(
+            const name = document.getElementById("savename").value;
+            $http({
+                url: "/x/execsave/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]",
+                method: "post",
+                data: {sql_name: name, sql: userSQL},
+                headers: {'Content-Type': 'application/json'}
+            }).then(
                 function success(response) {
                     $scope.statusMessageColour = "green";
                     $scope.statusMessage = nowString() + "SQL statement '" + name + "' saved";
