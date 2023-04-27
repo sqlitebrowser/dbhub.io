@@ -90,7 +90,7 @@ describe('live databases', () => {
           let jsonBody = JSON.parse(fixedBody)
 
           expect(jsonBody).to.have.keys(['commit', 'url'])
-          expect(jsonBody.url).to.equal('/default')
+          expect(jsonBody.url).to.equal('https://docker-dev.dbhub.io:9444/default/LIVE database upload testing.sqlite')
         }
       )
     })

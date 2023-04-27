@@ -5682,9 +5682,23 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 	// Send a request to the AMQP backend to set up the database there, ready for querying
-	err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID, accessType)
+	liveNode, err := com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID)
 	if err != nil {
 		log.Println(err)
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Update PG, so it has a record of this database existing and knows the node/queue name for querying it
+	err = com.LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, accessType)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Enable the watch flag for the uploader for this database
+	err = com.ToggleDBWatch(dbOwner, dbOwner, dbName)
+	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}

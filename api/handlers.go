@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 
 	sqlite "github.com/gwenn/gosqlite"
@@ -27,11 +28,14 @@ import (
 //	* "dbname" is the name of the database
 func branchesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "branches", r.Header.Get("User-Agent"))
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
@@ -101,6 +105,9 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "columns", r.Header.Get("User-Agent"))
 
 	// Extract the table name
 	table, err := com.GetFormTable(r, false)
@@ -221,11 +228,14 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 //	* "dbname" is the name of the database
 func commitsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "commits", r.Header.Get("User-Agent"))
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
@@ -278,6 +288,13 @@ func databasesHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Record the api call in our backend database
+	operation := "databases"
+	if live {
+		operation = "LIVE databases"
+	}
+	com.ApiCallLog(loggedInUser, "", "", operation, r.Header.Get("User-Agent"))
 
 	// Retrieve the list of databases in the user account
 	var databases []com.DBInfo
@@ -335,6 +352,9 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dbOwner := loggedInUser
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "delete", r.Header.Get("User-Agent"))
 
 	// Check if the database exists
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
@@ -517,6 +537,10 @@ func diffHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Record the api call in our backend database
+	// Note - Lets not bother adding additional api logging fields just for the diff function at this stage
+	com.ApiCallLog(loggedInUser, dbOwnerA, dbNameA, "diff", r.Header.Get("User-Agent"))
+
 	// Check permissions of the first database
 	var allowed bool
 	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwnerA, dbNameA, false)
@@ -593,6 +617,9 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "download", r.Header.Get("User-Agent"))
+
 	// Return the requested database to the user
 	_, err = com.DownloadDatabase(w, r, dbOwner, dbName, commitID, loggedInUser, "api")
 	if err != nil {
@@ -629,6 +656,9 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "execute", r.Header.Get("User-Agent"))
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
@@ -708,6 +738,9 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "indexes", r.Header.Get("User-Agent"))
 
 	// Check if the database is a live database, and get the node/queue to send the request to
 	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
@@ -826,11 +859,14 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 //	* "dbname" is the name of the database
 func metadataHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "metadata", r.Header.Get("User-Agent"))
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
@@ -885,6 +921,9 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "query", r.Header.Get("User-Agent"))
 
 	// Grab the incoming SQLite query
 	rawInput := r.FormValue("sql")
@@ -958,11 +997,14 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 //	* "dbname" is the name of the database
 func releasesHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "releases", r.Header.Get("User-Agent"))
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
@@ -1032,6 +1074,9 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "tables", r.Header.Get("User-Agent"))
 
 	// Check if the database is a live database, and get the node/queue to send the request to
 	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
@@ -1108,11 +1153,14 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 //	* "dbname" is the name of the database
 func tagsHandler(w http.ResponseWriter, r *http.Request) {
 	// Do auth check, grab request info
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "tags", r.Header.Get("User-Agent"))
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
@@ -1314,9 +1362,23 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 		// Send a request to the AMQP backend to set up the database there, ready for querying
-		err = com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID, com.SetToPrivate)
+		liveNode, err := com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID)
 		if err != nil {
 			log.Println(err)
+			jsonErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Update PG, so it has a record of this database existing and knows the node/queue name for querying it
+		err = com.LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, com.SetToPrivate)
+		if err != nil {
+			jsonErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Enable the watch flag for the uploader for this database
+		err = com.ToggleDBWatch(dbOwner, dbOwner, dbName)
+		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -1324,8 +1386,15 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		// Upload was successful, so we construct a fake commit ID then return a success message to the user
 		x = make(map[string]string)
 		x["commit_id"] = ""
-		x["url"] = fmt.Sprintf("/%s", dbOwner)
+		x["url"] = server + filepath.Join("/", dbOwner, dbName)
 	}
+
+	// Record the api call in our backend database
+	operation := "upload"
+	if live {
+		operation = "LIVE upload"
+	}
+	com.ApiCallLog(loggedInUser, loggedInUser, dbName, operation, r.Header.Get("User-Agent"))
 
 	// Construct the response message
 	var ok bool
@@ -1365,6 +1434,9 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, loggedInUser, dbName, "views", r.Header.Get("User-Agent"))
 
 	// Check if the database is a live database, and get the node/queue to send the request to
 	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
@@ -1441,11 +1513,14 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 //	* "dbname" is the name of the database being queried
 func webpageHandler(w http.ResponseWriter, r *http.Request) {
 	// Authenticate user and collect requested database details
-	_, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
+	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), httpStatus)
 		return
 	}
+
+	// Record the api call in our backend database
+	com.ApiCallLog(loggedInUser, dbOwner, dbName, "webpage", r.Header.Get("User-Agent"))
 
 	// Return the database webUI URL to the user
 	var z com.WebpageResponseContainer

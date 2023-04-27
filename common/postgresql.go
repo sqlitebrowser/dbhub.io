@@ -96,6 +96,50 @@ func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) 
 	return nil
 }
 
+// ApiCallLog records an API call operation.  Database name is optional, as not all API calls operate on a
+// database.  If a database name is provided however, then the database owner name *must* also be provided
+func ApiCallLog(loggedInUser, dbOwner, dbName, operation, callerSw string) {
+	var dbQuery string
+	var err error
+	var commandTag pgx.CommandTag
+	if dbName != "" {
+		dbQuery = `
+		WITH loggedIn AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), owner AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($2)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, owner
+			WHERE db.user_id = owner.user_id
+				AND db.db_name = $3)
+		INSERT INTO api_call_log (caller_id, db_owner_id, db_id, api_operation, api_caller_sw)
+		VALUES ((SELECT user_id FROM loggedIn), (SELECT user_id FROM owner), (SELECT db_id FROM d), $4, $5)`
+		commandTag, err = pdb.Exec(dbQuery, loggedInUser, dbOwner, dbName, operation, callerSw)
+	} else {
+		dbQuery = `
+		WITH loggedIn AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		INSERT INTO api_call_log (caller_id, api_operation, api_caller_sw)
+		VALUES ((SELECT user_id FROM loggedIn), $2, $3)`
+		commandTag, err = pdb.Exec(dbQuery, loggedInUser, operation, callerSw)
+	}
+	if err != nil {
+		log.Printf("Adding api call log entry failed: %s", err)
+		return
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%d) affected when adding api call entry for user '%s'", numRows, SanitiseLogString(loggedInUser))
+	}
+}
+
 // APIKeySave saves a new API key to the PostgreSQL database
 func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
 	// Make sure the API key isn't already in the database
@@ -3106,6 +3150,7 @@ func ResetDB() error {
 	// We probably don't want to drop the database itself, as that'd screw up the current database
 	// connection.  Instead, lets truncate all the tables then load their default values
 	tableNames := []string{
+		"api_call_log",
 		"api_keys",
 		"database_downloads",
 		"database_files",
@@ -3118,6 +3163,7 @@ func ResetDB() error {
 		"discussions",
 		"email_queue",
 		"events",
+		"live_user_sql_statements",
 		"sqlite_databases",
 		"users",
 		"vis_params",
@@ -3128,6 +3174,7 @@ func ResetDB() error {
 
 	sequenceNames := []string{
 		"api_keys_key_id_seq",
+		"api_log_log_id_seq",
 		"database_downloads_dl_id_seq",
 		"database_licences_lic_id_seq",
 		"database_uploads_up_id_seq",
@@ -3136,6 +3183,7 @@ func ResetDB() error {
 		"discussions_disc_id_seq",
 		"email_queue_email_id_seq",
 		"events_event_id_seq",
+		"live_user_sql_statements_stmt_id_seq",
 		"sqlite_databases_db_id_seq",
 		"users_user_id_seq",
 		"vis_query_runs_query_run_id_seq",

@@ -3,10 +3,6 @@ package main
 // TODO: API functions that still need updating for Live databases
 //         * diff - already updated to just return an error for live databases.  needs testing though
 
-// FIXME: Update the documented Upload() function return values on the API doc page.  Currently it talks about
-//        returning the commit ID for the upload.  We'll probably return that field with a blank value for live
-//        databases though.  TBD.
-
 // FIXME: After the API and webui pieces are done, figure out how the DB4S end
 //        point and dio should be updated to use live databases too
 
@@ -113,29 +109,29 @@ func main() {
 	}
 
 	// Our pages
-	http.Handle("/", gz.GzipHandler(handleWrapper(rootHandler)))
-	http.Handle("/changelog", gz.GzipHandler(handleWrapper(changeLogHandler)))
-	http.Handle("/changelog.html", gz.GzipHandler(handleWrapper(changeLogHandler)))
-	http.Handle("/v1/branches", gz.GzipHandler(handleWrapper(branchesHandler)))
-	http.Handle("/v1/columns", gz.GzipHandler(handleWrapper(columnsHandler)))
-	http.Handle("/v1/commits", gz.GzipHandler(handleWrapper(commitsHandler)))
-	http.Handle("/v1/databases", gz.GzipHandler(handleWrapper(databasesHandler)))
-	http.Handle("/v1/delete", gz.GzipHandler(handleWrapper(deleteHandler)))
-	http.Handle("/v1/diff", gz.GzipHandler(handleWrapper(diffHandler)))
-	http.Handle("/v1/download", gz.GzipHandler(handleWrapper(downloadHandler)))
-	http.Handle("/v1/execute", gz.GzipHandler(handleWrapper(executeHandler)))
-	http.Handle("/v1/indexes", gz.GzipHandler(handleWrapper(indexesHandler)))
-	http.Handle("/v1/metadata", gz.GzipHandler(handleWrapper(metadataHandler)))
-	http.Handle("/v1/query", gz.GzipHandler(handleWrapper(queryHandler)))
-	http.Handle("/v1/releases", gz.GzipHandler(handleWrapper(releasesHandler)))
-	http.Handle("/v1/tables", gz.GzipHandler(handleWrapper(tablesHandler)))
-	http.Handle("/v1/tags", gz.GzipHandler(handleWrapper(tagsHandler)))
-	http.Handle("/v1/upload", gz.GzipHandler(handleWrapper(uploadHandler)))
-	http.Handle("/v1/views", gz.GzipHandler(handleWrapper(viewsHandler)))
-	http.Handle("/v1/webpage", gz.GzipHandler(handleWrapper(webpageHandler)))
+	http.Handle("/", gz.GzipHandler(corsWrapper(rootHandler)))
+	http.Handle("/changelog", gz.GzipHandler(corsWrapper(changeLogHandler)))
+	http.Handle("/changelog.html", gz.GzipHandler(corsWrapper(changeLogHandler)))
+	http.Handle("/v1/branches", gz.GzipHandler(corsWrapper(branchesHandler)))
+	http.Handle("/v1/columns", gz.GzipHandler(corsWrapper(columnsHandler)))
+	http.Handle("/v1/commits", gz.GzipHandler(corsWrapper(commitsHandler)))
+	http.Handle("/v1/databases", gz.GzipHandler(corsWrapper(databasesHandler)))
+	http.Handle("/v1/delete", gz.GzipHandler(corsWrapper(deleteHandler)))
+	http.Handle("/v1/diff", gz.GzipHandler(corsWrapper(diffHandler)))
+	http.Handle("/v1/download", gz.GzipHandler(corsWrapper(downloadHandler)))
+	http.Handle("/v1/execute", gz.GzipHandler(corsWrapper(executeHandler)))
+	http.Handle("/v1/indexes", gz.GzipHandler(corsWrapper(indexesHandler)))
+	http.Handle("/v1/metadata", gz.GzipHandler(corsWrapper(metadataHandler)))
+	http.Handle("/v1/query", gz.GzipHandler(corsWrapper(queryHandler)))
+	http.Handle("/v1/releases", gz.GzipHandler(corsWrapper(releasesHandler)))
+	http.Handle("/v1/tables", gz.GzipHandler(corsWrapper(tablesHandler)))
+	http.Handle("/v1/tags", gz.GzipHandler(corsWrapper(tagsHandler)))
+	http.Handle("/v1/upload", gz.GzipHandler(corsWrapper(uploadHandler)))
+	http.Handle("/v1/views", gz.GzipHandler(corsWrapper(viewsHandler)))
+	http.Handle("/v1/webpage", gz.GzipHandler(corsWrapper(webpageHandler)))
 
 	// favicon.ico
-	http.Handle("/favicon.ico", gz.GzipHandler(handleWrapper(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/favicon.ico", gz.GzipHandler(corsWrapper(func(w http.ResponseWriter, r *http.Request) {
 		logReq(r, "-")
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "favicon.ico"))
 	})))
@@ -329,9 +325,8 @@ func extractUserFromClientCert(w http.ResponseWriter, r *http.Request) (userAcc 
 	return
 }
 
-// handleWrapper does nothing useful except interface between types
-// TODO: Get rid of this, as it shouldn't be needed
-func handleWrapper(fn http.HandlerFunc) http.HandlerFunc {
+// corsWrapper sets a general allow for all our api calls
+func corsWrapper(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Enable CORS (https://enable-cors.org)
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -361,6 +356,5 @@ func jsonErr(w http.ResponseWriter, msg string, statusCode int) {
 // logReq writes an entry for the incoming request to the request log
 func logReq(r *http.Request, loggedInUser string) {
 	fmt.Fprintf(reqLog, "%v - %s [%s] \"%s %s %s\" \"-\" \"-\" \"%s\" \"%s\"\n", r.RemoteAddr,
-		loggedInUser, time.Now().Format(time.RFC3339Nano), r.Method, r.URL, r.Proto,
-		r.Referer(), r.Header.Get("User-Agent"))
+		loggedInUser, time.Now().Format(time.RFC3339Nano), r.Method, r.URL, r.Proto, r.Referer(), r.Header.Get("User-Agent"))
 }

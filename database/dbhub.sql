@@ -31,6 +31,28 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: api_call_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.api_call_log (
+    api_call_id bigint NOT NULL,
+    api_call_date timestamp with time zone DEFAULT now(),
+    caller_id bigint,
+    db_owner_id bigint,
+    db_id bigint,
+    api_operation text NOT NULL,
+    api_caller_sw text
+);
+
+
+--
+-- Name: COLUMN api_call_log.db_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.api_call_log.db_id IS 'This field must be nullable, as not all api calls act on a database';
+
+
+--
 -- Name: api_keys; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -59,6 +81,25 @@ CREATE SEQUENCE public.api_keys_key_id_seq
 --
 
 ALTER SEQUENCE public.api_keys_key_id_seq OWNED BY public.api_keys.key_id;
+
+
+--
+-- Name: api_log_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.api_log_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: api_log_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.api_log_log_id_seq OWNED BY public.api_call_log.api_call_id;
 
 
 --
@@ -597,6 +638,13 @@ CREATE TABLE public.watchers (
 
 
 --
+-- Name: api_call_log api_call_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_call_log ALTER COLUMN api_call_id SET DEFAULT nextval('public.api_log_log_id_seq'::regclass);
+
+
+--
 -- Name: api_keys key_id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1001,6 +1049,14 @@ CREATE INDEX watchers_db_id_idx ON public.watchers USING btree (db_id);
 
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT api_keys_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: api_call_log api_log_users_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_call_log
+    ADD CONSTRAINT api_log_users_user_id_fk FOREIGN KEY (caller_id) REFERENCES public.users(user_id);
 
 
 --

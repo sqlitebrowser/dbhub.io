@@ -85,9 +85,25 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send the live database file to our AMQP backend for setup
-	err = LiveCreateDB(AmqpChan, "default", "Join Testing with index.sqlite", objectID, SetToPrivate)
+	dbOwner := "default"
+	dbName := "Join Testing with index.sqlite"
+	liveNode, err := LiveCreateDB(AmqpChan, dbOwner, dbName, objectID)
 	if err != nil {
 		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Update PG, so it has a record of this database existing and knows the node/queue name for querying it
+	err = LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, SetToPrivate)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Enable the watch flag for the uploader for this database
+	err = ToggleDBWatch(dbOwner, dbOwner, dbName)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
