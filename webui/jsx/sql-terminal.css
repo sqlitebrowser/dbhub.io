@@ -1,0 +1,30 @@
+.sql-terminal {
+	overflow: auto;
+	display: flex;
+	flex-direction: column;
+	height: 600px;
+	padding: 8px;
+
+	/* These are colours from the Solarized colour scheme */
+	border: 1px solid #eee8d5;
+	background: #fdf6e3;
+	color: #002b36;
+}
+
+.sql-terminal-command {
+	font-family: "monospace";
+}
+
+.sql-terminal-command-input {
+	margin-bottom: 0.7em;
+	white-space: pre;
+}
+
+.sql-terminal-command-output > div {
+	margin-top: 0.7em;
+}
+
+
+.sql-terminal-input {
+	padding-right: 1em;
+}

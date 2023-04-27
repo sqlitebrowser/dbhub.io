@@ -2601,124 +2601,6 @@ func LiveAddDatabasePG(dbOwner, dbName, bucketName, liveNode string, accessType 
 	return nil
 }
 
-// LiveExecuteSQLDelete deletes a saved SQL statement for a user
-func LiveExecuteSQLDelete(dbOwner, sqlName string) (err error) {
-	var commandTag pgx.CommandTag
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		)
-		DELETE FROM live_user_sql_statements
-		WHERE user_id = (SELECT user_id FROM u)
-			AND sql_name = $2`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, sqlName)
-	if err != nil {
-		log.Printf("Deleting SQL statement '%s' for user '%s' failed: %s", SanitiseLogString(sqlName), SanitiseLogString(dbOwner), err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected while deleting SQL statement '%s' for user '%s'", numRows,
-			SanitiseLogString(sqlName), SanitiseLogString(dbOwner))
-	}
-	return
-}
-
-// LiveExecuteSQLGet returns the SQL text for a given users' requested SQL statement
-func LiveExecuteSQLGet(dbOwner, sqlName string) (sqlText string, err error) {
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		)
-		SELECT sql_stmt
-		FROM live_user_sql_statements, u
-		WHERE live_user_sql_statements.user_id = u.user_id
-			AND live_user_sql_statements.sql_name = $2`
-	e := pdb.QueryRow(dbQuery, dbOwner, sqlName).Scan(&sqlText)
-	if e != nil {
-		if e == pgx.ErrNoRows {
-			// There weren't any saved parameters for this database visualisation
-			return
-		}
-
-		// A real database error occurred
-		err = e
-		log.Printf("Retrieving SQL statement text for '%s', statement '%s' failed: %s", SanitiseLogString(dbOwner),
-			SanitiseLogString(sqlName), e)
-		return
-	}
-	return
-}
-
-// LiveExecuteSQLList returns the list of saved SQL statements for a given user
-func LiveExecuteSQLList(dbOwner string) (sqlNames []string, err error) {
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		)
-		SELECT sql_name
-		FROM live_user_sql_statements, u
-		WHERE live_user_sql_statements.user_id = u.user_id`
-	rows, e := pdb.Query(dbQuery, dbOwner)
-	if e != nil {
-		if e == pgx.ErrNoRows {
-			// There weren't any saved SQL statements for this user
-			return
-		}
-
-		// A real database error occurred
-		err = e
-		log.Printf("Retrieving SQL statement list for user '%s' failed: %s", dbOwner, e)
-		return
-	}
-	defer rows.Close()
-
-	var s string
-	for rows.Next() {
-		err = rows.Scan(&s)
-		if err != nil {
-			log.Printf("Error retrieving SQL statement list: %s", err.Error())
-			return
-		}
-		sqlNames = append(sqlNames, s)
-	}
-	sort.Strings(sqlNames)
-	return
-}
-
-// LiveExecuteSQLSave saves an "Execute SQL" statement for live databases
-// Note: as a first attempt at this, lets have the SQL statements not be bound to any one database belonging to the
-// user.  eg if the user saves a SQL statement for database A, it'll still appear in the drop-down list for their other
-// databases.  Could be useful, but we can change this if it turns out to be a pain
-func LiveExecuteSQLSave(dbOwner, sqlName, sqlText string) (err error) {
-	var commandTag pgx.CommandTag
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		)
-		INSERT INTO live_user_sql_statements (user_id, sql_name, sql_stmt)
-		VALUES ((SELECT user_id FROM u), $2, $3)
-		ON CONFLICT (user_id, sql_name)
-			DO UPDATE
-			SET sql_stmt = $3`
-	commandTag, err = pdb.Exec(dbQuery, dbOwner, sqlName, sqlText)
-	if err != nil {
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected while saving SQL statement '%s' for user '%s'", numRows,
-			SanitiseLogString(sqlName), SanitiseLogString(dbOwner))
-	}
-	return
-}
-
 // LiveGenerateMinioNames generates Minio bucket and object names for a live database
 func LiveGenerateMinioNames(userName string) (bucketName, objectName string, err error) {
 	// If the user already has a Minio bucket name assigned, then we use it
@@ -3162,7 +3044,6 @@ func ResetDB() error {
 		"discussions",
 		"email_queue",
 		"events",
-		"live_user_sql_statements",
 		"sqlite_databases",
 		"users",
 		"vis_params",
@@ -3182,7 +3063,6 @@ func ResetDB() error {
 		"discussions_disc_id_seq",
 		"email_queue_email_id_seq",
 		"events_event_id_seq",
-		"live_user_sql_statements_stmt_id_seq",
 		"sqlite_databases_db_id_seq",
 		"users_user_id_seq",
 		"vis_query_runs_query_run_id_seq",

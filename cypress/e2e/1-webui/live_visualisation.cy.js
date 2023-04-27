@@ -156,10 +156,9 @@ describe('live visualisation', () => {
   it('Y axis column drop down', () => {
     // Add a third column to table2
     cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
+    cy.get('.sql-terminal-input').find('textarea').type(
         'ALTER TABLE table2 ADD COLUMN value2 INTEGER DEFAULT 8')
-    cy.get('[data-cy="execsqlbtn"]').click()
+    cy.get('[data-cy="executebtn"]').click()
 
     // Create a visualisation with a third column
     cy.visit('/vis/default/Join Testing with index.sqlite')

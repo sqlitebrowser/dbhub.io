@@ -66,6 +66,7 @@ webui/js/discussion-list.js
 webui/js/format.js
 webui/js/markdown-editor.js
 webui/js/profile-page.js
+webui/js/sql-terminal.js
 webui/js/user-page.js
 
 # Local secrets

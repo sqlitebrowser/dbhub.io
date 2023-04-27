@@ -7,86 +7,23 @@ describe('live execute', () => {
     cy.request('/x/test/seed')
   })
 
-  // Save a SQL statement
-  it('save a SQL statement using non-default name', () => {
+  // "Format SQL" button
+  it('"Format SQL" button', () => {
     cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type(
+
+    // Type in some SQL statement
+    cy.get('.sql-terminal-input').find('textarea').type(
       'CREATE TABLE livetest1(\n' +
         'field1 INTEGER, field2 TEXT, field3 INTEGER\n' +
         ')')
-    cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('livetest1')
-    cy.get('[data-cy="savebtn"]').click()
-    cy.get('[data-cy="statusmsg"]').should('contain.text', 'SQL statement \'livetest1\' saved')
-
-    // Verify the SQL statement - it should be automatically selected in the drop down list as it's the only one
-    cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="selectedexec"]').should('contain.text', 'livetest1')
-  })
-
-  // Check if 'default' SQL statement is still chosen by default even when created after non-default ones
-  it('save a SQL statement using default name', () => {
-    cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
-      'CREATE TABLE defaulttest (field2 INTEGER)')
-    cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('default')
-    cy.get('[data-cy="savebtn"]').click()
-    cy.get('[data-cy="statusmsg"]').should('contain.text', 'SQL statement \'default\' saved')
-
-    // Verify the SQL statement - it should be automatically selected in the drop down list as it's the default
-    cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="selectedexec"]').should('contain.text', 'default')
-    cy.get('[data-cy="usersqltext"]').should('contain.text',
-      'CREATE TABLE defaulttest (field2 INTEGER)')
-  })
-
-  // Save a SQL statement
-  it('save a SQL statement with name alphabetically lower than \'default\'', () => {
-    cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
-      'CREATE TABLE stuff (field3 INTEGER)')
-    cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('abc')
-    cy.get('[data-cy="savebtn"]').click()
-    cy.get('[data-cy="statusmsg"]').should('contain.text', 'SQL statement \'abc\' saved')
-
-    // Check that the SQL statement is present, but not automatically selected when the page loads
-    cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="selectedexec"]').should('not.contain.text', 'abc')
-  })
-
-  // Save over an existing SQL statement
-  it('save over an existing SQL statement', () => {
-    cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
-      'DROP TABLE table1')
-    cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('default')
-    cy.get('[data-cy="savebtn"]').click()
-    cy.get('[data-cy="statusmsg"]').should('contain.text', 'SQL statement \'default\' saved')
-
-    // Verify the new SQL statement text
-    cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="execdropdown"]').click()
-    cy.get('[data-cy="exec-default"]').click()
-    cy.get('[data-cy="usersqltext"]').should('contain',
-      'DROP TABLE table1')
-  })
-
-  // "Format SQL" button
-  it('"Format SQL" button', () => {
-    // Start with the existing "livetest1" test
-    cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="execdropdown"]').click()
-    cy.get('[data-cy="exec-livetest1"]').click()
 
     // Click the format button
-    cy.get('[data-cy="formatsqlbtn"]').click()
+    cy.get('[data-cy="dropdownbtn"]').click()
+    cy.get('[data-cy="formatbtn"]').click()
 
     // Verify the changed text
     cy.wait(waitTime)
-    cy.get('[data-cy="usersqltext"]').should('contain',
+    cy.get('.sql-terminal-input').find('textarea').should('contain',
       'CREATE TABLE\n' +
         '  livetest1 (field1 INTEGER, field2 TEXT, field3 INTEGER)')
   })
@@ -100,30 +37,14 @@ describe('live execute', () => {
 
     // Remove the view using the Execute SQL button
     cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
+    cy.get('.sql-terminal-input').find('textarea').type(
         'DROP VIEW joinedView')
-    cy.get('[data-cy="execsqlbtn"]').click()
+    cy.get('[data-cy="executebtn"]').click()
 
     // Verify the view has been removed
     cy.visit('/default/Join Testing with index.sqlite')
     cy.get('[name="viewtable"]').parent('.react-dropdown-select').click()
     cy.get('[name="viewtable"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('joinedView').should('not.exist')
-  })
-
-  // "Delete" button
-  it('Delete button', () => {
-    cy.visit('/exec/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="execdropdown"]').click()
-    cy.get('[data-cy="exec-abc"]').click()
-
-    // Click the Delete button
-    cy.get('[data-cy="delexecbtn"]').click()
-
-    // Verify the result
-    cy.wait(waitTime)
-    cy.get('[data-cy="execdropdown"]').click()
-    cy.get('[data-cy="exec-abc"]').should('not.exist')
   })
 
   // Verify only the owner can see this Execute SQL page

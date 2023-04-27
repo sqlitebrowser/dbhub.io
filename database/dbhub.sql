@@ -426,44 +426,6 @@ ALTER SEQUENCE public.events_event_id_seq OWNED BY public.events.event_id;
 
 
 --
--- Name: live_user_sql_statements; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.live_user_sql_statements (
-    stmt_id bigint NOT NULL,
-    user_id bigint NOT NULL,
-    sql_name text NOT NULL,
-    sql_stmt text
-);
-
-
---
--- Name: TABLE live_user_sql_statements; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.live_user_sql_statements IS 'This table holds sql statements saved by users for their Live databases';
-
-
---
--- Name: live_user_sql_statements_stmt_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.live_user_sql_statements_stmt_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: live_user_sql_statements_stmt_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.live_user_sql_statements_stmt_id_seq OWNED BY public.live_user_sql_statements.stmt_id;
-
-
---
 -- Name: sqlite_databases; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -705,13 +667,6 @@ ALTER TABLE ONLY public.email_queue ALTER COLUMN email_id SET DEFAULT nextval('p
 --
 
 ALTER TABLE ONLY public.events ALTER COLUMN event_id SET DEFAULT nextval('public.events_event_id_seq'::regclass);
-
-
---
--- Name: live_user_sql_statements stmt_id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.live_user_sql_statements ALTER COLUMN stmt_id SET DEFAULT nextval('public.live_user_sql_statements_stmt_id_seq'::regclass);
 
 
 --
@@ -1002,13 +957,6 @@ CREATE INDEX fki_discussions_source_db_id_fkey ON public.discussions USING btree
 
 
 --
--- Name: live_user_sql_statements_user_id_sql_name_uindex; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX live_user_sql_statements_user_id_sql_name_uindex ON public.live_user_sql_statements USING btree (user_id, sql_name);
-
-
---
 -- Name: users_lower_user_name_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1185,14 +1133,6 @@ ALTER TABLE ONLY public.discussions
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_db_id_fkey FOREIGN KEY (db_id) REFERENCES public.sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: live_user_sql_statements live_user_sql_statements_users_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.live_user_sql_statements
-    ADD CONSTRAINT live_user_sql_statements_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id);
 
 
 --

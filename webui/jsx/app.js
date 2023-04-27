@@ -16,6 +16,7 @@ import DiscussionCreateMr from "./discussion-create-mr";
 import DiscussionList from "./discussion-list";
 import MarkdownEditor from "./markdown-editor";
 import ProfilePage from "./profile-page";
+import SqlTerminal from "./sql-terminal";
 import UserPage from "./user-page";
 
 {
@@ -156,6 +157,14 @@ import UserPage from "./user-page";
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<UserPage />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("sql-terminal");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<SqlTerminal />);
 	}
 }
 

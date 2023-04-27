@@ -8,19 +8,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/sessions"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
 func executePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		Data         com.SQLiteRecordSet
 		DB           com.SQLiteDBinfo
 		PageMeta     PageMetaInfo
-		ParamsGiven  bool
-		SQL          string
-		ExecNames    []string
-		SelectedName string
 	}
 
 	// Get all meta information
@@ -36,8 +30,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database exists and the user has access to view it
-	var exists bool
-	exists, err = com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
+	exists, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -50,9 +43,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	// * Execution can only get here if the user has access to the requested database *
 
 	// Ensure this is a live database
-	var isLive bool
-	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbName.Owner, dbName.Database)
+	isLive, liveNode, err := com.CheckDBLive(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -69,149 +60,23 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get a list of all saved SQL statements for this user
-	pageData.ExecNames, err = com.LiveExecuteSQLList(dbName.Owner)
-	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Handle any saved SQL statements for this database
-	if len(pageData.ExecNames) > 0 {
-		// If there's a saved statement called "default", then we use that
-		sqlName := "default"
-		var defaultFound bool
-		for _, j := range pageData.ExecNames {
-			if j == "default" {
-				defaultFound = true
-			}
-		}
-		if !defaultFound {
-			// No default was found, but there are saved SQL statements.  So we just use the first one
-			sqlName = pageData.ExecNames[0]
-		}
-
-		// Retrieve the saved SQL statement text
-		sqlNames, err := com.LiveExecuteSQLGet(dbName.Owner, sqlName)
-		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		// If saved SQL statements were found, pass them through to the web page
-		if len(sqlNames) > 0 {
-			pageData.ParamsGiven = true
-			pageData.SelectedName = sqlName
-			pageData.SQL = sqlNames
-		}
-	}
-
 	// Ask the AMQP backend for the database file size
 	pageData.DB.Info.DBEntry.Size, err = com.LiveSize(liveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
 	if err != nil {
-		log.Println(err)
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
-	}
-
-	// If there are no saved SQL statements, indicate that using an empty slice instead of a null value. This makes
-	// sure the array of statements names in the resulting JavaScript code is encoded correctly.
-	if pageData.ExecNames == nil {
-		pageData.ExecNames = make([]string, 0)
 	}
 
 	// Fill out various metadata fields
 	pageData.PageMeta.Title = fmt.Sprintf("Execute SQL - %s / %s", dbName.Owner, dbName.Database)
-
-	// Update database star and watch status for the logged in user
-	// FIXME: Add Cypress tests for this, to ensure moving the code above isn't screwing anything up (especially caching)
-	//pageData.MyStar = myStar
-	//pageData.MyWatch = myWatch
+	pageData.PageMeta.PageSection = "db_exec"
 
 	// Render the visualisation page
-	pageData.PageMeta.PageSection = "db_exec"
-	templateName := "executePage"
-	t := tmpl.Lookup(templateName)
+	t := tmpl.Lookup("executePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)
 	}
-}
-
-// This function handles requests to delete a saved database execution query
-func execDel(w http.ResponseWriter, r *http.Request) {
-	// Retrieve user, database
-	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/execdel/" at the start of the URL
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Required information is missing")
-		return
-	}
-
-	// Validate input
-	input := com.VisGetFields{
-		VisName: r.FormValue("sqlname"),
-	}
-	err = com.Validate.Struct(input)
-	if err != nil {
-		log.Printf("Input validation error for execDel(): %s", err)
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Error when validating input: %s", err)
-		return
-	}
-	sqlName := input.VisName
-
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment == "production" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
-	}
-
-	// Ensure we have a valid logged in user
-	if validSession != true {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "You need to be logged in")
-		return
-	}
-
-	// Make sure the logged in user has the permissions to proceed
-	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
-		return
-	}
-	if allowed == false {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "Database not found")
-		return
-	}
-
-	// Delete the saved SQL statement
-	err = com.LiveExecuteSQLDelete(dbOwner, sqlName)
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
-		return
-	}
-
-	// Deletion succeeded
-	w.WriteHeader(http.StatusOK)
 }
 
 // execLiveSQL executes a user provided SQLite statement on a database.
@@ -221,8 +86,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	var u interface{}
 	var err error
 	if com.Conf.Environment.Environment == "production" {
-		var sess *sessions.Session
-		sess, err = store.Get(r, "dbhub-user")
+		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -324,184 +188,4 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "%s", jsonData)
 	return
-}
-
-// This function handles requests to retrieve database execution query parameters
-func execGet(w http.ResponseWriter, r *http.Request) {
-	// Retrieve user, database
-	dbOwner, dbName, err := com.GetOD(2, r) // 2 = Ignore "/x/execget/" at the start of the URL
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Required information is missing")
-		return
-	}
-
-	// Validate input
-	input := com.VisGetFields{ // Reuse the visualisation names validation rules
-		VisName: r.FormValue("sqlname"),
-	}
-	err = com.Validate.Struct(input)
-	if err != nil {
-		log.Printf("Input validation error for execGet(): %s", err)
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Error when validating input: %s", err)
-		return
-	}
-	sqlName := input.VisName
-
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	if com.Conf.Environment.Environment == "production" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-	}
-
-	// Make sure the logged in user has the permissions to proceed
-	var allowed bool
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
-		return
-	}
-	if allowed == false {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "Database not found")
-		return
-	}
-
-	// Retrieve and return the text of a saved SQL statement
-	var sqlText string
-	sqlText, err = com.LiveExecuteSQLGet(dbOwner, sqlName)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
-		return
-	}
-	if sqlText == "" {
-		// No saved SQL statement was found
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-	fmt.Fprintf(w, "%s", sqlText)
-	return
-}
-
-// This function handles requests to save the database execution statement parameters
-func execSave(w http.ResponseWriter, r *http.Request) {
-	// Retrieve user and database name
-	dbOwner, dbName, _, err := com.GetODC(2, r) // 2 = Ignore "/x/execsave/" at the start of the URL
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// SQL statement and name provided by the user
-	bodyData, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err)
-		return
-	}
-	var data SaveSqlRequest
-	err = json.Unmarshal([]byte(bodyData), &data)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err)
-		return
-	}
-
-	decodedStr, err := com.CheckUnicode(data.Sql, false)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err)
-		return
-	}
-
-	err = com.ValidateVisualisationName(data.SqlName)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, err)
-		return
-	}
-
-	// Ensure minimum viable parameters are present
-	if data.SqlName == "" || decodedStr == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// Retrieve session data (if any)
-	var loggedInUser string
-	var u interface{}
-	validSession := false
-	if com.Conf.Environment.Environment == "production" {
-		sess, err := store.Get(r, "dbhub-user")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		u = sess.Values["UserName"]
-	} else {
-		u = com.Conf.Environment.UserOverride
-	}
-	if u != nil {
-		loggedInUser = u.(string)
-		validSession = true
-	}
-
-	// Ensure we have a valid logged in user
-	if validSession != true {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "You need to be logged in")
-		return
-	}
-
-	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
-		return
-	}
-	if allowed == false {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "%s", "Database not found")
-		return
-	}
-
-	// Ensure this is a live database
-	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, err)
-		return
-	}
-	if !isLive {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Saving SQL statements is only supported for Live databases")
-		return
-	}
-
-	// Save the SQL statement
-	err = com.LiveExecuteSQLSave(dbOwner, data.SqlName, decodedStr)
-	if err != nil {
-		log.Printf("Error occurred when saving SQL statement '%s' for' '%s/%s': %s",
-			com.SanitiseLogString(data.SqlName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	// Save succeeded
-	w.WriteHeader(http.StatusOK)
 }
