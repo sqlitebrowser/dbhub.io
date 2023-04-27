@@ -2812,7 +2812,6 @@ func LiveUserDBs(dbOwner string, public AccessType) (list []DBInfo, err error) {
 	}
 	dbQuery += " ORDER BY date_created DESC"
 
-
 	rows, err := pdb.Query(dbQuery, dbOwner)
 	if err != nil {
 		log.Printf("Database query failed: %v", err)
@@ -2823,8 +2822,8 @@ func LiveUserDBs(dbOwner string, public AccessType) (list []DBInfo, err error) {
 		var oneRow DBInfo
 		var liveNode string
 		err = rows.Scan(&oneRow.Database, &oneRow.DateCreated, &oneRow.RepoModified, &oneRow.Public, &oneRow.IsLive, &liveNode,
-				&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.Contributors,
-				&oneRow.OneLineDesc, &oneRow.SourceURL, &oneRow.Downloads, &oneRow.Views)
+			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.Contributors,
+			&oneRow.OneLineDesc, &oneRow.SourceURL, &oneRow.Downloads, &oneRow.Views)
 		if err != nil {
 			log.Printf("Error when retrieving list of live databases for user '%s': %v", dbOwner, err)
 			return nil, err
