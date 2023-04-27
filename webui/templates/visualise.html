@@ -441,6 +441,7 @@
         // Change to a newly selected visualisation
         // Note, the 'execNewVis' parameter controls whether to execute and display the visualisation after loading it
         $scope.changeVis = function(newVis, execNewVis) {
+
             // Clear out any existing table data and chart
             $scope.showVis = false;
             $scope.clearData();
@@ -454,7 +455,10 @@
                     }
 
                     // Apply the retrieved information
-                    document.getElementById("savename").value = newVis;
+                    let saveTxt = document.getElementById("savename");
+                    if (saveTxt) {
+                        saveTxt.value = newVis;
+                    }
                     $scope.visName = newVis;
 
                     // We include '.textContent' here now because Cypress (v12.3.0) *refuses* to return the correct

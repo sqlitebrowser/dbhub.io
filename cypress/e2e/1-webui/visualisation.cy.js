@@ -358,4 +358,51 @@ describe('visualisation', () => {
     cy.get('[data-cy="nameinput"').should('exist')
     cy.get('[data-cy="delvisbtn"').should('exist')
   })
+
+  // Ensure a logged-out user can still change visualisations
+  it('Ensure a logged-out user can still change visualisations', () => {
+    // Switch to the default user
+    cy.request('/x/test/switchdefault')
+
+    // Load a public database
+    cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
+
+    // Delete the "default" visualisation
+    cy.get('[data-cy="visdropdown"]').click()
+    cy.get('[data-cy="vis-default"]').click()
+    cy.get('[data-cy="delvisbtn"]').click()
+
+    // Create a second visualisation
+    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
+        'SELECT Constituency_Name, Constituency_Number\n' +
+        'FROM Constituency_Turnout_Information\n' +
+        'ORDER BY Constituency_Name ASC\n' +
+        'LIMIT 5')
+    cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('test2 ASC')
+    cy.get('[data-cy="savebtn"]').click()
+
+    // Log out
+    cy.request('/x/test/logout')
+
+    // Load the database again
+    cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
+
+    // Ensure the visualisation drop down works ok
+    cy.get('[data-cy="visdropdown"]').click()
+    cy.get('[data-cy="vis-test2 ASC"]').click()
+    cy.get('[data-cy="usersqltext"]').should('contain.text', 'SELECT Constituency_Name, Constituency_Number\n' +
+        'FROM Constituency_Turnout_Information\n' +
+        'ORDER BY Constituency_Name ASC\n' +
+        'LIMIT 5')
+    cy.get('[data-cy="visdropdown"]').click()
+    cy.get('[data-cy="vis-test1"]').click()
+    cy.get('[data-cy="usersqltext"]').should('contain.text', 'SELECT Constituency_Name, Constituency_Number, Turnout_pct\n' +
+        'FROM Constituency_Turnout_Information\n' +
+        'ORDER BY Constituency_Name DESC\n' +
+        'LIMIT 10')
+
+    // Switch back to the default user
+    cy.request('/x/test/switchdefault')
+  })
 })
