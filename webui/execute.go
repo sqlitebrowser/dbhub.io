@@ -87,6 +87,43 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// execClearHistory deletes all items in the user's SQL history
+func execClearHistory(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	var loggedInUser string
+	var u interface{}
+	var err error
+	if com.Conf.Environment.Environment == "production" {
+		sess, err := store.Get(r, "dbhub-user")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		u = sess.Values["UserName"]
+	} else {
+		u = com.Conf.Environment.UserOverride
+	}
+	if u != nil {
+		loggedInUser = u.(string)
+	}
+
+	// Retrieve user and database info
+	dbOwner, dbName, _, err := com.GetODC(2, r) // 2 = Ignore "/x/execlivesql/" at the start of the URL
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	// Delete items
+	err = com.LiveSqlHistoryDeleteOld(loggedInUser, dbOwner, dbName, 0)	// 0 means "keep 0 items"
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err)
+		return
+	}
+}
+
 // execLiveSQL executes a user provided SQLite statement on a database.
 func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)

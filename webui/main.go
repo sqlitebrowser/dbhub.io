@@ -3226,6 +3226,7 @@ func main() {
 	http.Handle("/x/diffcommitlist/", gz.GzipHandler(logReq(diffCommitListHandler)))
 	http.Handle("/x/download/", gz.GzipHandler(logReq(downloadHandler)))
 	http.Handle("/x/downloadcsv/", gz.GzipHandler(logReq(downloadCSVHandler)))
+	http.Handle("/x/execclearhistory/", gz.GzipHandler(logReq(execClearHistory)))
 	http.Handle("/x/execlivesql/", gz.GzipHandler(logReq(execLiveSQL)))
 	http.Handle("/x/execsql/", gz.GzipHandler(logReq(visExecuteSQL)))
 	http.Handle("/x/forkdb/", gz.GzipHandler(logReq(forkDBHandler)))

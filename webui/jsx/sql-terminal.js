@@ -172,6 +172,20 @@ export default function SqlTerminal() {
 		}
 	}
 
+	// Clears the SQL history
+	function clearHistory() {
+		fetch("/x/execclearhistory/" + meta.owner + "/" + meta.database, {
+			method: "post",
+		}).then(response => {
+			if (!response.ok) {
+				return Promise.reject(response);
+			}
+
+			setRecentCommands([]);
+		}).catch(error => {
+		});
+	}
+
 	// This effect makes sure we scroll to the bottom of the command history whenever a new entry is added
 	const performScrolldown = React.useRef(false);
 	React.useEffect(() => {
@@ -224,6 +238,8 @@ export default function SqlTerminal() {
 							<li><a href="#" onClick={() => setExecuteOnEnter(!executeOnEnter)}><input type="checkbox" checked={executeOnEnter ? "checked" : null} /> Execute on Enter</a></li>
 							<li role="separator" className="divider"></li>
 							<li><a href="#" onClick={() => formatSql()} data-cy="formatbtn">Format SQL</a></li>
+							<li role="separator" className="divider"></li>
+							<li><a href="#" onClick={() => clearHistory()} data-cy="clearhistorybtn">Clear history</a></li>
 						</ul>
 					</div>
 				</div>
