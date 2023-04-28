@@ -40,7 +40,7 @@ function SqlTerminalCommandOutput({state, data}) {
 	if (state === "loading") {
 		output = <span className="text-muted">loading...</span>;
 	} else if (state === "error") {
-		output = <span className="text-danger"><strong>error: </strong>{data}</span>;
+		output = <span className="text-danger"><strong>error: </strong>{data.error}</span>;
 	} else if (state === "executed") {
 		output = <span className="text-info"><strong>done: </strong>{data.rows_changed + " row" + (data.rows_changed === 1 ? "" : "s") + " changed"}</span>;
 	} else if (state === "queried") {
@@ -102,7 +102,7 @@ function SqlTerminalCommand({command}) {
 			.catch(error => {
 				error.text().then(text => {
 					setState("error");
-					setOutput(text);
+					setOutput({error: text});
 				});
 			});
 		}
@@ -118,7 +118,7 @@ function SqlTerminalCommand({command}) {
 
 export default function SqlTerminal() {
 	const [code, setCode] = React.useState("");
-	const [recentCommands, setRecentCommands] = React.useState([]);
+	const [recentCommands, setRecentCommands] = React.useState(historyData === null ? [] : historyData);
 	const [executeOnEnter, setExecuteOnEnter] = React.useState(false);
 	const [isDragging, setDragging] = React.useState(false);		// We use this to distinguish simple clicks on the component from drag & drop movements. The latter are ignored to not interfere with selecting text for copy & paste.
 
@@ -217,7 +217,7 @@ export default function SqlTerminal() {
 							minHeight: "42px",
 						}}
 					/>
-					<div className="input-group-btn dropup">
+					<div className={recentCommands.length > 0 ? "input-group-btn dropup" : "input-group-btn"}>
 						<button type="button" className="btn btn-primary" disabled={code.trim() === "" ? "disabled" : null} onClick={() => execute()} data-cy="executebtn"><i className="fa fa-play" /> Execute</button>
 						<button type="button" className="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-cy="dropdownbtn"><span className="caret"></span></button>
 						<ul className="dropdown-menu dropdown-menu-right">

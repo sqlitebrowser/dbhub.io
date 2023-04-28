@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version 15.2
--- Dumped by pg_dump version 15.2 (Ubuntu 15.2-1.pgdg20.04+1)
+-- Dumped by pg_dump version 15.2
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -426,6 +426,46 @@ ALTER SEQUENCE public.events_event_id_seq OWNED BY public.events.event_id;
 
 
 --
+-- Name: sql_terminal_history; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sql_terminal_history (
+    history_id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    db_id bigint NOT NULL,
+    sql_stmt text,
+    result jsonb,
+    state text NOT NULL
+);
+
+
+--
+-- Name: TABLE sql_terminal_history; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sql_terminal_history IS 'This table holds the history of executed SQL statements for a user and database';
+
+
+--
+-- Name: sql_terminal_history_history_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sql_terminal_history_history_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sql_terminal_history_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.sql_terminal_history_history_id_seq OWNED BY public.sql_terminal_history.history_id;
+
+
+--
 -- Name: sqlite_databases; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -667,6 +707,13 @@ ALTER TABLE ONLY public.email_queue ALTER COLUMN email_id SET DEFAULT nextval('p
 --
 
 ALTER TABLE ONLY public.events ALTER COLUMN event_id SET DEFAULT nextval('public.events_event_id_seq'::regclass);
+
+
+--
+-- Name: sql_terminal_history history_id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sql_terminal_history ALTER COLUMN history_id SET DEFAULT nextval('public.sql_terminal_history_history_id_seq'::regclass);
 
 
 --
@@ -957,6 +1004,13 @@ CREATE INDEX fki_discussions_source_db_id_fkey ON public.discussions USING btree
 
 
 --
+-- Name: sql_terminal_history_user_id_db_id_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sql_terminal_history_user_id_db_id_index ON public.sql_terminal_history USING btree (user_id, db_id);
+
+
+--
 -- Name: users_lower_user_name_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1133,6 +1187,22 @@ ALTER TABLE ONLY public.discussions
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_db_id_fkey FOREIGN KEY (db_id) REFERENCES public.sqlite_databases(db_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: sql_terminal_history sql_terminal_history_sqlite_databases_db_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sql_terminal_history
+    ADD CONSTRAINT sql_terminal_history_sqlite_databases_db_id_fk FOREIGN KEY (db_id) REFERENCES public.sqlite_databases(db_id) ON DELETE CASCADE;
+
+
+--
+-- Name: sql_terminal_history sql_terminal_history_users_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sql_terminal_history
+    ADD CONSTRAINT sql_terminal_history_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id);
 
 
 --

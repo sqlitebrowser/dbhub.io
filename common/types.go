@@ -379,6 +379,20 @@ type ShareDatabasePermissionsUser struct {
 	Permission ShareDatabasePermissions `json:"permission"`
 }
 
+type SqlHistoryItemStates string
+
+const (
+	Executed SqlHistoryItemStates = "executed"
+	Queried  SqlHistoryItemStates = "queried"
+	Error    SqlHistoryItemStates = "error"
+)
+
+type SqlHistoryItem struct {
+	Statement string               `json:"input"`
+	Result    interface{}          `json:"output"`
+	State     SqlHistoryItemStates `json:"state"`
+}
+
 type SQLiteDBinfo struct {
 	Info     DBInfo
 	MaxRows  int

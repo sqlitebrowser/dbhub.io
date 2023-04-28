@@ -15,6 +15,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		DB           com.SQLiteDBinfo
 		PageMeta     PageMetaInfo
+		SqlHistory   []com.SqlHistoryItem
 	}
 
 	// Get all meta information
@@ -62,6 +63,13 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 
 	// Ask the AMQP backend for the database file size
 	pageData.DB.Info.DBEntry.Size, err = com.LiveSize(liveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Get SQL history
+	pageData.SqlHistory, err = com.LiveSqlHistoryGet(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -155,6 +163,18 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// In case of an error in the statement, save it in the terminal history as well.
+	// This should not be registered too early because we do not want to save it when
+	// there are validation or permission errors.
+	var logError = func(e error) {
+		// Store statement in sql terminal history
+		err = com.LiveSqlHistoryAdd(loggedInUser, dbOwner, dbName, sql, com.Error, map[string]interface{}{"error": e.Error()})
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err)
+		}
+	}
+
 	// Send the SQL execution request to our AMQP backend
 	var z interface{}
 	rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
@@ -163,6 +183,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err)
+			logError(err)
 			return
 		}
 
@@ -171,11 +192,26 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err.Error())
+			logError(err)
 			return
+		}
+
+		// Store statement in sql terminal history
+		err = com.LiveSqlHistoryAdd(loggedInUser, dbOwner, dbName, sql, com.Queried, z)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err)
 		}
 	} else {
 		// The SQL statement execution succeeded, so pass along the # of rows changed
 		z = com.ExecuteResponseContainer{RowsChanged: rowsChanged, Status: "OK"}
+
+		// Store statement in sql terminal history
+		err = com.LiveSqlHistoryAdd(loggedInUser, dbOwner, dbName, sql, com.Executed, z)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err)
+		}
 	}
 
 	// Return the success message
@@ -184,8 +220,10 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
+		logError(err)
 		return
 	}
 	fmt.Fprintf(w, "%s", jsonData)
+
 	return
 }
