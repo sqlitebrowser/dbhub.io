@@ -217,7 +217,6 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
 	if err != nil {
 		if !strings.HasPrefix(err.Error(), "don't use exec with") {
-			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err)
 			logError(err)
@@ -261,6 +260,4 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, "%s", jsonData)
-
-	return
 }
