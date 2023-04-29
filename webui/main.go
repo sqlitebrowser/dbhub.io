@@ -3104,24 +3104,24 @@ func main() {
 	// Read server configuration
 	var err error
 	if err = com.ReadConfig(); err != nil {
-		log.Fatalf("Configuration file problem\n\n%v", err)
+		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
 	// Set the temp dir environment variable
 	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
 	if err != nil {
-		log.Fatalf("Setting temp directory environment variable failed: '%s'\n", err.Error())
+		log.Fatalf("Setting temp directory environment variable failed: '%s'", err)
 	}
 
 	// Ensure the SQLite library is recent enough
 	if com.SQLiteVersionNumber() < 3031000 {
-		log.Fatalf("Aborting.  SQLite version is too old: %v, needs to be at least SQLite 3.31.0.\n ", sqlite.Version())
+		log.Fatalf("Aborting.  SQLite version is too old: %s, needs to be at least SQLite 3.31.0.", sqlite.Version())
 	}
 
 	// Open the request log for writing
 	reqLog, err = os.OpenFile(com.Conf.Web.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
 	if err != nil {
-		log.Fatalf("Error when opening request log: %s\n", err)
+		log.Fatalf("Error when opening request log: %s", err)
 	}
 	defer reqLog.Close()
 	log.Printf("Request log opened: %s", com.Conf.Web.RequestLog)
@@ -3133,25 +3133,25 @@ func main() {
 	// Connect to Minio server
 	err = com.ConnectMinio()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Connect to PostgreSQL server
 	err = com.ConnectPostgreSQL()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Add the default user to the system
 	err = com.AddDefaultUser()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Add the default licences to PostgreSQL
 	err = com.AddDefaultLicences()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Connect to MQ server
@@ -3164,7 +3164,7 @@ func main() {
 	// Connect to the Memcached server
 	err = com.ConnectCache()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Setup session storage

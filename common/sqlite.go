@@ -332,7 +332,7 @@ var SQLiteFunctions = []function{
 func init() {
 	// Enable the collection of memory allocation statistics
 	if err := sqlite.ConfigMemStatus(true); err != nil {
-		log.Fatalf("Cannot enable memory allocation statistics: '%s'\n", err)
+		log.Fatalf("Cannot enable memory allocation statistics: '%s'", err)
 	}
 }
 

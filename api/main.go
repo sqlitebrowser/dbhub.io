@@ -43,7 +43,7 @@ func main() {
 	// Read server configuration
 	var err error
 	if err = com.ReadConfig(); err != nil {
-		log.Fatalf("Configuration file problem\n\n%v", err)
+		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
 	// Open the request log for writing
@@ -61,13 +61,13 @@ func main() {
 	// Connect to Minio server
 	err = com.ConnectMinio()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Connect to PostgreSQL server
 	err = com.ConnectPostgreSQL()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Connect to MQ server
@@ -80,32 +80,30 @@ func main() {
 	// Connect to the Memcached server
 	err = com.ConnectCache()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Add the default user to the system
 	err = com.AddDefaultUser()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Add the default licences to the system
 	err = com.AddDefaultLicences()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
 	certFile, err := os.ReadFile(com.Conf.DB4S.CAChain)
 	if err != nil {
-		log.Printf("Error opening Certificate Authority chain file: %v", err)
-		return
+		log.Fatalf("Error opening Certificate Authority chain file: '%s'", err)
 	}
 	ok := ourCAPool.AppendCertsFromPEM(certFile)
 	if !ok {
-		log.Println("Error appending certificate file")
-		return
+		log.Fatal("Error appending certificate file")
 	}
 
 	// Our pages

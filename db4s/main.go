@@ -35,56 +35,54 @@ func main() {
 	// Read server configuration
 	var err error
 	if err = com.ReadConfig(); err != nil {
-		log.Fatalf("Configuration file problem\n\n%v", err)
+		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
 	// Set the temp dir environment variable
 	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
 	if err != nil {
-		log.Fatalf("Setting temp directory environment variable failed: '%s'\n", err.Error())
+		log.Fatalf("Setting temp directory environment variable failed: '%s'", err)
 	}
 
 	// Connect to Minio server
 	err = com.ConnectMinio()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Connect to PostgreSQL server
 	err = com.ConnectPostgreSQL()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Connect to the Memcached server
 	err = com.ConnectCache()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Add the default user to the system
 	err = com.AddDefaultUser()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Add the default licences to PostgreSQL
 	err = com.AddDefaultLicences()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
 	certFile, err := os.ReadFile(com.Conf.DB4S.CAChain)
 	if err != nil {
-		fmt.Printf("Error opening Certificate Authority chain file: %v\n", err)
-		return
+		log.Fatalf("Error opening Certificate Authority chain file: '%s'", err)
 	}
 	ok := ourCAPool.AppendCertsFromPEM(certFile)
 	if !ok {
-		fmt.Println("Error appending certificate file")
-		return
+		log.Fatal("Error appending certificate file")
 	}
 
 	// URL handler

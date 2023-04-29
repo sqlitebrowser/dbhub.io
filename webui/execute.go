@@ -13,9 +13,9 @@ import (
 
 func executePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		DB           com.SQLiteDBinfo
-		PageMeta     PageMetaInfo
-		SqlHistory   []com.SqlHistoryItem
+		DB         com.SQLiteDBinfo
+		PageMeta   PageMetaInfo
+		SqlHistory []com.SqlHistoryItem
 	}
 
 	// Get all meta information
@@ -116,7 +116,7 @@ func execClearHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete items
-	err = com.LiveSqlHistoryDeleteOld(loggedInUser, dbOwner, dbName, 0)	// 0 means "keep 0 items"
+	err = com.LiveSqlHistoryDeleteOld(loggedInUser, dbOwner, dbName, 0) // 0 means "keep 0 items"
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)

@@ -3208,13 +3208,13 @@ func ResetDB() error {
 	// Add the default user to the system
 	err = AddDefaultUser()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Add the default licences
 	err = AddDefaultLicences()
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	// Commit the transaction

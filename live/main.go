@@ -23,7 +23,7 @@ func main() {
 	// Read server configuration
 	err := com.ReadConfig()
 	if err != nil {
-		log.Fatalf("Configuration file problem\n\n%v", err)
+		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
 	// If node name and base directory were provided on the command line, then override the config file values

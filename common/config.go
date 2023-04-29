@@ -31,14 +31,15 @@ func ReadConfig() error {
 		//       world readable.  Similar in concept to what ssh does for its config files.
 		userHome, err := homedir.Dir()
 		if err != nil {
-			log.Fatalf("User home directory couldn't be determined: %s", "\n")
+			log.Printf("User home directory couldn't be determined: '%s'", err)
+			return err
 		}
 		configFile = filepath.Join(userHome, ".dbhub", "config.toml")
 	}
 
 	// Reads the server configuration from disk
 	if _, err := toml.DecodeFile(configFile, &Conf); err != nil {
-		return fmt.Errorf("Config file couldn't be parsed: %v\n", err)
+		return fmt.Errorf("Config file couldn't be parsed: %s", err)
 	}
 
 	// Override config file via environment variables
@@ -58,7 +59,7 @@ func ReadConfig() error {
 	if tempString != "" {
 		Conf.Minio.HTTPS, err = strconv.ParseBool(tempString)
 		if err != nil {
-			return fmt.Errorf("Failed to parse MINIO_HTTPS: %v\n", err)
+			return fmt.Errorf("Failed to parse MINIO_HTTPS: %s", err)
 		}
 	}
 	tempString = os.Getenv("PG_SERVER")
@@ -69,7 +70,7 @@ func ReadConfig() error {
 	if tempString != "" {
 		tempInt, err := strconv.ParseInt(tempString, 10, 0)
 		if err != nil {
-			return fmt.Errorf("Failed to parse PG_PORT: %v\n", err)
+			return fmt.Errorf("Failed to parse PG_PORT: %s", err)
 		}
 		Conf.Pg.Port = int(tempInt)
 	}
