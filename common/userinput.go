@@ -340,14 +340,6 @@ func GetOD(ignoreLeading int, r *http.Request) (dbOwner string, dbName string, e
 	// Validate the user supplied owner and database name
 	err = ValidateUserDB(dbOwner, dbName)
 	if err != nil {
-		// Don't bother logging the fairly common case of a bot using an AngularJS phrase in a request
-		if (dbOwner == "{{ meta.Owner + '" && dbName == "' + row.Database }}") ||
-			(dbOwner == "{{ row.owner + '" && dbName == "' + row.dbname }}") {
-			return "", "", errors.New("Invalid owner or database name")
-		}
-
-		log.Printf("Validation failed for owner or database name. Owner '%s', DB name '%s': %s",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return "", "", errors.New("Invalid owner or database name")
 	}
 
