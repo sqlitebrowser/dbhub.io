@@ -164,7 +164,7 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 							Download database <span className="caret"></span>
 						</button>
 						<ul className="dropdown-menu">
-							<li><a href={"/x/download/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID} data-cy="dldb">Entire database ({Math.round(meta.size / 1024).toLocaleString()} KB)</a></li>
+							<li><a href={"/x/download/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID} data-cy="dldb">Entire database</a></li>
 							{meta.size <= 100000000  && meta.isLive === false ? <li><a href={"/x/downloadcsv/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&table=" + table} data-cy="dlcsv">Selected table as CSV</a></li> : null}
 						</ul>
 					</div>
