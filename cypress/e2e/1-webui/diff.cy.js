@@ -19,7 +19,7 @@ describe('diff databases', () => {
 
   // Diff between two databases with just a simple schema change (view creation)
   it('schema change only diff', () => {
-    cy.visit('https://localhost:9443/branches/default/Assembly%20Election%202017.sqlite')
+    cy.visit('/branches/default/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="comparebtn"]').click()
     cy.get('[data-cy="objname"]').should('have.text', 'Candidate_Names')
     cy.get('[data-cy="objtype"]').should('have.text', 'view')
