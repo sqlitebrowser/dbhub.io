@@ -1,5 +1,8 @@
 import path from "path";
 
+// Sometimes we need a delay between making a change, and testing it, otherwise the AngularJS changes are missed
+let waitTime = 250;
+
 describe('database page', () => {
   before(() => {
     // Seed data
@@ -176,7 +179,7 @@ describe('database page', () => {
 
   // Download database button (selected table as csv)
   it('Download database - selected table as csv', () => {
-    // Open the drop down, unhiding the element we want to trigger
+    // Open the drop-down, unhiding the element we want to trigger
     cy.get('[data-cy="dldropdown"]').click()
 
     // Setup the dodgy page reload to workaround Cypress issue #14857
@@ -208,6 +211,7 @@ describe('database page', () => {
   // Click on column header (sort ascending)
   it('Click on column header - 1st time', () => {
     cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
+    cy.wait(waitTime)
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '27')
   })
 
@@ -215,6 +219,7 @@ describe('database page', () => {
   it('Click on column header - 2nd time', () => {
     cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
     cy.get('.rdg-header-row').find('span').contains('Candidate_First_Pref_Votes').click()
+    cy.wait(waitTime)
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '10258')
   })
 
@@ -225,6 +230,7 @@ describe('database page', () => {
 
     // Click the button we're testing
     cy.get('[data-cy="pgdnbtn"]').first().click()
+    cy.wait(waitTime)
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '85')
   })
 
@@ -235,6 +241,7 @@ describe('database page', () => {
 
     // Click the button we're testing
     cy.get('[data-cy="lastpgbtn"]').first().click()
+    cy.wait(waitTime)
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '8881')
   })
 
@@ -246,6 +253,7 @@ describe('database page', () => {
     // Click the button we're testing
     cy.get('[data-cy="lastpgbtn"]').first().click()
     cy.get('[data-cy="pgupbtn"]').first().click()
+    cy.wait(waitTime)
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '7786')
   })
 
@@ -257,6 +265,7 @@ describe('database page', () => {
     // Click the button we're testing
     cy.get('[data-cy="lastpgbtn"]').first().click()
     cy.get('[data-cy="firstpgbtn"]').first().click()
+    cy.wait(waitTime)
     cy.get('.rdg-row').first().find('.rdg-cell').first().should('contain', '27')
   })
 

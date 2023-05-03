@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -18,7 +18,7 @@ var (
 	Conf TomlConfig
 
 	// PostgreSQL configuration info
-	pgConfig = new(pgx.ConnConfig)
+	pgConfig *pgxpool.Config
 )
 
 // ReadConfig reads the server configuration file.
@@ -172,12 +172,9 @@ func ReadConfig() error {
 		}
 	}
 
+
 	// Set the PostgreSQL configuration values
-	pgConfig.Host = Conf.Pg.Server
-	pgConfig.Port = uint16(Conf.Pg.Port)
-	pgConfig.User = Conf.Pg.Username
-	pgConfig.Password = Conf.Pg.Password
-	pgConfig.Database = Conf.Pg.Database
+	pgConfig, err = pgxpool.ParseConfig(fmt.Sprintf("host=%s port=%d user= %s password = %s dbname=%s pool_max_conns=%d connect_timeout=10", Conf.Pg.Server, uint16(Conf.Pg.Port), Conf.Pg.Username, Conf.Pg.Password, Conf.Pg.Database, Conf.Pg.NumConnections))
 	clientTLSConfig := tls.Config{}
 	if Conf.Environment.Environment == "production" {
 		clientTLSConfig.ServerName = Conf.Pg.Server
@@ -186,12 +183,10 @@ func ReadConfig() error {
 		clientTLSConfig.InsecureSkipVerify = true
 	}
 	if Conf.Pg.SSL {
-		pgConfig.TLSConfig = &clientTLSConfig
+		pgConfig.ConnConfig.TLSConfig = &clientTLSConfig
 	} else {
-		pgConfig.TLSConfig = nil
+		pgConfig.ConnConfig.TLSConfig = nil
 	}
-
-	// TODO: Add environment variable overrides for memcached
 
 	// Environment variable override for non-production logged-in user
 	tempString = os.Getenv("DBHUB_USERNAME")

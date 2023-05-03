@@ -55,7 +55,7 @@ username = "guest"
 
 [pg]
 database = "dbhub"
-num_connections = 45
+num_connections = 5
 port = 5432
 server = "localhost"
 ssl = false
