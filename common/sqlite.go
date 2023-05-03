@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	sqlite "github.com/gwenn/gosqlite"
@@ -1606,8 +1607,13 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	var memUsed, memHighWater int64
 	memUsed, memHighWater, dataRows, err = SQLiteRunQuery(sdb, querySource, query, false, false)
 	if err != nil {
-		log.Printf("Error when running query by '%s' for database (%s/%s): '%s'", SanitiseLogString(loggedInUser),
-			SanitiseLogString(dbOwner), SanitiseLogString(dbName), SanitiseLogString(err.Error()))
+		e := err.Error()
+		if strings.HasPrefix(e, "not authorized") {
+			err = errors.New("SQL that modifies a database can only be used on Live databases")
+		} else {
+			log.Printf("Error when running query by '%s' for database (%s/%s): '%s'", SanitiseLogString(loggedInUser),
+				SanitiseLogString(dbOwner), SanitiseLogString(dbName), SanitiseLogString(e))
+		}
 		return SQLiteRecordSet{}, err
 	}
 
