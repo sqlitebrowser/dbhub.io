@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -436,6 +437,14 @@ func removeLiveDB(dbOwner, dbName string) (err error) {
 	dbDir := filepath.Join(com.Conf.Live.StorageDir, dbOwner, dbName)
 	dbPath := filepath.Join(dbDir, "live.sqlite")
 	if _, err = os.Stat(dbPath); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			if com.AmqpDebug > 0 {
+				log.Printf("Live node '%s': Database file '%s/%s' was requested to be deletet, but was missing " +
+					"from filesystem path: '%s'", com.Conf.Live.Nodename, dbOwner, dbName, dbPath)
+			}
+			return
+		}
+
 		// Something wrong with the database file
 		log.Println(err)
 		return
