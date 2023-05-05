@@ -28,3 +28,9 @@
 .sql-terminal-input {
 	padding-right: 1em;
 }
+
+.sql-terminal-input-prompt {
+	display: table-cell;
+	width: 1%;
+	font-family: "monospace";
+}

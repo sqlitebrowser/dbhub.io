@@ -222,6 +222,7 @@ export default function SqlTerminal() {
 			{recentCommands.map(c => <SqlTerminalCommand command={c} />)}
 			<div className="sql-terminal-input">
 				<div className="input-group" ref={editorRef}>
+					<div className="sql-terminal-input-prompt"><strong className="text-muted">sql>&nbsp;</strong></div>
 					<Editor
 						value={code}
 						onValueChange={text => setCode(text)}
