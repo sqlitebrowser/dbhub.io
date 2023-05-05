@@ -172,7 +172,6 @@ func ReadConfig() error {
 		}
 	}
 
-
 	// Set the PostgreSQL configuration values
 	pgConfig, err = pgxpool.ParseConfig(fmt.Sprintf("host=%s port=%d user= %s password = %s dbname=%s pool_max_conns=%d connect_timeout=10", Conf.Pg.Server, uint16(Conf.Pg.Port), Conf.Pg.Username, Conf.Pg.Password, Conf.Pg.Database, Conf.Pg.NumConnections))
 	clientTLSConfig := tls.Config{}

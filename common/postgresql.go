@@ -490,8 +490,19 @@ func ConnectPostgreSQL() (err error) {
 		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v", err)
 	}
 
-	// Apply any outstanding database migrations
-	m, err := migrate.New(fmt.Sprintf("file://%s/database/migrations", Conf.Web.BaseDir), "pgx5://dbhub@localhost:5432/dbhub")
+	// migrate doesn't handle pgx connection strings, so we need to manually create something it can use
+	var mConnStr string
+	if Conf.Environment.Environment == "production" {
+		mConnStr = fmt.Sprintf("pgx5://%s@%s:%d/%s?password=%s&connect_timeout=10", Conf.Pg.Username, Conf.Pg.Server,
+			uint16(Conf.Pg.Port), Conf.Pg.Database, url.PathEscape(Conf.Pg.Password))
+	} else {
+		// Non-production, so probably our Docker test container
+		mConnStr = "pgx5://dbhub@localhost:5432/dbhub"
+	}
+	if Conf.Pg.SSL {
+		mConnStr += "&sslmode=require"
+	}
+	m, err := migrate.New(fmt.Sprintf("file://%s/database/migrations", Conf.Web.BaseDir), mConnStr)
 	if err != nil {
 		return
 	}
