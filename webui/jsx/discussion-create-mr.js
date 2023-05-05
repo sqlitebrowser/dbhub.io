@@ -181,31 +181,31 @@ export default function DiscussionCreateMr() {
 		) : null}
 		<form>
 			<div className="form-group">
-				<label for="title">Title</label>
+				<label htmlFor="title">Title</label>
 				<input type="text" className="form-control" id="title" placeholder="Please fill in a title for the new merge request" maxlength={80} value={title} onChange={e => setTitle(e.target.value)} required />
 			</div>
 			<div className="form-group">
-				<label for="sourcedb">Source database</label>
+				<label htmlFor="sourcedb">Source database</label>
 				<Select name="sourcedb" required={true} labelField="name" valueField="name" onChange={(values) => changeDb("source", values[0])} options={dbListData} values={[{name: sourceDbOwner + "/" + sourceDbName}]} />
 				<p className="help-block">Where the new data is coming from</p>
 			</div>
 			<div className="form-group">
-				<label for="sourcebranch">Source branch</label>
+				<label htmlFor="sourcebranch">Source branch</label>
 				<Select name="sourcebranch" required={true} labelField="name" valueField="name" onChange={(values) => setSourceBranch(values[0].name)} options={sourceBranchListData} values={[{name: sourceBranch}]} />
 				<p className="help-block">The branch in the source database to use</p>
 			</div>
 			<div className="form-group">
-				<label for="destdb">Destination database</label>
+				<label htmlFor="destdb">Destination database</label>
 				<Select name="destdb" required={true} labelField="name" valueField="name" onChange={(values) => changeDb("dest", values[0])} options={dbListData} values={[{name: destDbOwner + "/" + destDbName}]} />
 				<p className="help-block">Where you'd like the data merged into</p>
 			</div>
 			<div className="form-group">
-				<label for="destbranch">Destination branch</label>
+				<label htmlFor="destbranch">Destination branch</label>
 				<Select name="destbranch" required={true} labelField="name" valueField="name" onChange={(values) => setDestBranch(values[0].name)} options={destBranchListData} values={[{name: destBranch}]} />
 				<p className="help-block">The target branch in the destination database</p>
 			</div>
 			<div className="form-group">
-				<label for="desc">Description</label>
+				<label htmlFor="desc">Description</label>
 				<MarkdownEditor editorId="desc" rows={10} placeholder="Please add a summary for this merge request, describing what the new or changed data is for" />
 				<p className="help-block">The purpose of this merge request</p>
 			</div>

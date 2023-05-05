@@ -89,11 +89,11 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 	return (<>
 		<tr>
 			<td style={{borderStyle: "none"}}>
-				{authInfo.loggedInUser === meta.owner ? <button class="btn btn-primary" onClick={() => {return updateBranch()}} data-cy="savebtn">Save Changes</button> : null}
+				{authInfo.loggedInUser === meta.owner ? <button className="btn btn-primary" onClick={() => {return updateBranch()}} data-cy="savebtn">Save Changes</button> : null}
 			</td>
 			<td style={{borderStyle: "none"}}>
 				<div>
-					{authInfo.loggedInUser === meta.owner && name !== defaultBranch ? <button class="btn btn-primary" onClick={() => {return setDefaultBranch()}} data-cy="setdefaultbtn">Set Default</button> : null }
+					{authInfo.loggedInUser === meta.owner && name !== defaultBranch ? <button className="btn btn-primary" onClick={() => {return setDefaultBranch()}} data-cy="setdefaultbtn">Set Default</button> : null }
 					{name === defaultBranch ? <i>Default branch</i> : null}
 				</div>
 			</td>
@@ -102,20 +102,20 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 					<input name={name + "_name"} id={name + "_name"} size="20" maxlength="20" value={branchName} data-cy="nameinput" onChange={(e) => setName(e.target.value)} required />
 				:
 					<div style={{paddingTop: "8px"}}>
-						<a class="blackLink" href={"/" + meta.owner + "/" + meta.database + "?branch=" + name}>{name}</a>
+						<a className="blackLink" href={"/" + meta.owner + "/" + meta.database + "?branch=" + name}>{name}</a>
 					</div>
 				}
 			</td>
 			<td style={{borderStyle: "none"}}>
 				<div style={{paddingTop: "8px"}}>
-					<a class="blackLink" href={"/" + meta.owner + "/" + meta.database + "?branch=" + name + "&commit=" + commit} data-cy="commitlnk">{commit}</a>
+					<a className="blackLink" href={"/" + meta.owner + "/" + meta.database + "?branch=" + name + "&commit=" + commit} data-cy="commitlnk">{commit}</a>
 				</div>
 			</td>
 		</tr>
 		<tr>
 			<td style={{borderStyle: "none"}}>
-				{name !== defaultBranch ? <button class="btn btn-default" onClick={() => {return viewChanges()}} data-cy="comparebtn">{"Compare with " + defaultBranch}</button> : null}
-				{authInfo.loggedInUser === meta.owner ? <button class="btn btn-danger" onClick={() => {return deleteBranch()}} data-cy="delbtn">Delete</button> : null}
+				{name !== defaultBranch ? <button className="btn btn-default" onClick={() => {return viewChanges()}} data-cy="comparebtn">{"Compare with " + defaultBranch}</button> : null}
+				{authInfo.loggedInUser === meta.owner ? <button className="btn btn-danger" onClick={() => {return deleteBranch()}} data-cy="delbtn">Delete</button> : null}
 			</td>
 			<td style={{borderStyle: "none", padding: 0}} colSpan={3}>
 				<MarkdownEditor editorId={name + "_desc"} rows={10} placeholder="A description for this branch" defaultIndex={1} initialValue={description} viewOnly={meta.owner !== authInfo.loggedInUser} />
@@ -155,18 +155,18 @@ export default function BranchesTable() {
 	return (
 		<div>
 			{statusMessage !== "" ? (
-				<div class="row">
-					<div class="col-md-12">
+				<div className="row">
+					<div className="col-md-12">
 						<div style={{textAlign: "center", paddingBottom: "8px"}}>
 							<h4 style={{color: statusMessageColour}}>&nbsp;{statusMessage}</h4>
 						</div>
 					</div>
 				</div>
 			) : null}
-			<div class="row">
-				<div class="col-md-12">
+			<div className="row">
+				<div className="col-md-12">
 					<div style={{border: "1px solid #DDD", borderRadius: "7px", marginBottom: "10px", padding: "0"}}>
-						<table id="contents" class="table table-striped table-responsive" style={{margin: "0"}}>
+						<table id="contents" className="table table-striped table-responsive" style={{margin: "0"}}>
 							<thead>
 								<tr>
 									<th colSpan={2}>Actions</th><th>Name</th><th>Head Commit ID</th>

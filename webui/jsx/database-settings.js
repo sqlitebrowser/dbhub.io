@@ -312,19 +312,19 @@ export default function DatabaseSettings() {
 			<input type="hidden" name="username" value={meta.owner} />
 			<input type="hidden" name="dbname" value={meta.database} />
 			<div className="form-group">
-				<label for="newname" className="col-sm-2 control-label">Name</label>
+				<label htmlFor="newname" className="col-sm-2 control-label">Name</label>
 				<div className="col-sm-10">
 					<input id="newname" name="newname" value={name} onChange={(e) => setName(e.target.value)} data-cy="nameinput" className="form-control" required />
 				</div>
 			</div>
 			<div className="form-group">
-				<label for="onelinedesc" className="col-sm-2 control-label">One line description</label>
+				<label htmlFor="onelinedesc" className="col-sm-2 control-label">One line description</label>
 				<div className="col-sm-10">
 					<input id="onelinedesc" name="onelinedesc" value={oneLineDescription} onChange={(e) => setOneLineDescription(e.target.value)} data-cy="onelinedescinput" className="form-control" />
 				</div>
 			</div>
 			<div className="form-group">
-				<label for="public" className="col-sm-2 control-label">Public?</label>
+				<label htmlFor="public" className="col-sm-2 control-label">Public?</label>
 				<div className="col-sm-10">
 					<div className="btn-group" data-toggle="buttons">
 						<label className={"btn btn-default " + (isPublic ? "active" : null)} onClick={() => setPublic(true)} data-cy="public">
@@ -339,7 +339,7 @@ export default function DatabaseSettings() {
 				</div>
 			</div>
 			<div className="form-group">
-				<label for="selectdefaulttable" className="col-sm-2 control-label">Default table or view</label>
+				<label htmlFor="selectdefaulttable" className="col-sm-2 control-label">Default table or view</label>
 				<div className="col-sm-10">
 					<Select name="selectdefaulttable" required={true} labelField="name" valueField="name" onChange={(values) => setDefaultTable(values[0].name)} options={tables} values={[{name: defaultTable}]} backspaceDelete={false} />
 					<input type="hidden" name="defaulttable" value={defaultTable} />
@@ -347,7 +347,7 @@ export default function DatabaseSettings() {
 			</div>
 			{meta.isLive === false ?
 				<div className="form-group">
-					<label for="selectbranch" className="col-sm-2 control-label">Default branch</label>
+					<label htmlFor="selectbranch" className="col-sm-2 control-label">Default branch</label>
 					<div className="col-sm-10">
 						<Select name="selectbranch" required={true} labelField="name" valueField="name" onChange={(values) => switchDefaultBranch(values[0].name)} options={branches} values={[{name: defaultBranch}]} backspaceDelete={false} />
 						<input type="hidden" name="branch" value={defaultBranch} />
@@ -355,7 +355,7 @@ export default function DatabaseSettings() {
 				</div>
 			: null}
 			<div className="form-group">
-				<label for="sourceurl" className="col-sm-2 control-label">Source URL</label>
+				<label htmlFor="sourceurl" className="col-sm-2 control-label">Source URL</label>
 				<div className="col-sm-10">
 					<input id="sourceurl" name="sourceurl" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} data-cy="sourceurl" className="form-control" />
 				</div>
@@ -363,7 +363,7 @@ export default function DatabaseSettings() {
 			{meta.isLive === false ? <LicenceEdit /> : null}
 			<ShareEdit />
 			<div className="form-group">
-				<label for="fulldesc" className="col-sm-2 control-label">Full length description<span className="help-block">Markdown (<a href="https://commonmark.org" target="_blank">CommonMark</a> format) is supported</span></label>
+				<label htmlFor="fulldesc" className="col-sm-2 control-label">Full length description<span className="help-block">Markdown (<a href="https://commonmark.org" target="_blank">CommonMark</a> format) is supported</span></label>
 				<div className="col-sm-10">
 					<MarkdownEditor editorId="fulldesc" rows={18} defaultIndex={1} initialValue={fullDescription} />
 				</div>
