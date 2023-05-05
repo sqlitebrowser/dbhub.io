@@ -3253,9 +3253,8 @@ func main() {
 	http.Handle("/x/updatetag/", gz.GzipHandler(logReq(updateTagHandler)))
 	http.Handle("/x/uploaddata/", gz.GzipHandler(logReq(uploadDataHandler)))
 	http.Handle("/x/visdel/", gz.GzipHandler(logReq(visDel)))
-	http.Handle("/x/visdlresults/", gz.GzipHandler(logReq(visDownloadResults)))
-	http.Handle("/x/visget/", gz.GzipHandler(logReq(visGet)))
 	http.Handle("/x/vissave/", gz.GzipHandler(logReq(visSave)))
+	http.Handle("/x/visrename/", gz.GzipHandler(logReq(visRename)))
 	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
 	// Add routes which are only useful during testing
@@ -3343,14 +3342,6 @@ func main() {
 
 	http.Handle("/js/dbhub.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "dbhub.js"))
-	})))
-
-	http.Handle("/js/plotly-basic-2.18.2.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "plotly-basic-2.18.2.min.js"))
-	})))
-
-	http.Handle("/js/sql-formatter.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "sql-formatter.min.js"))
 	})))
 
 	http.Handle("/js/ui-bootstrap-tpls-2.5.0.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {

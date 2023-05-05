@@ -105,7 +105,7 @@ describe('ensure auth0 dialog is available on all pages', () => {
 
   it('visualise page', () => {
     cy.visit('vis/default/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="usersqltext"]')
+    cy.title().should('include', 'Visualisations')
     cy.get('[data-cy="loginlnk"]').click()
     cy.get('.auth0-lock-name').should('contain.text', 'Auth0')
   })

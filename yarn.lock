@@ -3079,6 +3079,16 @@ pkg-dir@^4.2.0:
   dependencies:
     find-up "^4.0.0"
 
+plotly.js-basic-dist@^2.22.0:
+  version "2.22.0"
+  resolved "https://registry.yarnpkg.com/plotly.js-basic-dist/-/plotly.js-basic-dist-2.22.0.tgz#a15624bfcc7eb0a74e327734890051ef3d72b34c"
+  integrity sha512-aNOXARIJ60OzGpOLi3HEyV1dIZDtNW0iQbwYCNZmKLMzeT5dWWqLVcLq9hGWxS8R0rGmzlcz0YmZCflfQGlckw==
+
+plotly.js-dist@^2.22.0:
+  version "2.22.0"
+  resolved "https://registry.yarnpkg.com/plotly.js-dist/-/plotly.js-dist-2.22.0.tgz#523590d89622371839b4880e9804ee4680778618"
+  integrity sha512-ldb7TzxN8lOqV61wA9P3X5PAcI4h7u2G1WK2cSw1RfcAbheLfFrGO8xMhb+jOoi2/tCGO5vqwHfECIekQ5CEcg==
+
 postcss-modules-extract-imports@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/postcss-modules-extract-imports/-/postcss-modules-extract-imports-3.0.0.tgz#cda1f047c0ae80c97dbe28c3e76a43b88025741d"
@@ -3139,7 +3149,7 @@ prismjs@^1.29.0:
   resolved "https://registry.yarnpkg.com/prismjs/-/prismjs-1.29.0.tgz#f113555a8fa9b57c35e637bba27509dcf802dd12"
   integrity sha512-Kx/1w86q/epKcmte75LNrEoT+lX8pBpavuAbvJWRXar7Hz8jrtF+e3vY751p0R8H9HdArwaCTNDDzHg/ScJK1Q==
 
-prop-types@^15.5.0:
+prop-types@^15.5.0, prop-types@^15.8.1:
   version "15.8.1"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.8.1.tgz#67d87bf1a694f48435cf332c24af10214a3140b5"
   integrity sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==
@@ -3235,6 +3245,13 @@ react-modal-image@^2.6.0:
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/react-modal-image/-/react-modal-image-2.6.0.tgz#24b5963b5a50c029a445d125efb49870738700d5"
   integrity sha512-NNc1xPKzFAn0VsNMdJ8NXt6c54aL/z0fcoYmw9qn4SBUONdGl+8LOQ0sTfo0wtdzcjLiby/ncloHcAL+UI+wIA==
+
+react-plotly.js@^2.6.0:
+  version "2.6.0"
+  resolved "https://registry.yarnpkg.com/react-plotly.js/-/react-plotly.js-2.6.0.tgz#ad6b68ee64f1b5cfa142ee92c59687f9c2c09209"
+  integrity sha512-g93xcyhAVCSt9kV1svqG1clAEdL6k3U+jjuSzfTV7owaSU9Go6Ph8bl25J+jKfKvIGAEYpe4qj++WHJuc9IaeA==
+  dependencies:
+    prop-types "^15.8.1"
 
 react-simple-code-editor@^0.13.1:
   version "0.13.1"

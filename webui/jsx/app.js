@@ -18,6 +18,7 @@ import MarkdownEditor from "./markdown-editor";
 import ProfilePage from "./profile-page";
 import SqlTerminal from "./sql-terminal";
 import UserPage from "./user-page";
+import VisualisationEditor from "./visualisation-editor";
 
 {
 	const rootNode = document.getElementById("db-header-root");
@@ -173,5 +174,13 @@ import UserPage from "./user-page";
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<ProfilePage />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("visualisation-editor");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<VisualisationEditor />);
 	}
 }

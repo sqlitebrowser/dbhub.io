@@ -10,86 +10,44 @@ describe('live visualisation', () => {
   })
 
   // Save a visualisation
-  it('save a visualisation using non-default name', () => {
+  it('save a visualisation', () => {
     cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="newvisbtn"]').click()
     cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type(
+    cy.get('[name="usersql"]').type(
       'SELECT table1.Name, table2.value\n' +
       'FROM table1 JOIN table2\n' +
       'ON table1.id = table2.id\n' +
       'ORDER BY table1.id')
+    cy.get('[data-cy="runsqlbtn"]').click()
+    cy.wait(150) // Needs a bit of a delay here, otherwise any error status message may be missed
+    cy.get('[data-cy="renamebtn"]').click()
     cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('livetest1')
+    cy.get('[data-cy="renameokbtn"]').click()
     cy.get('[data-cy="savebtn"]').click()
-    cy.get('[data-cy="statusmsg"]').should('contain.text', 'Visualisation \'livetest1\' saved')
 
     // Verify the visualisation - it should be automatically selected in the drop down list as it's the only one
     cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="selectedvis"]').should('contain.text', 'livetest1')
-  })
-
-  // Check if 'default' visualisation is still chosen by default even when created after non-default ones
-  it('save a visualisation using default name', () => {
-    cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
-      'SELECT table1.Name, table2.value\n' +
-      'FROM table1 JOIN table2\n' +
-      'USING (id)\n' +
-      'ORDER BY table1.id')
-    cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('default')
-    cy.get('[data-cy="savebtn"]').click()
-    cy.get('[data-cy="statusmsg"]').should('contain.text', 'Visualisation \'default\' saved')
-
-    // Verify the visualisation - it should be automatically selected in the drop down list as it's the default
-    cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="selectedvis"]').should('contain.text', 'default')
-    cy.get('[data-cy="usersqltext"]').should('contain.text',
-      'SELECT table1.Name, table2.value\n' +
-      'FROM table1 JOIN table2\n' +
-      'USING (id)\n' +
-      'ORDER BY table1.id')
-  })
-
-  // Save a visualisation
-  it('save a visualisation with name alphabetically lower than \'default\'', () => {
-    cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
-      'SELECT table1.Name, table2.value\n' +
-      'FROM table1, table2\n' +
-      'WHERE table1.id = table2.id\n' +
-      'ORDER BY table2.value;')
-    cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('abc')
-    cy.get('[data-cy="savebtn"]').click()
-    cy.get('[data-cy="statusmsg"]').should('contain.text', 'Visualisation \'abc\' saved')
-
-    // Check that the visualisation is present, but not automatically selected when the page loads
-    cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="selectedvis"]').should('not.contain.text', 'abc')
+    cy.get('[data-cy="savedvis"]').should('contain.text', 'livetest1')
   })
 
   // Save over an existing visualisation
   it('save over an existing visualisation', () => {
     cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="newvisbtn"]').click()
     cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
+    cy.get('[name="usersql"]').type('{selectall}{backspace}').type(
       'SELECT table1.Name, table2.value\n' +
       'FROM table1, table2\n' +
       'WHERE table1.id = table2.id\n' +
       'ORDER BY table1.id;')
+    cy.get('[data-cy="runsqlbtn"]').click()
+    cy.wait(150) // Needs a bit of a delay here, otherwise any error status message may be missed
+    cy.get('[data-cy="renamebtn"]').click()
     cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('livetest1')
-    cy.get('[data-cy="savebtn"]').click()
-    cy.get('[data-cy="statusmsg"]').should('contain.text', 'Visualisation \'livetest1\' saved')
-
-    // Verify the new visualisation text
-    cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="visdropdown"]').click()
-    cy.get('[data-cy="vis-livetest1"]').click()
-    cy.get('[data-cy="usersqltext"]').should('contain',
-      'SELECT table1.Name, table2.value\n' +
-      'FROM table1, table2\n' +
-      'WHERE table1.id = table2.id\n' +
-      'ORDER BY table1.id;')
+    cy.get('[data-cy="renameokbtn"]').click()
+    cy.wait(200)
+    cy.get('.react-confirm-alert-body').should('contain.text', 'already exists')
   })
 
   // * Chart settings tab *
@@ -98,58 +56,66 @@ describe('live visualisation', () => {
   it('chart type drop down', () => {
     // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="visdropdown"]').click()
-    cy.get('[data-cy="vis-livetest1"]').click()
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Switch to the chart settings tab
-    cy.get('[data-cy="charttab"]').click()
+    cy.get('[data-cy="settingstab"]').click()
 
     // Change the chart type
-    cy.get('[data-cy="chartdropdown"]').click()
-    cy.get('[data-cy="chartpie"]').click()
+    cy.get('[name="charttype"]').parent().click()
+    cy.get('[name="charttype"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('Pie chart').click({force: true})
+    cy.get('[data-cy="savebtn"]').click()
 
     // Verify the change
-    cy.wait(waitTime)
-    cy.get('[data-cy="charttype"]').should('contain', 'Pie chart')
-    cy.get('[data-cy="showxaxis"]').should('not.exist')
+    cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
+    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[name="charttype"]').should('have.value', 'Pie chart')
+    cy.get('[data-cy="xtruetoggle"]').should('not.exist')
 
     // Switch to a different chart type
-    cy.get('[data-cy="chartdropdown"]').click()
-    cy.get('[data-cy="charthbc"]').click()
+    cy.get('[name="charttype"]').parent().click()
+    cy.get('[name="charttype"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('Horizontal bar chart').click({force: true})
+    cy.get('[data-cy="savebtn"]').click()
 
     // Verify the change
-    cy.wait(waitTime)
-    cy.get('[data-cy="charttype"]').should('contain', 'Horizontal bar chart')
-    cy.get('[data-cy="showxaxis"]').should('exist')
+    cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
+    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[name="charttype"]').should('have.value', 'Horizontal bar chart')
+    cy.get('[data-cy="xtruetoggle"]').should('exist')
   })
 
   // X axis column drop down
   it('X axis column drop down', () => {
     // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="visdropdown"]').click()
-    cy.get('[data-cy="vis-livetest1"]').click()
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Switch to the chart settings tab
-    cy.get('[data-cy="charttab"]').click()
+    cy.get('[data-cy="settingstab"]').click()
 
     // Change the X axis column value
-    cy.get('[data-cy="xaxisdropdown"]').click()
-    cy.get('[data-cy="xcol-value"]').click()
+    cy.get('[name="xaxiscol"]').parent().click()
+    cy.get('[name="xaxiscol"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('value').click({force: true})
+    cy.get('[data-cy="savebtn"]').click()
 
     // Verify the change
-    cy.wait(waitTime)
-    cy.get('[data-cy="xaxiscol"]').should('contain', 'value')
-    cy.get('[data-cy="yaxiscol"]').should('contain', 'Name')
+    cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
+    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[name="xaxiscol"]').should('have.value', 'value')
 
     // Switch to a different X axis column value
-    cy.get('[data-cy="xaxisdropdown"]').click()
-    cy.get('[data-cy="xcol-Name"]').click()
+    cy.get('[name="xaxiscol"]').parent().click()
+    cy.get('[name="xaxiscol"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('Name').click({force: true})
+    cy.get('[data-cy="savebtn"]').click()
 
     // Verify the change
-    cy.wait(waitTime)
-    cy.get('[data-cy="xaxiscol"]').should('contain', 'Name')
-    cy.get('[data-cy="yaxiscol"]').should('contain', 'value')
+    cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
+    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[name="xaxiscol"]').should('have.value', 'Name')
   })
 
   // Y axis column drop down
@@ -162,8 +128,9 @@ describe('live visualisation', () => {
 
     // Create a visualisation with a third column
     cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="newvisbtn"]').click()
     cy.get('[data-cy="sqltab"]').click()
-    cy.get('[data-cy="usersqltext"]').type('{selectall}{backspace}').type(
+    cy.get('[name="usersql"]').type('{selectall}{backspace}').type(
         'SELECT table1.Name, table2.value, table2.value2\n' +
         'FROM table1, table2\n' +
         'WHERE table1.id = table2.id\n' +
@@ -171,40 +138,46 @@ describe('live visualisation', () => {
 
     // Click the Run SQL button
     cy.get('[data-cy="runsqlbtn"]').click()
+    cy.wait(150) // Needs a bit of a delay here, otherwise any error status message may be missed
 
     // Switch to the chart settings tab
-    cy.get('[data-cy="charttab"]').click()
+    cy.get('[data-cy="settingstab"]').click()
 
     // Change the Y axis column value
-    cy.get('[data-cy="yaxisdropdown"]').click()
-    cy.get('[data-cy="ycol-value2"]').click()
+    cy.get('[name="yaxiscol"]').parent().click()
+    cy.get('[name="yaxiscol"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('value2').click({force: true})
+    cy.get('[data-cy="savebtn"]').click()
 
     // Verify the change
-    cy.wait(waitTime)
-    cy.get('[data-cy="yaxiscol"]').should('contain', 'value2')
+    cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('new 1').click()
+    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[name="yaxiscol"]').should('have.value', 'value2')
 
     // Switch to a different Y axis column value
-    cy.get('[data-cy="yaxisdropdown"]').click()
-    cy.get('[data-cy="ycol-value"]').click()
+    cy.get('[name="yaxiscol"]').parent().click()
+    cy.get('[name="yaxiscol"]').siblings('.react-dropdown-select-dropdown').find('.react-dropdown-select-item').contains('value').click({force: true})
+    cy.get('[data-cy="savebtn"]').click()
 
     // Verify the change
-    cy.wait(waitTime)
-    cy.get('[data-cy="yaxiscol"]').should('contain', 'value')
+    cy.visit('/vis/default/Join Testing with index.sqlite')
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('new 1').click()
+    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[name="yaxiscol"]').should('have.value', 'value')
   })
 
   // "Show result table" button works
   it('Shows results table button works', () => {
     // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="visdropdown"]').click()
-    cy.get('[data-cy="vis-livetest1"]').click()
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Verify the button starts closed
-    cy.get('[data-cy="resultsbtn"]').should('contain', 'Show result table')
+    cy.contains('button', 'Show data table').should('exist')
 
     // Open the results table
-    cy.get('[data-cy="resultsbtn"]').click()
-    cy.get('[data-cy="resultsbtn"]').should('contain', 'Hide result table')
+    cy.contains('button', 'Show data table').click()
+    cy.contains('button', 'Hide data table').should('exist')
   })
 
   // "Download as CSV" button
@@ -212,16 +185,15 @@ describe('live visualisation', () => {
   it('"Download as CSV" button', () => {
     // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="visdropdown"]').click()
-    cy.get('[data-cy="vis-livetest1"]').click()
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Click the download button
-    cy.get('[data-cy="downcsvbtn"]').click()
+    cy.contains('button', 'Export to CSV').click()
 
     // Simple sanity check of the downloaded file
     // TODO - Implement a better check.   Maybe keep the "correct" csv in the repo as test data too, and compare against it?
-    const csv = path.join(downloadsFolder, 'results.csv')
-    cy.readFile(csv, 'binary', { timeout: 5000 }).should('have.length', 51)
+    const csv = path.join(downloadsFolder, 'livetest1.csv')
+    cy.readFile(csv, 'binary', { timeout: 5000 }).should('have.length', 90)
     cy.task('rmFile', { path: csv })
   })
 
@@ -229,35 +201,33 @@ describe('live visualisation', () => {
   it('"Format SQL" button', () => {
     // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="visdropdown"]').click()
-    cy.get('[data-cy="vis-livetest1"]').click()
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
-    // Click the format button
+    // Click the format buttn
+    cy.get('[data-cy="sqltab"]').click()
     cy.get('[data-cy="formatsqlbtn"]').click()
 
     // Verify the changed text
     cy.wait(waitTime)
-    cy.get('[data-cy="usersqltext"]').should('contain',
+    cy.get('[name="usersql"]').should('have.value',
       'SELECT\n' +
         '  table1.Name,\n' +
         '  table2.value\n' +
         'FROM\n' +
-        '  table1,\n' +
-        '  table2\n' +
-        'WHERE\n' +
-        '  table1.id = table2.id\n' +
+        '  table1\n' +
+        '  JOIN table2 ON table1.id = table2.id\n' +
         'ORDER BY\n' +
-        '  table1.id;')
+        '  table1.id')
   })
 
   // "Run SQL" button
   it('"Run SQL" button', () => {
     // Start with the existing "livetest1" visualisation
     cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="visdropdown"]').click()
-    cy.get('[data-cy="vis-livetest1"]').click()
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Click the Run SQL button
+    cy.get('[data-cy="sqltab"]').click()
     cy.get('[data-cy="runsqlbtn"]').click()
 
     // Verify the result
@@ -268,16 +238,18 @@ describe('live visualisation', () => {
   // "Delete" button
   it('Delete button', () => {
     cy.visit('/vis/default/Join Testing with index.sqlite')
-    cy.get('[data-cy="visdropdown"]').click()
-    cy.get('[data-cy="vis-abc"]').click()
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Click the Delete button
-    cy.get('[data-cy="delvisbtn"]').click()
+    cy.get('[data-cy="deletebtn"]').click()
+
+    // Confirm dialog
+    cy.wait(200)
+    cy.get('button[label="Yes"]').click()
 
     // Verify the result
     cy.wait(waitTime)
-    cy.get('[data-cy="visdropdown"]').click()
-    cy.get('[data-cy="vis-abc"]').should('not.exist')
+    cy.get('[data-cy="savedvis"]').get('.list-group-item').should('not.contain', 'livetest1')
   })
 
   // Verify only the owner can see this visualisation

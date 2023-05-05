@@ -2483,8 +2483,8 @@ func GetUsernameFromEmail(email string) (userName, avatarURL string, err error) 
 	return
 }
 
-// GetVisualisationParams returns a saved set of visualisation parameters
-func GetVisualisationParams(dbOwner, dbName, visName string) (params VisParamsV2, ok bool, err error) {
+// GetVisualisations returns the saved visualisations for a given database
+func GetVisualisations(dbOwner, dbName string) (visualisations map[string]VisParamsV2, err error) {
 	dbQuery := `
 		WITH u AS (
 			SELECT user_id
@@ -2496,44 +2496,7 @@ func GetVisualisationParams(dbOwner, dbName, visName string) (params VisParamsV2
 			WHERE db.user_id = u.user_id
 				AND db_name = $2
 		)
-		SELECT parameters
-		FROM vis_params as vis, u, d
-		WHERE vis.db_id = d.db_id
-			AND vis.user_id = u.user_id
-			AND vis.name = $3`
-	e := pdb.QueryRow(context.Background(), dbQuery, dbOwner, dbName, visName).Scan(&params)
-	if e != nil {
-		if errors.Is(e, pgx.ErrNoRows) {
-			// There weren't any saved parameters for this database visualisation
-			return
-		}
-
-		// A real database error occurred
-		err = e
-		log.Printf("Retrieving visualisation parameters for '%s/%s', visualisation '%s' failed: %v",
-			SanitiseLogString(dbOwner), SanitiseLogString(dbName), SanitiseLogString(visName), e)
-		return
-	}
-
-	// Parameters were successfully retrieved
-	ok = true
-	return
-}
-
-// GetVisualisations returns the list of saved visualisations for a given database
-func GetVisualisations(dbOwner, dbName string) (visNames []string, err error) {
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		), d AS (
-			SELECT db.db_id
-			FROM sqlite_databases AS db, u
-			WHERE db.user_id = u.user_id
-				AND db_name = $2
-		)
-		SELECT name
+		SELECT name, parameters
 		FROM vis_params as vis, u, d
 		WHERE vis.db_id = d.db_id
 			AND vis.user_id = u.user_id
@@ -2552,14 +2515,17 @@ func GetVisualisations(dbOwner, dbName string) (visNames []string, err error) {
 	}
 	defer rows.Close()
 
-	var s string
+	visualisations = make(map[string]VisParamsV2)
 	for rows.Next() {
-		err = rows.Scan(&s)
+		var n string
+		var p VisParamsV2
+		err = rows.Scan(&n, &p)
 		if err != nil {
 			log.Printf("Error retrieving visualisation list: %v", err.Error())
 			return
 		}
-		visNames = append(visNames, s)
+
+		visualisations[n] = p
 	}
 	return
 }
@@ -5258,6 +5224,33 @@ func VisualisationDeleteParams(dbOwner, dbName, visName string) (err error) {
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%d) affected while deleting visualisation '%s' for database '%s/%s'",
+			numRows, SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbName))
+	}
+	return
+}
+
+// VisualisationRename renames an existing saved visualisation
+func VisualisationRename(dbOwner, dbName, visName, visNewName string) (err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		), d AS (
+			SELECT db.db_id
+			FROM sqlite_databases AS db, u
+			WHERE db.user_id = u.user_id
+				AND db_name = $2
+		)
+		UPDATE vis_params SET name = $4 WHERE user_id = (SELECT user_id FROM u) AND db_id = (SELECT db_id FROM d) AND name = $3`
+	commandTag, err := pdb.Exec(context.Background(), dbQuery, dbOwner, dbName, visName, visNewName)
+	if err != nil {
+		log.Printf("Renaming visualisation '%s' for database '%s/%s' failed: %v", SanitiseLogString(visName),
+			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%d) affected while renaming visualisation '%s' for database '%s/%s'",
 			numRows, SanitiseLogString(visName), SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 	}
 	return
