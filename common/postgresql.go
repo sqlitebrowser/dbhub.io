@@ -23,6 +23,10 @@ import (
 	"github.com/smtp2go-oss/smtp2go-go"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 var (
@@ -484,6 +488,19 @@ func ConnectPostgreSQL() (err error) {
 	pdb, err = pgpool.New(context.Background(), pgConfig.ConnString())
 	if err != nil {
 		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v", err)
+	}
+
+	// Apply any outstanding database migrations
+	m, err := migrate.New(fmt.Sprintf("file://%s/database/migrations", Conf.Web.BaseDir), "pgx5://dbhub@localhost:5432/dbhub")
+	if err != nil {
+		return
+	}
+
+	// Bizarrely, migrate throws a "no change" error when there are no migrations to apply.  So, we work around it:
+	// https://github.com/golang-migrate/migrate/issues/485
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return
 	}
 
 	// Log successful connection

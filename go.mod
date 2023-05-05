@@ -17,6 +17,7 @@ require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/bradleypeabody/gorilla-sessions-memcache v0.0.0-20181103040241-659414f458e1
 	github.com/go-playground/validator/v10 v10.3.0
+	github.com/golang-migrate/migrate/v4 v4.15.3-0.20230407054901-84009cf2ab46
 	github.com/gorilla/sessions v1.2.0
 	github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237
 	github.com/jackc/pgx/v5 v5.3.1
@@ -27,8 +28,8 @@ require (
 	github.com/segmentio/ksuid v1.0.3
 	github.com/smtp2go-oss/smtp2go-go v1.0.2
 	github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47
-	golang.org/x/crypto v0.6.0
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/crypto v0.7.0
+	golang.org/x/oauth2 v0.1.0
 )
 
 require (
@@ -36,10 +37,13 @@ require (
 	github.com/go-ini/ini v1.56.0 // indirect
 	github.com/go-playground/locales v0.13.0 // indirect
 	github.com/go-playground/universal-translator v0.17.0 // indirect
-	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/gwenn/yacr v0.0.0-20200112083327-bbe82c1f4d60 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.0 // indirect
@@ -56,15 +60,16 @@ require (
 	github.com/shurcooL/highlight_go v0.0.0-20191220051317-782971ddf21b // indirect
 	github.com/shurcooL/octicon v0.0.0-20191102190552-cbb32d6a785c // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337 // indirect
+	github.com/smartystreets/goconvey v1.8.0 // indirect
 	github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d // indirect
 	github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e // indirect
 	github.com/sqlitebrowser/blackfriday v9.0.0+incompatible // indirect
-	golang.org/x/net v0.7.0 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
-	google.golang.org/appengine v1.6.6 // indirect
-	google.golang.org/protobuf v1.23.0 // indirect
-	gopkg.in/ini.v1 v1.46.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
 )
