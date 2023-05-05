@@ -439,8 +439,8 @@ func removeLiveDB(dbOwner, dbName string) (err error) {
 	if _, err = os.Stat(dbPath); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			if com.AmqpDebug > 0 {
-				log.Printf("Live node '%s': Database file '%s/%s' was requested to be deletet, but was missing " +
-					"from filesystem path: '%s'", com.Conf.Live.Nodename, dbOwner, dbName, dbPath)
+				log.Printf("Live node '%s': database file '%s/%s' was supposed to get deleted here, but was "+
+					"missing from filesystem path: '%s'", com.Conf.Live.Nodename, dbOwner, dbName, dbPath)
 			}
 			return
 		}
