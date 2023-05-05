@@ -119,7 +119,7 @@ function SqlTerminalCommand({command}) {
 export default function SqlTerminal() {
 	const [code, setCode] = React.useState("");
 	const [recentCommands, setRecentCommands] = React.useState(historyData === null ? [] : historyData);
-	const [executeOnEnter, setExecuteOnEnter] = React.useState(false);
+	const [executeOnEnter, setExecuteOnEnter] = React.useState(JSON.parse(localStorage.getItem("sqlTerminal_executeOnEnter")) || false);
 	const [isDragging, setDragging] = React.useState(false);		// We use this to distinguish simple clicks on the component from drag & drop movements. The latter are ignored to not interfere with selecting text for copy & paste.
 
 	const editorRef = React.useRef(null);
@@ -194,6 +194,11 @@ export default function SqlTerminal() {
 		}
 		performScrolldown.current = true;
 	}, [recentCommands]);
+
+	// This stores the state of the execute-on-enter flag in the browser local storage
+	React.useEffect(() => {
+		localStorage.setItem("sqlTerminal_executeOnEnter", JSON.stringify(executeOnEnter));
+	}, [executeOnEnter]);
 
 	// Handle all mouse click events, used for setting focus to the SQL code editor component even if another
 	// part of the component has been clicked.
