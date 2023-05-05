@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/csv"
 	"encoding/json"
@@ -108,12 +109,12 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		log.Printf("Login failure from '%v', probably due to blocked 3rd party cookies", r.RemoteAddr)
+		log.Printf("Login failure from '%s', probably due to blocked 3rd party cookies", r.RemoteAddr)
 		errorPage(w, r, http.StatusInternalServerError,
 			"Login failure.  Please allow 3rd party cookies from https://dbhub.eu.auth0.com then try again (it should then work).")
 		return
 	}
-	token, err := conf.Exchange(oauth2.NoContext, code)
+	token, err := conf.Exchange(context.Background(), code)
 	if err != nil {
 		log.Printf("Login failure: %s", err.Error())
 		errorPage(w, r, http.StatusInternalServerError, "Login failed")
@@ -121,7 +122,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the user info (JSON format)
-	conn := conf.Client(oauth2.NoContext, token)
+	conn := conf.Client(context.Background(), token)
 	userInfo, err := conn.Get("https://" + com.Conf.Auth0.Domain + "/userinfo")
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -170,7 +171,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		auth0Conn = co.(string)
 	}
-	if auth0Conn != "Test2DB" { // The Auth0 fallback profile pic's seem pretty lousy, so avoid those
+	if auth0Conn != "Test2DB" { // The Auth0 fallback profile pics seem pretty lousy, so avoid those
 		p, ok := profile["picture"]
 		if ok && p.(string) != "" {
 			avatarURL = p.(string)
@@ -275,7 +276,12 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Login completed, so bounce to the users' profile page
+	// Login completed, so record it and bounce them to their profile page
+	err = com.RecordWebLogin(userName)
+	if err != nil {
+		// Although something went wrong here, lets just log it to our backend for admin follow up
+		log.Println(err)
+	}
 	http.Redirect(w, r, "/"+userName, http.StatusSeeOther)
 }
 
