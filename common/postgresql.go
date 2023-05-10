@@ -103,6 +103,54 @@ func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) 
 	return nil
 }
 
+// AnalysisRecordUserStorage adds a record to the backend database containing the amount of storage space used by a user
+func AnalysisRecordUserStorage(userName string, spaceUsedStandard, spaceUsedLive int64) (err error) {
+	dbQuery := `
+		WITH u AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		INSERT INTO analysis_space_used (user_id, standard_databases_bytes, live_databases_bytes)
+		VALUES ((SELECT user_id FROM u), $2, $3)`
+	commandTag, err := pdb.Exec(context.Background(), dbQuery, userName, spaceUsedStandard, spaceUsedLive)
+	if err != nil {
+		log.Printf("Adding record of storage space used by '%s' failed: %s", userName, err)
+		return
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%d) affected when recording the storage space used by '%s'", numRows, userName)
+	}
+	return
+}
+
+// AnalysisUsersWithDBs returns the list of users with at least one database
+func AnalysisUsersWithDBs() (userList map[string]int, err error) {
+	dbQuery := `
+		SELECT u.user_name, count(*)
+		FROM users u, sqlite_databases db
+		WHERE u.user_id = db.user_id
+		GROUP BY u.user_name`
+	rows, err := pdb.Query(context.Background(), dbQuery)
+	if err != nil {
+		log.Printf("Database query failed in %s: %v", GetCurrentFunctionName(), err)
+		return
+	}
+	defer rows.Close()
+	userList = make(map[string]int)
+	for rows.Next() {
+		var user string
+		var numDBs int
+		err = rows.Scan(&user, &numDBs)
+		if err != nil {
+			log.Printf("Error in %s when getting the list of users with at least one database: %v", GetCurrentFunctionName(), err)
+			return nil, err
+		}
+		userList[user] = numDBs
+	}
+	return
+}
+
 // ApiCallLog records an API call operation.  Database name is optional, as not all API calls operate on a
 // database.  If a database name is provided however, then the database owner name *must* also be provided
 func ApiCallLog(loggedInUser, dbOwner, dbName, operation, callerSw string) {

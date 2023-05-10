@@ -35,6 +35,7 @@ _testmain.go
 request.log
 api/api
 db4s/db4s
+standalone/analysis/analysis
 webui/webui
 
 # Cypress generated files

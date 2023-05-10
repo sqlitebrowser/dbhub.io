@@ -16,6 +16,7 @@ require (
 	github.com/aquilax/truncate v1.0.0
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/bradleypeabody/gorilla-sessions-memcache v0.0.0-20181103040241-659414f458e1
+	github.com/docker/go-units v0.5.0
 	github.com/go-playground/validator/v10 v10.3.0
 	github.com/golang-migrate/migrate/v4 v4.15.3-0.20230407054901-84009cf2ab46
 	github.com/gorilla/sessions v1.2.0

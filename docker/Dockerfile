@@ -106,6 +106,9 @@ RUN echo "cd ${DBHUB_SOURCE}" >> /usr/local/bin/compile.sh && \
     echo "PKG_CONFIG_PATH=/sqlite/lib/pkgconfig go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-db4s ." >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/live" >> /usr/local/bin/compile.sh && \
     echo "PKG_CONFIG_PATH=/sqlite/lib/pkgconfig go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-live ." >> /usr/local/bin/compile.sh && \
+    echo "cd ${DBHUB_SOURCE}/standalone/analysis" >> /usr/local/bin/compile.sh && \
+    echo "PKG_CONFIG_PATH=/sqlite/lib/pkgconfig go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-analysis ." >> /usr/local/bin/compile.sh && \
+    echo "ln --force -s /usr/local/bin/dbhub-analysis  /etc/periodic/15min/" >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/webui" >> /usr/local/bin/compile.sh && \
     echo "PKG_CONFIG_PATH=/sqlite/lib/pkgconfig go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-webui ." >> /usr/local/bin/compile.sh && \
     echo "/usr/local/bin/restart.sh" >> /usr/local/bin/compile.sh && \
