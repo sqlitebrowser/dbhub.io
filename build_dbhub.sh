@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# TODO: Add the function names from the SQLite extensions to AuthorizerSelect()
-
 # Useful variables
 DEST=${PWD}/local
 export PKG_CONFIG_PATH=${DEST}/lib/pkgconfig
@@ -55,20 +53,34 @@ yarn run webpack -c webui/webpack.config.js
 
 # Builds the Go binaries
 if [ -d "${GOBIN}" ]; then
-  echo "Compiling DBHub.io API executable"
-  cd api || exit 5
-  go install .
-  cd ..
-  echo "Compiling DBHub.io DB4S end point executable"
-  cd db4s || exit 6
-  go install .
-  cd ..
-  echo "Compiling DBHub.io Live executable"
-  cd live || exit 7
-  go install .
-  cd ..
-  echo "Compiling DBHub.io Web User Interface executable"
-  cd webui || exit 8
-  go install .
-  cd ..
+  (
+    echo "Compiling DBHub.io API daemon"
+    cd api || exit 5
+    go install .
+    cd ..
+  )
+  (
+    echo "Compiling DBHub.io DB4S end point daemon"
+    cd db4s || exit 6
+    go install .
+    cd ..
+  )
+  (
+    echo "Compiling DBHub.io Live daemon"
+    cd live || exit 7
+    go install .
+    cd ..
+  )
+  (
+    echo "Compiling DBHub.io Space Analysis executable"
+    cd standalone/analysis || exit 8
+    go install .
+    cd ../..
+  )
+  (
+    echo "Compiling DBHub.io Web User Interface daemon"
+    cd webui || exit 9
+    go install .
+    cd ..
+  )
 fi
