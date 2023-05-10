@@ -8,6 +8,7 @@ import {highlight, languages} from "prismjs/components/prism-core";
 import "prismjs/components/prism-sql";
 import "prismjs/themes/prism-solarizedlight.css";
 import {format} from "sql-formatter";
+import { convertResultsetToCsv, downloadData } from "./export-data";
 
 /********************
  * The general structure here is this:
@@ -45,7 +46,10 @@ function SqlTerminalCommandOutput({state, data}) {
 		output = <span className="text-info"><strong>done: </strong>{data.rows_changed + " row" + (data.rows_changed === 1 ? "" : "s") + " changed"}</span>;
 	} else if (state === "queried") {
 		output = (<>
-			<span className="text-info"><strong>done: </strong>{data.RowCount + " row" + (data.RowCount === 1 ? "" : "s") + " returned"}</span>
+			<span className="text-info">
+				<strong>done: </strong>{data.RowCount + " row" + (data.RowCount === 1 ? "" : "s") + " returned"}&nbsp;
+				<a href="#/" title="Export results to CSV" onClick={() => downloadData(convertResultsetToCsv(data), "result.csv", "text/csv")}><i className={"fa fa-download"}></i></a>
+			</span>
 			<div className="table-responsive">
 				<table className="table table-hover table-condensed">
 					<thead>
