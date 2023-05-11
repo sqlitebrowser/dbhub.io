@@ -132,7 +132,7 @@ export default function ProfilePage() {
 				<WatchPanelGroup title="Databases you've starred" noDatabasesMessage="No starred databases yet" databases={userData.starredDbs} dateText="Starred" />
 			</div>
 			<div className="col-md-6" data-cy="watches">
-				<WatchPanelGroup title="Datebases you're watching" noDatabasesMessage="Not watching any databases yet" databases={userData.watchedDbs} dateText="Started watching" />
+				<WatchPanelGroup title="Databases you're watching" noDatabasesMessage="Not watching any databases yet" databases={userData.watchedDbs} dateText="Started watching" />
 			</div>
 		</div>
 		<div className="row">
