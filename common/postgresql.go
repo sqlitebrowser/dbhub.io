@@ -3567,12 +3567,12 @@ func StatusUpdatesLoop() {
 			for _, u := range users {
 				// Retrieve the current status updates list for the user
 				var eml pgtype.Text
+				var userEvents map[string][]StatusUpdateEntry
+				var userName string
 				dbQuery = `
 					SELECT user_name, email, status_updates
 					FROM users
 					WHERE user_id = $1`
-				userEvents := make(map[string][]StatusUpdateEntry)
-				var userName string
 				err = tx.QueryRow(context.Background(), dbQuery, u).Scan(&userName, &eml, &userEvents)
 				if err != nil {
 					if !errors.Is(err, pgx.ErrNoRows) {
@@ -3581,6 +3581,9 @@ func StatusUpdatesLoop() {
 						tx.Rollback(context.Background())
 					}
 					continue
+				}
+				if len(userEvents) == 0 {
+					userEvents = make(map[string][]StatusUpdateEntry)
 				}
 
 				// If the user generated this event themselves, skip them
