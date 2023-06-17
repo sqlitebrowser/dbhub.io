@@ -2262,7 +2262,8 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Usage page.
 func usagePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		PageMeta    PageMetaInfo
+		PageMeta  PageMetaInfo
+		DiskUsage map[time.Time]com.NumDatabases
 	}
 	pageData.PageMeta.Title = "Usage"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -2278,8 +2279,14 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Figure out display of usage info here
+	// Include disk space usage in the page data
+	pageData.DiskUsage, err = com.UsageDiskSpaceUser(pageData.PageMeta.LoggedInUser)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
 
+	// TODO: Figure out display of other usage info here
 
 	// Render the page
 	t := tmpl.Lookup("usagePage")
