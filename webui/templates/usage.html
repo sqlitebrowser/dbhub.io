@@ -3,6 +3,7 @@
 <html ng-app="DBHub" ng-controller="prefView">
 [[ template "head" . ]]
 <body>
+<script src="/js/plotly-basic-2.18.2.min.js"></script>
 [[ template "header" . ]]
 <div>
     <div class="row">
@@ -11,7 +12,27 @@
         </div>
         <div class="col-md-6">
             <h2 style="text-align: center;">Usage</h2>
-            <h3 style="text-align: center;">How much disk space your databases are using</h3>
+
+            <h3 style="text-align: center;">Disk space usage over time</h3>
+            <div id="visdisk" style="width:100%;"></div>
+
+            <h3 style="text-align: center;">Number of standard databases over time</h3>
+            <div id="visnumstd" style="width:100%;"></div>
+
+            <h3 style="text-align: center;">Number of live databases over time</h3>
+            <div id="visnumlive" style="width:100%;"></div>
+
+            <!--
+
+                What else would be useful to display here?
+
+                * Probably most/all other stat info we collect
+
+                  * API calls over time
+                  * Database uploads/downloads over time
+                  * What else?
+
+             -->
 
         </div>
         <div class="col-md-3">
@@ -21,59 +42,46 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    let app = angular.module('DBHub', ['ngSanitize']);
+    // Plotly pieces
+    let plotDataDisk = [
+        {
+            type: "bar",
+            orientation: "v"
+        }
+    ];
+    let plotDataNumStd = [
+        {
+            type: "bar",
+            orientation: "v"
+        }
+    ];
+    let plotDataNumLive = [
+        {
+            type: "bar",
+            orientation: "v"
+        }
+    ];
+    let plotLayout = {};
+    let plotConfig = {
+        displaylogo: false,
+        editable: true,
+        // responsive: true, // Responsive mode badly screws things up in Firefox.  Better to handle resize events ourselves.
+        watermark: false,
+    };
+
+    // * AngularJS pieces start here *
+
+    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
-        // API Keys
-        $scope.apiKeys = [[ .APIKeys ]];
 
-        // If the supplied display name is blank, we set a placeholder value instead
-        $scope.FullName = "";
-        $scope.NamePlaceholder = "";
-        if ("[[ .DisplayName ]]" === "") {
-            $scope.NamePlaceholder = "Jane Doe";
-        } else {
-            $scope.FullName = "[[ .DisplayName ]]";
-        }
+        // TODO: We can probably have the backend Go code pre-populate the data here rather than needing to fetch it
+        //       after page load
 
-        // Same thing, but for email address
-        $scope.EmailAddr = "";
-        $scope.EmailPlaceholder = "";
-        if ("[[ .Email ]]" === "") {
-            $scope.EmailPlaceholder = "[[ .PageMeta.LoggedInUser ]]@[[ .PageMeta.Server ]]";
-        } else {
-            $scope.EmailAddr = "[[ .Email ]]";
-        }
+        // Draw the charts
+        Plotly.react("visdisk", plotDataDisk, plotLayout, plotConfig);
+        Plotly.react("visnumstd", plotDataNumStd, plotLayout, plotConfig);
+        Plotly.react("visnumlive", plotDataNumLive, plotLayout, plotConfig);
 
-        // Generate new client certificate
-        $scope.genCert = function() {
-            window.location = '/x/gencert'
-        };
-
-        // Generate a new API key
-        $scope.statusMessage = "";
-        $scope.statusMessageColour = "red";
-        $scope.apiKeyGen = function() {
-            // Call the server to generate a new API key
-            $http.get("/x/apikeygen").then(
-                function success(response) {
-                    $scope.statusMessageColour = "green";
-                    $scope.statusMessage = "New API key '" + response.data["key"] + "' created";
-
-                    // Append the new key to the displayed list
-                    let newKey = {"key": response.data["key"], "date_created": response.data["date_created"]};
-                    if ($scope.apiKeys !== null) {
-                        $scope.apiKeys.push(newKey);
-                    } else {
-                        $scope.apiKeys = [newKey];
-                    }
-
-                }, function failure(response) {
-                    // Key creation failed, so display the returned error message
-                    $scope.statusMessageColour = "red";
-                    $scope.statusMessage = "Creating new API key failed: " + response.data;
-                }
-            )
-        };
     });
 </script>
 </body>

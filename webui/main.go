@@ -3345,6 +3345,10 @@ func main() {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "dbhub.js"))
 	})))
 
+	http.Handle("/js/plotly-basic-2.18.2.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "plotly-basic-2.18.2.min.js"))
+	})))
+
 	http.Handle("/js/ui-bootstrap-tpls-2.5.0.min.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "ui-bootstrap-tpls-2.5.0.min.js"))
 	})))
