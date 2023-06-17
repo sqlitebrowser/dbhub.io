@@ -1159,7 +1159,7 @@ func forksPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the user has access to the requested database (and get it's details if available)
+	// Check if the user has access to the requested database (and get its details if available)
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
@@ -1261,7 +1261,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the user has access to the requested database (and get it's details if available)
+	// Check if the user has access to the requested database (and get its details if available)
 	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
@@ -2253,6 +2253,36 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 
 	// Render the page
 	t := tmpl.Lookup("uploadPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
+// Renders the user Usage page.
+func usagePage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		PageMeta    PageMetaInfo
+	}
+	pageData.PageMeta.Title = "Usage"
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+
+	// Require login
+	errCode, err = requireLogin(pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+
+	// TODO: Figure out display of usage info here
+
+
+	// Render the page
+	t := tmpl.Lookup("usagePage")
 	err = t.Execute(w, pageData)
 	if err != nil {
 		log.Printf("Error: %s", err)

@@ -1,0 +1,81 @@
+[[ define "usagePage" ]]
+<!doctype html>
+<html ng-app="DBHub" ng-controller="prefView">
+[[ template "head" . ]]
+<body>
+[[ template "header" . ]]
+<div>
+    <div class="row">
+        <div class="col-md-3">
+            &nbsp;
+        </div>
+        <div class="col-md-6">
+            <h2 style="text-align: center;">Usage</h2>
+            <h3 style="text-align: center;">How much disk space your databases are using</h3>
+
+        </div>
+        <div class="col-md-3">
+            &nbsp;
+        </div>
+    </div>
+</div>
+[[ template "footer" . ]]
+<script>
+    let app = angular.module('DBHub', ['ngSanitize']);
+    app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
+        // API Keys
+        $scope.apiKeys = [[ .APIKeys ]];
+
+        // If the supplied display name is blank, we set a placeholder value instead
+        $scope.FullName = "";
+        $scope.NamePlaceholder = "";
+        if ("[[ .DisplayName ]]" === "") {
+            $scope.NamePlaceholder = "Jane Doe";
+        } else {
+            $scope.FullName = "[[ .DisplayName ]]";
+        }
+
+        // Same thing, but for email address
+        $scope.EmailAddr = "";
+        $scope.EmailPlaceholder = "";
+        if ("[[ .Email ]]" === "") {
+            $scope.EmailPlaceholder = "[[ .PageMeta.LoggedInUser ]]@[[ .PageMeta.Server ]]";
+        } else {
+            $scope.EmailAddr = "[[ .Email ]]";
+        }
+
+        // Generate new client certificate
+        $scope.genCert = function() {
+            window.location = '/x/gencert'
+        };
+
+        // Generate a new API key
+        $scope.statusMessage = "";
+        $scope.statusMessageColour = "red";
+        $scope.apiKeyGen = function() {
+            // Call the server to generate a new API key
+            $http.get("/x/apikeygen").then(
+                function success(response) {
+                    $scope.statusMessageColour = "green";
+                    $scope.statusMessage = "New API key '" + response.data["key"] + "' created";
+
+                    // Append the new key to the displayed list
+                    let newKey = {"key": response.data["key"], "date_created": response.data["date_created"]};
+                    if ($scope.apiKeys !== null) {
+                        $scope.apiKeys.push(newKey);
+                    } else {
+                        $scope.apiKeys = [newKey];
+                    }
+
+                }, function failure(response) {
+                    // Key creation failed, so display the returned error message
+                    $scope.statusMessageColour = "red";
+                    $scope.statusMessage = "Creating new API key failed: " + response.data;
+                }
+            )
+        };
+    });
+</script>
+</body>
+</html>
+[[ end ]]
