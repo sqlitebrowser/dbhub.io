@@ -1,21 +1,33 @@
 # vim:set ft=dockerfile:
-FROM alpine:3.17
+
+# We grab RabbitMQ and Erlang from the official RabbitMQ image
+FROM rabbitmq:3-alpine AS rabbit
+
+# Build our own image
+FROM alpine:3.18
 
 LABEL maintainer="Justin Clift <justin@postgresql.org>"
 
-# Install Git, Go, Memcached, Minio, OpenRC, PostgreSQL, and RabbitMQ
-RUN  \
-    apk update && \
+# Copy the RabbitMQ files we need
+COPY --from=rabbit /etc/rabbitmq /etc/rabbitmq
+COPY --from=rabbit /opt/erlang /opt/erlang
+COPY --from=rabbit /opt/openssl /opt/openssl
+COPY --from=rabbit /opt/rabbitmq /opt/rabbitmq
+COPY --from=rabbit /var/lib/rabbitmq /var/lib/rabbitmq
+COPY --from=rabbit /var/log/rabbitmq /var/log/rabbitmq
+
+# Create the rabbitmq user and group
+RUN addgroup -S rabbitmq && \
+    adduser -S -D -h /var/lib/rabbitmq -s /sbin/nologin -g "Linux User,,," -G rabbitmq rabbitmq && \
+    chown -Rh rabbitmq: /opt/rabbitmq /var/log/rabbitmq
+
+# Install Git, Go, Memcached, Minio, OpenRC, and PostgreSQL
+RUN apk update && \
     apk upgrade && \
     apk add --no-cache ca-certificates 'curl>7.61.0' file git go libc-dev make memcached minio openrc openssl openssl-dev postgresql yarn && \
-    apk add rabbitmq-server --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/ && \
     rc-update add memcached default && \
     rc-update add minio default && \
-    rc-update add postgresql default && \
-    rc-update add rabbitmq-server default && \
-    mkdir /etc/rabbitmq && \
-    rabbitmq-plugins enable rabbitmq_management && \
-    rabbitmq-plugins enable rabbitmq_top
+    rc-update add postgresql
 
 # Create the DBHub.io OS user
 RUN addgroup dbhub && \
@@ -31,7 +43,7 @@ ENV MINIO_ROOT_PASSWORD minio123
 RUN sed -i "s/^MINIO_ROOT_USER=\"change-me\"/MINIO_ROOT_USER=\"${MINIO_ROOT_USER}\"/" /etc/conf.d/minio && \
     sed -i "s/^MINIO_ROOT_PASSWORD=\"change-me\"/MINIO_ROOT_PASSWORD=\"${MINIO_ROOT_PASSWORD}\"/" /etc/conf.d/minio
 
-# Run each of our daemon dependencies at least once to ensure they initialise ok, and populate the DBHub.io database
+# Run each of our (non RabbitMQ) daemon dependencies at least once to ensure they initialise ok, and populate the DBHub.io database
 RUN echo "openrc nonetwork" >> /usr/local/bin/init.sh && \
     echo "openrc default stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
     echo "createuser -U postgres -d dbhub" >> /usr/local/bin/init.sh && \
@@ -40,7 +52,6 @@ RUN echo "openrc nonetwork" >> /usr/local/bin/init.sh && \
     echo "rc-service memcached stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
     echo "rc-service minio stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
     echo "rc-service postgresql stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
-    echo "rc-service rabbitmq-server stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
     chmod +x /usr/local/bin/init.sh
 
 # Set the dependencies and DBHub.io daemons to automatically start
@@ -61,6 +72,11 @@ RUN GOBIN=/usr/local/bin go install github.com/go-delve/delve/cmd/dlv@latest
 # These don't use openrc.  Not sure if it'd be useful.  Maybe a task for a different day?
 RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/local/bin/start.sh && \
     echo "openrc default" >> /usr/local/bin/start.sh && \
+    echo "" >> /usr/local/bin/start.sh && \
+    echo "unset CONFIG_FILE" >> /usr/local/bin/start.sh && \
+    echo "export RABBITMQ_CONFIG_FILES=/etc/rabbitmq/conf.d" >> /usr/local/bin/start.sh && \
+    echo "export PATH=/opt/rabbitmq/sbin:/opt/erlang/bin:/opt/openssl/bin:$PATH" >> /usr/local/bin/start.sh && \
+    echo "/opt/rabbitmq/sbin/rabbitmq-server &" >> /usr/local/bin/start.sh && \
     echo "" >> /usr/local/bin/start.sh && \
     echo "# Wait for RabbitMQ to start before launching the DBHub.io daemons" >> /usr/local/bin/start.sh && \
     echo "sleep 15" >> /usr/local/bin/start.sh && \
