@@ -21,13 +21,10 @@ RUN addgroup -S rabbitmq && \
     adduser -S -D -h /var/lib/rabbitmq -s /sbin/nologin -g "Linux User,,," -G rabbitmq rabbitmq && \
     chown -Rh rabbitmq: /opt/rabbitmq /var/log/rabbitmq
 
-# Install Git, Go, Memcached, Minio, OpenRC, and PostgreSQL
+# Install Git, Go, Memcached, Minio, and PostgreSQL
 RUN apk update && \
     apk upgrade && \
-    apk add --no-cache ca-certificates 'curl>7.61.0' file git go libc-dev make memcached minio openrc openssl openssl-dev postgresql yarn && \
-    rc-update add memcached default && \
-    rc-update add minio default && \
-    rc-update add postgresql
+    apk add --no-cache ca-certificates 'curl>7.61.0' file git go libc-dev make memcached minio openssl openssl-dev postgresql shadow yarn
 
 # Create the DBHub.io OS user
 RUN addgroup dbhub && \
@@ -40,18 +37,24 @@ ENV DBHUB_SOURCE /dbhub.io
 ENV MINIO_ROOT_USER minio
 ENV MINIO_ROOT_PASSWORD minio123
 
-RUN sed -i "s/^MINIO_ROOT_USER=\"change-me\"/MINIO_ROOT_USER=\"${MINIO_ROOT_USER}\"/" /etc/conf.d/minio && \
-    sed -i "s/^MINIO_ROOT_PASSWORD=\"change-me\"/MINIO_ROOT_PASSWORD=\"${MINIO_ROOT_PASSWORD}\"/" /etc/conf.d/minio
-
 # Run each of our (non RabbitMQ) daemon dependencies at least once to ensure they initialise ok, and populate the DBHub.io database
-RUN echo "openrc nonetwork" >> /usr/local/bin/init.sh && \
-    echo "openrc default stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
+RUN echo "echo export PGDATA=/var/lib/postgresql/data > ~postgres/.profile" >> /usr/local/bin/init.sh && \
+    echo "echo export MINIO_ROOT_USER=${MINIO_ROOT_USER} > ~minio/.profile" >> /usr/local/bin/init.sh && \
+    echo "echo export MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD} >> ~minio/.profile" >> /usr/local/bin/init.sh && \
+    echo "su - postgres -c '/usr/libexec/postgresql/initdb --locale=en_US.UTF-8'" >> /usr/local/bin/init.sh && \
+    echo "mkdir /run/postgresql /home/memcached" >> /usr/local/bin/init.sh && \
+    echo "chown memcached: /home/memcached" >> /usr/local/bin/init.sh && \
+    echo "chown -R minio: /var/lib/minio" >> /usr/local/bin/init.sh && \
+    echo "chown -R postgres: /var/lib/postgresql /run/postgresql" >> /usr/local/bin/init.sh && \
+    echo "usermod -s /bin/sh memcached" >> /usr/local/bin/init.sh && \
+    echo "usermod -s /bin/sh minio" >> /usr/local/bin/init.sh && \
+    echo "su - postgres -c '/usr/libexec/postgresql/pg_ctl start'" >> /usr/local/bin/init.sh && \
     echo "createuser -U postgres -d dbhub" >> /usr/local/bin/init.sh && \
     echo "createdb -U postgres -O dbhub dbhub" >> /usr/local/bin/init.sh && \
     echo "su - dbhub -c 'psql dbhub < ${DBHUB_SOURCE}/database/dbhub.sql'" >> /usr/local/bin/init.sh && \
-    echo "rc-service memcached stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
-    echo "rc-service minio stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
-    echo "rc-service postgresql stop 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
+    echo "su - memcached -c '/usr/bin/memcached -d'" >> /usr/local/bin/init.sh && \
+    echo "su - minio -c '/usr/bin/minio server --quiet --anonymous /var/lib/minio/data 2>&1 &'" >> /usr/local/bin/init.sh && \
+    echo "su - postgres -c '/usr/libexec/postgresql/pg_ctl stop' 2>&1 | grep -v 'Read-only file system'" >> /usr/local/bin/init.sh && \
     chmod +x /usr/local/bin/init.sh
 
 # Set the dependencies and DBHub.io daemons to automatically start
@@ -69,9 +72,11 @@ ENV CONFIG_FILE ${DBHUB_SOURCE}/docker/config.toml
 RUN GOBIN=/usr/local/bin go install github.com/go-delve/delve/cmd/dlv@latest
 
 # Add script pieces for starting DBHub.io services
-# These don't use openrc.  Not sure if it'd be useful.  Maybe a task for a different day?
 RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/local/bin/start.sh && \
-    echo "openrc default" >> /usr/local/bin/start.sh && \
+    echo "echo nameserver 8.8.8.8 > /etc/resolv.conf" >> /usr/local/bin/start.sh && \
+    echo "su - memcached -c '/usr/bin/memcached -d'" >> /usr/local/bin/start.sh && \
+    echo "su - minio -c '/usr/bin/minio server --quiet --anonymous /var/lib/minio/data 2>&1 &'" >> /usr/local/bin/start.sh && \
+    echo "su - postgres -c '/usr/libexec/postgresql/pg_ctl start'" >> /usr/local/bin/start.sh && \
     echo "" >> /usr/local/bin/start.sh && \
     echo "unset CONFIG_FILE" >> /usr/local/bin/start.sh && \
     echo "export RABBITMQ_CONFIG_FILES=/etc/rabbitmq/conf.d" >> /usr/local/bin/start.sh && \
