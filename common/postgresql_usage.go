@@ -20,7 +20,7 @@ func UsageDiskSpaceUser(username string) (usage map[time.Time]NumDatabases, err 
 			FROM users
 			WHERE lower(user_name) = lower($1)
 		)
-		SELECT to_char(analysis_date, 'YYYY-MM') AS "Usage date", standard_databases_bytes / (1024*1024) AS "Standard databases", live_databases_bytes / (1024*1024) AS "Live databases"
+		SELECT to_char(analysis_date, 'YYYY-MM-DD')::date AS "Usage date", standard_databases_bytes / (1024*1024) AS "Standard databases", live_databases_bytes / (1024*1024) AS "Live databases"
 		FROM analysis_space_used a, users u
 		WHERE a.user_id = u.user_id
 			AND u.user_id = (SELECT user_id FROM loggedIn)
