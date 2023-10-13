@@ -14,7 +14,8 @@
             <h2 style="text-align: center;">Usage</h2>
 
             <h3 style="text-align: center;">Disk space usage over time</h3>
-            <div id="visdisk" style="width:100%;"></div>
+            <div id="visdiskstd" style="width:100%;"></div>
+            <div id="visdisklive" style="width:100%;"></div>
 
             <h3 style="text-align: center;">Number of standard databases over time</h3>
             <div id="visnumstd" style="width:100%;"></div>
@@ -43,11 +44,20 @@
 [[ template "footer" . ]]
 <script>
     // Plotly pieces
-    let plotDataDiskRaw = [[ .DiskUsage ]];
-    let plotDataDisk = [
+    let plotDataDiskStd = [
         {
             type: "bar",
-            orientation: "v"
+            orientation: "v",
+            x: [[ .DiskDates ]],
+            y: [[ .DiskStd ]]
+        }
+    ];
+    let plotDataDiskLive = [
+        {
+            type: "bar",
+            orientation: "v",
+            x: [[ .DiskDates ]],
+            z: [[ .DiskLive ]]
         }
     ];
     let plotDataNumStd = [
@@ -63,6 +73,30 @@
         }
     ];
     let plotLayout = {};
+    let plotLayoutDiskStd = {
+        title: 'Disk Usage over time (standard databases)',
+        xaxis: {
+            title: 'Date',
+            showgrid: false,
+            zeroline: false
+        },
+        yaxis: {
+            title: 'Megabytes',
+            showline: false
+        }
+    };
+    let plotLayoutDiskLive = {
+        title: 'Disk Usage over time (live databases)',
+        xaxis: {
+            title: 'Date',
+            showgrid: false,
+            zeroline: false
+        },
+        yaxis: {
+            title: 'Megabytes',
+            showline: false
+        }
+    };
     let plotConfig = {
         displaylogo: false,
         editable: true,
@@ -75,11 +109,9 @@
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
 
-        // TODO: We can probably have the backend Go code pre-populate the data here rather than needing to fetch it
-        //       after page load
-
         // Draw the charts
-        Plotly.react("visdisk", plotDataDisk, plotLayout, plotConfig);
+        Plotly.react("visdiskstd", plotDataDiskStd, plotLayoutDiskStd, plotConfig);
+        Plotly.react("visdisklive", plotDataDiskLive, plotLayoutDiskLive, plotConfig);
         Plotly.react("visnumstd", plotDataNumStd, plotLayout, plotConfig);
         Plotly.react("visnumlive", plotDataNumLive, plotLayout, plotConfig);
 

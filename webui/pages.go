@@ -2263,7 +2263,9 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 func usagePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		PageMeta  PageMetaInfo
-		DiskUsage map[string]com.NumDatabases
+		DiskDates []string
+		DiskLive  []int
+		DiskStd   []int
 	}
 	pageData.PageMeta.Title = "Usage"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -2280,10 +2282,15 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Include disk space usage in the page data
-	pageData.DiskUsage, err = com.UsageDiskSpaceUser(pageData.PageMeta.LoggedInUser)
+	diskRaw, err := com.UsageDiskSpaceUser(pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
+	}
+	for rawDate, rawVals := range diskRaw {
+		pageData.DiskDates = append(pageData.DiskDates, rawDate)
+		pageData.DiskStd = append(pageData.DiskStd, rawVals.NumStd)
+		pageData.DiskLive = append(pageData.DiskLive, rawVals.NumLive)
 	}
 
 	// TODO: Figure out display of other usage info here
