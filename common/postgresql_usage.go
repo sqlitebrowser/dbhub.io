@@ -3,7 +3,6 @@ package common
 import (
 	"context"
 	"log"
-	"time"
 )
 
 type NumDatabases struct {
@@ -12,7 +11,7 @@ type NumDatabases struct {
 }
 
 // UsageDiskSpaceUser returns the historical and current amount of disk space used by a given user
-func UsageDiskSpaceUser(username string) (usage map[time.Time]NumDatabases, err error) {
+func UsageDiskSpaceUser(username string) (usage map[string]NumDatabases, err error) {
 	// FIXME: Adjust this query to return the highest value from *any* date in a month, rather than just sample the 1st of the month
 	dbQuery := `
 		WITH loggedIn AS (
@@ -20,7 +19,7 @@ func UsageDiskSpaceUser(username string) (usage map[time.Time]NumDatabases, err 
 			FROM users
 			WHERE lower(user_name) = lower($1)
 		)
-		SELECT to_char(analysis_date, 'YYYY-MM-DD')::date AS "Usage date", standard_databases_bytes / (1024*1024) AS "Standard databases", live_databases_bytes / (1024*1024) AS "Live databases"
+		SELECT to_char(analysis_date, 'YYYY-MM') AS "Usage date", standard_databases_bytes / (1024*1024) AS "Standard databases", live_databases_bytes / (1024*1024) AS "Live databases"
 		FROM analysis_space_used a, users u
 		WHERE a.user_id = u.user_id
 			AND u.user_id = (SELECT user_id FROM loggedIn)
@@ -33,10 +32,10 @@ func UsageDiskSpaceUser(username string) (usage map[time.Time]NumDatabases, err 
 	}
 	defer rows.Close()
 	if len(usage) == 0 {
-		usage = make(map[time.Time]NumDatabases)
+		usage = make(map[string]NumDatabases)
 	}
 	for rows.Next() {
-		var date time.Time
+		var date string
 		var numStd, numLive int
 		err = rows.Scan(&date, &numStd, &numLive)
 		if err != nil {

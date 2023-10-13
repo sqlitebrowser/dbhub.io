@@ -2263,7 +2263,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 func usagePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		PageMeta  PageMetaInfo
-		DiskUsage map[time.Time]com.NumDatabases
+		DiskUsage map[string]com.NumDatabases
 	}
 	pageData.PageMeta.Title = "Usage"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
