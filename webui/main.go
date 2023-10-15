@@ -316,7 +316,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
@@ -1443,7 +1443,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -1941,7 +1941,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -2114,7 +2114,7 @@ func deleteDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system, and the user has write access to it
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -2225,7 +2225,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
 		return
@@ -2300,7 +2300,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Delete the database in PostgreSQL
 	err = com.DeleteDatabase(dbOwner, dbName)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
 		log.Println(err)
@@ -2349,7 +2349,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -2430,7 +2430,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -2981,7 +2981,7 @@ func insertDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system, and the user has write access to it
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -4210,7 +4210,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -4344,7 +4344,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -4525,7 +4525,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	// Make sure the database exists in the system, and the user has access to it
 	var exists bool
 	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -4799,7 +4799,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -4954,7 +4954,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -4995,7 +4995,7 @@ func updateDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system, and the user has write access to it
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -5168,7 +5168,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since MRs are considered public
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
@@ -5261,7 +5261,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -5375,7 +5375,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
-	if err != err {
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
