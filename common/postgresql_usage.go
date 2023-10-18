@@ -6,12 +6,13 @@ import (
 )
 
 type NumDatabases struct {
+	UsageDate string `json:"usage_date"`
 	NumStd  int `json:"num_std"`
 	NumLive int `json:"num_live"`
 }
 
 // UsageDiskSpaceUser returns the historical and current amount of disk space used by a given user
-func UsageDiskSpaceUser(username string) (usage map[string]NumDatabases, err error) {
+func UsageDiskSpaceUser(username string) (usage []NumDatabases, err error) {
 	// FIXME: Adjust this query to return the highest value from *any* date in a month, rather than just sample the 1st of the month
 	dbQuery := `
 		WITH loggedIn AS (
@@ -24,16 +25,14 @@ func UsageDiskSpaceUser(username string) (usage map[string]NumDatabases, err err
 		WHERE a.user_id = u.user_id
 			AND u.user_id = (SELECT user_id FROM loggedIn)
 			AND standard_databases_bytes > 0
-			AND to_char(analysis_date, 'DD') = '01'`
+			AND to_char(analysis_date, 'DD') = '01'
+		ORDER BY "Usage date" ASC`
 	rows, err := pdb.Query(context.Background(), dbQuery, username)
 	if err != nil {
 		log.Printf("Database query failed in %s: %v", GetCurrentFunctionName(), err)
 		return
 	}
 	defer rows.Close()
-	if len(usage) == 0 {
-		usage = make(map[string]NumDatabases)
-	}
 	for rows.Next() {
 		var date string
 		var numStd, numLive int
@@ -42,10 +41,11 @@ func UsageDiskSpaceUser(username string) (usage map[string]NumDatabases, err err
 			log.Printf("Error in %s when retrieving the disk space usage for '%s': %v", GetCurrentFunctionName(), username, err)
 			return nil, err
 		}
-		usage[date] = NumDatabases{
+		usage = append(usage, NumDatabases{
+			UsageDate: date,
 			NumStd:  numStd,
 			NumLive: numLive,
-		}
+		})
 	}
 	return
 }
