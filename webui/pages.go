@@ -2282,13 +2282,13 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Include disk space usage in the page data
-	diskRaw, err := com.UsageDiskSpaceUser(pageData.PageMeta.LoggedInUser)
+	diskUsage, err := com.UsageDiskSpaceUser(pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	for rawDate, rawVals := range diskRaw {
-		pageData.DiskDates = append(pageData.DiskDates, rawDate)
+	for _, rawVals := range diskUsage {
+		pageData.DiskDates = append(pageData.DiskDates, rawVals.UsageDate)
 		pageData.DiskStd = append(pageData.DiskStd, rawVals.NumStd)
 		pageData.DiskLive = append(pageData.DiskLive, rawVals.NumLive)
 	}
