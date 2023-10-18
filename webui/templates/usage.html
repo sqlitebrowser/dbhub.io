@@ -11,11 +11,9 @@
             &nbsp;
         </div>
         <div class="col-md-6">
-            <h2 style="text-align: center;">Usage</h2>
+            <h2 style="text-align: center;">Your usage</h2>
 
-            <h3 style="text-align: center;">Disk space usage over time</h3>
-            <div id="visdiskstd" style="width:100%;"></div>
-            <div id="visdisklive" style="width:100%;"></div>
+            <div id="visdisk" style="width:100%;"></div>
 
             <h3 style="text-align: center;">Number of standard databases over time</h3>
             <div id="visnumstd" style="width:100%;"></div>
@@ -43,50 +41,25 @@
 </div>
 [[ template "footer" . ]]
 <script>
-    // Plotly pieces
-    let plotDataDiskStd = [
-        {
-            type: "bar",
-            orientation: "v",
-            x: [[ .DiskDates ]],
-            y: [[ .DiskStd ]]
-        }
-    ];
-    let plotDataDiskLive = [
-        {
-            type: "bar",
-            orientation: "v",
-            x: [[ .DiskDates ]],
-            z: [[ .DiskLive ]]
-        }
-    ];
-    let plotDataNumStd = [
-        {
-            type: "bar",
-            orientation: "v"
-        }
-    ];
-    let plotDataNumLive = [
-        {
-            type: "bar",
-            orientation: "v"
-        }
-    ];
-    let plotLayout = {};
-    let plotLayoutDiskStd = {
-        title: 'Disk Usage over time (standard databases)',
-        xaxis: {
-            title: 'Date',
-            showgrid: false,
-            zeroline: false
-        },
-        yaxis: {
-            title: 'Megabytes',
-            showline: false
-        }
+    let plotDataDiskStd = {
+        x: [[ .DiskDates ]],
+        y: [[ .DiskStd ]],
+        mode: 'lines',
+        type: 'scatter',
+        name: 'Standard databases'
     };
-    let plotLayoutDiskLive = {
-        title: 'Disk Usage over time (live databases)',
+
+    let plotDataDiskLive = {
+        x: [[ .DiskDates ]],
+        y: [[ .DiskLive ]],
+        mode: 'lines',
+        type: 'scatter',
+        name: 'Live databases'
+    };
+    let plotDataDisk = [plotDataDiskStd, plotDataDiskLive];
+    let plotLayoutDisk = {
+        title: 'Disk space used over time',
+        showlegend: true,
         xaxis: {
             title: 'Date',
             showgrid: false,
@@ -94,27 +67,22 @@
         },
         yaxis: {
             title: 'Megabytes',
-            showline: false
+            showline: true
         }
     };
     let plotConfig = {
         displaylogo: false,
         editable: true,
-        // responsive: true, // Responsive mode badly screws things up in Firefox.  Better to handle resize events ourselves.
+        responsive: false, // Responsive mode badly screws things up in Firefox.  Better to handle resize events ourselves.
         watermark: false,
     };
 
-    // * AngularJS pieces start here *
-
+    // * AngularJS *
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
 
         // Draw the charts
-        Plotly.react("visdiskstd", plotDataDiskStd, plotLayoutDiskStd, plotConfig);
-        Plotly.react("visdisklive", plotDataDiskLive, plotLayoutDiskLive, plotConfig);
-        Plotly.react("visnumstd", plotDataNumStd, plotLayout, plotConfig);
-        Plotly.react("visnumlive", plotDataNumLive, plotLayout, plotConfig);
-
+        Plotly.newPlot('visdisk', plotDataDisk, plotLayoutDisk);
     });
 </script>
 </body>
