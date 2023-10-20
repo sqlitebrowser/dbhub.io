@@ -24,7 +24,15 @@ RUN addgroup -S rabbitmq && \
 # Install Git, Go, Memcached, Minio, and PostgreSQL
 RUN apk update && \
     apk upgrade && \
-    apk add --no-cache ca-certificates 'curl>7.61.0' file git go libc-dev make memcached minio openssl openssl-dev postgresql shadow yarn
+    apk add --no-cache bison ca-certificates 'curl>7.61.0' file flex git go libc-dev make memcached minio openssl openssl-dev postgresql postgresql-dev shadow yarn
+
+# Add PostgreSQL jsquery extension
+RUN mkdir /install && \
+    cd /install && \
+    git clone https://github.com/postgrespro/jsquery.git && \
+    cd jsquery && \
+    make USE_PGXS=1 && \
+    make USE_PGXS=1 install
 
 # Create the DBHub.io OS user
 RUN addgroup dbhub && \
@@ -49,7 +57,7 @@ RUN echo "echo export PGDATA=/var/lib/postgresql/data > ~postgres/.profile" >> /
     echo "usermod -s /bin/sh memcached" >> /usr/local/bin/init.sh && \
     echo "usermod -s /bin/sh minio" >> /usr/local/bin/init.sh && \
     echo "su - postgres -c '/usr/libexec/postgresql/pg_ctl start'" >> /usr/local/bin/init.sh && \
-    echo "createuser -U postgres -d dbhub" >> /usr/local/bin/init.sh && \
+    echo "createuser -U postgres -ds dbhub" >> /usr/local/bin/init.sh && \
     echo "createdb -U postgres -O dbhub dbhub" >> /usr/local/bin/init.sh && \
     echo "su - dbhub -c 'psql dbhub < ${DBHUB_SOURCE}/database/dbhub.sql'" >> /usr/local/bin/init.sh && \
     echo "su - memcached -c '/usr/bin/memcached -d'" >> /usr/local/bin/init.sh && \
