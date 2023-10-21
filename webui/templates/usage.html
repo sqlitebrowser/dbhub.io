@@ -13,8 +13,21 @@
         <div class="col-md-10">
             <h2 style="text-align: center;">Your usage</h2>
 
-            <div id="visdiskhist" style="width:100%;"></div>
-            <div id="visdiskrec" style="width:100%;"></div>
+            <div class="btn-group">
+                <label class="btn btn-default" ng-model="showCharts" ng-click="chartClick('true')" uib-btn-radio="'true'" data-cy="textbtn">Charts</label>
+                <label class="btn btn-default" ng-model="showCharts" ng-click="chartClick('false')" uib-btn-radio="'false'" data-cy="chartbtn">Text</label>
+            </div>
+
+            <div>
+                <div id="visdiskhist" style="width:100%;"></div>
+                <div id="visdiskrec" style="width:100%;"></div>
+            </div>
+            <div ng-if="showCharts === 'true'">
+                Charts
+            </div>
+            <div ng-if="showCharts !== 'true'">
+                Text
+            </div>
 
             <h3 style="text-align: center;">Number of standard databases over time</h3>
             <div id="visnumstd" style="width:100%;"></div>
@@ -111,9 +124,24 @@
     let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
     app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
 
+        // Display usage as charts or text?
+        $scope.showCharts = "true";
+        $scope.chartClick = function(newValue) {
+            console.log("New incoming value = " + newValue);
+            if (newValue === "true") {
+                $scope.showCharts = "true";
+            } else {
+                $scope.showCharts = "false";
+            }
+            console.log("showCharts = " + $scope.showCharts);
+        };
+        $scope.chartClick($scope.showCharts);
+
         // Draw the charts
-        Plotly.newPlot('visdiskhist', plotDataDiskHist, plotLayoutDiskHist);
-        Plotly.newPlot('visdiskrec', plotDataDiskRec, plotLayoutDiskRec);
+        if ($scope.showCharts === "true") {
+            Plotly.newPlot('visdiskhist', plotDataDiskHist, plotLayoutDiskHist);
+            Plotly.newPlot('visdiskrec', plotDataDiskRec, plotLayoutDiskRec);
+        }
     });
 </script>
 </body>
