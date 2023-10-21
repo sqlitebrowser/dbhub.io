@@ -32,6 +32,7 @@
     "docker:attach": "docker attach dbhub-build",
     "docker:build": "docker build --tag dbhub-build docker",
     "docker:debug": "docker exec -it dbhub-build /bin/sh /usr/local/bin/debug.sh",
+    "docker:emptydb": "docker exec -it dbhub-build pkill dbhub- && docker exec -itu postgres dbhub-build sh -c 'dropdb dbhub && createdb -O dbhub dbhub'",
     "docker:exec": "docker exec -it dbhub-build /bin/sh",
     "docker:github": "docker run -itd --rm --name dbhub-build -p 9443-9445:9443-9445/tcp --mount type=bind,src=\"$(pwd)\",target=/dbhub.io dbhub-build:latest",
     "docker:psql": "docker exec -it dbhub-build psql -U dbhub dbhub",
