@@ -2262,10 +2262,13 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Usage page.
 func usagePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		PageMeta  PageMetaInfo
-		DiskDates []string
-		DiskLive  []int
-		DiskStd   []int
+		PageMeta            PageMetaInfo
+		DiskDatesHistorical []string
+		DiskLiveHistorical  []int
+		DiskStdHistorical   []int
+		DiskDatesRecent     []string
+		DiskLiveRecent      []int
+		DiskStdRecent       []int
 	}
 	pageData.PageMeta.Title = "Usage"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -2281,16 +2284,28 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Include disk space usage in the page data
-	diskUsage, err := com.UsageDiskSpaceUser(pageData.PageMeta.LoggedInUser)
+	// Retrieve historical disk space usage data
+	diskUsageHistorical, err := com.UsageDiskSpaceUserHistorical(pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	for _, rawVals := range diskUsage {
-		pageData.DiskDates = append(pageData.DiskDates, rawVals.UsageDate)
-		pageData.DiskStd = append(pageData.DiskStd, rawVals.NumStd)
-		pageData.DiskLive = append(pageData.DiskLive, rawVals.NumLive)
+	for _, rawVals := range diskUsageHistorical {
+		pageData.DiskDatesHistorical = append(pageData.DiskDatesHistorical, rawVals.UsageDate)
+		pageData.DiskStdHistorical = append(pageData.DiskStdHistorical, rawVals.NumStd)
+		pageData.DiskLiveHistorical = append(pageData.DiskLiveHistorical, rawVals.NumLive)
+	}
+
+	// Retrieve recent disk space usage data
+	diskUsageRecent, err := com.UsageDiskSpaceUserRecent(pageData.PageMeta.LoggedInUser)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	for _, rawVals := range diskUsageRecent {
+		pageData.DiskDatesRecent = append(pageData.DiskDatesRecent, rawVals.UsageDate)
+		pageData.DiskStdRecent = append(pageData.DiskStdRecent, rawVals.NumStd)
+		pageData.DiskLiveRecent = append(pageData.DiskLiveRecent, rawVals.NumLive)
 	}
 
 	// TODO: Figure out display of other usage info here
