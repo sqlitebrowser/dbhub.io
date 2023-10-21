@@ -7,13 +7,14 @@
 [[ template "header" . ]]
 <div>
     <div class="row">
-        <div class="col-md-3">
+        <div class="col-md-1">
             &nbsp;
         </div>
-        <div class="col-md-6">
+        <div class="col-md-10">
             <h2 style="text-align: center;">Your usage</h2>
 
-            <div id="visdisk" style="width:100%;"></div>
+            <div id="visdiskhist" style="width:100%;"></div>
+            <div id="visdiskrec" style="width:100%;"></div>
 
             <h3 style="text-align: center;">Number of standard databases over time</h3>
             <div id="visnumstd" style="width:100%;"></div>
@@ -34,31 +35,29 @@
              -->
 
         </div>
-        <div class="col-md-3">
+        <div class="col-md-1">
             &nbsp;
         </div>
     </div>
 </div>
 [[ template "footer" . ]]
 <script>
-    let plotDataDiskStd = {
-        x: [[ .DiskDates ]],
-        y: [[ .DiskStd ]],
-        mode: 'lines',
-        type: 'scatter',
+    // Historical disk usage
+    let plotDataDiskStdHist = {
+        x: [[ .DiskDatesHistorical ]],
+        y: [[ .DiskStdHistorical ]],
+        type: 'bar',
         name: 'Standard databases'
     };
-
-    let plotDataDiskLive = {
-        x: [[ .DiskDates ]],
-        y: [[ .DiskLive ]],
-        mode: 'lines',
-        type: 'scatter',
+    let plotDataDiskLiveHist = {
+        x: [[ .DiskDatesHistorical ]],
+        y: [[ .DiskLiveHistorical ]],
+        type: 'bar',
         name: 'Live databases'
     };
-    let plotDataDisk = [plotDataDiskStd, plotDataDiskLive];
-    let plotLayoutDisk = {
-        title: 'Disk space used over time',
+    let plotDataDiskHist = [plotDataDiskStdHist, plotDataDiskLiveHist];
+    let plotLayoutDiskHist = {
+        title: 'Historical disk space usage',
         showlegend: true,
         xaxis: {
             title: 'Date',
@@ -70,6 +69,37 @@
             showline: true
         }
     };
+
+    // Recent disk usage
+    let plotDataDiskStdRec = {
+        x: [[ .DiskDatesRecent ]],
+        y: [[ .DiskStdRecent ]],
+        mode: 'lines',
+        type: 'bar',
+        name: 'Standard databases'
+    };
+    let plotDataDiskLiveRec = {
+        x: [[ .DiskDatesRecent ]],
+        y: [[ .DiskLiveRecent ]],
+        mode: 'lines',
+        type: 'bar',
+        name: 'Live databases'
+    };
+    let plotDataDiskRec = [plotDataDiskStdRec, plotDataDiskLiveRec];
+    let plotLayoutDiskRec = {
+        title: 'Recent disk space usage',
+        showlegend: true,
+        xaxis: {
+            title: 'Date',
+            showgrid: false,
+            zeroline: false
+        },
+        yaxis: {
+            title: 'Megabytes',
+            showline: true
+        }
+    };
+
     let plotConfig = {
         displaylogo: false,
         editable: true,
@@ -82,7 +112,8 @@
     app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
 
         // Draw the charts
-        Plotly.newPlot('visdisk', plotDataDisk, plotLayoutDisk);
+        Plotly.newPlot('visdiskhist', plotDataDiskHist, plotLayoutDiskHist);
+        Plotly.newPlot('visdiskrec', plotDataDiskRec, plotLayoutDiskRec);
     });
 </script>
 </body>
