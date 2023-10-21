@@ -20,7 +20,7 @@ func UsageDiskSpaceUser(username string) (usage []NumDatabases, err error) {
 			FROM users
 			WHERE lower(user_name) = lower($1)
 		)
-		SELECT to_char(analysis_date, 'YYYY-MM') AS "Usage date", max(standard_databases_bytes) OVER w / (1024*1024) AS "Standard databases", max(live_databases_bytes) OVER w / (1024*1024) AS "Live databases"
+		SELECT DISTINCT to_char(analysis_date, 'YYYY-MM') AS "Usage date", max(standard_databases_bytes) OVER w / (1024*1024) AS "Standard databases", max(live_databases_bytes) OVER w / (1024*1024) AS "Live databases"
 		FROM analysis_space_used a, users u
 		WHERE a.user_id = u.user_id
 			AND u.user_id = (SELECT user_id FROM loggedIn)
