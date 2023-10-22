@@ -2279,6 +2279,12 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 		UploadApiHistorical   []int
 		UploadDB4SHistorical  []int
 		UploadWebuiHistorical []int
+
+		// Recent uploads
+		UploadDatesRecent     []string
+		UploadApiRecent       []int
+		UploadDB4SRecent      []int
+		UploadWebuiRecent     []int
 	}
 	pageData.PageMeta.Title = "Usage"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -2341,6 +2347,28 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	pageData.UploadApiHistorical = upApi
 	pageData.UploadDB4SHistorical = upDB4S
 	pageData.UploadWebuiHistorical = upWebui
+
+	// Retrieve upload data for the last 30 days
+	uploadsRecent, err := com.UsageUserUploadsRecent(pageData.PageMeta.LoggedInUser)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	upDates = nil
+	upApi = nil
+	upDB4S = nil
+	upWebui = nil
+	for _, upRec := range uploadsRecent {
+		upDates = append(upDates, upRec.UploadDate)
+		upApi = append(upApi, upRec.NumApi)
+		upDB4S = append(upDB4S, upRec.NumDB4S)
+		upWebui = append(upWebui, upRec.NumWebui)
+	}
+	pageData.UploadDatesRecent = upDates
+	pageData.UploadApiRecent = upApi
+	pageData.UploadDB4SRecent = upDB4S
+	pageData.UploadWebuiRecent = upWebui
+
 
 	// TODO: Figure out display of other usage info here
 

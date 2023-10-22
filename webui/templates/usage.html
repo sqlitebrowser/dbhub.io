@@ -23,6 +23,7 @@
                 <div id="visdiskrec" style="width:100%;"></div>
 
                 <div id="visuploadshist" style="width:100%;"></div>
+                <div id="visuploadsrec" style="width:100%;"></div>
             </div>
 
 
@@ -145,6 +146,40 @@
         }
     };
 
+    // Recent upload numbers
+    let plotUploadsAPIRec = {
+        x: [[ .UploadDatesRecent ]],
+        y: [[ .UploadApiRecent ]],
+        type: 'bar',
+        name: 'Uploads through API'
+    };
+    let plotUploadsDB4SRec = {
+        x: [[ .UploadDatesRecent ]],
+        y: [[ .UploadDB4SRecent ]],
+        type: 'bar',
+        name: 'Uploads through DB4S'
+    };
+    let plotUploadsWebuiRec = {
+        x: [[ .UploadDatesRecent ]],
+        y: [[ .UploadWebuiRecent ]],
+        type: 'bar',
+        name: 'Uploads through Website'
+    };
+    let plotUploadsRec = [plotUploadsAPIRec, plotUploadsDB4SRec, plotUploadsWebuiRec];
+    let plotLayoutUploadsRec = {
+        title: 'Recent uploads',
+        showlegend: true,
+        xaxis: {
+            title: 'Date',
+            showgrid: false,
+            zeroline: false
+        },
+        yaxis: {
+            title: 'Uploads',
+            showline: true
+        }
+    };
+
     let plotConfig = {
         displaylogo: false,
         editable: true,
@@ -174,6 +209,7 @@
             Plotly.newPlot('visdiskhist', plotDataDiskHist, plotLayoutDiskHist);
             Plotly.newPlot('visdiskrec', plotDataDiskRec, plotLayoutDiskRec);
             Plotly.newPlot('visuploadshist', plotUploadsHist, plotLayoutUploadsHist);
+            Plotly.newPlot('visuploadsrec', plotUploadsRec, plotLayoutUploadsRec);
         }
     });
 </script>
