@@ -2262,17 +2262,17 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Usage page.
 func usagePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		PageMeta              PageMetaInfo
+		PageMeta PageMetaInfo
 
 		// Historical disk usage
-		DiskDatesHistorical   []string
-		DiskLiveHistorical    []int
-		DiskStdHistorical     []int
+		DiskDatesHistorical []string
+		DiskLiveHistorical  []int
+		DiskStdHistorical   []int
 
 		// Recent disk usage
-		DiskDatesRecent       []string
-		DiskLiveRecent        []int
-		DiskStdRecent         []int
+		DiskDatesRecent []string
+		DiskLiveRecent  []int
+		DiskStdRecent   []int
 
 		// Historical uploads
 		UploadDatesHistorical []string
@@ -2281,10 +2281,22 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 		UploadWebuiHistorical []int
 
 		// Recent uploads
-		UploadDatesRecent     []string
-		UploadApiRecent       []int
-		UploadDB4SRecent      []int
-		UploadWebuiRecent     []int
+		UploadDatesRecent []string
+		UploadApiRecent   []int
+		UploadDB4SRecent  []int
+		UploadWebuiRecent []int
+
+		// Historical downloads
+		DownloadDatesHistorical []string
+		DownloadApiHistorical   []int
+		DownloadDB4SHistorical  []int
+		DownloadWebuiHistorical []int
+
+		// Recent downloads
+		DownloadDatesRecent []string
+		DownloadApiRecent   []int
+		DownloadDB4SRecent  []int
+		DownloadWebuiRecent []int
 	}
 	pageData.PageMeta.Title = "Usage"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -2338,7 +2350,7 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	var upDates []string
 	var upApi, upDB4S, upWebui []int
 	for _, upHist := range uploadsHistorical {
-		upDates = append(upDates, upHist.UploadDate)
+		upDates = append(upDates, upHist.TransferDate)
 		upApi = append(upApi, upHist.NumApi)
 		upDB4S = append(upDB4S, upHist.NumDB4S)
 		upWebui = append(upWebui, upHist.NumWebui)
@@ -2359,7 +2371,7 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	upDB4S = nil
 	upWebui = nil
 	for _, upRec := range uploadsRecent {
-		upDates = append(upDates, upRec.UploadDate)
+		upDates = append(upDates, upRec.TransferDate)
 		upApi = append(upApi, upRec.NumApi)
 		upDB4S = append(upDB4S, upRec.NumDB4S)
 		upWebui = append(upWebui, upRec.NumWebui)
@@ -2369,6 +2381,45 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	pageData.UploadDB4SRecent = upDB4S
 	pageData.UploadWebuiRecent = upWebui
 
+	// Retrieve historical download data
+	downloadsHistorical, err := com.UsageUserDownloadsHistorical(pageData.PageMeta.LoggedInUser)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	var downDates []string
+	var downApi, downDB4S, downWebui []int
+	for _, downHist := range downloadsHistorical {
+		downDates = append(downDates, downHist.TransferDate)
+		downApi = append(downApi, downHist.NumApi)
+		downDB4S = append(downDB4S, downHist.NumDB4S)
+		downWebui = append(downWebui, downHist.NumWebui)
+	}
+	pageData.DownloadDatesHistorical = downDates
+	pageData.DownloadApiHistorical = downApi
+	pageData.DownloadDB4SHistorical = downDB4S
+	pageData.DownloadWebuiHistorical = downWebui
+
+	// Retrieve download data for the last 30 days
+	downloadsRecent, err := com.UsageUserDownloadsRecent(pageData.PageMeta.LoggedInUser)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	downDates = nil
+	downApi = nil
+	downDB4S = nil
+	downWebui = nil
+	for _, downRec := range downloadsRecent {
+		downDates = append(downDates, downRec.TransferDate)
+		downApi = append(downApi, downRec.NumApi)
+		downDB4S = append(downDB4S, downRec.NumDB4S)
+		downWebui = append(downWebui, downRec.NumWebui)
+	}
+	pageData.DownloadDatesRecent = downDates
+	pageData.DownloadApiRecent = downApi
+	pageData.DownloadDB4SRecent = downDB4S
+	pageData.DownloadWebuiRecent = downWebui
 
 	// TODO: Figure out display of other usage info here
 

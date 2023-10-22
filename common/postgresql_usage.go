@@ -7,15 +7,15 @@ import (
 
 type NumDatabases struct {
 	UsageDate string `json:"usage_date"`
-	NumStd  int `json:"num_std"`
-	NumLive int `json:"num_live"`
+	NumStd    int    `json:"num_std"`
+	NumLive   int    `json:"num_live"`
 }
 
-type NumUploads struct {
-	UploadDate string `json:"upload_date"`
-	NumApi int `json:"num_api"`
-	NumDB4S int `json:"num_db4s"`
-	NumWebui  int `json:"num_webui"`
+type NumTransfers struct {
+	TransferDate string `json:"transfer_date"`
+	NumApi       int    `json:"num_api"`
+	NumDB4S      int    `json:"num_db4s"`
+	NumWebui     int    `json:"num_webui"`
 }
 
 // UsageUserDiskSpaceHistorical returns the historical amount of disk space used by a given user
@@ -50,8 +50,8 @@ func UsageUserDiskSpaceHistorical(username string) (usage []NumDatabases, err er
 		}
 		usage = append(usage, NumDatabases{
 			UsageDate: date,
-			NumStd:  numStd,
-			NumLive: numLive,
+			NumStd:    numStd,
+			NumLive:   numLive,
 		})
 	}
 	return
@@ -88,15 +88,15 @@ func UsageUserDiskSpaceRecent(username string) (usage []NumDatabases, err error)
 		}
 		usage = append(usage, NumDatabases{
 			UsageDate: date,
-			NumStd:  numStd,
-			NumLive: numLive,
+			NumStd:    numStd,
+			NumLive:   numLive,
 		})
 	}
 	return
 }
 
 // UsageUserUploadsHistorical returns the historical number of uploads by a given user
-func UsageUserUploadsHistorical(username string) (usage []NumUploads, err error) {
+func UsageUserUploadsHistorical(username string) (usage []NumTransfers, err error) {
 	dbQuery := `
 		WITH loggedIn AS (
 			SELECT user_id
@@ -115,7 +115,7 @@ func UsageUserUploadsHistorical(username string) (usage []NumUploads, err error)
 		return
 	}
 	defer rows.Close()
-	var tmpUploadCount NumUploads
+	var tmpUploadCount NumTransfers
 	for rows.Next() {
 		var date, serverSw string
 		var uploadCount int
@@ -124,19 +124,19 @@ func UsageUserUploadsHistorical(username string) (usage []NumUploads, err error)
 			log.Printf("Error in %s when retrieving the historical upload data for for '%s': %v", GetCurrentFunctionName(), username, err)
 			return nil, err
 		}
-		if tmpUploadCount.UploadDate != date {
+		if tmpUploadCount.TransferDate != date {
 			// We've moved on to a new date, so store the existing one we're processing in the output slice
-			if tmpUploadCount.UploadDate != "" {
+			if tmpUploadCount.TransferDate != "" {
 				usage = append(usage, tmpUploadCount)
 			}
 
 			// Clear the existing entries in the temporary upload data buffer
-			tmpUploadCount.UploadDate = ""
+			tmpUploadCount.TransferDate = ""
 			tmpUploadCount.NumApi = 0
 			tmpUploadCount.NumDB4S = 0
 			tmpUploadCount.NumWebui = 0
 		}
-		tmpUploadCount.UploadDate = date
+		tmpUploadCount.TransferDate = date
 		if serverSw == "api" && uploadCount != 0 {
 			tmpUploadCount.NumApi = uploadCount
 		}
@@ -154,7 +154,7 @@ func UsageUserUploadsHistorical(username string) (usage []NumUploads, err error)
 }
 
 // UsageUserUploadsRecent returns the number of uploads by a given user over the last 30 days
-func UsageUserUploadsRecent(username string) (usage []NumUploads, err error) {
+func UsageUserUploadsRecent(username string) (usage []NumTransfers, err error) {
 	dbQuery := `
 		WITH loggedIn AS (
 			SELECT user_id
@@ -174,7 +174,7 @@ func UsageUserUploadsRecent(username string) (usage []NumUploads, err error) {
 		return
 	}
 	defer rows.Close()
-	var tmpUploadCount NumUploads
+	var tmpUploadCount NumTransfers
 	for rows.Next() {
 		var date, serverSw string
 		var uploadCount int
@@ -183,19 +183,136 @@ func UsageUserUploadsRecent(username string) (usage []NumUploads, err error) {
 			log.Printf("Error in %s when retrieving the historical upload data for for '%s': %v", GetCurrentFunctionName(), username, err)
 			return nil, err
 		}
-		if tmpUploadCount.UploadDate != date {
+		if tmpUploadCount.TransferDate != date {
 			// We've moved on to a new date, so store the existing one we're processing in the output slice
-			if tmpUploadCount.UploadDate != "" {
+			if tmpUploadCount.TransferDate != "" {
 				usage = append(usage, tmpUploadCount)
 			}
 
 			// Clear the existing entries in the temporary upload data buffer
-			tmpUploadCount.UploadDate = ""
+			tmpUploadCount.TransferDate = ""
 			tmpUploadCount.NumApi = 0
 			tmpUploadCount.NumDB4S = 0
 			tmpUploadCount.NumWebui = 0
 		}
-		tmpUploadCount.UploadDate = date
+		tmpUploadCount.TransferDate = date
+		if serverSw == "api" && uploadCount != 0 {
+			tmpUploadCount.NumApi = uploadCount
+		}
+		if serverSw == "db4s" && uploadCount != 0 {
+			tmpUploadCount.NumDB4S = uploadCount
+		}
+		if serverSw == "webui" && uploadCount != 0 {
+			tmpUploadCount.NumWebui = uploadCount
+		}
+	}
+
+	// Add the final temporary entry to the output slice
+	usage = append(usage, tmpUploadCount)
+	return
+}
+
+// UsageUserDownloadsHistorical returns the historical number of downloads by a given user
+func UsageUserDownloadsHistorical(username string) (usage []NumTransfers, err error) {
+	dbQuery := `
+		WITH loggedIn AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		SELECT to_char(d.download_date, 'YYYY-MM') AS "Download date", d.server_sw, count(u.email)
+		FROM database_downloads d, users u
+		WHERE d.user_id = u.user_id
+			AND u.user_id = (SELECT user_id FROM loggedIn)
+		GROUP BY "Download date", d.server_sw
+		ORDER BY "Download date"`
+	rows, err := pdb.Query(context.Background(), dbQuery, username)
+	if err != nil {
+		log.Printf("Database query failed in %s: %v", GetCurrentFunctionName(), err)
+		return
+	}
+	defer rows.Close()
+	var tmpUploadCount NumTransfers
+	for rows.Next() {
+		var date, serverSw string
+		var uploadCount int
+		err = rows.Scan(&date, &serverSw, &uploadCount)
+		if err != nil {
+			log.Printf("Error in %s when retrieving the historical upload data for for '%s': %v", GetCurrentFunctionName(), username, err)
+			return nil, err
+		}
+		if tmpUploadCount.TransferDate != date {
+			// We've moved on to a new date, so store the existing one we're processing in the output slice
+			if tmpUploadCount.TransferDate != "" {
+				usage = append(usage, tmpUploadCount)
+			}
+
+			// Clear the existing entries in the temporary upload data buffer
+			tmpUploadCount.TransferDate = ""
+			tmpUploadCount.NumApi = 0
+			tmpUploadCount.NumDB4S = 0
+			tmpUploadCount.NumWebui = 0
+		}
+		tmpUploadCount.TransferDate = date
+		if serverSw == "api" && uploadCount != 0 {
+			tmpUploadCount.NumApi = uploadCount
+		}
+		if serverSw == "db4s" && uploadCount != 0 {
+			tmpUploadCount.NumDB4S = uploadCount
+		}
+		if serverSw == "webui" && uploadCount != 0 {
+			tmpUploadCount.NumWebui = uploadCount
+		}
+	}
+
+	// Add the final temporary entry to the output slice
+	usage = append(usage, tmpUploadCount)
+	return
+}
+
+// UsageUserDownloadsRecent returns the number of downloads by a given user over the last 30 days
+func UsageUserDownloadsRecent(username string) (usage []NumTransfers, err error) {
+	dbQuery := `
+		WITH loggedIn AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		SELECT to_char(d.download_date, 'YYYY-MM') AS "Download date", d.server_sw, count(u.email)
+		FROM database_downloads d, users u
+		WHERE d.user_id = u.user_id
+			AND u.user_id = (SELECT user_id FROM loggedIn)
+			AND d.download_date > now() - interval '30 days'
+		GROUP BY "Download date", d.server_sw
+		ORDER BY "Download date"`
+	rows, err := pdb.Query(context.Background(), dbQuery, username)
+	if err != nil {
+		log.Printf("Database query failed in %s: %v", GetCurrentFunctionName(), err)
+		return
+	}
+	defer rows.Close()
+	var tmpUploadCount NumTransfers
+	for rows.Next() {
+		var date, serverSw string
+		var uploadCount int
+		err = rows.Scan(&date, &serverSw, &uploadCount)
+		if err != nil {
+			log.Printf("Error in %s when retrieving the historical upload data for for '%s': %v", GetCurrentFunctionName(), username, err)
+			return nil, err
+		}
+		if tmpUploadCount.TransferDate != date {
+			// We've moved on to a new date, so store the existing one we're processing in the output slice
+			if tmpUploadCount.TransferDate != "" {
+				usage = append(usage, tmpUploadCount)
+			}
+
+			// Clear the existing entries in the temporary upload data buffer
+			tmpUploadCount.TransferDate = ""
+			tmpUploadCount.NumApi = 0
+			tmpUploadCount.NumDB4S = 0
+			tmpUploadCount.NumWebui = 0
+		}
+		tmpUploadCount.TransferDate = date
 		if serverSw == "api" && uploadCount != 0 {
 			tmpUploadCount.NumApi = uploadCount
 		}
