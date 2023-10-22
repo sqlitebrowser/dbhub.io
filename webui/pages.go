@@ -2262,13 +2262,23 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Usage page.
 func usagePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		PageMeta            PageMetaInfo
-		DiskDatesHistorical []string
-		DiskLiveHistorical  []int
-		DiskStdHistorical   []int
-		DiskDatesRecent     []string
-		DiskLiveRecent      []int
-		DiskStdRecent       []int
+		PageMeta              PageMetaInfo
+
+		// Historical disk usage
+		DiskDatesHistorical   []string
+		DiskLiveHistorical    []int
+		DiskStdHistorical     []int
+
+		// Recent disk usage
+		DiskDatesRecent       []string
+		DiskLiveRecent        []int
+		DiskStdRecent         []int
+
+		// Historical uploads
+		UploadDatesHistorical []string
+		UploadApiHistorical   []int
+		UploadDB4SHistorical  []int
+		UploadWebuiHistorical []int
 	}
 	pageData.PageMeta.Title = "Usage"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -2285,28 +2295,52 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve historical disk space usage data
-	diskUsageHistorical, err := com.UsageDiskSpaceUserHistorical(pageData.PageMeta.LoggedInUser)
+	diskUsageHistorical, err := com.UsageUserDiskSpaceHistorical(pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	for _, rawVals := range diskUsageHistorical {
-		pageData.DiskDatesHistorical = append(pageData.DiskDatesHistorical, rawVals.UsageDate)
-		pageData.DiskStdHistorical = append(pageData.DiskStdHistorical, rawVals.NumStd)
-		pageData.DiskLiveHistorical = append(pageData.DiskLiveHistorical, rawVals.NumLive)
+	for _, diskHist := range diskUsageHistorical {
+		pageData.DiskDatesHistorical = append(pageData.DiskDatesHistorical, diskHist.UsageDate)
+		pageData.DiskStdHistorical = append(pageData.DiskStdHistorical, diskHist.NumStd)
+		pageData.DiskLiveHistorical = append(pageData.DiskLiveHistorical, diskHist.NumLive)
 	}
 
 	// Retrieve recent disk space usage data
-	diskUsageRecent, err := com.UsageDiskSpaceUserRecent(pageData.PageMeta.LoggedInUser)
+	diskUsageRecent, err := com.UsageUserDiskSpaceRecent(pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
 	}
-	for _, rawVals := range diskUsageRecent {
-		pageData.DiskDatesRecent = append(pageData.DiskDatesRecent, rawVals.UsageDate)
-		pageData.DiskStdRecent = append(pageData.DiskStdRecent, rawVals.NumStd)
-		pageData.DiskLiveRecent = append(pageData.DiskLiveRecent, rawVals.NumLive)
+	for _, diskRecent := range diskUsageRecent {
+		pageData.DiskDatesRecent = append(pageData.DiskDatesRecent, diskRecent.UsageDate)
+		pageData.DiskStdRecent = append(pageData.DiskStdRecent, diskRecent.NumStd)
+		pageData.DiskLiveRecent = append(pageData.DiskLiveRecent, diskRecent.NumLive)
 	}
+
+	// Retrieve historical upload data
+	uploadsHistorical, err := com.UsageUserUploadsHistorical(pageData.PageMeta.LoggedInUser)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+
+	// NOTE - We have to use this non-optimal approach for assembling the values into the page data, to work around
+	// what seems like a bug in the Go html/template library (at least versions 1.19 -> 1.21).
+	// It was literally putting values from the pageData.DiskStdRecent structure into the '[[ .UploadDB4SHistorical ]]'
+	// placeholder when rendering the page.  The two step approach below seems to avoid whatever the problem there was.
+	var upDates []string
+	var upApi, upDB4S, upWebui []int
+	for _, upHist := range uploadsHistorical {
+		upDates = append(upDates, upHist.UploadDate)
+		upApi = append(upApi, upHist.NumApi)
+		upDB4S = append(upDB4S, upHist.NumDB4S)
+		upWebui = append(upWebui, upHist.NumWebui)
+	}
+	pageData.UploadDatesHistorical = upDates
+	pageData.UploadApiHistorical = upApi
+	pageData.UploadDB4SHistorical = upDB4S
+	pageData.UploadWebuiHistorical = upWebui
 
 	// TODO: Figure out display of other usage info here
 
