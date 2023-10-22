@@ -147,6 +147,66 @@ func UsageUserUploadsHistorical(username string) (usage []NumUploads, err error)
 			tmpUploadCount.NumWebui = uploadCount
 		}
 	}
+
+	// Add the final temporary entry to the output slice
+	usage = append(usage, tmpUploadCount)
+	return
+}
+
+// UsageUserUploadsRecent returns the number of uploads by a given user over the last 30 days
+func UsageUserUploadsRecent(username string) (usage []NumUploads, err error) {
+	dbQuery := `
+		WITH loggedIn AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		SELECT to_char(d.upload_date, 'YYYY-MM') AS "Upload date", d.server_sw, count(u.email)
+		FROM database_uploads d, users u
+		WHERE d.user_id = u.user_id
+			AND u.user_id = (SELECT user_id FROM loggedIn)
+			AND d.upload_date > now() - interval '30 days'
+		GROUP BY "Upload date", d.server_sw
+		ORDER BY "Upload date"`
+	rows, err := pdb.Query(context.Background(), dbQuery, username)
+	if err != nil {
+		log.Printf("Database query failed in %s: %v", GetCurrentFunctionName(), err)
+		return
+	}
+	defer rows.Close()
+	var tmpUploadCount NumUploads
+	for rows.Next() {
+		var date, serverSw string
+		var uploadCount int
+		err = rows.Scan(&date, &serverSw, &uploadCount)
+		if err != nil {
+			log.Printf("Error in %s when retrieving the historical upload data for for '%s': %v", GetCurrentFunctionName(), username, err)
+			return nil, err
+		}
+		if tmpUploadCount.UploadDate != date {
+			// We've moved on to a new date, so store the existing one we're processing in the output slice
+			if tmpUploadCount.UploadDate != "" {
+				usage = append(usage, tmpUploadCount)
+			}
+
+			// Clear the existing entries in the temporary upload data buffer
+			tmpUploadCount.UploadDate = ""
+			tmpUploadCount.NumApi = 0
+			tmpUploadCount.NumDB4S = 0
+			tmpUploadCount.NumWebui = 0
+		}
+		tmpUploadCount.UploadDate = date
+		if serverSw == "api" && uploadCount != 0 {
+			tmpUploadCount.NumApi = uploadCount
+		}
+		if serverSw == "db4s" && uploadCount != 0 {
+			tmpUploadCount.NumDB4S = uploadCount
+		}
+		if serverSw == "webui" && uploadCount != 0 {
+			tmpUploadCount.NumWebui = uploadCount
+		}
+	}
+
 	// Add the final temporary entry to the output slice
 	usage = append(usage, tmpUploadCount)
 	return
