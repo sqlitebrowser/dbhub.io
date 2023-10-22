@@ -13,21 +13,18 @@
         <div class="col-md-10">
             <h2 style="text-align: center;">Your usage</h2>
 
-            <div class="btn-group">
-                <label class="btn btn-default" ng-model="showCharts" ng-click="chartClick('true')" uib-btn-radio="'true'" data-cy="textbtn">Charts</label>
-                <label class="btn btn-default" ng-model="showCharts" ng-click="chartClick('false')" uib-btn-radio="'false'" data-cy="chartbtn">Text</label>
-            </div>
+            <!--<div class="btn-group">-->
+            <!--    <label class="btn btn-default" ng-model="showCharts" ng-click="chartClick('true')" uib-btn-radio="'true'" data-cy="textbtn">Charts</label>-->
+            <!--    <label class="btn btn-default" ng-model="showCharts" ng-click="chartClick('false')" uib-btn-radio="'false'" data-cy="chartbtn">Text</label>-->
+            <!--</div>-->
 
             <div>
                 <div id="visdiskhist" style="width:100%;"></div>
                 <div id="visdiskrec" style="width:100%;"></div>
+
+                <div id="visuploadshist" style="width:100%;"></div>
             </div>
-            <div ng-if="showCharts === 'true'">
-                Charts
-            </div>
-            <div ng-if="showCharts !== 'true'">
-                Text
-            </div>
+
 
             <h3 style="text-align: center;">Number of standard databases over time</h3>
             <div id="visnumstd" style="width:100%;"></div>
@@ -36,15 +33,18 @@
             <div id="visnumlive" style="width:100%;"></div>
 
             <!--
-
                 What else would be useful to display here?
 
                 * Probably most/all other stat info we collect
 
-                  * API calls over time
-                  * Database uploads/downloads over time
-                  * What else?
-
+                  * Number of databases
+                  * API calls
+                    * Show each operation type as a separate bar/line
+                  * Database uploads/downloads
+                    * Show each source as a separate bar/line; webui, api, db4s
+                  * Visualisations
+                    * Number of visualisations
+                    * Number of calls to the visualisations?
              -->
 
         </div>
@@ -87,14 +87,12 @@
     let plotDataDiskStdRec = {
         x: [[ .DiskDatesRecent ]],
         y: [[ .DiskStdRecent ]],
-        mode: 'lines',
         type: 'bar',
         name: 'Standard databases'
     };
     let plotDataDiskLiveRec = {
         x: [[ .DiskDatesRecent ]],
         y: [[ .DiskLiveRecent ]],
-        mode: 'lines',
         type: 'bar',
         name: 'Live databases'
     };
@@ -109,6 +107,40 @@
         },
         yaxis: {
             title: 'Megabytes',
+            showline: true
+        }
+    };
+
+    // Historical upload numbers
+    let plotUploadsAPIHist = {
+        x: [[ .UploadDatesHistorical ]],
+        y: [[ .UploadApiHistorical ]],
+        type: 'bar',
+        name: 'Uploads through API'
+    };
+    let plotUploadsDB4SHist = {
+        x: [[ .UploadDatesHistorical ]],
+        y: [[ .UploadDB4SHistorical ]],
+        type: 'bar',
+        name: 'Uploads through DB4S'
+    };
+    let plotUploadsWebuiHist = {
+        x: [[ .UploadDatesHistorical ]],
+        y: [[ .UploadWebuiHistorical ]],
+        type: 'bar',
+        name: 'Uploads through Website'
+    };
+    let plotUploadsHist = [plotUploadsAPIHist, plotUploadsDB4SHist, plotUploadsWebuiHist];
+    let plotLayoutUploadsHist = {
+        title: 'Historical upload numbers',
+        showlegend: true,
+        xaxis: {
+            title: 'Date',
+            showgrid: false,
+            zeroline: false
+        },
+        yaxis: {
+            title: 'Uploads',
             showline: true
         }
     };
@@ -141,6 +173,7 @@
         if ($scope.showCharts === "true") {
             Plotly.newPlot('visdiskhist', plotDataDiskHist, plotLayoutDiskHist);
             Plotly.newPlot('visdiskrec', plotDataDiskRec, plotLayoutDiskRec);
+            Plotly.newPlot('visuploadshist', plotUploadsHist, plotLayoutUploadsHist);
         }
     });
 </script>
