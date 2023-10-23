@@ -34,8 +34,8 @@ type NumTransfers struct {
 	NumWebui     int    `json:"num_webui"`
 }
 
-// UsageUserApiOpsHistorical returns the historical number of API operations by a given user
-func UsageUserApiOpsHistorical(username string) (usage []NumAPIOps, err error) {
+// UsageUserApiOps returns the number of API operations by a given user for the desired time period
+func UsageUserApiOps(username string, recentOnly bool) (usage []NumAPIOps, err error) {
 	dbQuery := `
 		WITH loggedIn AS (
 			SELECT user_id
@@ -44,7 +44,12 @@ func UsageUserApiOpsHistorical(username string) (usage []NumAPIOps, err error) {
 		)
 		SELECT to_char(api_call_date, 'YYYY-MM') AS "Date", api_operation AS "Operation", count(*)
 		FROM api_call_log a
-		WHERE a.caller_id = (SELECT user_id FROM loggedIn)
+		WHERE a.caller_id = (SELECT user_id FROM loggedIn)`
+	if recentOnly {
+		dbQuery += `
+		AND api_call_date > now() - interval '30 days'`
+	}
+	dbQuery += `
 		GROUP BY "Date", "Operation"
 		ORDER BY "Date"`
 	rows, err := pdb.Query(context.Background(), dbQuery, username)

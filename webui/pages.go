@@ -2311,6 +2311,20 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 		OpTablesHistorical        []int
 		OpTagsHistorical          []int
 		OpUploadHistorical        []int
+
+		// Recent API operations
+		OpDatesRecent         []string
+		OpCommitsRecent       []int
+		OpDatabasesRecent     []int
+		OpDownloadRecent      []int
+		OpExecuteRecent       []int
+		OpIndexesRecent       []int
+		OpLiveDatabasesRecent []int
+		OpMetadataRecent      []int
+		OpQueryRecent         []int
+		OpTablesRecent        []int
+		OpTagsRecent          []int
+		OpUploadRecent        []int
 	}
 	pageData.PageMeta.Title = "Usage"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -2436,7 +2450,7 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	pageData.DownloadWebuiRecent = downWebui
 
 	// Retrieve historical API operations data
-	apiOpsHistorical, err := com.UsageUserApiOpsHistorical(pageData.PageMeta.LoggedInUser)
+	apiOpsHistorical, err := com.UsageUserApiOps(pageData.PageMeta.LoggedInUser, false)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
@@ -2469,6 +2483,51 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	pageData.OpTablesHistorical = opTables
 	pageData.OpTagsHistorical = opTags
 	pageData.OpUploadHistorical = opUpload
+
+	// Retrieve recent API operations data
+	apiOpsRecent, err := com.UsageUserApiOps(pageData.PageMeta.LoggedInUser, true)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	opDates = nil
+	opCommits = nil
+	opDatabases = nil
+	opDownload = nil
+	opExecute = nil
+	opIndexes = nil
+	opLiveDatabases = nil
+	opMetadata = nil
+	opQuery = nil
+	opTables = nil
+	opTags = nil
+	opUpload = nil
+	for _, opRec := range apiOpsRecent {
+		opDates = append(opDates, opRec.OpDate)
+		opCommits = append(opCommits, opRec.NumCommits)
+		opDatabases = append(opDatabases, opRec.NumDatabases)
+		opDownload = append(opDownload, opRec.NumDownload)
+		opExecute = append(opExecute, opRec.NumExecute)
+		opIndexes = append(opIndexes, opRec.NumIndexes)
+		opLiveDatabases = append(opLiveDatabases, opRec.NumLiveDatabases)
+		opMetadata = append(opMetadata, opRec.NumMetadata)
+		opQuery = append(opQuery, opRec.NumQuery)
+		opTables = append(opTables, opRec.NumTables)
+		opTags = append(opTags, opRec.NumTags)
+		opUpload = append(opUpload, opRec.NumUpload)
+	}
+	pageData.OpDatesRecent = opDates
+	pageData.OpCommitsRecent = opCommits
+	pageData.OpDatabasesRecent = opDatabases
+	pageData.OpDownloadRecent = opDownload
+	pageData.OpExecuteRecent = opExecute
+	pageData.OpIndexesRecent = opIndexes
+	pageData.OpLiveDatabasesRecent = opLiveDatabases
+	pageData.OpMetadataRecent = opMetadata
+	pageData.OpQueryRecent = opQuery
+	pageData.OpTablesRecent = opTables
+	pageData.OpTagsRecent = opTags
+	pageData.OpUploadRecent = opUpload
 
 	// TODO: Figure out display of other usage info here
 
