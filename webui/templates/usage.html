@@ -27,6 +27,8 @@
 
                 <div id="visdownloadshist" style="width:100%;"></div>
                 <div id="visdownloadsrec" style="width:100%;"></div>
+
+                <div id="visapiopshist" style="width:100%;"></div>
             </div>
 
 
@@ -44,6 +46,7 @@
                   * Number of databases
                   * API calls
                     * Show each operation type as a separate bar/line
+
                   * Visualisations
                     * Number of saved visualisations
                     * Number of calls to the visualisations?
@@ -249,6 +252,90 @@
         }
     };
 
+    // Historical download numbers
+    let plotLayoutAPIOpsHist = {
+        title: 'Historical API Operations',
+        showlegend: true,
+        xaxis: {
+            title: 'Date',
+            showgrid: false,
+            zeroline: false
+        },
+        yaxis: {
+            title: 'API Operations',
+            showline: true
+        }
+    };
+    let plotAPIOpsCommitsHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpCommitsHistorical ]],
+        type: 'bar',
+        name: 'API commits operations'
+    };
+    let plotAPIOpsDatabasesHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpDatabasesHistorical ]],
+        type: 'bar',
+        name: 'API databases operations'
+    };
+    let plotAPIOpsDownloadHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpDownloadHistorical ]],
+        type: 'bar',
+        name: 'API download operations'
+    };
+    let plotAPIOpsExecuteHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpExecuteHistorical ]],
+        type: 'bar',
+        name: 'API execute operations'
+    };
+    let plotAPIOpsIndexesHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpIndexesHistorical ]],
+        type: 'bar',
+        name: 'API indexes operations'
+    };
+    let plotAPIOpsLiveDatabasesHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpLiveDatabasesHistorical ]],
+        type: 'bar',
+        name: 'API LIVE databases operations'
+    };
+    let plotAPIOpsMetadataHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpMetadataHistorical ]],
+        type: 'bar',
+        name: 'API metadata operations'
+    };
+    let plotAPIOpsQueryHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpQueryHistorical ]],
+        type: 'bar',
+        name: 'API query operations'
+    };
+    let plotAPIOpsTablesHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpTablesHistorical ]],
+        type: 'bar',
+        name: 'API tables operations'
+    };
+    let plotAPIOpsTagsHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpTagsHistorical ]],
+        type: 'bar',
+        name: 'API tags operations'
+    };
+    let plotAPIOpsUploadHist = {
+        x: [[ .OpDatesHistorical ]],
+        y: [[ .OpUploadHistorical ]],
+        type: 'bar',
+        name: 'API upload operations'
+    };
+    let plotAPIOpsHist = [plotAPIOpsCommitsHist, plotAPIOpsDatabasesHist, plotAPIOpsDownloadHist, plotAPIOpsExecuteHist,
+                          plotAPIOpsIndexesHist, plotAPIOpsLiveDatabasesHist, plotAPIOpsMetadataHist, plotAPIOpsQueryHist,
+                          plotAPIOpsTablesHist, plotAPIOpsTagsHist, plotAPIOpsUploadHist];
+
     let plotConfig = {
         displaylogo: false,
         editable: true,
@@ -281,6 +368,7 @@
             Plotly.newPlot('visuploadsrec', plotUploadsRec, plotLayoutUploadsRec);
             Plotly.newPlot('visdownloadshist', plotDownloadsHist, plotLayoutDownloadsHist);
             Plotly.newPlot('visdownloadsrec', plotDownloadsRec, plotLayoutDownloadsRec);
+            Plotly.newPlot('visapiopshist', plotAPIOpsHist, plotLayoutAPIOpsHist);
         }
     });
 </script>
