@@ -2297,6 +2297,20 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 		DownloadApiRecent   []int
 		DownloadDB4SRecent  []int
 		DownloadWebuiRecent []int
+
+		// Historical API operations
+		OpDatesHistorical         []string
+		OpCommitsHistorical       []int
+		OpDatabasesHistorical     []int
+		OpDownloadHistorical      []int
+		OpExecuteHistorical       []int
+		OpIndexesHistorical       []int
+		OpLiveDatabasesHistorical []int
+		OpMetadataHistorical      []int
+		OpQueryHistorical         []int
+		OpTablesHistorical        []int
+		OpTagsHistorical          []int
+		OpUploadHistorical        []int
 	}
 	pageData.PageMeta.Title = "Usage"
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -2420,6 +2434,41 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	pageData.DownloadApiRecent = downApi
 	pageData.DownloadDB4SRecent = downDB4S
 	pageData.DownloadWebuiRecent = downWebui
+
+	// Retrieve historical API operations data
+	apiOpsHistorical, err := com.UsageUserApiOpsHistorical(pageData.PageMeta.LoggedInUser)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	var opDates []string
+	var opCommits, opDatabases, opDownload, opExecute, opIndexes, opLiveDatabases, opMetadata, opQuery, opTables, opTags, opUpload []int
+	for _, opHist := range apiOpsHistorical {
+		opDates = append(opDates, opHist.OpDate)
+		opCommits = append(opCommits, opHist.NumCommits)
+		opDatabases = append(opDatabases, opHist.NumDatabases)
+		opDownload = append(opDownload, opHist.NumDownload)
+		opExecute = append(opExecute, opHist.NumExecute)
+		opIndexes = append(opIndexes, opHist.NumIndexes)
+		opLiveDatabases = append(opLiveDatabases, opHist.NumLiveDatabases)
+		opMetadata = append(opMetadata, opHist.NumMetadata)
+		opQuery = append(opQuery, opHist.NumQuery)
+		opTables = append(opTables, opHist.NumTables)
+		opTags = append(opTags, opHist.NumTags)
+		opUpload = append(opUpload, opHist.NumUpload)
+	}
+	pageData.OpDatesHistorical = opDates
+	pageData.OpCommitsHistorical = opCommits
+	pageData.OpDatabasesHistorical = opDatabases
+	pageData.OpDownloadHistorical = opDownload
+	pageData.OpExecuteHistorical = opExecute
+	pageData.OpIndexesHistorical = opIndexes
+	pageData.OpLiveDatabasesHistorical = opLiveDatabases
+	pageData.OpMetadataHistorical = opMetadata
+	pageData.OpQueryHistorical = opQuery
+	pageData.OpTablesHistorical = opTables
+	pageData.OpTagsHistorical = opTags
+	pageData.OpUploadHistorical = opUpload
 
 	// TODO: Figure out display of other usage info here
 
