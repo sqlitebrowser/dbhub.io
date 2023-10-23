@@ -29,6 +29,7 @@
                 <div id="visdownloadsrec" style="width:100%;"></div>
 
                 <div id="visapiopshist" style="width:100%;"></div>
+                <div id="visapiopsrec" style="width:100%;"></div>
             </div>
 
 
@@ -252,7 +253,7 @@
         }
     };
 
-    // Historical download numbers
+    // Historical API operations numbers
     let plotLayoutAPIOpsHist = {
         title: 'Historical API Operations',
         showlegend: true,
@@ -336,6 +337,90 @@
                           plotAPIOpsIndexesHist, plotAPIOpsLiveDatabasesHist, plotAPIOpsMetadataHist, plotAPIOpsQueryHist,
                           plotAPIOpsTablesHist, plotAPIOpsTagsHist, plotAPIOpsUploadHist];
 
+    // Recent API operations numbers
+    let plotLayoutAPIOpsRec = {
+        title: 'Recent API Operations',
+        showlegend: true,
+        xaxis: {
+            title: 'Date',
+            showgrid: false,
+            zeroline: false
+        },
+        yaxis: {
+            title: 'API Operations',
+            showline: true
+        }
+    };
+    let plotAPIOpsCommitsRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpCommitsRecent ]],
+        type: 'bar',
+        name: 'API commits operations'
+    };
+    let plotAPIOpsDatabasesRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpDatabasesRecent ]],
+        type: 'bar',
+        name: 'API databases operations'
+    };
+    let plotAPIOpsDownloadRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpDownloadRecent ]],
+        type: 'bar',
+        name: 'API download operations'
+    };
+    let plotAPIOpsExecuteRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpExecuteRecent ]],
+        type: 'bar',
+        name: 'API execute operations'
+    };
+    let plotAPIOpsIndexesRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpIndexesRecent ]],
+        type: 'bar',
+        name: 'API indexes operations'
+    };
+    let plotAPIOpsLiveDatabasesRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpLiveDatabasesRecent ]],
+        type: 'bar',
+        name: 'API LIVE databases operations'
+    };
+    let plotAPIOpsMetadataRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpMetadataRecent ]],
+        type: 'bar',
+        name: 'API metadata operations'
+    };
+    let plotAPIOpsQueryRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpQueryRecent ]],
+        type: 'bar',
+        name: 'API query operations'
+    };
+    let plotAPIOpsTablesRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpTablesRecent ]],
+        type: 'bar',
+        name: 'API tables operations'
+    };
+    let plotAPIOpsTagsRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpTagsRecent ]],
+        type: 'bar',
+        name: 'API tags operations'
+    };
+    let plotAPIOpsUploadRec = {
+        x: [[ .OpDatesRecent ]],
+        y: [[ .OpUploadRecent ]],
+        type: 'bar',
+        name: 'API upload operations'
+    };
+    let plotAPIOpsRec = [plotAPIOpsCommitsRec, plotAPIOpsDatabasesRec, plotAPIOpsDownloadRec, plotAPIOpsExecuteRec,
+                          plotAPIOpsIndexesRec, plotAPIOpsLiveDatabasesRec, plotAPIOpsMetadataRec, plotAPIOpsQueryRec,
+                          plotAPIOpsTablesRec, plotAPIOpsTagsRec, plotAPIOpsUploadRec];
+
     let plotConfig = {
         displaylogo: false,
         editable: true,
@@ -369,6 +454,7 @@
             Plotly.newPlot('visdownloadshist', plotDownloadsHist, plotLayoutDownloadsHist);
             Plotly.newPlot('visdownloadsrec', plotDownloadsRec, plotLayoutDownloadsRec);
             Plotly.newPlot('visapiopshist', plotAPIOpsHist, plotLayoutAPIOpsHist);
+            Plotly.newPlot('visapiopsrec', plotAPIOpsRec, plotLayoutAPIOpsRec);
         }
     });
 </script>
