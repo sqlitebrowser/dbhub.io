@@ -138,7 +138,7 @@ func main() {
 
 		// Store the information in our PostgreSQL backend
 		for user, z := range userStorage {
-			err = com.AnalysisRecordUserStorage(user, now, z.StandardBytes, z.LiveBytes)
+			err = com.AnalysisRecordUserStorage(user, now, z.StandardBytes, z.LiveBytes, z.NumStandard, z.NumLive)
 			if err != nil {
 				log.Fatalln()
 			}
@@ -164,6 +164,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			numStdDB := len(dbList)
 
 			type commitList map[string]com.CommitEntry
 			dbCommits := make(map[string]commitList)
@@ -193,7 +194,7 @@ func main() {
 				}
 
 				// Record the storage space used by the database (until this date) to our backend
-				err = com.AnalysisRecordUserStorage(user, pointInTime, spaceUsed, 0)
+				err = com.AnalysisRecordUserStorage(user, pointInTime, spaceUsed, 0, numStdDB, 0)
 				if err != nil {
 					log.Fatalln()
 				}
