@@ -125,28 +125,27 @@ func AnalysisRecordUserStorage(userName string, recordDate time.Time, spaceUsedS
 }
 
 // AnalysisUsersWithDBs returns the list of users with at least one database
-func AnalysisUsersWithDBs() (userList map[string]int, err error) {
+func AnalysisUsersWithDBs() (userList []string, err error) {
 	dbQuery := `
-		SELECT u.user_name, count(*)
+		SELECT u.user_id, u.user_name
 		FROM users u, sqlite_databases db
 		WHERE u.user_id = db.user_id
-		GROUP BY u.user_name`
+		GROUP BY u.user_id
+		ORDER BY u.user_id`
 	rows, err := pdb.Query(context.Background(), dbQuery)
 	if err != nil {
 		log.Printf("Database query failed in %s: %v", GetCurrentFunctionName(), err)
 		return
 	}
 	defer rows.Close()
-	userList = make(map[string]int)
 	for rows.Next() {
 		var user string
-		var numDBs int
-		err = rows.Scan(&user, &numDBs)
+		err = rows.Scan(nil, &user)
 		if err != nil {
 			log.Printf("Error in %s when getting the list of users with at least one database: %v", GetCurrentFunctionName(), err)
 			return nil, err
 		}
-		userList[user] = numDBs
+		userList = append(userList, user)
 	}
 	return
 }

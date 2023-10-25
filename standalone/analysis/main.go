@@ -67,9 +67,9 @@ func main() {
 	// Loop through the users, calculating the total disk space used by each
 	now := time.Now()
 	if !Historical {
-		for user, numDBs := range userList {
+		for _, user := range userList {
 			if Debug {
-				log.Printf("Processing user: %s, # databases: %d", user, numDBs)
+				log.Printf("Processing user: %s", user)
 			}
 
 			// Get the list of standard databases for a user
@@ -126,6 +126,7 @@ func main() {
 
 				if Debug {
 					log.Printf("User: %s, Live database: %s, Space used: %s", user, db.Database, units.HumanSize(float64(spaceUsedLive)))
+					log.Printf("User: %s, Live database: %s, Space used: %s", user, db.Database, units.HumanSize(float64(spaceUsedLive)))
 				}
 			}
 			userStorage[user] = dbUsage{
@@ -147,7 +148,7 @@ func main() {
 
 	// Do the historical storage analysis if requested by the caller
 	if Historical {
-		for user, _ := range userList {
+		for _, user := range userList {
 			// Get the date the user signed up
 			details, err := com.User(user)
 			if err != nil {
@@ -164,7 +165,6 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			numStdDB := len(dbList)
 
 			type commitList map[string]com.CommitEntry
 			dbCommits := make(map[string]commitList)
@@ -172,9 +172,18 @@ func main() {
 			// Loop through the days, calculating the space used each day since they joined until today
 			pointInTime := joinDate
 			for pointInTime.Before(now) {
+				// Clear the map of standard databases for this point in time
+				stdExists := make(map[string]bool)
+
 				// Calculate the disk space used by all of the users' databases for the given day
 				var spaceUsed int64
 				for _, db := range dbList {
+					// If the database wasn't created by this point in time, then skip it
+					if db.DateCreated.After(pointInTime) {
+						continue
+					}
+					stdExists[db.Database]=true
+
 					// Get the commit list for the database, using a cache to reduce multiple database hits for the same info
 					commits, ok := dbCommits[db.Database]
 					if !ok {
@@ -192,6 +201,7 @@ func main() {
 					}
 					spaceUsed += z
 				}
+				numStdDB := len(stdExists)
 
 				// Record the storage space used by the database (until this date) to our backend
 				err = com.AnalysisRecordUserStorage(user, pointInTime, spaceUsed, 0, numStdDB, 0)
