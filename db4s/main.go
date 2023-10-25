@@ -995,7 +995,7 @@ func userDatabaseList(userAcc string, user string) (dbList []byte, err error) {
 	}
 
 	// Retrieve the database list
-	pubDBs, err := com.UserDBs(user, pubSetting)
+	pubDBs, err := com.UserDBs(user, pubSetting, false)
 	if err != nil {
 		return nil, err
 	}

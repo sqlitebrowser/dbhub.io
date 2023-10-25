@@ -211,6 +211,7 @@ type DBInfo struct {
 	Contributors  int
 	Database      string
 	DateCreated   time.Time
+	DateDeleted   time.Time
 	DBEntry       DBTreeEntry
 	DefaultBranch string
 	DefaultTable  string
@@ -221,6 +222,7 @@ type DBInfo struct {
 	ForkOwner     string
 	Forks         int
 	FullDesc      string
+	IsDeleted     bool
 	IsLive        bool
 	LastModified  time.Time
 	Licence       string

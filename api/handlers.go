@@ -300,7 +300,7 @@ func databasesHandler(w http.ResponseWriter, r *http.Request) {
 	var databases []com.DBInfo
 	if !live {
 		// Get the list of standard databases
-		databases, err = com.UserDBs(loggedInUser, com.DB_BOTH)
+		databases, err = com.UserDBs(loggedInUser, com.DB_BOTH, false)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
 			return
