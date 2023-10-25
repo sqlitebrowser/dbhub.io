@@ -1077,7 +1077,7 @@ func DeleteDatabase(dbOwner, dbName string) error {
 		// Mark the database as deleted in PostgreSQL, replacing the entry with the ~randomly generated name
 		dbQuery = `
 			UPDATE sqlite_databases AS db
-			SET is_deleted = true, public = false, db_name = $3, last_modified = now()
+			SET is_deleted = true, public = false, db_name = $3, last_modified = now(), date_deleted = now()
 			WHERE user_id = (
 					SELECT user_id
 					FROM users
@@ -1134,7 +1134,7 @@ func DeleteDatabase(dbOwner, dbName string) error {
 	// Replace the database entry in sqlite_databases with a stub
 	dbQuery = `
 		UPDATE sqlite_databases AS db
-		SET is_deleted = true, public = false, db_name = $3, last_modified = now()
+		SET is_deleted = true, public = false, db_name = $3, last_modified = now(), date_deleted = now()
 		WHERE user_id = (
 				SELECT user_id
 				FROM users
@@ -1343,8 +1343,7 @@ func DisconnectPostgreSQL() {
 // Discussions returns the list of discussions or MRs for a given database
 // If a non-0 discID value is passed, it will only return the details for that specific discussion/MR.  Otherwise, it
 // will return a list of all discussions or MRs for a given database
-// Note - This returns a slice of DiscussionEntry, instead of a map.  We use a slice because it lets us use an ORDER
-//
+// Note: This returns a slice of DiscussionEntry, instead of a map.  We use a slice because it lets us use an ORDER
 //	BY clause in the SQL and preserve the returned order (maps don't preserve order).  If in future we no longer
 //	need to preserve the order, it might be useful to switch to using a map instead since they're often simpler
 //	to work with.
@@ -4957,7 +4956,7 @@ func User(userName string) (user UserDetails, err error) {
 }
 
 // UserDBs returns the list of databases for a user
-func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
+func UserDBs(userName string, public AccessType, includeDeleted bool) (list []DBInfo, err error) {
 	// Construct SQL query for retrieving the requested database list
 	dbQuery := `
 		WITH u AS (
@@ -4969,15 +4968,17 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 			FROM sqlite_databases AS db, u
 			WHERE db.user_id = u.user_id
 		), dbs AS (
-			SELECT DISTINCT ON (db.db_name) db.db_name, db.date_created, db.last_modified, db.public,
+			SELECT DISTINCT ON (db.db_name) db.db_name, db.date_created, db.date_deleted, db.last_modified, db.public,
 				db.watchers, db.stars, db.discussions, db.merge_requests, db.branches, db.release_count, db.tags,
 				db.contributors, db.one_line_description, default_commits.id,
 				db.commit_list->default_commits.id->'tree'->'entries'->0, db.source_url, db.default_branch,
-				db.download_count, db.page_views
+				db.download_count, db.page_views, db.is_deleted
 			FROM sqlite_databases AS db, default_commits
 			WHERE db.db_id = default_commits.db_id
-				AND db.is_deleted = false
 				AND db.live_db = false`
+	if includeDeleted != true {
+		dbQuery += ` AND db.is_deleted = false`
+	}
 	switch public {
 	case DB_PUBLIC:
 		// Only public databases
@@ -5004,11 +5005,12 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var defBranch, desc, source pgtype.Text
+		var tmpDelDate pgtype.Timestamptz
 		var oneRow DBInfo
-		err = rows.Scan(&oneRow.Database, &oneRow.DateCreated, &oneRow.RepoModified, &oneRow.Public,
+		err = rows.Scan(&oneRow.Database, &oneRow.DateCreated, &tmpDelDate, &oneRow.RepoModified, &oneRow.Public,
 			&oneRow.Watchers, &oneRow.Stars, &oneRow.Discussions, &oneRow.MRs, &oneRow.Branches,
 			&oneRow.Releases, &oneRow.Tags, &oneRow.Contributors, &desc, &oneRow.CommitID, &oneRow.DBEntry, &source,
-			&defBranch, &oneRow.Downloads, &oneRow.Views)
+			&defBranch, &oneRow.Downloads, &oneRow.Views, &oneRow.IsDeleted)
 		if err != nil {
 			log.Printf("Error retrieving database list for user: %v", err)
 			return nil, err
@@ -5021,6 +5023,9 @@ func UserDBs(userName string, public AccessType) (list []DBInfo, err error) {
 		}
 		if source.Valid {
 			oneRow.SourceURL = source.String
+		}
+		if tmpDelDate.Valid {
+			oneRow.DateDeleted = tmpDelDate.Time
 		}
 		oneRow.LastModified = oneRow.DBEntry.LastModified
 		oneRow.Size = oneRow.DBEntry.Size

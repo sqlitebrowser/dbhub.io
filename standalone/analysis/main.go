@@ -73,7 +73,7 @@ func main() {
 			}
 
 			// Get the list of standard databases for a user
-			dbList, err := com.UserDBs(user, com.DB_BOTH)
+			dbList, err := com.UserDBs(user, com.DB_BOTH, false)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -161,7 +161,7 @@ func main() {
 			}
 
 			// Get the list of standard databases for a user
-			dbList, err := com.UserDBs(user, com.DB_BOTH)
+			dbList, err := com.UserDBs(user, com.DB_BOTH, true)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -178,8 +178,8 @@ func main() {
 				// Calculate the disk space used by all of the users' databases for the given day
 				var spaceUsed int64
 				for _, db := range dbList {
-					// If the database wasn't created by this point in time, then skip it
-					if db.DateCreated.After(pointInTime) {
+					// If the database wasn't present at this point in time, then skip it
+					if db.DateCreated.After(pointInTime) || (db.IsDeleted && db.DateDeleted.Before(pointInTime)) {
 						continue
 					}
 					stdExists[db.Database]=true

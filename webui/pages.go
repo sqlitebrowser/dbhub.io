@@ -1558,14 +1558,14 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// Retrieve list of public databases for the user
-	pageData.PublicDBs, err = com.UserDBs(userName, com.DB_PUBLIC)
+	pageData.PublicDBs, err = com.UserDBs(userName, com.DB_PUBLIC, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
 	}
 
 	// Retrieve list of private databases for the user
-	pageData.PrivateDBs, err = com.UserDBs(userName, com.DB_PRIVATE)
+	pageData.PrivateDBs, err = com.UserDBs(userName, com.DB_PRIVATE, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -2590,7 +2590,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// Retrieve list of public standard databases owned by the user
-	pageData.DBRows, err = com.UserDBs(userName, com.DB_PUBLIC)
+	pageData.DBRows, err = com.UserDBs(userName, com.DB_PUBLIC, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
