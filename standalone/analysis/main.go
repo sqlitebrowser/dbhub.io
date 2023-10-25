@@ -56,11 +56,13 @@ func main() {
 		log.Printf("# of users: %d", len(userList))
 	}
 
-	type dbSizes struct {
-		Live     int64
-		Standard int64
+	type dbUsage struct {
+		LiveBytes     int64
+		StandardBytes int64
+		NumLive       int
+		NumStandard   int
 	}
-	userStorage := make(map[string]dbSizes)
+	userStorage := make(map[string]dbUsage)
 
 	// Loop through the users, calculating the total disk space used by each
 	now := time.Now()
@@ -75,6 +77,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			numStd := len(dbList)
 
 			// For each standard database, count the list of commits and amount of space used
 			var spaceUsedStandard int64
@@ -103,6 +106,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			numLive := len(liveList)
 
 			// For each live database, get the amount of space used
 			var spaceUsedLive int64
@@ -124,12 +128,17 @@ func main() {
 					log.Printf("User: %s, Live database: %s, Space used: %s", user, db.Database, units.HumanSize(float64(spaceUsedLive)))
 				}
 			}
-			userStorage[user] = dbSizes{Standard: spaceUsedStandard, Live: spaceUsedLive}
+			userStorage[user] = dbUsage{
+				LiveBytes:     spaceUsedLive,
+				StandardBytes: spaceUsedStandard,
+				NumLive:       numLive,
+				NumStandard:   numStd,
+			}
 		}
 
 		// Store the information in our PostgreSQL backend
 		for user, z := range userStorage {
-			err = com.AnalysisRecordUserStorage(user, now, z.Standard, z.Live)
+			err = com.AnalysisRecordUserStorage(user, now, z.StandardBytes, z.LiveBytes)
 			if err != nil {
 				log.Fatalln()
 			}
