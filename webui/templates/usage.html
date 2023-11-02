@@ -136,7 +136,7 @@
         type: 'bar',
         name: 'Uploads through Website'
     };
-    let plotUploadsHist = [plotUploadsAPIHist, plotUploadsDB4SHist, plotUploadsWebuiHist];
+    let plotDataUploadsHist = [plotUploadsAPIHist, plotUploadsDB4SHist, plotUploadsWebuiHist];
     let plotLayoutUploadsHist = {
         title: 'Historical upload numbers',
         showlegend: true,
@@ -170,7 +170,7 @@
         type: 'bar',
         name: 'Uploads through Website'
     };
-    let plotUploadsRec = [plotUploadsAPIRec, plotUploadsDB4SRec, plotUploadsWebuiRec];
+    let plotDataUploadsRec = [plotUploadsAPIRec, plotUploadsDB4SRec, plotUploadsWebuiRec];
     let plotLayoutUploadsRec = {
         title: 'Recent uploads',
         showlegend: true,
@@ -204,7 +204,7 @@
         type: 'bar',
         name: 'Downloads through Website'
     };
-    let plotDownloadsHist = [plotDownloadsAPIHist, plotDownloadsDB4SHist, plotDownloadsWebuiHist];
+    let plotDadaDownloadsHist = [plotDownloadsAPIHist, plotDownloadsDB4SHist, plotDownloadsWebuiHist];
     let plotLayoutDownloadsHist = {
         title: 'Historical download numbers',
         showlegend: true,
@@ -238,7 +238,7 @@
         type: 'bar',
         name: 'Downloads through Website'
     };
-    let plotDownloadsRec = [plotDownloadsAPIRec, plotDownloadsDB4SRec, plotDownloadsWebuiRec];
+    let plotDataDownloadsRec = [plotDownloadsAPIRec, plotDownloadsDB4SRec, plotDownloadsWebuiRec];
     let plotLayoutDownloadsRec = {
         title: 'Recent downloads',
         showlegend: true,
@@ -333,7 +333,7 @@
         type: 'bar',
         name: 'API upload operations'
     };
-    let plotAPIOpsHist = [plotAPIOpsCommitsHist, plotAPIOpsDatabasesHist, plotAPIOpsDownloadHist, plotAPIOpsExecuteHist,
+    let plotDataAPIOpsHist = [plotAPIOpsCommitsHist, plotAPIOpsDatabasesHist, plotAPIOpsDownloadHist, plotAPIOpsExecuteHist,
                           plotAPIOpsIndexesHist, plotAPIOpsLiveDatabasesHist, plotAPIOpsMetadataHist, plotAPIOpsQueryHist,
                           plotAPIOpsTablesHist, plotAPIOpsTagsHist, plotAPIOpsUploadHist];
 
@@ -417,9 +417,37 @@
         type: 'bar',
         name: 'API upload operations'
     };
-    let plotAPIOpsRec = [plotAPIOpsCommitsRec, plotAPIOpsDatabasesRec, plotAPIOpsDownloadRec, plotAPIOpsExecuteRec,
+    let plotDataAPIOpsRec = [plotAPIOpsCommitsRec, plotAPIOpsDatabasesRec, plotAPIOpsDownloadRec, plotAPIOpsExecuteRec,
                           plotAPIOpsIndexesRec, plotAPIOpsLiveDatabasesRec, plotAPIOpsMetadataRec, plotAPIOpsQueryRec,
                           plotAPIOpsTablesRec, plotAPIOpsTagsRec, plotAPIOpsUploadRec];
+
+    // Historical number of databases
+    let plotNumDBsStdHist = {
+        x: [[ .DiskDatesHistorical ]],
+        y: [[ .DiskStdHistorical ]],
+        type: 'bar',
+        name: 'Standard databases'
+    };
+    let plotNumDBsLiveHist = {
+        x: [[ .DiskDatesHistorical ]],
+        y: [[ .DiskLiveHistorical ]],
+        type: 'bar',
+        name: 'Live databases'
+    };
+    let plotDataNumDBsHist = [plotNumDBsStdHist, plotNumDBsLiveHist];
+    let plotLayoutNumDBsHist = {
+        title: 'Historical number of databases',
+        showlegend: true,
+        xaxis: {
+            title: 'Date',
+            showgrid: false,
+            zeroline: false
+        },
+        yaxis: {
+            title: 'Quantity',
+            showline: true
+        }
+    };
 
     let plotConfig = {
         displaylogo: false,
@@ -447,14 +475,15 @@
 
         // Draw the charts
         if ($scope.showCharts === "true") {
+            Plotly.newPlot('visnumdbshist', plotDataNumDBsHist, plotLayoutNumDBsHist);
             Plotly.newPlot('visdiskhist', plotDataDiskHist, plotLayoutDiskHist);
             Plotly.newPlot('visdiskrec', plotDataDiskRec, plotLayoutDiskRec);
-            Plotly.newPlot('visuploadshist', plotUploadsHist, plotLayoutUploadsHist);
-            Plotly.newPlot('visuploadsrec', plotUploadsRec, plotLayoutUploadsRec);
-            Plotly.newPlot('visdownloadshist', plotDownloadsHist, plotLayoutDownloadsHist);
-            Plotly.newPlot('visdownloadsrec', plotDownloadsRec, plotLayoutDownloadsRec);
-            Plotly.newPlot('visapiopshist', plotAPIOpsHist, plotLayoutAPIOpsHist);
-            Plotly.newPlot('visapiopsrec', plotAPIOpsRec, plotLayoutAPIOpsRec);
+            Plotly.newPlot('visuploadshist', plotDataUploadsHist, plotLayoutUploadsHist);
+            Plotly.newPlot('visuploadsrec', plotDataUploadsRec, plotLayoutUploadsRec);
+            Plotly.newPlot('visdownloadshist', plotDadaDownloadsHist, plotLayoutDownloadsHist);
+            Plotly.newPlot('visdownloadsrec', plotDataDownloadsRec, plotLayoutDownloadsRec);
+            Plotly.newPlot('visapiopshist', plotDataAPIOpsHist, plotLayoutAPIOpsHist);
+            Plotly.newPlot('visapiopsrec', plotDataAPIOpsRec, plotLayoutAPIOpsRec);
         }
     });
 </script>
