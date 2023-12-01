@@ -205,6 +205,61 @@ func UsageUserDiskSpaceRecent(username string) (usage []NumDatabases, err error)
 	return
 }
 
+
+// UsageUserNumDatabasesHistorical returns the historical number of databases in a given users' account
+// NOTE - We haven't recorded this information historically, so will likely need to add a database table for the info first
+func UsageUserNumDatabasesHistorical(username string) (usage []NumDatabases, err error) {
+	dbQuery := `
+		WITH loggedIn AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+
+		SELECT count(*) AS "# of databases"
+		FROM users u, sqlite_databases db
+		WHERE u.user_id = db.user_id
+			AND u.user_name NOT IN ('mkleusberg', 'justinclift', 'chrisjlocke')
+		GROUP BY "Username"
+		ORDER BY "# of databases" desc
+
+		SELECT to_char(analysis_date, 'YYYY-MM') AS "Usage date", max(standard_databases_bytes) / (1024*1024) AS "Standard databases", max(live_databases_bytes) / (1024*1024) AS "Live databases"
+		FROM analysis_space_used a, users u
+		WHERE a.user_id = u.user_id
+			AND u.user_id = (SELECT user_id FROM loggedIn)
+			AND standard_databases_bytes > 0
+		GROUP BY "Usage date"
+		ORDER BY "Usage date" ASC
+
+
+`
+	rows, err := pdb.Query(context.Background(), dbQuery, username)
+	if err != nil {
+		log.Printf("Database query failed in %s: %v", GetCurrentFunctionName(), err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var date string
+		var numStd, numLive int
+		err = rows.Scan(&date, &numStd, &numLive)
+		if err != nil {
+			log.Printf("Error in %s when retrieving the disk space usage for '%s': %v", GetCurrentFunctionName(), username, err)
+			return nil, err
+		}
+		usage = append(usage, NumDatabases{
+			UsageDate: date,
+			NumStd:    numStd,
+			NumLive:   numLive,
+		})
+	}
+	return
+}
+
+
+
+
+
 // UsageUserUploadsHistorical returns the historical number of uploads by a given user
 func UsageUserUploadsHistorical(username string) (usage []NumTransfers, err error) {
 	dbQuery := `
