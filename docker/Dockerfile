@@ -4,7 +4,7 @@
 FROM rabbitmq:3-alpine AS rabbit
 
 # Build our own image
-FROM alpine:3.18
+FROM alpine:3.19
 
 LABEL maintainer="Justin Clift <justin@postgresql.org>"
 
@@ -23,8 +23,8 @@ RUN addgroup -S rabbitmq && \
 
 # Use a fast Australian mirror for the Alpine package repositories
 # Without doing this, building the image can take 2+ hours. :(
-RUN echo "https://mirror.aarnet.edu.au/pub/alpine/v3.18/main" > /etc/apk/repositories && \
-    echo "https://mirror.aarnet.edu.au/pub/alpine/v3.18/community" >> /etc/apk/repositories
+RUN echo "https://mirror.aarnet.edu.au/pub/alpine/v3.19/main" > /etc/apk/repositories && \
+    echo "https://mirror.aarnet.edu.au/pub/alpine/v3.19/community" >> /etc/apk/repositories
 
 # Install Git, Go, Memcached, Minio, and PostgreSQL
 RUN apk update && \

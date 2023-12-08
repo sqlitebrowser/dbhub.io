@@ -50,7 +50,7 @@
     "mq:q": "docker exec -it dbhub-build rabbitmqctl list_queues"
   },
   "engines": {
-    "node": "^18.14.1",
+    "node": "^20.10.0",
     "yarn": "^1.22.19"
   },
   "repository": "https://github.com/sqlitebrowser/dbhub.io",
