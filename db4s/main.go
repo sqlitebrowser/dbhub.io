@@ -38,6 +38,9 @@ func main() {
 		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
+	// Set the node name used in various logging strings
+	com.Conf.Live.Nodename = "DB4S end point server"
+
 	// Set the temp dir environment variable
 	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
 	if err != nil {
@@ -119,7 +122,7 @@ func main() {
 	}
 
 	// Start server
-	log.Printf("Starting DB4S end point on %s", server)
+	log.Printf("%s: listening for requests on %s", com.Conf.Live.Nodename, server)
 	log.Fatal(newServer.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey))
 }
 

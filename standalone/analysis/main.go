@@ -39,9 +39,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Connect to MQ server
+	// Connect to job queue server
 	com.Conf.Live.Nodename = "Usage Analysis"
-	com.AmqpChan, err = com.ConnectMQ()
+	err = com.ConnectQueue()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -113,7 +113,7 @@ func main() {
 					return
 				}
 
-				// Ask our AMQP backend for the database size
+				// Ask our job queue backend for the database size
 				z, err := com.LiveSize(liveNode, user, user, db.Database)
 				if err != nil {
 					log.Fatal(err)

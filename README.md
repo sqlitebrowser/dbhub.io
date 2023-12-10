@@ -17,12 +17,11 @@ our API server at https://api.dbhub.io, or run things locally for your own users
 
 ### Requirements
 
-* [Golang](https://golang.org) - version 1.17 or above is required.
+* [Golang](https://golang.org) - version 1.18 or above is required.
 * [Memcached](https://memcached.org) - version 1.4.33 and above are known to work.
 * [Minio](https://minio.io) - release 2016-11-26T02:23:47Z and later are known to work.
-* [NodeJS](https://nodejs.org) - version 18.x is known to work, others are untested.
+* [NodeJS](https://nodejs.org) - version 20 is known to work, others are untested.
 * [PostgreSQL](https://www.postgresql.org) - version 13 and above are known to work.
-* [RabbitMQ](https://www.rabbitmq.com) - version 3.10.x and above are known to work.
 * [Yarn](https://classic.yarnpkg.com) - version 1.22.x.  Not Yarn 2.x or greater.
 
 ### Subdirectories

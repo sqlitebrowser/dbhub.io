@@ -1,6 +1,6 @@
 module github.com/sqlitebrowser/dbhub.io
 
-go 1.17
+go 1.18
 
 replace (
 	github.com/Sirupsen/logrus v1.0.5 => github.com/sirupsen/logrus v1.0.5
@@ -24,7 +24,6 @@ require (
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/rabbitmq/amqp091-go v1.7.0
 	github.com/segmentio/ksuid v1.0.3
 	github.com/smtp2go-oss/smtp2go-go v1.0.2
 	github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47

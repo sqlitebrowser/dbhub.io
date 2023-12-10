@@ -181,7 +181,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For live databases, we ask the AMQP backend for its file size
+	// For live databases, we ask the job queue backend for its file size
 	if isLive {
 		pageData.DB.Info.DBEntry.Size, err = com.LiveSize(liveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
 		if err != nil {

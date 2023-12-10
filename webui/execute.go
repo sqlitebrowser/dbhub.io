@@ -61,7 +61,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ask the AMQP backend for the database file size
+	// Ask the job queue backend for the database file size
 	pageData.DB.Info.DBEntry.Size, err = com.LiveSize(liveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -212,7 +212,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Send the SQL execution request to our AMQP backend
+	// Send the SQL execution request to our job queue backend
 	var z interface{}
 	rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
 	if err != nil {

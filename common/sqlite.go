@@ -1022,7 +1022,7 @@ func ReadSQLiteDBCSV(sdb *sqlite.Conn, dbTable string) ([][]string, error) {
 	return resultSet, nil
 }
 
-// SQLiteBackupLive is used by our AMQP backend nodes to refresh a live SQLite database back into Minio
+// SQLiteBackupLive is used by our job queue backend nodes to refresh a live SQLite database back into Minio
 func SQLiteBackupLive(baseDir, dbOwner, dbName string) (err error) {
 	dbPath := filepath.Join(baseDir, dbOwner, dbName, "live.sqlite")
 	if _, err = os.Stat(dbPath); err != nil {
@@ -1109,7 +1109,7 @@ func SQLiteBackupLive(baseDir, dbOwner, dbName string) (err error) {
 	return
 }
 
-// SQLiteExecuteQueryLive is used by our AMQP backend infrastructure to execute a user provided SQLite statement
+// SQLiteExecuteQueryLive is used by our job queue backend infrastructure to execute a user provided SQLite statement
 func SQLiteExecuteQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (rowsChanged int, err error) {
 	// Open the Live database on the local node
 	var sdb *sqlite.Conn
@@ -1125,16 +1125,18 @@ func SQLiteExecuteQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string
 	// Execute the statement
 	rowsChanged, err = sdb.ExecDml(query)
 	if err != nil {
-		log.Printf("Error when executing query by '%s' for LIVE database (%s/%s): '%s'",
-			SanitiseLogString(loggedInUser), SanitiseLogString(dbOwner), SanitiseLogString(dbName),
-			SanitiseLogString(err.Error()))
+		if !strings.HasPrefix(err.Error(), "don't use exec with") {
+			log.Printf("Error when executing query by '%s' for LIVE database (%s/%s): '%s'",
+				SanitiseLogString(loggedInUser), SanitiseLogString(dbOwner), SanitiseLogString(dbName),
+				SanitiseLogString(err.Error()))
+		}
 		return
 	}
 	return
 }
 
-// SQLiteGetColumnsLive is used by our AMQP backend nodes to retrieve the list of columns from a SQLite database
-func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sqlite.Column, pk []string, err error, errCode AMQPErrorCode) {
+// SQLiteGetColumnsLive is used by our job queue backend nodes to retrieve the list of columns from a SQLite database
+func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sqlite.Column, pk []string, err error, errCode JobQueueErrorCode) {
 	// Open the database on the local node
 	var sdb *sqlite.Conn
 	sdb, err = OpenSQLiteDatabaseLive(baseDir, dbOwner, dbName)
@@ -1157,7 +1159,7 @@ func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sql
 	}
 	if !tableOrViewFound {
 		err = errors.New("Provided table or view name doesn't exist in this database")
-		errCode = AMQPRequestedTableNotPresent
+		errCode = JobQueueRequestedTableNotPresent
 		return
 	}
 
@@ -1173,7 +1175,7 @@ func SQLiteGetColumnsLive(baseDir, dbOwner, dbName, table string) (columns []sql
 	return
 }
 
-// SQLiteGetIndexesLive is used by our AMQP backend nodes to retrieve the list of indexes from a SQLite database
+// SQLiteGetIndexesLive is used by our job queue backend nodes to retrieve the list of indexes from a SQLite database
 func SQLiteGetIndexesLive(baseDir, dbOwner, dbName string) (indexes []APIJSONIndex, err error) {
 	// Open the database on the local node
 	var sdb *sqlite.Conn
@@ -1213,7 +1215,7 @@ func SQLiteGetIndexesLive(baseDir, dbOwner, dbName string) (indexes []APIJSONInd
 	return
 }
 
-// SQLiteGetTablesLive is used by our AMQP backend nodes to retrieve the list of tables in a SQLite database
+// SQLiteGetTablesLive is used by our job queue backend nodes to retrieve the list of tables in a SQLite database
 func SQLiteGetTablesLive(baseDir, dbOwner, dbName string) (tables []string, err error) {
 	// Open the database on the local node
 	var sdb *sqlite.Conn
@@ -1231,7 +1233,7 @@ func SQLiteGetTablesLive(baseDir, dbOwner, dbName string) (tables []string, err 
 	return
 }
 
-// SQLiteGetViewsLive is used by our AMQP backend nodes to retrieve the list of views in a SQLite database
+// SQLiteGetViewsLive is used by our job queue backend nodes to retrieve the list of views in a SQLite database
 func SQLiteGetViewsLive(baseDir, dbOwner, dbName string) (views []string, err error) {
 	// Open the database on the local node
 	var sdb *sqlite.Conn
@@ -1625,7 +1627,7 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	return dataRows, err
 }
 
-// SQLiteRunQueryLive is used by our AMQP backend infrastructure to run a user provided SQLite query
+// SQLiteRunQueryLive is used by our job queue backend infrastructure to run a user provided SQLite query
 func SQLiteRunQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (records SQLiteRecordSet, err error) {
 	// Open the database on the local node
 	var sdb *sqlite.Conn

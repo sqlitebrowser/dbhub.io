@@ -51,7 +51,7 @@ func AddDefaultUser() error {
 	}
 
 	// Log addition of the default user
-	log.Println("Default user added")
+	log.Printf("%v: default user added", Conf.Live.Nodename)
 	return nil
 }
 
@@ -563,7 +563,7 @@ func ConnectPostgreSQL() (err error) {
 	}
 
 	// Log successful connection
-	log.Printf("Connected to PostgreSQL server: %v:%v", Conf.Pg.Server, uint16(Conf.Pg.Port))
+	log.Printf("%v: connected to PostgreSQL server: %v:%v", Conf.Live.Nodename, Conf.Pg.Server, uint16(Conf.Pg.Port))
 	return nil
 }
 
@@ -1087,14 +1087,14 @@ func DeleteDatabase(dbOwner, dbName string) error {
 				AND db_name = $2`
 		commandTag, err = tx.Exec(context.Background(), dbQuery, dbOwner, dbName, newName)
 		if err != nil {
-			log.Printf("Deleting (forked) database entry failed for database '%s/%s': %v",
-				SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
+			log.Printf("%s: deleting (forked) database entry failed for database '%s/%s': %v",
+				Conf.Live.Nodename, SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
-				"Wrong number of rows (%d) affected when deleting (forked) database '%s/%s'", numRows,
-				SanitiseLogString(dbOwner), SanitiseLogString(dbName))
+				"%s: wrong number of rows (%d) affected when deleting (forked) database '%s/%s'",
+				Conf.Live.Nodename, numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 
 		// Commit the transaction
@@ -1104,7 +1104,7 @@ func DeleteDatabase(dbOwner, dbName string) error {
 		}
 
 		// Log the database deletion
-		log.Printf("Database '%s/%s' deleted", SanitiseLogString(dbOwner), SanitiseLogString(dbName))
+		log.Printf("%s: database '%s/%s' deleted", Conf.Live.Nodename, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		return nil
 	}
 
@@ -1193,7 +1193,8 @@ func DeleteDatabase(dbOwner, dbName string) error {
 	}
 
 	// Log the database deletion
-	log.Printf("(Forked) database '%s/%s' deleted", SanitiseLogString(dbOwner), SanitiseLogString(dbName))
+	log.Printf("%s: (forked) database '%s/%s' deleted", Conf.Live.Nodename, SanitiseLogString(dbOwner),
+		SanitiseLogString(dbName))
 	return nil
 }
 
@@ -1204,6 +1205,7 @@ func DeleteLicence(userName, licenceName string) (err error) {
 	if err != nil {
 		return err
 	}
+
 	// Set up an automatic transaction roll back if the function exits without committing
 	defer tx.Rollback(context.Background())
 
@@ -1507,13 +1509,12 @@ func FlushViewCount() {
 	}
 
 	// Log the start of the loop
-	log.Printf("Periodic view count flushing loop started.  %d second refresh.",
-		Conf.Memcache.ViewCountFlushDelay)
+	log.Printf("%s: periodic view count flushing loop started.  %d second refresh.", Conf.Live.Nodename, Conf.Memcache.ViewCountFlushDelay)
 
 	// Start the endless flush loop
 	var rows pgx.Rows
 	var err error
-	for true {
+	for {
 		// Retrieve the list of all public databases
 		dbQuery := `
 			SELECT users.user_name, db.db_name
@@ -1524,7 +1525,7 @@ func FlushViewCount() {
 		rows, err = pdb.Query(context.Background(), dbQuery)
 		if err != nil {
 			log.Printf("Database query failed: %v", err)
-			return
+			continue
 		}
 		var dbList []dbEntry
 		for rows.Next() {
@@ -1533,7 +1534,7 @@ func FlushViewCount() {
 			if err != nil {
 				log.Printf("Error retrieving database list for view count flush thread: %v", err)
 				rows.Close()
-				return
+				continue
 			}
 			dbList = append(dbList, oneRow)
 		}
@@ -1580,7 +1581,9 @@ func FlushViewCount() {
 		// Wait before running the loop again
 		time.Sleep(Conf.Memcache.ViewCountFlushDelay * time.Second)
 	}
-	return
+
+	// If somehow the endless loop finishes, then record that in the server logs
+	log.Printf("%s: WARN: periodic view count flushing loop stopped.", Conf.Live.Nodename)
 }
 
 // ForkDatabase forks the PostgreSQL entry for a SQLite database from one user to another
@@ -2856,7 +2859,7 @@ func LiveUserDBs(dbOwner string, public AccessType) (list []DBInfo, err error) {
 			return nil, err
 		}
 
-		// Ask the AMQP backend for the database file size
+		// Ask the job queue backend for the database file size
 		oneRow.Size, err = LiveSize(liveNode, dbOwner, dbOwner, oneRow.Database)
 		if err != nil {
 			log.Printf("Error when retrieving size of live databases for user '%s': %v", dbOwner, err)
@@ -3480,11 +3483,11 @@ func StatusUpdates(loggedInUser string) (statusUpdates map[string][]StatusUpdate
 func StatusUpdatesLoop() {
 	// Ensure a warning message is displayed on the console if the status update loop exits
 	defer func() {
-		log.Printf("WARN: Status update loop exited")
+		log.Printf("%s: WARN: Status update loop exited", Conf.Live.Nodename)
 	}()
 
 	// Log the start of the loop
-	log.Printf("Status update processing loop started.  %d second refresh.", Conf.Event.Delay)
+	log.Printf("%s: status update processing loop started.  %d second refresh.", Conf.Live.Nodename, Conf.Event.Delay)
 
 	// Start the endless status update processing loop
 	var err error
@@ -5387,8 +5390,8 @@ func RecordWebLogin(userName string) (err error) {
 		return
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		err = errors.New(fmt.Sprintf("Wrong number of rows (%d) affected while adding a webUI login record for '%s' to the database",
-			numRows, SanitiseLogString(userName)))
+		err = fmt.Errorf("Wrong number of rows (%d) affected while adding a webUI login record for '%s' to the database",
+			numRows, SanitiseLogString(userName))
 	}
 	return
 }
