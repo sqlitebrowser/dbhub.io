@@ -2,7 +2,7 @@
   "dependencies": {
     "babel-preset-react": "^6.24.1",
     "babel-preset-react-app": "^10.0.1",
-    "cypress": "^13.3.0",
+    "cypress": "13.3.3",
     "plotly.js-basic-dist": "^2.22.0",
     "plotly.js-dist": "^2.22.0",
     "prismjs": "^1.29.0",
