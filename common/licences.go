@@ -85,6 +85,6 @@ func AddDefaultLicences() (err error) {
 			return err
 		}
 	}
-	log.Println("Default licences added")
+	log.Printf("%s: default licences added", Conf.Live.Nodename)
 	return nil
 }

@@ -36,7 +36,7 @@ func BranchListResponse(dbOwner, dbName string) (list BranchListResponseContaine
 	return
 }
 
-// ExecuteResponseContainer is used by our AMQP backend, to return information in response to an
+// ExecuteResponseContainer is used by our job queue backend, to return information in response to an
 // Execute() call on a live database.  It holds the success/failure status of the remote call,
 // and also the number of rows changed by the Execute() call (if it succeeded)
 type ExecuteResponseContainer struct {

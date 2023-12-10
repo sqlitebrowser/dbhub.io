@@ -46,13 +46,16 @@ func main() {
 		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
+	// Set the node name used in various logging strings
+	com.Conf.Live.Nodename = "API server"
+
 	// Open the request log for writing
 	reqLog, err = os.OpenFile(com.Conf.Api.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
 	if err != nil {
 		log.Fatalf("Error when opening request log: %s", err)
 	}
 	defer reqLog.Close()
-	log.Printf("Request log opened: %s", com.Conf.Api.RequestLog)
+	log.Printf("%s: request log opened: %s", com.Conf.Live.Nodename, com.Conf.Api.RequestLog)
 
 	// Parse our template files
 	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
@@ -70,9 +73,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Connect to MQ server
-	com.Conf.Live.Nodename = "API server"
-	com.AmqpChan, err = com.ConnectMQ()
+	// Connect to job queue server
+	err = com.ConnectQueue()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -94,6 +96,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Start background goroutines to handle job queue responses
+	com.ResponseWaiters = com.NewResponseReceiver()
+	com.CheckResponsesQueue = make(chan struct{})
+	com.SubmitterInstance = com.RandomString(3)
+	go com.ResponseQueueCheck()
+	go com.ResponseQueueListen()
 
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
@@ -136,11 +145,10 @@ func main() {
 
 	// Load our self signed CA Cert chain, check client certificates if given, and set TLS1.2 as minimum
 	newTLSConfig := &tls.Config{
-		ClientAuth:               tls.VerifyClientCertIfGiven,
-		ClientCAs:                ourCAPool,
-		MinVersion:               tls.VersionTLS12,
-		PreferServerCipherSuites: true,
-		RootCAs:                  ourCAPool,
+		ClientAuth: tls.VerifyClientCertIfGiven,
+		ClientCAs:  ourCAPool,
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    ourCAPool,
 	}
 	srv := &http.Server{
 		Addr:         com.Conf.Api.BindAddress,
@@ -153,7 +161,7 @@ func main() {
 	server = fmt.Sprintf("https://%s", com.Conf.Api.ServerName)
 
 	// Start API server
-	log.Printf("API server starting on %s", server)
+	log.Printf("%s: listening on %s", com.Conf.Live.Nodename, server)
 	err = srv.ListenAndServeTLS(com.Conf.Api.Certificate, com.Conf.Api.CertificateKey)
 
 	// Shut down nicely

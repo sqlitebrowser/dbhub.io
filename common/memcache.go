@@ -58,7 +58,7 @@ func ConnectCache() error {
 	}
 
 	// Log successful connection message for Memcached
-	log.Printf("Connected to Memcached: %v", Conf.Memcache.Server)
+	log.Printf("%v: connected to Memcached: %v", Conf.Live.Nodename, Conf.Memcache.Server)
 
 	return nil
 }

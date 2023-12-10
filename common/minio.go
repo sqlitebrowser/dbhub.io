@@ -26,7 +26,7 @@ func ConnectMinio() (err error) {
 	}
 
 	// Log Minio server end point
-	log.Printf("Minio server config ok. Address: %v", Conf.Minio.Server)
+	log.Printf("%v: minio server config ok. Address: %v", Conf.Live.Nodename, Conf.Minio.Server)
 	return nil
 }
 
@@ -82,9 +82,8 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName, objectID string) (dbPat
 		return
 	}
 
-	if AmqpDebug > 0 {
-		log.Printf("Live node '%s': Database file '%s/%s' written to filesystem at: '%s'",
-			Conf.Live.Nodename, dbOwner, dbName, dbPath)
+	if JobQueueDebug > 0 {
+		log.Printf("%s: database file '%s/%s' written to filesystem at: '%s'", Conf.Live.Nodename, dbOwner, dbName, dbPath)
 	}
 	return
 }
@@ -132,12 +131,12 @@ func LiveStoreDatabaseMinio(db *os.File, dbOwner, dbName string, dbSize int64) (
 
 	// Sanity check.  Make sure the # of bytes written is equal to the size of the database we were given
 	if dbSize != numBytes {
-		err = errors.New(fmt.Sprintf("Something went wrong storing the database file.  dbSize = %d, numBytes = %d",
-			dbSize, numBytes))
+		err = fmt.Errorf("Something went wrong storing the database file.  dbSize = %d, numBytes = %d",
+			dbSize, numBytes)
 		return
 	}
 
-	if AmqpDebug > 0 {
+	if JobQueueDebug > 0 {
 		log.Printf("Added Minio LIVE database object '%s/%s', using bucket '%s' and id '%s'", dbOwner, dbName, bkt, minioObjectID)
 	}
 	return
@@ -150,9 +149,9 @@ func MinioDeleteDatabase(source, dbOwner, dbName, bucket, id string) (err error)
 		return
 	}
 
-	if AmqpDebug > 0 {
-		log.Printf("[DELETE] '%s' removed Minio database object '%s/%s', using bucket '%s' and id '%s'",
-			source, dbOwner, dbName, bucket, id)
+	if JobQueueDebug > 0 {
+		log.Printf("%s: [DELETE] '%s' removed Minio database object '%s/%s', using bucket '%s' and id '%s'",
+			Conf.Live.Nodename, source, dbOwner, dbName, bucket, id)
 	}
 	return
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"mime/multipart"
@@ -132,11 +131,11 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
 	// should never happen
 	if isLive && liveNode == "" {
-		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		jsonErr(w, "No job queue node available for request", http.StatusInternalServerError)
 		return
 	}
 
-	// If it's a standard database, process it locally.  Else send the query to our AMQP backend
+	// If it's a standard database, process it locally.  Else send the query to our job queue backend
 	var cols []sqlite.Column
 	if !isLive {
 		// Get Minio bucket and object id for the SQLite file
@@ -187,7 +186,7 @@ func columnsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// Send the columns request to our AMQP backend
+		// Send the columns request to our job queue backend
 		cols, _, err = com.LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusBadRequest)
@@ -383,7 +382,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// For a live database, delete it from both Minio and our AMQP backend
+	// For a live database, delete it from both Minio and our job queue backend
 	var bucket, id string
 	if isLive {
 		// Get the Minio bucket and object names for this database
@@ -400,7 +399,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Delete the database from our AMQP backend
+		// Delete the database from our job queue backend
 		err = com.LiveDelete(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -700,11 +699,11 @@ func executeHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
 	// should never happen
 	if isLive && liveNode == "" {
-		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		jsonErr(w, "No job queue node available for request", http.StatusInternalServerError)
 		return
 	}
 
-	// Send the SQL execution request to our AMQP backend
+	// Send the SQL execution request to our job queue backend
 	var rowsChanged int
 	rowsChanged, err = com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
 	if err != nil {
@@ -752,11 +751,11 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
 	// should never happen
 	if isLive && liveNode == "" {
-		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		jsonErr(w, "No job queue node available for request", http.StatusInternalServerError)
 		return
 	}
 
-	// If it's a standard database, process it locally.  Else send the query to our AMQP backend
+	// If it's a standard database, process it locally.  Else send the query to our job queue backend
 	var indexes []com.APIJSONIndex
 	if !isLive {
 		// Get Minio bucket and object id for the SQLite file
@@ -811,33 +810,12 @@ func indexesHandler(w http.ResponseWriter, r *http.Request) {
 			indexes = append(indexes, oneIndex)
 		}
 	} else {
-		// Send the indexes request to our AMQP backend
-		var rawResponse []byte
-		rawResponse, err = com.MQRequest(com.AmqpChan, liveNode, "indexes", loggedInUser, dbOwner, dbName, "")
+		// Send the indexes request to our job queue backend
+		indexes, err = com.LiveIndexes(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
 			return
 		}
-
-		// Decode the response
-		var resp com.LiveDBIndexesResponse
-		err = json.Unmarshal(rawResponse, &resp)
-		if err != nil {
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			log.Println(err)
-			return
-		}
-		if resp.Error != "" {
-			err = errors.New(resp.Error)
-			jsonErr(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if resp.Node == "" {
-			log.Printf("In API (Live) indexesHandler().  A node responded, but didn't identify itself.")
-			return
-		}
-		indexes = resp.Indexes
 	}
 
 	// Return the results
@@ -955,7 +933,7 @@ func queryHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
 	// should never happen
 	if isLive && liveNode == "" {
-		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		jsonErr(w, "No job queue node available for request", http.StatusInternalServerError)
 		return
 	}
 
@@ -1088,11 +1066,11 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
 	// should never happen
 	if isLive && liveNode == "" {
-		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		jsonErr(w, "No job queue node available for request", http.StatusInternalServerError)
 		return
 	}
 
-	// If it's a standard database, process it locally.  Else send the query to our AMQP backend
+	// If it's a standard database, process it locally.  Else send the query to our job queue backend
 	var tables []string
 	if !isLive {
 		// Get Minio bucket and object id for the SQLite file
@@ -1125,7 +1103,7 @@ func tablesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// Send the tables request to our AMQP backend
+		// Send the tables request to our job queue backend
 		tables, err = com.LiveTables(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -1361,8 +1339,8 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("API Server: Username '%s' uploaded LIVE database '%s/%s', bytes: %v", loggedInUser,
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
-		// Send a request to the AMQP backend to set up the database there, ready for querying
-		liveNode, err := com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID)
+		// Send a request to the job queue to set up the database
+		liveNode, err := com.LiveCreateDB(dbOwner, dbName, objectID)
 		if err != nil {
 			log.Println(err)
 			jsonErr(w, err.Error(), http.StatusInternalServerError)
@@ -1448,11 +1426,11 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 	// If a live database has been uploaded but doesn't have a live node handling its requests, then error out as this
 	// should never happen
 	if isLive && liveNode == "" {
-		jsonErr(w, "No AMQP node available for request", http.StatusInternalServerError)
+		jsonErr(w, "No job queue node available for request", http.StatusInternalServerError)
 		return
 	}
 
-	// If it's a standard database, process it locally.  Else send the query to our AMQP backend
+	// If it's a standard database, process it locally.  Else send the query to our job queue backend
 	var views []string
 	if !isLive {
 		// Get Minio bucket and object id for the SQLite file
@@ -1485,7 +1463,7 @@ func viewsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// Send the views request to our AMQP backend
+		// Send the views request to our job queue backend
 		views, err = com.LiveViews(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			jsonErr(w, err.Error(), http.StatusInternalServerError)

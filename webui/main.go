@@ -2171,7 +2171,7 @@ func deleteDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		sql = strings.TrimSuffix(sql, " AND ")
 
-		// Send an SQL execution request to our AMQP backend
+		// Send a SQL execution request to our job queue backend
 		rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
 		if err != nil {
 			log.Println(err)
@@ -2267,7 +2267,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// For a live database, delete it from both Minio and our AMQP backend
+	// For a live database, delete it from both Minio and our job queue backend
 	if isLive {
 		// Get the Minio bucket name and object id
 		var bucket, objectID string
@@ -2288,7 +2288,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Delete the database from our AMQP backend
+		// Delete the database from our job queue backend
 		err = com.LiveDelete(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -3014,7 +3014,7 @@ func insertDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Produce an insert statement which attempts to insert a new record with default values
 	sql := "INSERT INTO " + com.EscapeId(table) + " DEFAULT VALUES"
 
-	// Send an SQL execution request to our AMQP backend
+	// Send a SQL execution request to our job queue backend
 	rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
 	if err != nil {
 		log.Println(err)
@@ -3113,6 +3113,9 @@ func main() {
 		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
+	// Set the node name used in various logging strings
+	com.Conf.Live.Nodename = "WebUI server"
+
 	// Set the temp dir environment variable
 	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
 	if err != nil {
@@ -3130,7 +3133,7 @@ func main() {
 		log.Fatalf("Error when opening request log: %s", err)
 	}
 	defer reqLog.Close()
-	log.Printf("Request log opened: %s", com.Conf.Web.RequestLog)
+	log.Printf("%s: request log opened: %s", com.Conf.Live.Nodename, com.Conf.Web.RequestLog)
 
 	// Parse our template files
 	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
@@ -3160,9 +3163,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Connect to MQ server
-	com.Conf.Live.Nodename = "WebUI server"
-	com.AmqpChan, err = com.ConnectMQ()
+	// Connect to job queue server
+	err = com.ConnectQueue()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -3184,6 +3186,13 @@ func main() {
 
 	// Start the email sending goroutine in the background
 	go com.SendEmails()
+
+	// Start background goroutines to handle job queue responses
+	com.ResponseWaiters = com.NewResponseReceiver()
+	com.CheckResponsesQueue = make(chan struct{})
+	com.SubmitterInstance = com.RandomString(3)
+	go com.ResponseQueueCheck()
+	go com.ResponseQueueListen()
 
 	// Our pages
 	http.Handle("/", gz.GzipHandler(logReq(mainHandler)))
@@ -3479,7 +3488,7 @@ func main() {
 	})))
 
 	// Start webUI server
-	log.Printf("WebUI server starting on https://%s", com.Conf.Web.ServerName)
+	log.Printf("%s: listening on https://%s", com.Conf.Live.Nodename, com.Conf.Web.ServerName)
 	srv := &http.Server{
 		Addr:     com.Conf.Web.BindAddress,
 		ErrorLog: com.HttpErrorLog(),
@@ -3493,11 +3502,6 @@ func main() {
 	com.DisconnectPostgreSQL()
 	if err != nil {
 		log.Println(err)
-	}
-
-	err = com.CloseMQChannel(com.AmqpChan)
-	if err != nil {
-		log.Fatal(err)
 	}
 }
 
@@ -4704,8 +4708,8 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
-		// It's a live database, so we send the request to our AMQP backend
-		reqData := com.LiveDBRowsRequest{
+		// It's a live database, so we send the request to our job queue backend
+		reqData := com.JobRequestRows{
 			DbTable:   requestedTable,
 			SortCol:   sortCol,
 			SortDir:   sortDir,
@@ -5063,7 +5067,7 @@ func updateDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		sql = strings.TrimSuffix(sql, " AND ")
 
-		// Send an SQL execution request to our AMQP backend
+		// Send a SQL execution request to our job queue backend
 		rowsChanged, err := com.LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql)
 		if err != nil {
 			log.Println(err)
@@ -5672,8 +5676,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s: Username: '%s', LIVE database '%s/%s' uploaded', bytes: %v", pageName, loggedInUser,
 		com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
-	// Send a request to the AMQP backend to set up the database there, ready for querying
-	liveNode, err := com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID)
+	// Send a request to the job queue to set up the database
+	liveNode, err := com.LiveCreateDB(dbOwner, dbName, objectID)
 	if err != nil {
 		log.Println(err)
 		errorPage(w, r, http.StatusInternalServerError, err.Error())

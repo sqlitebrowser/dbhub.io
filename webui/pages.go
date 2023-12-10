@@ -849,7 +849,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 		return
 	}
 
-	// For non-live databases, add branch, table and view information by querying it directly, otherwise we get the details from our AMQP backend
+	// For non-live databases, add branch, table and view information by querying it directly, otherwise we get the details from our job queue backend
 	if !pageData.DB.Info.IsLive {
 		// Retrieve default branch name details
 		if pageData.DB.Info.Branch == "" {
@@ -1867,7 +1867,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If it's a standard database then we query it directly, otherwise we query it via our AMQP backend
+	// If it's a standard database then we query it directly, otherwise we query it via our job queue backend
 	if !pageData.DB.Info.IsLive {
 		// Get a handle from Minio for the database object
 		bkt := pageData.DB.Info.DBEntry.Sha256[:com.MinioFolderChars]
@@ -1940,7 +1940,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Also request the database size from our AMQP backend
+		// Also request the database size from our job queue backend
 		pageData.DB.Info.DBEntry.Size, err = com.LiveSize(pageData.DB.Info.LiveNode, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
 		if err != nil {
 			log.Println(err)

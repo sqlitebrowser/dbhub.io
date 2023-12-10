@@ -9,17 +9,16 @@ It includes the four DBHub.io daemons:
 * The webUI, listening on port 9443
 * The REST API end point, listening on port 9444
 * The DB4S end point (the daemon DB Browser for SQLite talks to) on port 5550
-* The internal-use-only "live" database daemon,
+* The internal-use-only "live" database daemon (running two instances),
 
 ...and the dependencies for the daemons:
 
 * PostgreSQL
 * Memcached
 * Minio
-* RabbitMQ
 
 This is done as an all-in-one image for now.  It _might_ be better separated
-into separate services per damon (eg for docker-compose), but that'll be a
+into separate services per daemon (eg for docker-compose), but that'll be a
 later thing (if needed).
 
 

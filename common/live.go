@@ -2,16 +2,20 @@ package common
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	sqlite "github.com/gwenn/gosqlite"
-	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/jackc/pgx/v5"
+	pgpool "github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -19,321 +23,251 @@ const (
 )
 
 var (
-	// AmqpChan is the AMQP channel handle we use for communication with our AMQP backend
-	AmqpChan *amqp.Channel
+	// JobListenConn is the PG server connection used for receiving PG notifications
+	JobListenConn *pgx.Conn
 
-	// AmqpDebug controls whether to output - via Log.Print*() functions -  useful messages during processing.  Mostly
-	// useful for development / debugging purposes
-	AmqpDebug = 1
+	// JobQueueConn is the PG server connection used for submitting and retrieving jobs
+	JobQueueConn *pgpool.Pool
+
+	// JobQueueDebug tells the daemons whether or not to output debug messages while running job queue code
+	// Mostly useful for development / debugging purposes.  0 means no debug messages, higher values means more verbosity
+	JobQueueDebug = 0
 )
 
-// CloseMQChannel closes an open AMQP channel
-func CloseMQChannel(channel *amqp.Channel) (err error) {
-	err = channel.Close()
-	return
-}
-
-// CloseMQConnection closes an open AMQP connection
-func CloseMQConnection(connection *amqp.Connection) (err error) {
-	err = connection.Close()
-	return
-}
-
-// ConnectMQ creates a connection to the backend MQ server
-func ConnectMQ() (channel *amqp.Channel, err error) {
-	var conn *amqp.Connection
-	if Conf.Environment.Environment == "production" {
-		// If certificate/key files have been provided, then we can use mutual TLS (mTLS)
-		if Conf.MQ.CertFile != "" && Conf.MQ.KeyFile != "" {
-			var cert tls.Certificate
-			cert, err = tls.LoadX509KeyPair(Conf.MQ.CertFile, Conf.MQ.KeyFile)
-			if err != nil {
-				return
-			}
-			cfg := &tls.Config{Certificates: []tls.Certificate{cert}}
-			conn, err = amqp.DialTLS(fmt.Sprintf("amqps://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port), cfg)
-			if err != nil {
-				return
-			}
-			log.Printf("%s connected to AMQP server using mutual TLS (mTLS): %v:%d", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
-		} else {
-			// Fallback to just verifying the server certs for TLS.  This is needed by the DB4S end point, as it
-			// uses certs from our own CA, so mTLS won't easily work with it.
-			conn, err = amqp.Dial(fmt.Sprintf("amqps://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
-			if err != nil {
-				return
-			}
-			log.Printf("%s connected to AMQP server with server-only TLS: %v:%d", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
-		}
-	} else {
-		// Everywhere else (eg docker container) doesn't *have* to use TLS
-		conn, err = amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%d/", Conf.MQ.Username, Conf.MQ.Password, Conf.MQ.Server, Conf.MQ.Port))
-		if err != nil {
-			return
-		}
-		log.Printf("%s connected to AMQP server without encryption: %v:%d", Conf.Live.Nodename, Conf.MQ.Server, Conf.MQ.Port)
+// ConnectQueue creates the connections to the backend queue server
+func ConnectQueue() (err error) {
+	// Connect to PostgreSQL based queue server
+	// Note: JobListenConn uses a dedicated, non-pooled connection to the job queue database, while JobQueueConn uses
+	// a standard database connection pool
+	JobListenConn, err = pgx.ConnectConfig(context.Background(), listenConfig)
+	if err != nil {
+		return fmt.Errorf("%s: couldn't connect to backend queue server: %v", Conf.Live.Nodename, err)
 	}
-
-	channel, err = conn.Channel()
+	JobQueueConn, err = pgpool.New(context.Background(), pgConfig.ConnString())
+	if err != nil {
+		return fmt.Errorf("%s: couldn't connect to backend queue server: %v", Conf.Live.Nodename, err)
+	}
 	return
 }
 
-// LiveBackup asks the AMQP backend to store the given database back into Minio
+// LiveBackup asks the job queue backend to store the given database back into Minio
 func LiveBackup(liveNode, loggedInUser, dbOwner, dbName string) (err error) {
-	var rawResponse []byte
-	rawResponse, err = MQRequest(AmqpChan, liveNode, "backup", loggedInUser, dbOwner, dbName, "")
+	// Send the backup request to our job queue backend
+	var resp JobResponseDBError
+	err = JobSubmit(&resp, liveNode, "backup", loggedInUser, dbOwner, dbName, "")
 	if err != nil {
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBErrorResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		return
-	}
+	log.Printf("%s: node which handled the database backup request: %s", Conf.Live.Nodename, liveNode)
 
-	// If the backup failed, then provide the error message to the user
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		return
-	}
-	if resp.Node == "" {
-		log.Println("A node responded to a 'backup' request, but didn't identify itself.")
-		return
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned during database backup on '%s': '%v'", Conf.Live.Nodename, liveNode, resp.Err)
 	}
 	return
 }
 
-// LiveColumns requests the AMQP backend to return a list of all columns of the given table
+// LiveColumns requests the job queue backend to return a list of all columns of the given table
 func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns []sqlite.Column, pk []string, err error) {
-	var rawResponse []byte
-	rawResponse, err = MQRequest(AmqpChan, liveNode, "columns", loggedInUser, dbOwner, dbName, table)
+	// Send the column list request to our job queue backend
+	var resp JobResponseDBColumns
+	err = JobSubmit(&resp, liveNode, "columns", loggedInUser, dbOwner, dbName, table)
 	if err != nil {
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBColumnsResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		return
-	}
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		return
-	}
-	if resp.Node == "" {
-		log.Println("A node responded to a 'columns' request, but didn't identify itself.")
-		return
-	}
+	// Return the requested data
 	columns = resp.Columns
 	pk = resp.PkColumns
+
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned when retrieving the column list for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+	}
 	return
 }
 
-// LiveCreateDB requests the AMQP backend create a new live SQLite database
-func LiveCreateDB(channel *amqp.Channel, dbOwner, dbName, objectID string) (liveNode string, err error) {
-	// Send the database setup request to our AMQP backend
-	var rawResponse []byte
-	rawResponse, err = MQRequest(channel, "create_queue", "createdb", "", dbOwner, dbName, objectID)
+// LiveCreateDB requests the job queue backend create a new live SQLite database
+func LiveCreateDB(dbOwner, dbName, objectID string) (liveNode string, err error) {
+	// Send the database setup request to our job queue backend
+	var resp JobResponseDBCreate
+	err = JobSubmit(&resp, "any", "createdb", "", dbOwner, dbName, objectID)
 	if err != nil {
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		log.Println(err)
-		return
+	// Return the name of the node which has the database
+	liveNode = resp.NodeName
+
+	log.Printf("%s: node which handled the database creation request: %s", Conf.Live.Nodename, liveNode)
+
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned during database creation on '%s': '%v'", Conf.Live.Nodename, resp.NodeName, resp.Err)
 	}
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		return
-	}
-	if resp.Node == "" {
-		log.Println("A node responded to a 'create' request, but didn't identify itself.")
-		return
-	}
-	if resp.Result != "success" {
-		err = errors.New(fmt.Sprintf("LIVE database (%s/%s) creation apparently didn't fail, but the response didn't include a success message",
-			dbOwner, dbName))
-		return
-	}
-	liveNode = resp.Node
 	return
 }
 
-// LiveDelete asks our AMQP backend to delete a database
+// LiveDelete asks our job queue backend to delete a database
 func LiveDelete(liveNode, loggedInUser, dbOwner, dbName string) (err error) {
-	// Delete the database from our AMQP backend
-	var rawResponse []byte
-	rawResponse, err = MQRequest(AmqpChan, liveNode, "delete", loggedInUser, dbOwner, dbName, "")
+	// Send the database setup request to our job queue backend
+	var resp JobResponseDBError
+	err = JobSubmit(&resp, liveNode, "delete", loggedInUser, dbOwner, dbName, "")
 	if err != nil {
-		log.Println(err)
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBErrorResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		return
-	}
-	if resp.Node == "" {
-		log.Println("A node responded to a 'delete' request, but didn't identify itself.")
-		return
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned during database deletion on '%s': '%v'", Conf.Live.Nodename, liveNode, resp.Err)
 	}
 	return
 }
 
-// LiveExecute asks our AMQP backend to execute a SQL statement on a database
+// LiveExecute asks our job queue backend to execute a SQL statement on a database
 func LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql string) (rowsChanged int, err error) {
-	var rawResponse []byte
-	rawResponse, err = MQRequest(AmqpChan, liveNode, "execute", loggedInUser, dbOwner, dbName, sql)
+	// Send the execute request to our job queue backend
+	var resp JobResponseDBExecute
+	err = JobSubmit(&resp, liveNode, "execute", loggedInUser, dbOwner, dbName, sql)
 	if err != nil {
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBExecuteResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// If the SQL execution failed, then provide the error message to the user
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		return
-	}
+	// Return the number of rows changed by the execution run
 	rowsChanged = resp.RowsChanged
+
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		if !strings.HasPrefix(err.Error(), "don't use exec with") {
+			log.Printf("%s: an error was returned when retrieving the execution result for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+		}
+	}
+	return
+}
+
+// LiveIndexes asks our job queue backend to provide the list of indexes in a database
+func LiveIndexes(liveNode, loggedInUser, dbOwner, dbName string) (indexes []APIJSONIndex, err error) {
+	// Send the index request to our job queue backend
+	var resp JobResponseDBIndexes
+	err = JobSubmit(&resp, liveNode, "indexes", loggedInUser, dbOwner, dbName, "")
+	if err != nil {
+		return
+	}
+
+	// Return the index list for the live database
+	indexes = resp.Indexes
+
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned when retrieving the index list for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+	}
 	return
 }
 
 // LiveQuery sends a SQLite query to a live database on its hosting node
-func LiveQuery(nodeName, requestingUser, dbOwner, dbName, query string) (rows SQLiteRecordSet, err error) {
-	// Send the query request to our AMQP backend
-	var rawResponse []byte
-	rawResponse, err = MQRequest(AmqpChan, nodeName, "query", requestingUser, dbOwner, dbName, query)
+func LiveQuery(liveNode, loggedInUser, dbOwner, dbName, query string) (rows SQLiteRecordSet, err error) {
+	// Send the query to our job queue backend
+	var resp JobResponseDBQuery
+	err = JobSubmit(&resp, liveNode, "query", loggedInUser, dbOwner, dbName, query)
 	if err != nil {
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBQueryResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		return
-	}
+	// Return the query response
 	rows = resp.Results
+
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned when retrieving the query response for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+	}
 	return
 }
 
-// LiveRowData asks our AMQP backend to send us the SQLite table data for a given range of rows
-func LiveRowData(liveNode, loggedInUser, dbOwner, dbName string, reqData LiveDBRowsRequest) (rowData SQLiteRecordSet, err error) {
-	var rawResponse []byte
-	rawResponse, err = MQRequest(AmqpChan, liveNode, "rowdata", loggedInUser, dbOwner, dbName, reqData)
+// LiveRowData asks our job queue backend to send us the SQLite table data for a given range of rows
+func LiveRowData(liveNode, loggedInUser, dbOwner, dbName string, reqData JobRequestRows) (rowData SQLiteRecordSet, err error) {
+	// Serialise the row data request to JSON
+	// NOTE - This actually causes the serialised field to be stored in PG as base64 instead.  Not sure why, but we can work with it.
+	reqJSON, err := json.Marshal(reqData)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBRowsResponse
-	err = json.Unmarshal(rawResponse, &resp)
+	// Send the row data request to our job queue backend
+	var resp JobResponseDBRows
+	err = JobSubmit(&resp, liveNode, "rowdata", loggedInUser, dbOwner, dbName, reqJSON)
 	if err != nil {
-		log.Println(err)
 		return
 	}
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		log.Println(err)
-		return
-	}
-	if resp.Node == "" {
-		log.Println("A node responded to a 'rowdata' request, but didn't identify itself.")
-		return
-	}
+
+	// Return the row data for the requested table
 	rowData = resp.RowData
+
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned when retrieving the row data for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+	}
 	return
 }
 
-// LiveSize asks our AMQP backend for the file size of a database
+// LiveSize asks our job queue backend for the file size of a database
 func LiveSize(liveNode, loggedInUser, dbOwner, dbName string) (size int64, err error) {
-	// Send the size request to our AMQP backend
-	var rawResponse []byte
-	rawResponse, err = MQRequest(AmqpChan, liveNode, "size", loggedInUser, dbOwner, dbName, "")
+	// Send the size request to our job queue backend
+	var resp JobResponseDBSize
+	err = JobSubmit(&resp, liveNode, "size", loggedInUser, dbOwner, dbName, "")
 	if err != nil {
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBSizeResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		return
-	}
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		return
-	}
-	if resp.Node == "" {
-		log.Println("A node responded to a 'size' request, but didn't identify itself.")
-		return
-	}
+	// Return the size of the live database
 	size = resp.Size
+
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned when checking the on disk database size for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+	}
 	return
 }
 
-// LiveTables asks our AMQP backend to provide the list of tables (not including views!) in a database
+// LiveTables asks our job queue backend to provide the list of tables (not including views!) in a database
 func LiveTables(liveNode, loggedInUser, dbOwner, dbName string) (tables []string, err error) {
-	// Send the tables request to our AMQP backend
-	var rawResponse []byte
-	rawResponse, err = MQRequest(AmqpChan, liveNode, "tables", loggedInUser, dbOwner, dbName, "")
+	// Send the tables request to our job queue backend
+	var resp JobResponseDBTables
+	err = JobSubmit(&resp, liveNode, "tables", loggedInUser, dbOwner, dbName, "")
 	if err != nil {
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBTablesResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		return
-	}
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		return
-	}
-	if resp.Node == "" {
-		log.Println("A node responded to a 'tables' request, but didn't identify itself.")
-		return
-	}
+	// Return the table list for the live database
 	tables = resp.Tables
+
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned when retrieving the table list for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+	}
 	return
 }
 
-// LiveTablesAndViews asks our AMQP backend to provide the list of tables and views in a database
+// LiveTablesAndViews asks our job queue backend to provide the list of tables and views in a database
 func LiveTablesAndViews(liveNode, loggedInUser, dbOwner, dbName string) (list []string, err error) {
-	// Send the tables request to our AMQP backend
+	// Send the tables request to our job queue backend
 	list, err = LiveTables(liveNode, loggedInUser, dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
-	// Send the tables request to our AMQP backend
+	// Send the tables request to our job queue backend
 	var vw []string
 	vw, err = LiveViews(liveNode, loggedInUser, dbOwner, dbName)
 	if err != nil {
@@ -346,180 +280,92 @@ func LiveTablesAndViews(liveNode, loggedInUser, dbOwner, dbName string) (list []
 	return
 }
 
-// LiveViews asks our AMQP backend to provide the list of views (not including tables!) in a database
+// LiveViews asks our job queue backend to provide the list of views (not including tables!) in a database
 func LiveViews(liveNode, loggedInUser, dbOwner, dbName string) (views []string, err error) {
-	var rawResponse []byte
-	rawResponse, err = MQRequest(AmqpChan, liveNode, "views", loggedInUser, dbOwner, dbName, "")
+	// Send the views request to our job queue backend
+	var resp JobResponseDBViews
+	err = JobSubmit(&resp, liveNode, "views", loggedInUser, dbOwner, dbName, "")
 	if err != nil {
 		return
 	}
 
-	// Decode the response
-	var resp LiveDBViewsResponse
-	err = json.Unmarshal(rawResponse, &resp)
-	if err != nil {
-		return
-	}
-	if resp.Error != "" {
-		err = errors.New(resp.Error)
-		return
-	}
-	if resp.Node == "" {
-		log.Println("A node responded to a 'views' request, but didn't identify itself.")
-		return
-	}
+	// Return the view list for the live database
 	views = resp.Views
-	return
-}
 
-// MQResponse sends an AMQP response back to its requester
-func MQResponse(requestType string, msg amqp.Delivery, channel *amqp.Channel, nodeName string, responseData interface{}) (err error) {
-	var z []byte
-	z, err = json.Marshal(responseData)
-	if err != nil {
-		log.Println(err)
-		// It's super unlikely we can safely return here without ack-ing the message.  So as something has gone
-		// wrong with json.Marshall() we'd better just attempt passing back info about that error message instead (!)
-		z = []byte(fmt.Sprintf(`{"node":"%s","error":"%s"}`, nodeName, err.Error())) // This is a LiveDBErrorResponse structure
-	}
-
-	// Send the message
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err = channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: msg.CorrelationId,
-			Body:          z,
-		})
-	if err != nil {
-		log.Println(err)
-	}
-
-	// Acknowledge the request, so it doesn't stick around in the queue
-	err = msg.Ack(false)
-	if err != nil {
-		log.Println(err)
-	}
-
-	if AmqpDebug > 0 {
-		log.Printf("[%s] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", requestType, nodeName, msg.CorrelationId, msg.ReplyTo)
+	// Handle error response from the live node
+	if resp.Err != "" {
+		err = errors.New(resp.Err)
+		log.Printf("%s: an error was returned when retrieving the view list for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
 	}
 	return
 }
 
-// MQCreateDBQueue creates a queue on the MQ server for "create database" messages
-func MQCreateDBQueue(channel *amqp.Channel) (queue amqp.Queue, err error) {
-	queue, err = channel.QueueDeclare("create_queue", true, false, false, false, nil)
-	if err != nil {
-		return
-	}
-
-	// FIXME: Re-read the docs for this, and work out if this is needed
-	err = channel.Qos(1, 0, false)
-	if err != nil {
-		return
-	}
-	return
-}
-
-// MQCreateQueryQueue creates a queue on the MQ server for sending database queries to
-func MQCreateQueryQueue(channel *amqp.Channel, nodeName string) (queue amqp.Queue, err error) {
-	queue, err = channel.QueueDeclare(nodeName, false, false, false, false, nil)
-	if err != nil {
-		return
-	}
-
-	// FIXME: Re-read the docs for this, and work out if this is needed
-	err = channel.Qos(0, 0, false)
-	if err != nil {
-		return
-	}
-	return
-}
-
-// MQCreateResponse sends a success/failure response back
-func MQCreateResponse(msg amqp.Delivery, channel *amqp.Channel, nodeName, result string) (err error) {
-	// Construct the response.  It's such a simple string we just create it directly instead of using json.Marshall()
-	resp := fmt.Sprintf(`{"node":"%s","dbowner":"","dbname":"","result":"%s","error":""}`, nodeName, result)
-
-	// Send the message
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	err = channel.PublishWithContext(ctx, "", msg.ReplyTo, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: msg.CorrelationId,
-			Body:          []byte(resp),
-		})
-	if err != nil {
-		log.Println(err)
-	}
-	msg.Ack(false)
-	if AmqpDebug > 0 {
-		log.Printf("[CREATE] Live node '%s' responded with ACK to message with correlationID: '%s', msg.ReplyTo: '%s'", nodeName, msg.CorrelationId, msg.ReplyTo)
-	}
-	return
-}
-
-// MQRequest is the main function used for sending requests to our AMQP backend
-func MQRequest(channel *amqp.Channel, queue, operation, requestingUser, dbOwner, dbName string, data interface{}) (result []byte, err error) {
-	// Create a temporary AMQP queue for receiving the response
-	var q amqp.Queue
-	q, err = channel.QueueDeclare("", false, false, true, false, nil)
-	if err != nil {
-		return
-	}
-
-	// Construct the request
-	bar := LiveDBRequest{
-		Operation:      operation,
-		DBOwner:        dbOwner,
-		DBName:         dbName,
-		Data:           data,
-		RequestingUser: requestingUser,
-	}
-	var z []byte
-	z, err = json.Marshal(bar)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Send the request via AMQP
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-	defer cancel()
-	corrID := RandomString(32)
-	err = channel.PublishWithContext(ctx, "", queue, false, false,
-		amqp.Publishing{
-			ContentType:   "text/json",
-			CorrelationId: corrID,
-			ReplyTo:       q.Name,
-			Body:          z,
-		})
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// Start processing messages from the AMQP response queue
-	msgs, err := channel.Consume(q.Name, "", true, false, false, false, nil)
-	if err != nil {
-		return
-	}
-
-	// Wait for, then extract the response.  Without json unmarshalling it yet
-	for d := range msgs {
-		if corrID == d.CorrelationId {
-			result = d.Body
-			break
+// RemoveLiveDB deletes a live database from the local node.  For example, when the user deletes it from
+// their account.
+// Be aware, it leaves the database owners directory in place, to avoid any potential race condition of
+// trying to delete that directory while other databases in their account are being worked with
+func RemoveLiveDB(dbOwner, dbName string) (err error) {
+	// Get the path to the database file, and it's containing directory
+	dbDir := filepath.Join(Conf.Live.StorageDir, dbOwner, dbName)
+	dbPath := filepath.Join(dbDir, "live.sqlite")
+	if _, err = os.Stat(dbPath); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			if JobQueueDebug > 0 {
+				log.Printf("%s: database file '%s/%s' was supposed to get deleted here, but was missing from "+
+					"filesystem path: '%s'", Conf.Live.Nodename, dbOwner, dbName, dbPath)
+			}
+			return
 		}
+
+		// Something wrong with the database file
+		log.Println(err)
+		return
 	}
 
-	// Delete the temporary queue
-	_, err = channel.QueueDelete(q.Name, false, false, false)
+	// Delete the "live.sqlite" file
+	// NOTE: If this seems to leave wal or other files hanging around in actual production use, we could
+	//       instead use filepath.RemoveAll(dbDir).  That should kill the containing directory and
+	//       all files within, thus not leave anything hanging around
+	err = os.Remove(dbPath)
 	if err != nil {
 		log.Println(err)
+		return
+	}
+
+	// Remove the containing directory
+	err = os.Remove(dbDir)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	if JobQueueDebug > 0 {
+		log.Printf("%s: database file '%s/%s' removed from filesystem path: '%s'", Conf.Live.Nodename, dbOwner,
+			dbName, dbPath)
+	}
+	return
+}
+
+// WaitForResponse waits for the job queue server to provide a response for a given job id
+func WaitForResponse[T any](jobID int, resp *T) (err error) {
+	// Add the response receiver
+	responseChan := make(chan ResponseInfo)
+	ResponseWaiters.AddReceiver(jobID, &responseChan)
+
+	// Wait for a response
+	response := <-responseChan
+
+	// Remove the response receiver
+	ResponseWaiters.RemoveReceiver(jobID)
+
+	// Update the response status to 'processed' (should be fine done async)
+	go ResponseComplete(response.responseID)
+
+	// Unmarshall the response
+	err = json.Unmarshal([]byte(response.payload), resp)
+	if err != nil {
+		err = fmt.Errorf("couldn't decode response payload: '%s'", err)
+		log.Printf("%s: %s", Conf.Live.Nodename, err)
 	}
 	return
 }

@@ -903,7 +903,7 @@ func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbName, c
 	var userDB *minio.Object
 	var logStr string
 	if isLive {
-		// It's a live database, so we tell the AMQP backend to back it up into Minio, which we then provide to the user
+		// It's a live database, so we tell the job queue backend to back it up into Minio, which we then provide to the user
 		err = LiveBackup(liveNode, loggedInUser, dbOwner, dbName)
 		if err != nil {
 			return
