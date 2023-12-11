@@ -87,7 +87,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	// Send the live database file to our job queue backend for setup
 	dbOwner := "default"
 	dbName := "Join Testing with index.sqlite"
-	liveNode, err := LiveCreateDB(dbOwner, dbName, objectID)
+	liveNode, err := LiveCreateDB(AmqpChan, dbOwner, dbName, objectID)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -12,6 +12,18 @@ CREATE TABLE IF NOT EXISTS job_submissions (
     completed_date TIMESTAMP WITH TIME ZONE
 );
 
+CREATE INDEX job_submissions_completed_date_index
+    ON job_submissions (completed_date);
+
+CREATE INDEX job_submissions_state_index
+    ON job_submissions (state);
+
+CREATE INDEX job_submissions_submission_date_index
+    ON job_submissions (submission_date);
+
+CREATE INDEX job_submissions_target_node_index
+    ON job_submissions (target_node);
+
 -- job_responses table
 CREATE TABLE IF NOT EXISTS job_responses
 (
@@ -26,6 +38,15 @@ CREATE TABLE IF NOT EXISTS job_responses
     details JSONB NOT NULL,
     processed_date TIMESTAMP WITH TIME ZONE
 );
+
+CREATE INDEX job_responses_processed_date_index
+    ON job_responses (processed_date);
+
+CREATE INDEX job_responses_response_date_index
+    ON job_responses (response_date);
+
+CREATE INDEX job_responses_submitter_node_index
+    ON job_responses (submitter_node);
 
 -- notify function for the job_submissions table
 CREATE OR REPLACE FUNCTION job_submissions_notify()

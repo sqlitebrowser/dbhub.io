@@ -45,6 +45,14 @@ access_key = "minio"
 secret = "minio123"
 https = false
 
+[mq]
+cert_file = ""
+key_file = ""
+password = "guest"
+port = 5672
+server = "localhost"
+username = "guest"
+
 [pg]
 database = "dbhub"
 num_connections = 5
