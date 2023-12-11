@@ -14,7 +14,7 @@ var (
 	AmqpChan *amqp.Channel
 
 	// UseAMQP switches between running in AMQP mode (true) or job queue server mode (false)
-	UseAMQP = true
+	UseAMQP = false
 )
 
 // CloseMQChannel closes an open AMQP channel
