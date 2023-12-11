@@ -41,7 +41,7 @@ func main() {
 
 	// Connect to job queue server
 	com.Conf.Live.Nodename = "Usage Analysis"
-	err = com.ConnectQueue()
+	com.AmqpChan, err = com.ConnectQueue()
 	if err != nil {
 		log.Fatal(err)
 	}

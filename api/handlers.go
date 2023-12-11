@@ -1340,7 +1340,7 @@ func uploadHandler(w http.ResponseWriter, r *http.Request) {
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 		// Send a request to the job queue to set up the database
-		liveNode, err := com.LiveCreateDB(dbOwner, dbName, objectID)
+		liveNode, err := com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID)
 		if err != nil {
 			log.Println(err)
 			jsonErr(w, err.Error(), http.StatusInternalServerError)

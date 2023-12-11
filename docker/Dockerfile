@@ -1,9 +1,25 @@
 # vim:set ft=dockerfile:
 
+# We grab RabbitMQ and Erlang from the official RabbitMQ image
+FROM rabbitmq:3-alpine AS rabbit
+
 # Build our own image
 FROM alpine:3.19
 
 LABEL maintainer="Justin Clift <justin@postgresql.org>"
+
+# Copy the RabbitMQ files we need
+COPY --from=rabbit /etc/rabbitmq /etc/rabbitmq
+COPY --from=rabbit /opt/erlang /opt/erlang
+COPY --from=rabbit /opt/openssl /opt/openssl
+COPY --from=rabbit /opt/rabbitmq /opt/rabbitmq
+COPY --from=rabbit /var/lib/rabbitmq /var/lib/rabbitmq
+COPY --from=rabbit /var/log/rabbitmq /var/log/rabbitmq
+
+# Create the rabbitmq user and group
+RUN addgroup -S rabbitmq && \
+    adduser -S -D -h /var/lib/rabbitmq -s /sbin/nologin -g "Linux User,,," -G rabbitmq rabbitmq && \
+    chown -Rh rabbitmq: /opt/rabbitmq /var/log/rabbitmq
 
 # Use a fast Australian mirror for the Alpine package repositories
 # Without doing this, building the image can take 2+ hours. :(
@@ -75,8 +91,13 @@ RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/l
     echo "su - minio -c '/usr/bin/minio server --quiet --anonymous /var/lib/minio/data 2>&1 &'" >> /usr/local/bin/start.sh && \
     echo "su - postgres -c '/usr/libexec/postgresql/pg_ctl start'" >> /usr/local/bin/start.sh && \
     echo "" >> /usr/local/bin/start.sh && \
-    echo "# Delay long enough for the DBHub.io daemons to start" >> /usr/local/bin/start.sh && \
-    echo "sleep 1" >> /usr/local/bin/start.sh && \
+    echo "unset CONFIG_FILE" >> /usr/local/bin/start.sh && \
+    echo "export RABBITMQ_CONFIG_FILES=/etc/rabbitmq/conf.d" >> /usr/local/bin/start.sh && \
+    echo "export PATH=/opt/rabbitmq/sbin:/opt/erlang/bin:/opt/openssl/bin:$PATH" >> /usr/local/bin/start.sh && \
+    echo "/opt/rabbitmq/sbin/rabbitmq-server &" >> /usr/local/bin/start.sh && \
+    echo "" >> /usr/local/bin/start.sh && \
+    echo "# Wait for RabbitMQ to start before launching the DBHub.io daemons" >> /usr/local/bin/start.sh && \
+    echo "sleep 15" >> /usr/local/bin/start.sh && \
     echo "" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \

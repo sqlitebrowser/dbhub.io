@@ -1,8 +1,15 @@
 BEGIN;
-DROP TABLE IF EXISTS job_submissions;
-DROP TABLE IF EXISTS job_responses;
 DROP TRIGGER IF EXISTS job_submissions_trigger ON job_submissions;
-DROP TRIGGER IF EXISTS job_responses_trigger ON job_responses;
 DROP FUNCTION IF EXISTS job_submissions_notify();
+DROP INDEX IF EXISTS job_submissions_completed_date_index;
+DROP INDEX IF EXISTS job_submissions_state_index;
+DROP INDEX IF EXISTS job_submissions_submission_date_index;
+DROP INDEX IF EXISTS job_submissions_target_node_index;
+DROP TABLE IF EXISTS job_submissions;
+DROP TRIGGER IF EXISTS job_responses_trigger ON job_responses;
 DROP FUNCTION IF EXISTS job_responses_notify();
+DROP INDEX IF EXISTS job_responses_processed_date_index;
+DROP INDEX IF EXISTS job_responses_response_date_index;
+DROP INDEX IF EXISTS job_responses_submitter_node_index;
+DROP TABLE IF EXISTS job_responses;
 COMMIT;

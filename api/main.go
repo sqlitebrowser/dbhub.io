@@ -74,7 +74,7 @@ func main() {
 	}
 
 	// Connect to job queue server
-	err = com.ConnectQueue()
+	com.AmqpChan, err = com.ConnectQueue()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -98,11 +98,13 @@ func main() {
 	}
 
 	// Start background goroutines to handle job queue responses
-	com.ResponseWaiters = com.NewResponseReceiver()
-	com.CheckResponsesQueue = make(chan struct{})
-	com.SubmitterInstance = com.RandomString(3)
-	go com.ResponseQueueCheck()
-	go com.ResponseQueueListen()
+	if !com.UseAMQP {
+		com.ResponseWaiters = com.NewResponseReceiver()
+		com.CheckResponsesQueue = make(chan struct{})
+		com.SubmitterInstance = com.RandomString(3)
+		go com.ResponseQueueCheck()
+		go com.ResponseQueueListen()
+	}
 
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
