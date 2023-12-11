@@ -45,22 +45,31 @@ function SqlTerminalCommandOutput({state, data}) {
 	} else if (state === "executed") {
 		output = <span className="text-info"><strong>done: </strong>{data.rows_changed + " row" + (data.rows_changed === 1 ? "" : "s") + " changed"}</span>;
 	} else if (state === "queried") {
-		output = (<>
-			<span className="text-info">
-				<strong>done: </strong>{data.RowCount + " row" + (data.RowCount === 1 ? "" : "s") + " returned"}&nbsp;
-				<a href="#/" title="Export results to CSV" onClick={() => downloadData(convertResultsetToCsv(data), "result.csv", "text/csv")}><i className={"fa fa-download"}></i></a>
-			</span>
-			<div className="table-responsive">
-				<table className="table table-hover table-condensed">
-					<thead>
-						<tr>{data.ColNames.map(n => <th>{n}</th>)}</tr>
-					</thead>
-					<tbody>
-						{data.Records.map(r => <tr>{r.map(c => <td>{c.Value}</td>)}</tr>)}
-					</tbody>
-				</table>
-			</div>
-		</>);
+		if (data.Records !== null) {
+			output = (<>
+				<span className="text-info">
+					<strong>done: </strong>{data.RowCount + " row" + (data.RowCount === 1 ? "" : "s") + " returned"}&nbsp;
+					<a href="#/" title="Export results to CSV" onClick={() => downloadData(convertResultsetToCsv(data), "result.csv", "text/csv")}><i className={"fa fa-download"}></i></a>
+				</span>
+				<div className="table-responsive">
+					<table className="table table-hover table-condensed">
+						<thead>
+							<tr>{data.ColNames.map(n => <th>{n}</th>)}</tr>
+						</thead>
+						<tbody>
+							{data.Records.map(r => <tr>{r.map(c => <td>{c.Value}</td>)}</tr>)}
+						</tbody>
+					</table>
+				</div>
+			</>);
+		} else {
+			output = (<>
+				<span className="text-info">
+					<strong>done: </strong>{data.RowCount + " row" + (data.RowCount === 1 ? "" : "s") + " returned"}&nbsp;
+					<a href="#/" title="Export results to CSV" onClick={() => downloadData(convertResultsetToCsv(data), "result.csv", "text/csv")}><i className={"fa fa-download"}></i></a>
+				</span>
+			</>);
+		}
 	}
 
 	return (
