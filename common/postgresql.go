@@ -4893,6 +4893,30 @@ func UpdateMergeRequestCommits(dbOwner, dbName string, discID int, mrCommits []C
 	return nil
 }
 
+// UpdateModified is a simple function to change the 'last modified' timestamp for a database to now()
+func UpdateModified(dbOwner, dbName string) (err error) {
+	dbQuery := `
+		UPDATE sqlite_databases AS db
+		SET last_modified = now()
+		WHERE user_id = (
+				SELECT user_id
+				FROM users
+				WHERE lower(user_name) = lower($1)
+			)
+			AND db_name = $2`
+	commandTag, err := pdb.Exec(context.Background(), dbQuery, dbOwner, dbName)
+	if err != nil {
+		log.Printf("%s: updating last_modified for database '%s/%s' failed: %v", Conf.Live.Nodename, dbOwner,
+			dbName, err)
+		return
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("%s: wrong number of rows (%d) affected when updating last_modified for database '%s/%s'",
+			Conf.Live.Nodename, numRows, dbOwner, dbName)
+	}
+	return
+}
+
 // User returns details for a user
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
