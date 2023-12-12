@@ -322,6 +322,11 @@ func LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql string) (rowsChang
 			}
 		}
 	}
+
+	// If no error was thrown, then update the "last_modified" field for the database
+	if err == nil {
+		err = UpdateModified(dbOwner, dbName)
+	}
 	return
 }
 
