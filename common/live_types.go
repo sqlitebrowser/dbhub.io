@@ -98,14 +98,14 @@ type ResponseInfo struct {
 
 // ResponseReceivers is a simple structure used for matching up job queue responses to the caller who submitted the job
 type ResponseReceivers struct {
-	sync.Mutex
+	sync.RWMutex
 	receivers map[int]*chan ResponseInfo
 }
 
-// NewResponseReceiver is the constructor function for creating new ResponseReceivers
-func NewResponseReceiver() *ResponseReceivers {
+// NewResponseQueue is the constructor function for creating a new ResponseReceivers
+func NewResponseQueue() *ResponseReceivers {
 	z := ResponseReceivers{
-		Mutex:     sync.Mutex{},
+		RWMutex:   sync.RWMutex{},
 		receivers: nil,
 	}
 	z.receivers = make(map[int]*chan ResponseInfo)
