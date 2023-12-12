@@ -21,8 +21,8 @@ var (
 	// CheckResponsesQueue is used by the non-live daemons for triggering a check of the job responses queue
 	CheckResponsesQueue chan struct{}
 
-	// ResponseWaiters is used to direct job queue responses back to the appropriate callers
-	ResponseWaiters *ResponseReceivers
+	// ResponseQueue is used to direct job queue responses back to the appropriate callers
+	ResponseQueue *ResponseReceivers
 
 	// SubmitterInstance is a random string generated at server start for identification purposes
 	SubmitterInstance string
@@ -49,8 +49,7 @@ func JobQueueCheck() {
 			continue
 		}
 
-		// TODO: a) we're in a loop so can't use defer, and
-		//       b) we'll likely need to update the job state to 'error' on failure instead of rolling back
+		// TODO: should we update the job state to 'error' on failure?
 
 		dbQuery := `
 			SELECT job_id, operation, submitter_node, details
@@ -523,12 +522,12 @@ func ResponseQueueCheck() {
 				log.Printf("%s: picked up response %d for jobID %d", Conf.Live.Nodename, responseID, jobID)
 			}
 
-			ResponseWaiters.Lock()
-			receiverChan, ok := ResponseWaiters.receivers[jobID]
+			ResponseQueue.RLock()
+			receiverChan, ok := ResponseQueue.receivers[jobID]
 			if ok {
 				*receiverChan <- ResponseInfo{jobID: jobID, responseID: responseID, payload: details}
 			}
-			ResponseWaiters.Unlock()
+			ResponseQueue.RUnlock()
 			return nil
 		})
 		if err != nil {

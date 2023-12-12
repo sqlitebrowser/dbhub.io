@@ -3189,7 +3189,7 @@ func main() {
 
 	// Start background goroutines to handle job queue responses
 	if !com.UseAMQP {
-		com.ResponseWaiters = com.NewResponseReceiver()
+		com.ResponseQueue = com.NewResponseQueue()
 		com.CheckResponsesQueue = make(chan struct{})
 		com.SubmitterInstance = com.RandomString(3)
 		go com.ResponseQueueCheck()

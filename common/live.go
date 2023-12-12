@@ -691,13 +691,13 @@ func RemoveLiveDB(dbOwner, dbName string) (err error) {
 func WaitForResponse[T any](jobID int, resp *T) (err error) {
 	// Add the response receiver
 	responseChan := make(chan ResponseInfo)
-	ResponseWaiters.AddReceiver(jobID, &responseChan)
+	ResponseQueue.AddReceiver(jobID, &responseChan)
 
 	// Wait for a response
 	response := <-responseChan
 
 	// Remove the response receiver
-	ResponseWaiters.RemoveReceiver(jobID)
+	ResponseQueue.RemoveReceiver(jobID)
 
 	// Update the response status to 'processed' (should be fine done async)
 	go ResponseComplete(response.responseID)
