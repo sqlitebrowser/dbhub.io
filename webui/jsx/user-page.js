@@ -22,7 +22,7 @@ function DatabasePanel({data, username}) {
 				{data.OneLineDesc !== "" ? <p>{data.OneLineDesc}</p> : null}
 				<p>
 					<strong>Updated: </strong><span title={new Date(data.RepoModified).toLocaleString()} className="text-info">{getTimePeriod(data.RepoModified, false)}</span>&nbsp;&nbsp;
-					<strong>Licence: </strong><span className="text-info">{data.LicenceURL === "" ? data.Licence : <a href={data.LicenceURL}>{data.Licence}</a>}</span>&nbsp;&nbsp;
+                    {data.IsLive ? null : <><strong>Licence: </strong><span className="text-info">{data.LicenceURL === "" ? data.Licence : <a href={data.LicenceURL}>{data.Licence}</a>}</span>&nbsp;&nbsp;</>}
 					<strong>Size: </strong><span className="text-info">{Math.floor(data.Size / 1024).toLocaleString()} KB</span>
 				</p>
 				{isExpanded ? (<>
