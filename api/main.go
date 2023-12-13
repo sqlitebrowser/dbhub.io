@@ -106,6 +106,10 @@ func main() {
 		go com.ResponseQueueListen()
 	}
 
+	// Start background signal handler
+	exitSignal := make(chan struct{}, 1)
+	go com.SignalHandler(&exitSignal)
+
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
 	certFile, err := os.ReadFile(com.Conf.DB4S.CAChain)
@@ -164,14 +168,10 @@ func main() {
 
 	// Start API server
 	log.Printf("%s: listening on %s", com.Conf.Live.Nodename, server)
-	err = srv.ListenAndServeTLS(com.Conf.Api.Certificate, com.Conf.Api.CertificateKey)
+	go srv.ListenAndServeTLS(com.Conf.Api.Certificate, com.Conf.Api.CertificateKey)
 
-	// Shut down nicely
-	com.DisconnectPostgreSQL()
-
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Wait for exit signal
+	<-exitSignal
 }
 
 // checkAuth authenticates and logs the incoming request

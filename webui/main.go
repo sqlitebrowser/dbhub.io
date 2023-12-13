@@ -3196,6 +3196,10 @@ func main() {
 		go com.ResponseQueueListen()
 	}
 
+	// Start background signal handler
+	exitSignal := make(chan struct{}, 1)
+	go com.SignalHandler(&exitSignal)
+
 	// Our pages
 	http.Handle("/", gz.GzipHandler(logReq(mainHandler)))
 	http.Handle("/about", gz.GzipHandler(logReq(aboutPage)))
@@ -3498,18 +3502,10 @@ func main() {
 			MinVersion: tls.VersionTLS12, // TLS 1.2 is now the lowest acceptable level
 		},
 	}
-	err = srv.ListenAndServeTLS(com.Conf.Web.Certificate, com.Conf.Web.CertificateKey)
+	go srv.ListenAndServeTLS(com.Conf.Web.Certificate, com.Conf.Web.CertificateKey)
 
-	// Shut down nicely
-	com.DisconnectPostgreSQL()
-	if err != nil {
-		log.Println(err)
-	}
-
-	err = com.CloseMQChannel(com.AmqpChan)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Wait for exit signal
+	<-exitSignal
 }
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {

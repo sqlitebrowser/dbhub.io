@@ -59,6 +59,12 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Connect to job queue server
+	com.AmqpChan, err = com.ConnectQueue()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Connect to the Memcached server
 	err = com.ConnectCache()
 	if err != nil {
@@ -76,6 +82,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Start background goroutines to handle job queue responses
+	if !com.UseAMQP {
+		com.ResponseQueue = com.NewResponseQueue()
+		com.CheckResponsesQueue = make(chan struct{})
+		com.SubmitterInstance = com.RandomString(3)
+		go com.ResponseQueueCheck()
+		go com.ResponseQueueListen()
+	}
+
+	// Start background signal handler
+	exitSignal := make(chan struct{}, 1)
+	go com.SignalHandler(&exitSignal)
 
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
@@ -123,7 +142,10 @@ func main() {
 
 	// Start server
 	log.Printf("%s: listening for requests on %s", com.Conf.Live.Nodename, server)
-	log.Fatal(newServer.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey))
+	go newServer.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey)
+
+	// Wait for exit signal
+	<-exitSignal
 }
 
 // Returns the list of branches for a database
