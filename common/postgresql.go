@@ -1325,12 +1325,20 @@ func DeleteLicence(userName, licenceName string) (err error) {
 	return nil
 }
 
-// DisconnectPostgreSQL disconnects the PostgreSQL database connection
+// DisconnectPostgreSQL disconnects the PostgreSQL database connections
 func DisconnectPostgreSQL() {
-	pdb.Close()
+	if pdb != nil {
+		pdb.Close()
+	}
 
-	// Log successful disconnection
-	log.Printf("Disconnected from PostgreSQL server: %v:%v", Conf.Pg.Server, uint16(Conf.Pg.Port))
+	if !UseAMQP {
+		// Don't bother trying to close the job responses listener connection, as it just blocks
+		//JobListenConn.Close(context.Background())
+
+		if JobQueueConn != nil {
+			JobQueueConn.Close()
+		}
+	}
 }
 
 // Discussions returns the list of discussions or MRs for a given database
@@ -3499,11 +3507,15 @@ func StatusUpdatesLoop() {
 		timeStamp time.Time
 	}
 	for {
+		// Wait at the start of the loop (simpler code then adding a delay before each continue statement below)
+		time.Sleep(Conf.Event.Delay * time.Second)
+
 		// Begin a transaction
 		var tx pgx.Tx
 		tx, err = pdb.Begin(context.Background())
 		if err != nil {
-			log.Printf("Couldn't begin database transaction for status update processing loop: %s", err.Error())
+			log.Printf("%s: couldn't begin database transaction for status update processing loop: %s",
+				Conf.Live.Nodename, err.Error())
 			continue
 		}
 
@@ -3727,9 +3739,6 @@ func StatusUpdatesLoop() {
 			log.Printf("Could not commit transaction when processing status updates: %v", err.Error())
 			continue
 		}
-
-		// Wait before running the loop again
-		time.Sleep(Conf.Event.Delay * time.Second)
 	}
 	return
 }

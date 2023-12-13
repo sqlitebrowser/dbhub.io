@@ -67,6 +67,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Start background signal handler
+	exitSignal := make(chan struct{}, 1)
+	go com.SignalHandler(&exitSignal)
+
 	// Make sure the channel to the AMQP server is still open
 	if com.UseAMQP {
 		// Create queue for receiving new database creation requests
@@ -440,12 +444,6 @@ func main() {
 
 	log.Printf("%s: listening for requests", com.Conf.Live.Nodename)
 
-	// Endless loop
-	var forever chan struct{}
-	<-forever
-
-	// Close the channel to the MQ server
-	if com.UseAMQP {
-		_ = com.CloseMQChannel(ch)
-	}
+	// Wait for exit signal
+	<- exitSignal
 }

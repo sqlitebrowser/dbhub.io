@@ -545,6 +545,12 @@ func ResponseQueueListen() {
 	}
 
 	// Listen for notify events
+	if JobListenConn == nil {
+		log.Fatalf("%v: ERROR, couldn't start ResponseQueueListen() as JobListenConn IS NILL", Conf.Live.Nodename)
+	}
+	if JobListenConn.IsClosed() {
+		log.Fatalf("%v: ERROR, couldn't start ResponseQueueListen() as connection to job responses listener is NOT open", Conf.Live.Nodename)
+	}
 	_, err := JobListenConn.Exec(context.Background(), "LISTEN job_responses_queue")
 	if err != nil {
 		log.Fatal(err)

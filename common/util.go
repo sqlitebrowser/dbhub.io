@@ -11,8 +11,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/minio/minio-go"
@@ -39,7 +41,7 @@ func (*FilteringErrorLogWriter) Write(msg []byte) (int, error) {
 	return len(msg), nil
 }
 
-// Filter out the copious 'TLS handshake error' messages we're getting
+// HttpErrorLog is used to filter out the copious 'TLS handshake error' messages we're getting
 func HttpErrorLog() *log.Logger {
 	httpErrorLogger = log.New(&FilteringErrorLogWriter{}, "", log.LstdFlags)
 	return httpErrorLogger
@@ -1105,6 +1107,51 @@ func RandomString(length int) string {
 		randomString[i] = alphaNum[rand.Intn(len(alphaNum))]
 	}
 	return string(randomString)
+}
+
+// SignalHandler is a background goroutine that exists to catch *nix termination signals then shut the daemon down cleanly
+func SignalHandler(done *chan struct{}) {
+	// Catch signals
+	z := make(chan os.Signal, 1)
+	signal.Notify(z, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-z
+	log.Printf("%s: received signal '%s', shutting down", Conf.Live.Nodename, sig)
+
+	// On non-live nodes, wait for the job response queue to be empty. aka not be waiting on in-flight responses from the live nodes
+	if ResponseQueue != nil {
+		loop := 0
+		ResponseQueue.RLock()
+		queueLength := len(ResponseQueue.receivers)
+		ResponseQueue.RUnlock()
+		for queueLength > 0 {
+			log.Printf("%s: response queue not empty (%d), waiting for 1/2 second then trying again", Conf.Live.Nodename, queueLength)
+			time.Sleep(500 * time.Millisecond)
+			loop++
+			if loop >= 20 {
+				log.Printf("%s: response queue not empty (%d) after 10 seconds.  Exiting anyway", Conf.Live.Nodename, queueLength)
+				break
+			}
+			ResponseQueue.RLock()
+			queueLength = len(ResponseQueue.receivers)
+			ResponseQueue.RUnlock()
+			if queueLength == 0 {
+				log.Printf("%s: response queue now empty, shutting down", Conf.Live.Nodename)
+			}
+		}
+	}
+
+	// Shut down connections
+	DisconnectPostgreSQL()
+	if UseAMQP {
+		err := CloseMQChannel(AmqpChan)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// The application is ready to exit
+	*done <- struct{}{}
+	return
 }
 
 // StatusUpdateCheck checks if a status update for the user exists for a given discussion or MR, and if so then removes it
