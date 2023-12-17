@@ -2261,6 +2261,14 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 
 // Renders the user Usage page.
 func usagePage(w http.ResponseWriter, r *http.Request) {
+
+	// TODO: The usage data also needs to check the data for the point in time that the user calls the page,
+	//       so an entry for "right now" can be shown.
+	//       Especially useful for new users taking a look around.
+
+	// TODO: On that note, we should also display empty charts (eg no data) better, such that people with no
+	//       usage data aren't shown what looks like a broken page
+
 	var pageData struct {
 		PageMeta PageMetaInfo
 
