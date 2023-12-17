@@ -3,6 +3,9 @@ package main
 // TODO: API functions that still need updating for Live databases
 //         * diff - already updated to just return an error for live databases.  needs testing though
 
+// TODO: It's probably a good idea to add some usage retrieval functionality to the API, so people can
+//       grab their usage data from that
+
 // FIXME: After the API and webui pieces are done, figure out how the DB4S end
 //        point and dio should be updated to use live databases too
 
