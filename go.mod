@@ -24,10 +24,11 @@ require (
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
+	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/segmentio/ksuid v1.0.3
 	github.com/smtp2go-oss/smtp2go-go v1.0.2
 	github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47
-	golang.org/x/crypto v0.14.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/oauth2 v0.1.0
 )
 
@@ -50,7 +51,6 @@ require (
 	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/memcachier/mc v2.0.1+incompatible // indirect
 	github.com/microcosm-cc/bluemonday v1.0.16 // indirect
-	github.com/rabbitmq/amqp091-go v1.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/russross/blackfriday v2.0.0+incompatible // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
@@ -68,8 +68,8 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
