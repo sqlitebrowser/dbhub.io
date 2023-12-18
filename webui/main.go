@@ -3226,6 +3226,7 @@ func main() {
 	http.Handle("/updates/", gz.GzipHandler(logReq(updatesPage)))
 	http.Handle("/upload/", gz.GzipHandler(logReq(uploadPage)))
 	http.Handle("/vis/", gz.GzipHandler(logReq(visualisePage)))
+	http.Handle("/visembed/", gz.GzipHandler(logReq(visEmbedPage)))
 	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))
 	http.Handle("/x/apikeygen", gz.GzipHandler(logReq(apiKeyGenHandler)))
 	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))

@@ -1,0 +1,33 @@
+[[ define "visembedPage" ]]
+<!doctype html>
+<html>
+[[ template "head" . ]]
+<body>
+<div>
+    <div id="visualisation" data-name="[[ .VisName ]]" data-plot-config="visualisationData" data-branch="[[ .DB.Info.Branch ]]"></div>
+    <div>
+        <div class="col-md-1"></div>
+        <div class="col-md-5">
+            <span class="pull-left">
+                View full dataset at <a href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]">[[ .DB.Info.Owner ]] / [[ .DB.Info.Database ]]</a>
+            </span>
+        </div>
+        <div class="col-md-5">
+            <div class="pull-right">
+                Powered by <a href="/"><img src="/images/sqlitebrowser.svg" height="15"/>
+                    <span style="vertical-align: bottom; color: black; padding-top: 3px;">DBHub.io</span>
+                </a>
+            </div>
+        </div>
+        <div class="col-md-1"></div>
+    </div>
+</div>
+[[ template "script_db_header" . ]]
+<script>
+    var visualisationData = [[ .Visualisation ]];
+    var branchData = [[ .Branches ]];
+</script>
+<script src="/js/dbhub.js"></script>
+</body>
+</html>
+[[ end ]]

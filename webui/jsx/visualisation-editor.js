@@ -110,7 +110,7 @@ function SavedVisualisations({visualisations, visualisationsStatus, preselectedV
 	);
 }
 
-function Visualisation({name, plotConfig, branch, setRawData, setLastRunResultMessage}) {
+export function Visualisation({name, plotConfig, branch, setRawData, setLastRunResultMessage}) {
 	const [state, setState] = React.useState("new");
 	const [data, setData] = React.useState(null);
 
@@ -240,18 +240,20 @@ function Visualisation({name, plotConfig, branch, setRawData, setLastRunResultMe
 	}
 }
 
-export default function VisualisationEditor() {
+export function VisualisationEditor() {
 	const [selectedBranch, setSelectedBranch] = React.useState(meta.branch);
 	const [visualisations, setVisualisations] = React.useState(visualisationsData);
 	const [visualisationsStatus, setVisualisationsStatus] = React.useState(Object.fromEntries(Object.keys(visualisationsData).map(k => [k, {dirty: false, newlyCreated: false, code: visualisationsData[k].sql}])));
 	const [selectedVisualisation, setSelectedVisualisation] = React.useState("");
 	const [rawData, setRawData] = React.useState(null);
 	const [showDataTable, setShowDataTable] = React.useState(false);
+	const [showEmbedHtml, setShowEmbedHtml] = React.useState(false);
 	const [lastRunResultMessage, setLastRunResultMessage] = React.useState(null);
 
 	// When the selected saved visualisation is changed, update the chart settings controls
 	React.useEffect(() => {
 		setRawData(null);
+		setShowEmbedHtml(false);
 	}, [selectedVisualisation]);
 
 	// When the data is updated, check if the currently selected plot columns still exist
@@ -605,6 +607,9 @@ export default function VisualisationEditor() {
 							{rawData !== null ? (<>
 								<button type="button" className={"btn btn-default" + (showDataTable ? " active" : "")} onClick={() => setShowDataTable(!showDataTable)}>{showDataTable ? "Hide data table" : "Show data table"}</button>&nbsp;
 								<button type="button" className="btn btn-default" onClick={() => exportDataTable()}>Export to CSV</button>
+								{visualisationsStatus[selectedVisualisation].newlyCreated ? null :
+									<>&nbsp;<button type="button" className={"btn btn-default" + (showEmbedHtml ? " active" : "")} onClick={() => setShowEmbedHtml(!showEmbedHtml)}>{showEmbedHtml ? "Hide embedding" : "Embed chart"}</button></>
+								}
 							</>) : null}
 						</TabPanel>
 						<TabPanel>
@@ -694,6 +699,14 @@ export default function VisualisationEditor() {
 									</table>
 								</div>
 							</>) : null}
+						</div>
+					) : null}
+					{showEmbedHtml ? (
+						<div style={{marginTop: "1em"}}>
+							<h5>You can embed the chart in other web pages by using this HTML code. Please keep in mind that renaming or deleting your visualisation is going to break the embedding.</h5>
+							<code>
+								&lt;iframe width="425" height="350" src={"\"" + window.location.origin + "/visembed/" + meta.owner + "/" + meta.database + "?visname=" + selectedVisualisation + "\""} title={selectedVisualisation + " - DBHub.io visualisation"} style="border: 1px solid black"&gt;&lt;/iframe&gt;
+							</code>
 						</div>
 					) : null}
 				</>)}

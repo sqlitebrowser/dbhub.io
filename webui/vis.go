@@ -275,6 +275,205 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func visEmbedPage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		DB             com.SQLiteDBinfo
+		PageMeta       PageMetaInfo
+		Branches       map[string]com.BranchEntry
+		Visualisation  com.VisParamsV2
+		VisName        string
+	}
+
+	// Get all meta information
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+	dbName, err := getDatabaseName(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check if a specific database commit ID was given
+	commitID, err := com.GetFormCommit(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Invalid database commit ID")
+		return
+	}
+
+	// Check if a branch name was requested
+	branchName, err := com.GetFormBranch(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for branch name")
+		return
+	}
+
+	// Check if a named tag was requested
+	tagName, err := com.GetFormTag(r)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, "Validation failed for tag name")
+		return
+	}
+
+	// Check if a specific release was requested
+	releaseName := r.FormValue("release")
+	if releaseName != "" {
+		err = com.ValidateBranchName(releaseName)
+		if err != nil {
+			errorPage(w, r, http.StatusBadRequest, "Validation failed for release name")
+			return
+		}
+	}
+
+	// Check if the database exists and the user has access to view it
+	exists, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, false)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !exists {
+		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s%s%s' doesn't exist", dbName.Owner, "/",
+			dbName.Database))
+		return
+	}
+
+	// * Execution can only get here if the user has access to the requested database *
+
+	// Check if this is a live database
+	isLive, _, err := com.CheckDBLive(dbName.Owner, dbName.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Live databases are handled differently to standard ones
+	if !isLive {
+		// If a specific commit was requested, make sure it exists in the database commit history
+		if commitID != "" {
+			commitList, err := com.GetCommitList(dbName.Owner, dbName.Database)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if _, ok := commitList[commitID]; !ok {
+				// The requested commit isn't one in the database commit history so error out
+				errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Unknown commit for database '%s/%s'", dbName.Owner,
+					dbName.Database))
+				return
+			}
+		}
+
+		// If a specific release was requested, and no commit ID was given, retrieve the commit ID matching the release
+		if commitID == "" && releaseName != "" {
+			releases, err := com.GetReleases(dbName.Owner, dbName.Database)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve releases for database")
+				return
+			}
+			rls, ok := releases[releaseName]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, "Unknown release requested for this database")
+				return
+			}
+			commitID = rls.Commit
+		}
+
+		// Read the branch heads list from the database
+		pageData.Branches, err = com.GetBranches(dbName.Owner, dbName.Database)
+		if err != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// If a specific branch was requested and no commit ID was given, use the latest commit for the branch
+		if commitID == "" && branchName != "" {
+			c, ok := pageData.Branches[branchName]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, "Unknown branch requested for this database")
+				return
+			}
+			commitID = c.Commit
+		}
+
+		// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
+		if commitID == "" && tagName != "" {
+			tags, err := com.GetTags(dbName.Owner, dbName.Database)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for database")
+				return
+			}
+			tg, ok := tags[tagName]
+			if !ok {
+				errorPage(w, r, http.StatusInternalServerError, "Unknown tag requested for this database")
+				return
+			}
+			commitID = tg.Commit
+		}
+
+		// If we still haven't determined the required commit ID, use the head commit of the default branch
+		if commitID == "" {
+			commitID, err = com.DefaultCommit(dbName.Owner, dbName.Database)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+
+		// Retrieve default branch name details
+		if branchName == "" {
+			branchName, err = com.GetDefaultBranchName(dbName.Owner, dbName.Database)
+			if err != nil {
+				errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
+				return
+			}
+		}
+
+		pageData.DB.Info.Branch = branchName
+	}
+
+	// Retrieve the database details
+	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, commitID)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Initial sanity check of the visualisation name
+	pageData.VisName = r.FormValue("visname")
+	err = com.ValidateVisualisationName(pageData.VisName)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Get a list of all saved visualisations for this database
+	visualisations, err := com.GetVisualisations(dbName.Owner, dbName.Database)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Get visualisation data
+	var ok bool
+	pageData.Visualisation, ok = visualisations[pageData.VisName]
+	if ok == false {
+		errorPage(w, r, http.StatusNotFound, "visualisation not found")
+		return
+	}
+
+	// Page title
+	pageData.PageMeta.Title = fmt.Sprintf("Visualisation %s - %s %s %s", pageData.VisName, dbName.Owner, "/", dbName.Database)
+
+	// Render the visualisation page
+	t := tmpl.Lookup("visembedPage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 // visExecuteSQL executes a custom SQLite SELECT query.
 func visExecuteSQL(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)

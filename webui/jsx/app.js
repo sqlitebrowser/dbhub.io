@@ -18,7 +18,7 @@ import MarkdownEditor from "./markdown-editor";
 import ProfilePage from "./profile-page";
 import SqlTerminal from "./sql-terminal";
 import UserPage from "./user-page";
-import VisualisationEditor from "./visualisation-editor";
+import { Visualisation, VisualisationEditor } from "./visualisation-editor";
 
 {
 	const rootNode = document.getElementById("db-header-root");
@@ -174,6 +174,18 @@ import VisualisationEditor from "./visualisation-editor";
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<ProfilePage />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("visualisation");
+	if (rootNode) {
+		const name = rootNode.dataset.name;
+		const plotConfig = window[rootNode.dataset.plotConfig];
+		const branch = rootNode.dataset.branch;
+
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<Visualisation name={name} plotConfig={plotConfig} branch={branch} />);
 	}
 }
 
