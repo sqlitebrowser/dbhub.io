@@ -311,8 +311,6 @@ export function VisualisationEditor() {
 	// Modify the status attributes of the currently selected visualisation
 	function updateVisualisationStatus(update) {
 		const vis = {[selectedVisualisation]: {...visualisationsStatus[selectedVisualisation], ...update}};
-		console.log(selectedVisualisation);
-		console.log(vis);
 		setVisualisationsStatus({
 			...visualisationsStatus,
 			...vis
