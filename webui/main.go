@@ -3302,11 +3302,8 @@ func main() {
 	}
 
 	// CSS
-	http.Handle("/css/bootstrap-3.3.7.min.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "bootstrap-3.3.7.min.css"))
-	})))
-	http.Handle("/css/bootstrap.min.css.map", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "bootstrap-3.3.7.min.css.map"))
+	http.Handle("/css/bootstrap.min.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "bootstrap.min.css"))
 	})))
 	http.Handle("/css/font-awesome-4.7.0.min.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "font-awesome-4.7.0.min.css"))
