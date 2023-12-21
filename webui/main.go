@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"html"
 	"html/template"
@@ -5456,8 +5455,9 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure we have a valid logged in user
-	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+	if validSession == false {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
 		return
 	}
 
@@ -5466,6 +5466,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	for _, user := range com.Conf.UserMgmt.SizeOverrideUsers {
 		if loggedInUser == user {
 			oversizeAllowed = true
+			break
 		}
 	}
 	if !oversizeAllowed {
@@ -5473,8 +5474,8 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Check whether the uploaded database is too large (except for specific users)
 		if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
-			errorPage(w, r, http.StatusBadRequest,
-				fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
 					com.MaxDatabaseSize, r.ContentLength/1024/1024))
 			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB",
 				loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
@@ -5485,23 +5486,24 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Prepare the form data
 	err = r.ParseMultipartForm(32 << 21) // 128MB of ram max
 	if err != nil {
-		log.Printf(err.Error())
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	if err = r.ParseForm(); err != nil {
 		log.Printf("%s: ParseForm() error: %v", pageName, err)
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	// Grab and validate the supplied "public" form field
 	var accessType com.SetAccessType
-	var public bool
-	public, err = com.GetPub(r)
+	public, err := com.GetPub(r)
 	if err != nil {
 		log.Printf("%s: Error when converting public value to boolean: %v", pageName, err)
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Public value '%v' incorrect", html.EscapeString(r.PostFormValue("public"))))
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, fmt.Sprintf("Public value '%v' incorrect", html.EscapeString(r.PostFormValue("public"))))
 		return
 	}
 	if public {
@@ -5511,66 +5513,77 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Grab and validate the supplied "live" form field
-	var isLiveDB bool
-	isLiveDB, err = com.GetFormLive(r)
+	isLiveDB, err := com.GetFormLive(r)
 	if err != nil {
 		log.Printf("%s: Error when converting live value to boolean: %v", pageName, err)
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprintf("Live value '%v' incorrect", html.EscapeString(r.PostFormValue("live"))))
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, fmt.Sprintf("Live value '%v' incorrect", html.EscapeString(r.PostFormValue("live"))))
 		return
 	}
 
 	// Validate the licence value
 	licenceName, err := com.GetFormLicence(r)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for licence value")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Validation failed for licence value")
 		return
 	}
 
 	// Validate the source URL
 	sourceURL, err := com.GetFormSourceURL(r)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Validation failed for source URL value")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Validation failed for source URL value")
 		return
 	}
 
 	// Validate the commit message
-	var commitMsg string
-	cm := r.PostFormValue("commitmsg")
-	if cm != "" {
-		err = com.ValidateMarkdown(cm)
+	commitMsg := r.PostFormValue("commitmsg")
+	if commitMsg != "" {
+		// Unescape and validate the description text
+		commitMsg, err = url.QueryUnescape(commitMsg)
 		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, "Validation failed for the commit message")
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Error when unescaping commit message")
 			return
 		}
-		commitMsg = cm
+
+		err = com.ValidateMarkdown(commitMsg)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Validation failed for the commit message")
+			return
+		}
 	}
 
 	// Validate the (optional) branch name
 	branchName, err := com.GetFormBranch(r)
 	if err != nil {
 		log.Printf("%s: Error when validating branch name '%s': %v", pageName, com.SanitiseLogString(branchName), err)
-		errorPage(w, r, http.StatusBadRequest, "Branch name value failed validation")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Branch name value failed validation")
 		return
 	}
-
-	var dbOwner, dbName string
 
 	tempFile, handler, err := r.FormFile("database")
 	if err != nil {
 		log.Printf("%s: Uploading file failed: %v", pageName, err)
-		errorPage(w, r, http.StatusInternalServerError, "Database file missing from upload data?")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Database file missing from upload data?")
 		return
 	}
-	dbName = handler.Filename
+	dbName := handler.Filename
 	defer tempFile.Close()
 
 	// If a database owner and name was passed in separately, we use that instead of the filename
 	usr, _, db, err := com.GetUFD(r, true)
 	if err != nil {
 		if db != "" {
-			errorPage(w, r, http.StatusInternalServerError, "Something seems to be wrong with the owner name or database name")
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Something seems to be wrong with the owner name or database name")
 		}
 	}
+	var dbOwner string
 	if usr != "" || db != "" {
 		dbOwner = usr
 		dbName = db
@@ -5583,14 +5596,16 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.ValidateDB(dbName)
 	if err != nil {
 		log.Printf("%s: Validation failed for database name: %s", com.GetCurrentFunctionName(), err)
-		errorPage(w, r, http.StatusBadRequest, "Invalid database name")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid database name")
 		return
 	}
 
 	// Check if the requested database exists already
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
@@ -5603,20 +5618,21 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If this is supposed to be a live database, and the database already exists, error out
 	if isLiveDB && exists {
-		errorPage(w, r, http.StatusConflict, "Can't upload a live database over the top of an existing one of the same name.  If you really want to do that, then delete the old one first")
+		w.WriteHeader(http.StatusConflict)
+		fmt.Fprint(w, "Can't upload a live database over the top of an existing one of the same name.  If you really want to do that, then delete the old one first")
 		return
 	}
 
 	// Retrieve the commit ID for the head of the specified branch
-	var commitID, sha string
-	var numBytes int64
-	createBranch := false
 	if !isLiveDB {
+		var commitID string
+		createBranch := false
+
 		if exists {
 			branchList, err := com.GetBranches(dbOwner, dbName)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				errorPage(w, r, http.StatusInternalServerError, err.Error())
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, err.Error())
 				return
 			}
 			branchEntry, ok := branchList[branchName]
@@ -5627,12 +5643,14 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 				// We also need a commit ID to branch from, so we use the head commit of the default branch
 				defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
 				if err != nil {
-					errorPage(w, r, http.StatusInternalServerError, err.Error())
+					w.WriteHeader(http.StatusInternalServerError)
+					fmt.Fprint(w, err.Error())
 					return
 				}
 				branchEntry, ok = branchList[defBranch]
 				if !ok {
-					errorPage(w, r, http.StatusInternalServerError, "Could not retrieve commit info for default branch entry")
+					w.WriteHeader(http.StatusInternalServerError)
+					fmt.Fprint(w, "Could not retrieve commit info for default branch entry")
 					return
 				}
 			}
@@ -5640,56 +5658,56 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Sanity check the uploaded database, and if ok then add it to the system
-		numBytes, _, sha, err = com.AddDatabase(loggedInUser, dbOwner, dbName, createBranch, branchName,
+		numBytes, _, sha, err := com.AddDatabase(loggedInUser, dbOwner, dbName, createBranch, branchName,
 			commitID, accessType, licenceName, commitMsg, sourceURL, tempFile, time.Now(), time.Time{},
 			"", "", "", "", nil, "")
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
 			return
 		}
 
 		// Make a record of the upload
 		err = com.LogUpload(dbOwner, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
 			return
 		}
 
-		// Log the successful database upload, and bounce the user to the database view page
+		// Log the successful database upload
 		log.Printf("%s: Username: '%s', database '%s/%s' uploaded', bytes: %v", pageName, loggedInUser,
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
-		http.Redirect(w, r, fmt.Sprintf("/%s/%s?branch=%s", html.EscapeString(dbOwner), html.EscapeString(dbName), html.EscapeString(branchName)), http.StatusSeeOther)
 		return
 	}
 
 	// ** Live databases **
 
 	// Write the incoming database to a temporary file on disk, and sanity check it
-	var tempDB *os.File
-	numBytes, tempDB, _, _, err = com.WriteDBtoDisk(loggedInUser, dbOwner, dbName, tempFile)
+	numBytes, tempDB, _, _, err := com.WriteDBtoDisk(loggedInUser, dbOwner, dbName, tempFile)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	defer os.Remove(tempDB.Name())
 
 	// Rewind the internal cursor in the temporary file back to the start again
-	var newOffset int64
-	newOffset, err = tempDB.Seek(0, 0)
+	newOffset, err := tempDB.Seek(0, 0)
 	if err != nil {
 		log.Printf("Seeking on the temporary file (2nd time) failed: %s", err)
 		return
 	}
 	if newOffset != 0 {
-		err = errors.New("Seeking to start of temporary database file didn't work")
-		log.Println(err)
+		log.Println("Seeking to start of temporary database file didn't work")
 		return
 	}
 
 	// Store the database in Minio
 	objectID, err := com.LiveStoreDatabaseMinio(tempDB, dbOwner, dbName, numBytes)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
@@ -5700,27 +5718,27 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	// Send a request to the job queue to set up the database
 	liveNode, err := com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID)
 	if err != nil {
-		log.Println(err)
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	// Update PG, so it has a record of this database existing and knows the node/queue name for querying it
 	err = com.LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, accessType)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	// Enable the watch flag for the uploader for this database
 	err = com.ToggleDBWatch(dbOwner, dbOwner, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
-	// Bounce the user to the database view page for the uploaded database
-	http.Redirect(w, r, fmt.Sprintf("/%s/%s?branch=%s", html.EscapeString(dbOwner), html.EscapeString(dbName), html.EscapeString(branchName)), http.StatusSeeOther)
 	return
 }
 

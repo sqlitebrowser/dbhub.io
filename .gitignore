@@ -70,6 +70,7 @@ webui/js/markdown-editor.js
 webui/js/profile-page.js
 webui/js/sql-terminal.js
 webui/js/tag-create.js
+webui/js/upload-form.js
 webui/js/user-page.js
 webui/js/visualisation-editor.js
 

@@ -18,6 +18,7 @@ import MarkdownEditor from "./markdown-editor";
 import ProfilePage from "./profile-page";
 import SqlTerminal from "./sql-terminal";
 import TagCreate from "./tag-create";
+import UploadForm from "./upload-form";
 import UserPage from "./user-page";
 import { Visualisation, VisualisationEditor } from "./visualisation-editor";
 
@@ -177,6 +178,16 @@ import { Visualisation, VisualisationEditor } from "./visualisation-editor";
 
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<TagCreate commit={commit} />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("upload-form");
+	if (rootNode) {
+		const branch = rootNode.dataset.branch;
+
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<UploadForm branch={branch} />);
 	}
 }
 
