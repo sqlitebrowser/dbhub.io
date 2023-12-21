@@ -997,56 +997,71 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure we have a valid logged in user
 	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
 		return
 	}
 
 	// Extract and validate the form variables
 	dbOwner, dbName, commit, err := com.GetFormUDC(r)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing or incorrect data supplied")
 		return
 	}
 	tagName, err := com.GetFormTag(r)
-	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect tag name")
+	if err != nil || tagName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing or incorrect tag name")
 		return
 	}
 
 	// If given, validate the tag description field
-	td := r.PostFormValue("tagdesc") // Optional
-	var tagDesc string
-	if td != "" {
-		err = com.Validate.Var(td, "markdownsource")
+	tagDesc := r.PostFormValue("tagdesc") // Optional
+	if tagDesc != "" {
+		// Unescape and validate the description text
+		tagDesc, err = url.QueryUnescape(tagDesc)
 		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, "Invalid characters in tag description")
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Error when unescaping description value")
 			return
 		}
-		tagDesc = td
+
+		err = com.Validate.Var(tagDesc, "markdownsource")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Invalid characters in tag description")
+			return
+		}
 	}
 
 	// Validate the tag type field
 	tagType := r.PostFormValue("tagtype")
 	if tagType != "tag" && tagType != "release" {
-		errorPage(w, r, http.StatusBadRequest, "Unknown tag type")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Unknown tag type")
 		return
 	}
 
 	// Check if the requested database exists
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName))
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName))
 		return
 	}
 
 	// Retrieve the user details
 	usr, err := com.User(loggedInUser)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "An error occurred when retrieving user details")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "An error occurred when retrieving user details")
+		return
 	}
 
 	// Create a new tag or release as appropriate
@@ -1056,13 +1071,15 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		// Read the releases list from the database
 		rels, err := com.GetReleases(dbOwner, dbName)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
 			return
 		}
 
 		// Ensure the release doesn't already exist
 		if _, ok := rels[tagName]; ok {
-			errorPage(w, r, http.StatusConflict, "A release of that name already exists!")
+			w.WriteHeader(http.StatusConflict)
+			fmt.Fprint(w, "A release of that name already exists!")
 			return
 		}
 
@@ -1070,7 +1087,8 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		var tmp com.SQLiteDBinfo
 		err = com.DBDetails(&tmp, loggedInUser, dbOwner, dbName, commit)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
 			return
 		}
 		size := tmp.Info.DBEntry.Size
@@ -1089,7 +1107,8 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		// Store it in PostgreSQL
 		err = com.StoreReleases(dbOwner, dbName, rels)
 		if err != nil {
-			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err.Error())
 			return
 		}
 
@@ -1101,8 +1120,6 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Bounce to the releases page
-		http.Redirect(w, r, fmt.Sprintf("/releases/%s/%s", loggedInUser, dbName), http.StatusSeeOther)
 		return
 	}
 
@@ -1111,13 +1128,15 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Read the tags list from the database
 	tags, err := com.GetTags(dbOwner, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	// Make sure the tag doesn't already exist
 	if _, ok := tags[tagName]; ok {
-		errorPage(w, r, http.StatusConflict, "A tag of that name already exists!")
+		w.WriteHeader(http.StatusConflict)
+		fmt.Fprint(w, "A tag of that name already exists!")
 		return
 	}
 
@@ -1134,7 +1153,8 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Store it in PostgreSQL
 	err = com.StoreTags(dbOwner, dbName, tags)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
@@ -1145,9 +1165,6 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error when invalidating memcache entries: %s", err.Error())
 		return
 	}
-
-	// Bounce to the tags page
-	http.Redirect(w, r, fmt.Sprintf("/tags/%s/%s", loggedInUser, dbName), http.StatusSeeOther)
 }
 
 func createUserHandler(w http.ResponseWriter, r *http.Request) {

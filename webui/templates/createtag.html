@@ -1,82 +1,15 @@
 [[ define "createTagPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="createtagView">
+<html>
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
 <div>
     <div id="db-header-root"></div>
-    <div class="row">
-        <div class="col-md-12">
-            <h2 style="text-align: center;">Create new tag or release</h2>
-            <form action="/x/createtag" method="post">
-                <div style="text-align: center;"><i>On commit: [[ .Commit ]]</i></div>
-                <table class="table table-striped table-responsive">
-                    <tr>
-                        <th style="vertical-align: middle;" width="25%">Tag or release?</th>
-                        <td>
-                            <div class="btn-group">
-                                <label class="btn btn-default" ng-model="radioType" ng-click="typeClick('tag')" uib-btn-radio="'tag'" data-cy="tagradio">Tag</label>
-                                <label class="btn btn-default" ng-model="radioType" ng-click="typeClick('release')" uib-btn-radio="'release'" data-cy="relradio">Release</label>
-                            </div>
-                            <span ng-bind-html="typeDesc"></span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th style="vertical-align: middle;" width="25%">Name:</th>
-                        <td>
-                            <input id="tag" name="tag" size="50" maxlength="80" data-cy="nameinput"/>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align: top;">
-                            <b>Description</b><br /><br />
-                            <i>Markdown (<a href="http://commonmark.org" target="_blank">CommonMark</a> format) is supported</i></td>
-                        <td>
-                            <div class="markdown-editor" data-id="tagdesc" data-rows="10" data-placeholder="A description for this tag or release" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                            <div style="text-align: center;">
-                                <input type="hidden" name="commit" value="[[ .Commit ]]">
-                                <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
-                                <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
-                                <input type="hidden" name="tagtype" value="{{ radioType }}">
-                                <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelCreate()" data-cy="cancelbtn">
-                                <input type="submit" class="btn btn-success" value="Create it" data-cy="createbtn">
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-            </form>
-        </div>
-    </div>
+    <div id="tag-create" data-commit="[[ .Commit ]]"></div>
 </div>
 [[ template "script_db_header" . ]]
 [[ template "footer" . ]]
-<script>
-    let app = angular.module('DBHub', ['ui.bootstrap', 'ngSanitize']);
-    app.controller('createtagView', function($scope, $http, $httpParamSerializerJQLike) {
-        // Handler for the cancel button.  Just bounces back to the commits page
-        $scope.cancelCreate = function() {
-            window.location = "/commits/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]";
-        };
-
-        // Set the type to tag by default
-        $scope.radioType = "tag";
-        $scope.typeDesc = "&nbsp; This will be a new <b>tag</b>.";
-
-        // Update the tag/release description text
-        $scope.typeClick = function(newValue) {
-            if (newValue === "tag") {
-                $scope.typeDesc = "&nbsp; This will be a new <b>tag</b>.";
-            } else {
-                $scope.typeDesc = "&nbsp; This will be a new <b>release</b>.";
-            }
-        };
-    });
-</script>
 </body>
 </html>
 [[ end ]]

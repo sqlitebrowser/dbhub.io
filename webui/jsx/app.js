@@ -17,6 +17,7 @@ import DiscussionList from "./discussion-list";
 import MarkdownEditor from "./markdown-editor";
 import ProfilePage from "./profile-page";
 import SqlTerminal from "./sql-terminal";
+import TagCreate from "./tag-create";
 import UserPage from "./user-page";
 import { Visualisation, VisualisationEditor } from "./visualisation-editor";
 
@@ -170,6 +171,16 @@ import { Visualisation, VisualisationEditor } from "./visualisation-editor";
 }
 
 {
+	const rootNode = document.getElementById("tag-create");
+	if (rootNode) {
+		const commit = rootNode.dataset.commit;
+
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<TagCreate commit={commit} />);
+	}
+}
+
+{
 	const rootNode = document.getElementById("profile-page");
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
@@ -180,7 +191,6 @@ import { Visualisation, VisualisationEditor } from "./visualisation-editor";
 {
 	const rootNode = document.getElementById("visualisation");
 	if (rootNode) {
-		const name = rootNode.dataset.name;
 		const plotConfig = window[rootNode.dataset.plotConfig];
 		const branch = rootNode.dataset.branch;
 
