@@ -15,9 +15,11 @@ export function DatabaseDescription({oneLineDescription, sourceUrl}) {
 	return (
 		<div className="row">
 			<div className="col-md-12">
-				<div className="well well-sm" style={{marginBottom: "10px", border: "1px solid #DDD", borderRadius: "7px"}}>
-					{oneLineDescription ? <label id="viewdesc" data-cy="onelinedesc">{oneLineDescription}</label> : null}
-					{sourceUrl ? <div><label>Source:</label> <a href={sourceUrl} data-cy="srcurl">{sourceUrl}</a></div> : null}
+				<div className="card text-bg-light border-secondary mb-2">
+					<div className="card-body p-2">
+						{oneLineDescription ? <b id="viewdesc" data-cy="onelinedesc">{oneLineDescription}</b> : null}
+						{sourceUrl ? <div><b>Source:</b> <a href={sourceUrl} data-cy="srcurl" rel="noopener noreferrer external">{sourceUrl}</a></div> : null}
+					</div>
 				</div>
 			</div>
 		</div>
@@ -30,19 +32,9 @@ export function DatabaseFullDescription({description}) {
 	}
 
 	return (
-		<div className="row" style={{border: "none"}}>
-			<div className="col-md-12" style={{border: "none"}}>
-				<div style={{border: "1px solid #DDD", borderRadius: "7px", padding: "1px"}}>
-					<table className="table table-striped table-responsive" style={{margin: 0}}><tbody>
-						<tr style={{borderBottom: "1px solid #DDD"}}>
-							<td className="page-header" style={{border: "none"}}><h4>DESCRIPTION</h4></td>
-						</tr>
-						<tr>
-							<td className="rendered" id="viewreadme" data-cy="repodescrip" dangerouslySetInnerHTML={{__html: description}}></td>
-						</tr>
-					</tbody></table>
-				</div>
-			</div>
+		<div className="card text-bg-light mt-2">
+			<div className="card-header">Description</div>
+			<div className="card-body" id="viewreadme" data-cy="repodescrip" dangerouslySetInnerHTML={{__html: description}} />
 		</div>
 	);
 }
@@ -54,41 +46,13 @@ export function DatabaseSubMenu() {
 	}
 
 	return (
-		<div className="row">
-			<div className="col-md-12">
-				<div style={{border: "1px solid #DDD", borderRadius: "7px", marginBottom: "10px"}}>
-					<table width="100%" className="table" style={{marginBottom: 0, border: "none"}}><tbody>
-						<tr style={{border: "none"}}>
-							<td style={{border: "none", borderRight: "1px solid #DDD"}}>
-								<div style={{textAlign: "center"}}>
-									<a href={"/commits/" + meta.owner + "/" + meta.database + "?branch=" + meta.branch} className="blackLink" style={{fontWeight: "bold"}} data-cy="commitslnk">Commits: <span data-cy="commitscnt">{meta.numCommits}</span></a>
-								</div>
-							</td>
-							<td style={{border: "none", borderRight: "1px solid #DDD"}}>
-								<div style={{textAlign: "center"}}>
-									<a href={"/branches/" + meta.owner + "/" + meta.database} className="blackLink" style={{fontWeight: "bold"}} data-cy="brancheslnk">Branches: <span data-cy="branchescnt">{meta.numBranches}</span></a>
-								</div>
-							</td>
-							<td style={{border: "none", borderRight: "1px solid #DDD"}}>
-								<div style={{textAlign: "center"}}>
-									<a href={"/tags/" + meta.owner + "/" + meta.database} className="blackLink" style={{fontWeight: "bold"}} data-cy="tagslnk">Tags: <span data-cy="tagscnt">{meta.numTags}</span></a>
-								</div>
-							</td>
-							<td style={{border: "none", borderRight: "1px solid #DDD"}}>
-								<div style={{textAlign: "center"}}>
-									<a href={"/releases/" + meta.owner + "/" + meta.database} className="blackLink" style={{fontWeight: "bold"}} data-cy="rlslnk">Releases: <span data-cy="rlscnt">{meta.numReleases}</span></a>
-								</div>
-							</td>
-							<td style={{border: "none"}}>
-								<div style={{textAlign: "center"}}>
-									<a href={"/contributors/" + meta.owner + "/" + meta.database} className="blackLink" style={{fontWeight: "bold"}} data-cy="contlnk">Contributors: <span data-cy="contcnt">{meta.numContributors}</span></a>
-								</div>
-							</td>
-						</tr>
-					</tbody></table>
-				</div>
-			</div>
-		</div>
+		<nav className="nav nav-fill border border-secondary rounded mb-2">
+			<a className="nav-link fw-bold" href={"/commits/" + meta.owner + "/" + meta.database + "?branch=" + meta.branch} data-cy="commitslnk">Commits: <span data-cy="commitscnt">{meta.numCommits}</span></a>
+			<a className="nav-link fw-bold" href={"/branches/" + meta.owner + "/" + meta.database} data-cy="brancheslnk">Branches: <span data-cy="branchescnt">{meta.numBranches}</span></a>
+			<a className="nav-link fw-bold" href={"/tags/" + meta.owner + "/" + meta.database} data-cy="tagslnk">Tags: <span data-cy="tagscnt">{meta.numTags}</span></a>
+			<a className="nav-link fw-bold" href={"/releases/" + meta.owner + "/" + meta.database} data-cy="rlslnk">Releases: <span data-cy="rlscnt">{meta.numReleases}</span></a>
+			<a className="nav-link fw-bold" href={"/contributors/" + meta.owner + "/" + meta.database} data-cy="contlnk">Contributors: <span data-cy="contcnt">{meta.numContributors}</span></a>
+		</nav>
 	);
 }
 
@@ -98,8 +62,8 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 	const dropdownContentRendererWithLabel = function(label) {
 		return function({props, state}) {
 			return (
-				<div style={{cursor: "pointer"}}>
-					<span style={{fontWeight: "bold"}}>{label}:</span> {state.values.length ? state.values[0].name : null}
+				<div>
+					<span className="fw-bold">{label}:</span> {state.values.length ? state.values[0].name : null}
 				</div>
 			);
 		};
@@ -119,7 +83,7 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 		tables.push({name: v});
 	});
 	const tableSelection = (
-		<div style={{display: "inline-block"}}>
+		<div className="d-inline-block">
 			<Select name="viewtable" required={true} labelField="name" valueField="name" onChange={(values) => setTable(values[0].name)} options={tables} values={[{name: table}]} contentRenderer={dropdownContentRendererWithLabel("Table/view")} />
 		</div>
 	);
@@ -132,16 +96,16 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 			branches.push({name: v});
 		});
 		branchSelection = (
-			<div style={{display: "inline-block"}}>
+			<div className="d-inline-block">
 				<Select name="viewbranch" required={true} labelField="name" valueField="name" onChange={(values) => setBranch(values[0].name)} options={branches} values={[{name: meta.branch}]} contentRenderer={dropdownContentRendererWithLabel("Branch")} />
 			</div>
 		);
 	}
 
 	return (<>
-		<div className="row" style={{paddingBottom: "10px"}}>
+		<div className="row mb-2">
 			<div className="col-md-8">
-				<span className="pull-left" style={{whiteSpace: "nowrap"}}> {tableSelection}&nbsp; {branchSelection}&nbsp;
+				<span className="pull-left">{tableSelection}&nbsp; {branchSelection}&nbsp;
 					{authInfo.loggedInUser && !meta.isLive ? <a href={"/compare/" + meta.owner + "/" + meta.database} className="btn btn-primary" data-cy="newmrbtn">New Merge Request</a> : null}&nbsp;
 					{authInfo.loggedInUser && !meta.isLive ? <a href={"/upload/?username=" + meta.owner + "&dbname=" + meta.database + "&branch=" + meta.branch} className="btn btn-primary" data-cy="uploadbtn">Upload database</a> : null}
 				</span>
@@ -149,35 +113,35 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 			<div className="col-md-4">
 				<span className="pull-right">
 					{meta.isLive === false ? (<>
-						<div className="btn-group">
-							<button type="button" className="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-								Clone database in DB4S <span className="caret"></span>
+						<div className="dropdown btn-group-vertical">
+							<button type="button" className="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+								Clone database in DB4S
 							</button>
 							<ul className="dropdown-menu">
-								<li><input type="text" value={"https://" + db4s.server + (db4s.port === 443 ? null : (":" + db4s.port)) + "/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&branch=" + meta.branch} id="db4sCloneLink" readOnly /></li>
-								<li><a href="#/" onClick={() => copyToClipboard('db4sCloneLink')}>Copy link <span className="glyphicon glyphicon-link"></span></a></li>
+								<li className="dropdown-item"><input type="text" value={"https://" + db4s.server + (db4s.port === 443 ? null : (":" + db4s.port)) + "/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&branch=" + meta.branch} id="db4sCloneLink" readOnly /></li>
+								<li className="dropdown-item"><a href="#/" onClick={() => copyToClipboard('db4sCloneLink')}>Copy link <span className="fa fa-link"></span></a></li>
 							</ul>
 						</div>&nbsp;</>
 					) : null}
-					<div className="btn-group" data-cy="dldropdown">
-						<button type="button" className="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-							Download database <span className="caret"></span>
+					<div className="dropdown btn-group-vertical" data-cy="dldropdown">
+						<button type="button" className="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+							Download database
 						</button>
-						<ul className="dropdown-menu">
-							<li><a href={"/x/download/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID} data-cy="dldb">Entire database</a></li>
-							{meta.size <= 100000000  && meta.isLive === false ? <li><a href={"/x/downloadcsv/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&table=" + table} data-cy="dlcsv">Selected table as CSV</a></li> : null}
-						</ul>
+						<div className="dropdown-menu">
+							<a className="dropdown-item" href={"/x/download/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID} data-cy="dldb">Entire database</a>
+							{meta.size <= 100000000  && meta.isLive === false ? <a className="dropdown-item" href={"/x/downloadcsv/" + meta.owner + "/" + meta.database + "?commit=" + meta.commitID + "&table=" + table} data-cy="dlcsv">Selected table as CSV</a> : null}
+						</div>
 					</div>
 				</span>
 			</div>
 		</div>
 		{meta.isLive && tableEdit.writeEnabled ? (
-			<div className="row" style={{paddingBottom: "10px"}}><div className="col-md-12">
+			<div className="row mb-2"><div className="col-md-12">
 				<button type="button" className="btn btn-primary btn-sm" disabled={allowInsert ? null : "disabled"} onClick={() => insertRow()}>
-					<span className="glyphicon glyphicon-plus" aria-hidden="true"></span> Insert empty row
+					<span className="fa fa-plus" aria-hidden="true"></span> Insert empty row
 				</button>&nbsp;
 				<button type="button" className="btn btn-danger btn-sm" disabled={numSelectedRows > 0 ? null : "disabled"} onClick={() => deleteSelectedRows()}>
-					<span className="glyphicon glyphicon-remove" aria-hidden="true"></span> Delete selected
+					<span className="fa fa-minus" aria-hidden="true"></span> Delete selected
 				</button>
 			</div></div>
 		) : null}
@@ -205,9 +169,9 @@ function DatabasePageControls({position, offset, maxRows, rowCount, setOffset}) 
 	// Adjust the style of the border for top vs bottom control placement
 	let bRadius;
 	if (position === "bottom") {
-		bRadius = "0 0 7px 7px";
+		bRadius = "rounded-bottom";
 	} else {
-		bRadius = "7px 7px 0 0";
+		bRadius = "rounded-top";
 	}
 
 	// Hide or show the page controls depending on the current position while maintaining their width
@@ -215,15 +179,15 @@ function DatabasePageControls({position, offset, maxRows, rowCount, setOffset}) 
 	const disabledDown = (offset + maxRows) < rowCount ? null : "disabled";
 
 	return (
-		<div className="text-center" style={{padding: "2px", border: "1px solid #DDD", borderRadius: bRadius}}>
+		<div className={"text-center p-1 border border-secondary " + bRadius}>
 				<div className="btn-group" role="group">
-					<button type="button" className="btn btn-default" disabled={disabledUp} onClick={() => setOffset(0)} data-cy="firstpgbtn"><i className="fa fa-fast-backward"></i></button>
-					<button type="button" className="btn btn-default" disabled={disabledUp} onClick={() => setOffset(offset - maxRows)} data-cy="pgupbtn"><i className="fa fa-backward"></i></button>
+					<button type="button" className="btn btn-outline-secondary text-reset" disabled={disabledUp} onClick={() => setOffset(0)} data-cy="firstpgbtn"><i className="fa fa-fast-backward"></i></button>
+					<button type="button" className="btn btn-outline-secondary text-reset" disabled={disabledUp} onClick={() => setOffset(offset - maxRows)} data-cy="pgupbtn"><i className="fa fa-backward"></i></button>
 				</div>
 				&nbsp;
 				<div className="btn-group" role="group">
-					<button type="button" className="btn btn-default" disabled={disabledDown} onClick={() => setOffset(offset + maxRows)} data-cy="pgdnbtn"><i className="fa fa-forward"></i></button>
-					<button type="button" className="btn btn-default" disabled={disabledDown} onClick={() => setOffset(rowCount - maxRows)} data-cy="lastpgbtn"><i className="fa fa-fast-forward"></i></button>
+					<button type="button" className="btn btn-outline-secondary text-reset" disabled={disabledDown} onClick={() => setOffset(offset + maxRows)} data-cy="pgdnbtn"><i className="fa fa-forward"></i></button>
+					<button type="button" className="btn btn-outline-secondary text-reset" disabled={disabledDown} onClick={() => setOffset(rowCount - maxRows)} data-cy="lastpgbtn"><i className="fa fa-fast-forward"></i></button>
 				</div>
 				<span> &nbsp; {totalRowCountText(offset, maxRows, rowCount)}</span>
 		</div>
@@ -231,7 +195,7 @@ function DatabasePageControls({position, offset, maxRows, rowCount, setOffset}) 
 }
 
 function DataGridNoRowsRender() {
-	return <div style={{textAlign: "center", gridColumn: "1/-1"}}><i>This table is empty</i></div>;
+	return <div className="text-center" style={{gridColumn: "1/-1"}}><i>This table is empty</i></div>;
 }
 
 export default function DatabaseView() {
@@ -496,8 +460,6 @@ export default function DatabaseView() {
 			}}
 		/>
 		<DatabasePageControls position="bottom" offset={offset} maxRows={maxRows} rowCount={rowCount} setOffset={(newOffset) => changeView(table, newOffset, sortColumns.length ? sortColumns[0].columnKey : null, sortColumns.length ? sortColumns[0].direction : null)} />
-		<div className="row" style={{border: "none"}}>&nbsp;</div>
 		<DatabaseFullDescription description={meta.fullDescription} />
-		<div className="row" style={{border: "none"}}>&nbsp;</div>
 	</>);
 }

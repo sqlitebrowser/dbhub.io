@@ -28,13 +28,13 @@
     }
 </style>
 [[ template "header" . ]]
-<div>
+<div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
             <div class="col-md-6 vcenter" style="text-align: right;">
-                <h2>Share your SQLite data</h2>
-                <h2>Visualise it</h2>
-                <h2>Improve it with others</h2>
+                <h3>Share your SQLite data</h3>
+                <h3>Visualise it</h3>
+                <h3>Improve it with others</h3>
                 <br />
                 <button class="btn btn-success" onClick="uploadForm()">Get Started</button>
                 <br /><br />
@@ -47,19 +47,19 @@
             </div>
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-12" style="text-align: center;"><h1 data-cy="features">Features</h1></div>
+    <div class="row mt-2">
+        <div class="col-md-12 text-center"><h2 data-cy="features">Features</h2></div>
     </div>
     <div class="row" style="background-color: #e7e7e7; padding: 10px; border-radius: 5px; border-style: dotted; border-width: 1px; border-color: #9d9d9d;">
-        <div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Public and private databases</h3>
-            <h5>The databases you upload can be set to public access, for<br />
-                anyone to download, or private, so they're only for you.</h5>
+        <div class="col-md-6 vtop text-center">
+            <h4>Public and private databases</h4>
+            <p>The databases you upload can be set to public access, for<br />
+                anyone to download, or private, so they're only for you.</p>
             <div class="lightbox-image" data-small="/images/pub_priv1-50px.png" data-large="/images/pub_priv1.png" data-alt="You choose whether your data is just for you, or accessible to everyone"></div>
-        </div><div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Integration with <a href="https://sqlitebrowser.org">DB Browser for SQLite</a></h3>
-            <h5>We're the people behind DB Browser for SQLite,<br />
-                so naturally they're integrated.</h5>
+        </div><div class="col-md-6 vtop text-center">
+            <h4>Integration with <a href="https://sqlitebrowser.org" rel="noopener noreferrer external">DB Browser for SQLite</a></h4>
+            <p>We're the people behind DB Browser for SQLite,<br />
+                so naturally they're integrated.</p>
             <div class="lightbox-image" data-small="/images/db4s_screenshot1-50px.png" data-large="/images/db4s_screenshot1.png" data-alt="DB Browser for SQLite is a popular Open Source GUI for SQLite databases"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/db4s_screenshot2-50px.png" data-large="/images/db4s_screenshot2.png" data-alt="DB Browser for SQLite includes basic plotting capabilities"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/db4s_screenshot3-50px.png" data-large="/images/db4s_screenshot3.png" data-alt="When configured, DB Browser for SQLite can access your databases on DBHub.io"></div> &nbsp;
@@ -67,16 +67,16 @@
         </div>
     </div>
     <div class="row" style="padding: 10px;">
-        <div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Visualise your data</h3>
-            <h5>Chart it using Plotly.js. (<a href="/vis/justinclift/Marine%20Litter%20Survey%20%28Keep%20Northern%20Ireland%20Beautiful%29.sqlite" target="_blank">example</a>)</h5>
+        <div class="col-md-6 vtop text-center">
+            <h4>Visualise your data</h4>
+            <p>Chart it using Plotly.js. (<a href="/vis/justinclift/Marine%20Litter%20Survey%20%28Keep%20Northern%20Ireland%20Beautiful%29.sqlite" target="_blank">example</a>)</p>
             <div class="lightbox-image" data-small="/images/plotly1-50px.png" data-large="/images/plotly1.png" data-alt="You can run SQL queries on your data, and visualise the results with Plotly.js charts"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/plotly2-50px.png" data-large="/images/plotly2.png" data-alt="Plotly.js offers many useful visualisation capabilities for your data"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/plotly3-50px.png" data-large="/images/plotly3.png" data-alt="With further chart types being added over time..."></div>
-        </div><div class="col-md-6 vtop" style="text-align: center;">
-            <h3>A powerful <a href="https://github.com/sqlitebrowser/dio" target="_blank">command line interface</a></h3>
-            <h5 style="padding-bottom: 5px;">Push (upload), pull (download), create tags, releases, and<br />
-                more using <a href="https://github.com/sqlitebrowser/dio" target="_blank">Dio</a>, our fully scriptable command line interface.</h5>
+        </div><div class="col-md-6 vtop text-center">
+            <h4>A powerful <a href="https://github.com/sqlitebrowser/dio" target="_blank" rel="noopener noreferrer external">command line interface</a></h4>
+            <p style="padding-bottom: 5px;">Push (upload), pull (download), create tags, releases, and<br />
+                more using <a href="https://github.com/sqlitebrowser/dio" target="_blank" rel="noopener noreferrer external">Dio</a>, our fully scriptable command line interface.</p>
             <div style="color: white; font-family: Source Code Pro,Monaco,Menlo,Consolas,monospace;">
                 <span style="background: #283542; border-radius: 5px 5px 5px 5px; border-style: none; padding: 10px 10px 5px 10px;"><span style="color: lightskyblue;">$</span> dio push mydata.sqlite&nbsp;</span><br />
                 <span style="background: #283542; border-radius: 5px 5px 5px 5px; border-style: none; padding: 5px 10px 10px 10px;"><span style="color: lightskyblue;">$</span> dio pull newdata.sqlite</span>
@@ -84,38 +84,35 @@
         </div>
     </div>
     <div class="row" style="background-color: #e7e7e7; padding: 10px; border-radius: 5px; border-style: dotted; border-width: 1px; border-color: #9d9d9d;">
-        <div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Automatic alerts on data changes</h3>
-            <h5>You can easily "watch" any public database,<br />
-                to alert you by email any time its changed.</h5>
+        <div class="col-md-6 vtop text-center">
+            <h4>Automatic alerts on data changes</h4>
+            <p>You can easily "watch" any public database,<br />
+                to alert you by email any time its changed.</p>
             <div class="lightbox-image" data-small="/images/watch1-46px.png" data-large="/images/watch1.png" data-alt="You can set a &quot;Watch&quot; on databases, so you're alerted to changes"></div>
-        </div><div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Open discussions, or report problems in data</h3>
-            <h5>Every database has a <i>discussion</i> area, useful for asking questions,<br />
-                making suggestions, and pointing out potential problems.</h5>
+        </div><div class="col-md-6 vtop text-center">
+            <h4>Open discussions, or report problems in data</h4>
+            <p>Every database has a <i>discussion</i> area, useful for asking questions,<br />
+                making suggestions, and pointing out potential problems.</p>
             <div class="lightbox-image" data-small="/images/discussions1-50px.png" data-large="/images/discussions1.png" data-alt="You can start discussions on your own databases, and any public database"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/discussions2-50px.png" data-large="/images/discussions2.png" data-alt="Anyone watching the database will be notified of the discussion, and can join in"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/discussions3-50px.png" data-large="/images/discussions3.png" data-alt="Discussions are useful for suggesting ideas, asking about the data, and pointing out problems"></div>
         </div>
     </div>
     <div class="row" style="padding: 10px;">
-        <div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Collaborative development</h3>
-            <h5>Submit changes to public databases, for collaborative development.</h5>
+        <div class="col-md-6 vtop text-center">
+            <h4>Collaborative development</h4>
+            <p>Submit changes to public databases, for collaborative development.</p>
             <div class="lightbox-image" data-small="/images/merge1-50px.png" data-large="/images/merge1.png" data-alt="Submitting new data to public databases is done through Merge Requests"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/merge2-50px.png" data-large="/images/merge2.png" data-alt="The Merge Request creation page"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/merge3-50px.png" data-large="/images/merge3.png" data-alt="Merge Requests have a title, discussion area, and list of the proposed changes"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/merge4-50px.png" data-large="/images/merge4.png" data-alt="A completed Merge Request.  The database has been updated with the new data"></div>
-        </div><div class="col-md-6 vtop" style="text-align: center;">
-            <h3>Full version control history, for traceability</h3>
-            <h5>All data changes are recorded and<br />
-                checksummed, for full traceability.</h5>
+        </div><div class="col-md-6 vtop text-center">
+            <h4>Full version control history, for traceability</h4>
+            <p>All data changes are recorded and<br />
+                checksummed, for full traceability.</p>
             <div class="lightbox-image" data-small="/images/version_control_history1-50px.png" data-large="/images/version_control_history1.png" data-alt="All data is SHA256 checksummed, and every database maintains a complete version history"></div> &nbsp;
             <div class="lightbox-image" data-small="/images/version_control_history2-50px.png" data-large="/images/version_control_history2.png" data-alt="The version history can be useful for traceability of important data"></div>
         </div>
-    </div>
-    <div class="row" style="padding: 10px;">
-        <div class="col-md-12">&nbsp;</div>
     </div>
 </div>
 [[ template "footer" . ]]

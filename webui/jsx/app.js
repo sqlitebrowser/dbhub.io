@@ -22,6 +22,11 @@ import UploadForm from "./upload-form";
 import UserPage from "./user-page";
 import { Visualisation, VisualisationEditor } from "./visualisation-editor";
 
+// Import Bootstrap
+import "../jsx/bootstrap.scss"
+import * as bootstrap from "bootstrap"
+
+
 {
 	const rootNode = document.getElementById("db-header-root");
 	if (rootNode) {

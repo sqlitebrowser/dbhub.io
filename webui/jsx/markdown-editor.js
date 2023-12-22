@@ -57,7 +57,7 @@ export default function MarkdownEditor({editorId, rows, placeholder, defaultInde
 			{initialValue}
 		</textarea>
 	);
-	let view = <div className="rendered minHeight" data-cy={editorId + "-preview"} dangerouslySetInnerHTML={{__html: previewHtml}} />;
+	let view = <div className="minHeight" data-cy={editorId + "-preview"} dangerouslySetInnerHTML={{__html: previewHtml}} />;
 
 	if (viewOnly) {
 		return <>{view}{editor}</>;

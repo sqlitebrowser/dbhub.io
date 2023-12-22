@@ -52,7 +52,7 @@ function SqlTerminalCommandOutput({state, data}) {
 					<a href="#/" title="Export results to CSV" onClick={() => downloadData(convertResultsetToCsv(data), "result.csv", "text/csv")}><i className={"fa fa-download"}></i></a>
 				</span>
 				<div className="table-responsive">
-					<table className="table table-hover table-condensed">
+					<table className="table table-hover table-sm">
 						<thead>
 							<tr>{data.ColNames.map(n => <th>{n}</th>)}</tr>
 						</thead>
@@ -248,19 +248,18 @@ export default function SqlTerminal() {
 							fontFamily: "monospace",
 							fontSize: "14px",
 							minHeight: "42px",
+							width: "85%",
 						}}
 					/>
-					<div className={recentCommands.length > 0 ? "input-group-btn dropup" : "input-group-btn"}>
-						<button type="button" className="btn btn-primary" disabled={code.trim() === "" ? "disabled" : null} onClick={() => execute()} data-cy="executebtn"><i className="fa fa-play" /> Execute</button>
-						<button type="button" className="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-cy="dropdownbtn"><span className="caret"></span></button>
-						<ul className="dropdown-menu dropdown-menu-right">
-							<li><a href="#" onClick={() => setExecuteOnEnter(!executeOnEnter)}><input type="checkbox" checked={executeOnEnter ? "checked" : null} /> Execute on Enter</a></li>
-							<li role="separator" className="divider"></li>
-							<li><a href="#" onClick={() => formatSql()} data-cy="formatbtn">Format SQL</a></li>
-							<li role="separator" className="divider"></li>
-							<li><a href="#" onClick={() => clearHistory()} data-cy="clearhistorybtn">Clear history</a></li>
-						</ul>
-					</div>
+					<button type="button" className="btn btn-primary" disabled={code.trim() === "" ? "disabled" : null} onClick={() => execute()} data-cy="executebtn"><i className="fa fa-play" /> Execute</button>
+					<button type="button" className="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" data-cy="dropdownbtn"><span className="visually-hidden">Show options</span></button>
+					<ul className="dropdown-menu dropdown-menu-right">
+						<li><a className="dropdown-item" href="#" onClick={() => setExecuteOnEnter(!executeOnEnter)}><input type="checkbox" checked={executeOnEnter ? "checked" : null} /> Execute on Enter</a></li>
+						<li><hr className="dropdown-divider" /></li>
+						<li><a className="dropdown-item" href="#" onClick={() => formatSql()} data-cy="formatbtn">Format SQL</a></li>
+						<li><hr className="dropdown-divider" /></li>
+						<li><a className="dropdown-item" href="#" onClick={() => clearHistory()} data-cy="clearhistorybtn">Clear history</a></li>
+					</ul>
 				</div>
 			</div>
 		</div>

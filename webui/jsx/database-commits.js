@@ -64,14 +64,14 @@ function DatabaseCommitRow({data, index, branch, setStatusMessage, setStatusMess
 			<td dangerouslySetInnerHTML={{__html: data.message}}>
 			</td>
 			<td>
-				{data.avatar_url !== "" ? <img src={data.avatar_url} height="30" width="30" style={{border: "1px solid #8c8c8c"}} /> : null}&nbsp;
-				<a className="blackLink" href={"/" + data.author_user_name}>{data.author_name}</a>
+				{data.avatar_url !== "" ? <img src={data.avatar_url} height="30" width="30" className="border border-secondary" /> : null}&nbsp;
+				<a href={"/" + data.author_user_name}>{data.author_name}</a>
 			</td>
 			<td>
 				<span title={new Date(data.timestamp).toLocaleString()}>{getTimePeriod(data.timestamp, false)}</span>
 			</td>
 			<td>
-				<a className="blackLink" href={"/" + meta.owner + "/" + meta.database + "?branch=" + branch + "&commit=" + data.id} data-cy="commitlnk">{data.id.substring(0, 8)}</a>
+				<a href={"/" + meta.owner + "/" + meta.database + "?branch=" + branch + "&commit=" + data.id} data-cy="commitlnk">{data.id.substring(0, 8)}</a>
 			</td>
 		</tr>
 	);
@@ -105,29 +105,29 @@ export default function DatabaseCommits() {
 		<div className="row">
 			<div className="col-md-12 text-center">
 				<span data-cy="commithist">Commit history for branch</span>&nbsp;
-				<div style={{display: "inline-block"}}>
+				<div className="d-inline-block">
 					<Select name="branchname" required={true} labelField="name" valueField="name" onChange={(values) => changeBranch(values[0].name)} options={branches} values={[{name: branch}]} />
 				</div>
 			</div>
 		</div>
 		{statusMessage !== "" ? (
 			<div className="row">
-				<div className="col-md-12">
-					<div style={{textAlign: "center", paddingBottom: "8px"}}>
-						<h4 style={{color: statusMessageColour}}>{statusMessage}</h4>
-					</div>
+				<div className="col-md-12 text-center mb-2">
+					<h6 style={{color: statusMessageColour}}>{statusMessage}</h6>
 				</div>
 			</div>
 		) : null}
-		<table id="contents" className="table table-striped table-responsive">
-			<thead>
-				<tr>
-					<th>Actions</th><th>Message</th><th>Author</th><th>Date</th><th>Commit ID</th>
-				</tr>
-			</thead>
-			<tbody>
-				{rows}
-			</tbody>
-		</table>
+		<div className="border border-secondary rounded">
+			<table id="contents" className="table table-striped table-responsive m-0">
+				<thead>
+					<tr>
+						<th>Actions</th><th>Message</th><th>Author</th><th>Date</th><th>Commit ID</th>
+					</tr>
+				</thead>
+				<tbody>
+					{rows}
+				</tbody>
+			</table>
+		</div>
 	</>);
 }

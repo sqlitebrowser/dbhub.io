@@ -4,39 +4,25 @@
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div>
+<div class="container-fluid">
     <div id="db-header-root"></div>
     <div class="row">
         <div class="col-md-12">
-            <h2 style="text-align: center;" data-cy="createbranch">Create new branch</h2>
+            <h3 class="text-center" data-cy="createbranch">Create new branch</h3>
+            <h5 class="text-center"><small>from commit [[ .Commit ]]</small></h5>
             <form action="/x/createbranch" method="post">
-                <div style="text-align: center;"><i>From commit: [[ .Commit ]]</i></div>
-                <table class="table table-striped table-responsive">
-                    <tr>
-                        <th style="vertical-align: middle;" width="25%">Name for the new branch:</th>
-                        <td>
-                            <input type="text" id="branch" name="branch" size="50" maxlength="80" data-cy="nameinput" required />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align: top;">
-                            <b>Branch description</b><br /><br />
-                            <i>Markdown (<a href="http://commonmark.org" target="_blank">CommonMark</a> format) is supported</i></td>
-                        <td>
-                            <div class="markdown-editor" data-id="branchdesc" data-rows="10" data-placeholder="A description for this branch" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                            <div style="text-align: center;">
-                                <input type="hidden" name="commit" value="[[ .Commit ]]">
-                                <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
-                                <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
-                                <input type="submit" class="btn btn-success" value="Create it" data-cy="createbtn">
-                            </div>
-                        </td>
-                    </tr>
-                </table>
+                <div class="mb-2">
+                    <label for="branch" class="form-label">Name for the new branch</label>
+                    <input type="text" class="form-control" id="branch" name="branch" maxlength="80" data-cy="nameinput" required />
+                </div>
+                <div class="mb-2">
+                    <label for="branchdesc" class="form-label">Branch description<div class="form-text">Markdown (<a href="http://commonmark.org" target="_blank" rel="noopener noreferrer external">CommonMark</a> format) is supported</div></label>
+                    <div class="markdown-editor" data-id="branchdesc" data-rows="10" data-placeholder="A description for this branch"></div>
+                </div>
+                <input type="hidden" name="commit" value="[[ .Commit ]]">
+                <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
+                <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
+                <input type="submit" class="btn btn-success" value="Create" data-cy="createbtn">
             </form>
         </div>
     </div>

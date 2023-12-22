@@ -83,13 +83,13 @@ function DatabaseTagRow({name, data, releases, setStatusMessage, setStatusMessag
 	if (meta.owner === authInfo.loggedInUser) {
 		nameCol = (
 			<td>
-				<input name={savedTagName + "_name"} id={savedTagName + "_name"} size="20" maxlength="20" value={tagName} onChange={(e) => setTagName(e.target.value)} data-cy="nameinput" />
+				<input name={savedTagName + "_name"} className="form-control" id={savedTagName + "_name"} size="20" maxlength="20" value={tagName} onChange={(e) => setTagName(e.target.value)} data-cy="nameinput" />
 			</td>
 		);
 	} else {
 		nameCol = (
 			<td>
-				<a className="blackLink" href={"/" + meta.owner + "/" + meta.database + (releases ? "?release=" : "?tag=") + savedTagName}>{tagName}</a>
+				<a href={"/" + meta.owner + "/" + meta.database + (releases ? "?release=" : "?tag=") + savedTagName}>{tagName}</a>
 			</td>
 		);
 	}
@@ -108,14 +108,14 @@ function DatabaseTagRow({name, data, releases, setStatusMessage, setStatusMessag
 				<MarkdownEditor editorId={savedTagName + "_desc"} rows={10} placeholder={"A description for this " + (releases ? "release" : "tag")} defaultIndex={1} initialValue={data.description} viewOnly={meta.owner !== authInfo.loggedInUser} />
 			</td>
 			<td>
-				{data.avatar_url !== "" ? <img src={data.avatar_url} height="28" width="28" style={{border: "1px solid #8c8c8c"}} /> : null}&nbsp;
-				<a className="blackLink" href={"/" + data.tagger_user_name} data-cy="taggerlnk">{data.tagger_display_name}</a>
+				{data.avatar_url !== "" ? <img src={data.avatar_url} height="28" width="28" className="border border-secondary" /> : null}&nbsp;
+				<a href={"/" + data.tagger_user_name} data-cy="taggerlnk">{data.tagger_display_name}</a>
 			</td>
 			<td>
 				<span title={new Date(data.date).toLocaleString()}>{getTimePeriod(data.date, false)}</span>
 			</td>
 			<td>
-				<a className="blackLink" href={"/" + meta.owner + "/" + meta.database + "?commit=" + data.commit} data-cy="commitlnk">{data.commit.substring(0, 8)}</a>
+				<a href={"/" + meta.owner + "/" + meta.database + "?commit=" + data.commit} data-cy="commitlnk">{data.commit.substring(0, 8)}</a>
 			</td>
 		</tr>
 	);
@@ -131,16 +131,14 @@ export default function DatabaseTags({releases}) {
 	}
 
 	if (rows.length === 0) {
-		return <h3 data-cy="notagstxt" style={{textAlign: "center"}}>This database does not have any {releases ? "releases" : "tags"} yet</h3>;
+		return <h4 data-cy="notagstxt" className="text-center">This database does not have any {releases ? "releases" : "tags"} yet</h4>;
 	}
 
 	return (<>
 		{statusMessage !== "" ? (
 			<div className="row">
-				<div className="col-md-12">
-					<div style={{textAlign: "center", paddingBottom: "8px"}}>
-						<h4 style={{color: statusMessageColour}}>{statusMessage}</h4>
-					</div>
+				<div className="col-md-12 text-center mb-2">
+					<h6 style={{color: statusMessageColour}}>{statusMessage}</h6>
 				</div>
 			</div>
 		) : null}

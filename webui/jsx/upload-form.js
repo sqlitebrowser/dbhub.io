@@ -81,34 +81,30 @@ export default function UploadForm({branch}) {
 		<h3 data-cy="uptitle" className="text-center">{meta.owner !== "" && meta.database !== "" ? "Upload new commit" : "Upload a new database"}</h3>
 		{statusMessage !== "" ? (
 			<div className="row">
-				<div className="col-md-12 text-center">
-					<div style={{paddingBottom: "1em"}}>
-						<h4 style={{color: statusMessageColour}}>{statusMessage}</h4>
-					</div>
+				<div className="col-md-12 text-center mb-2">
+					<h6 style={{color: statusMessageColour}}>{statusMessage}</h6>
 				</div>
 			</div>
 		) : null}
 		<form>
-			<div className="form-group">
-				<label htmlFor="database">Database file</label>
-				<input type="file" id="database" name="database" data-cy="dbfile" />
+			<div className="mb-2">
+				<label className="form-label" htmlFor="database">Database file</label>
+				<input className="form-control" type="file" id="database" name="database" data-cy="dbfile" />
 			</div>
 
 			{meta.owner !== "" && meta.database !== "" ? <p><b>
-				As a new commit into the <a className="blackLink" href={"/" + meta.owner} data-cy="ownerlabel">{meta.owner}</a> /&nbsp;
-				<a className="blackLink" href={"/" + meta.owner + "/" + meta.database} data-cy="dbnamelabel">{meta.database}</a> database,
-				in the <a className="blackLink" href={"/" + meta.owner + "/" + meta.database + "?branch=" + branchName} data-cy="branchlabel">{branchName}</a> branch.
+				As a new commit into the <a href={"/" + meta.owner} data-cy="ownerlabel">{meta.owner}</a> /&nbsp;
+				<a href={"/" + meta.owner + "/" + meta.database} data-cy="dbnamelabel">{meta.database}</a> database,
+				in the <a href={"/" + meta.owner + "/" + meta.database + "?branch=" + branchName} data-cy="branchlabel">{branchName}</a> branch.
 			</b></p> : <>
-				<div className="form-group">
-					<label htmlFor="liveselect" className="control-label">Database type</label>
+				<div className="mb-2">
+					<label htmlFor="liveselect" className="form-label">Database type</label>
 					<div>
-						<div className="btn-group" data-toggle="buttons">
-							<label className={"btn btn-default " + (live ? null : "active")} onClick={() => setLive(false)} data-cy="stdbtn">
-								<input type="radio" name="liveselect" checked={!live} /> Standard
-							</label>
-							<label className={"btn btn-default " + (live ? "active" : null)} onClick={() => setLive(true)} data-cy="livebtn">
-								<input type="radio" name="liveselect" checked={live} /> Live
-							</label>
+						<div className="btn-group" role="group">
+							<input type="radio" className="btn-check" name="liveselect" autocomplete="off" checked={!live} />
+							<label className="btn btn-outline-secondary" htmlFor="liveselect" onClick={() => setLive(false)} data-cy="stdbtn">Standard</label>
+							<input type="radio" className="btn-check" name="liveselect" autocomplete="off" checked={live} />
+							<label className="btn btn-outline-secondary" htmlFor="liveselect" onClick={() => setLive(true)} data-cy="livebtn">Live</label>
 						</div>&nbsp;
 						{live ? <span><b>Live</b> means a traditional SQLite database.  As with our Standard databases, these can be made public (or kept private), and
 							collaborated upon with others. These <b>are</b> able to run INSERT/UPDATE/DELETE statements and other SQL queries.  A good choice if you're
@@ -118,23 +114,21 @@ export default function UploadForm({branch}) {
 						}
 					</div>
 				</div>
-				<div className="form-group">
-					<label htmlFor="publicselect" className="control-label">Visibility</label>
+				<div className="mb-2">
+					<label htmlFor="publicselect" className="form-label">Visibility</label>
 					<div>
-						<div className="btn-group" data-toggle="buttons">
-							<label className={"btn btn-default " + (isPublic ? "active" : null)} onClick={() => setPublic(true)} data-cy="pubbtn">
-								<input type="radio" name="publicselect" checked={isPublic} /> Public
-							</label>
-							<label className={"btn btn-default " + (isPublic ? null : "active")} onClick={() => setPublic(false)} data-cy="privbtn">
-								<input type="radio" name="publicselect" checked={!isPublic} /> Private
-							</label>
+						<div className="btn-group" role="group">
+							<input type="radio" className="btn-check" name="publicselect" autocomplete="off" checked={isPublic} />
+							<label className="btn btn-outline-secondary" htmlFor="publicselect" onClick={() => setPublic(true)} data-cy="pubbtn">Public</label>
+							<input type="radio" className="btn-check" name="publicselect" autocomplete="off" checked={!isPublic} />
+							<label className="btn btn-outline-secondary" htmlFor="publicselect" onClick={() => setPublic(false)} data-cy="privbtn">Private</label>
 						</div>&nbsp;
 						{isPublic ? <span>Database will be <b>public</b>. Everyone has read access to it.</span> : <span>Database will be <b>private</b>. Only you have access to it.</span>}
 					</div>
 				</div>
 				{live === false ?
-					<div className="form-group">
-						<label htmlFor="licence" className="control-label">Licence</label>
+					<div className="mb-2">
+						<label htmlFor="licence" className="form-label">Licence</label>
 						<Select
 							name={"licence"}
 							required={true}
@@ -146,7 +140,7 @@ export default function UploadForm({branch}) {
 								return (
 									<div>
 										<span onClick={() => methods.addItem(item)}>{item.label}</span>
-										{item.url !== '' ? (<><span> - </span><a href={item.url} target="_blank" rel="noopener noreferrer">info</a></>) : null}
+										{item.url !== '' ? (<><span> - </span><a href={item.url} target="_blank" rel="noopener noreferrer external">info</a></>) : null}
 									</div>
 								);
 							}}
@@ -156,29 +150,27 @@ export default function UploadForm({branch}) {
 			</>}
 
 			{live === false ?
-				<div className="panel panel-default">
-					<div className="panel-heading">
-						<h3 className="panel-title">
-							<a href="#/" className="blackLink" onClick={() => setExpanded(!isExpanded)}>Advanced</a>
-							<span className="pull-right">
-								<a href="#/" className="blackLink" onClick={() => setExpanded(!isExpanded)}><i className={isExpanded ? "fa fa-minus" : "fa fa-plus"}></i></a>
-							</span>
-						</h3>
+				<div className="card text-bg-light mt-2 mb-2">
+					<div className="card-header">
+						<a href="#/" onClick={() => setExpanded(!isExpanded)}>Advanced</a>
+						<span className="pull-right">
+							<a href="#/" onClick={() => setExpanded(!isExpanded)}><i className={isExpanded ? "fa fa-minus" : "fa fa-plus"}></i></a>
+						</span>
 					</div>
 					{isExpanded ? (<>
-						<div className="panel-body">
-							<div className="form-group">
-								<label htmlFor="commitmsg">Commit Message</label>
+						<div className="card-body">
+							<div className="mb-2">
+								<label htmlFor="commitmsg" className="form-label">Commit Message</label>
 								<MarkdownEditor editorId="commitmsg" rows={10} placeholder="A description for this specific commit" onChange={e => setCommitMsg(e)} />
 							</div>
 							{meta.owner === "" && meta.database === "" ?
-								<div className="form-group">
-									<label htmlFor="sourceurl">Source URL</label>
+								<div className="mb-2">
+									<label htmlFor="sourceurl" className="form-label">Source URL</label>
 									<input type="text" className="form-control" id="sourceurl" maxlength={240} data-cy="srcurlinput" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} />
 								</div>
 							: null}
-							<div className="form-group">
-								<label htmlFor="branch">Branch</label>
+							<div className="mb-2">
+								<label htmlFor="branch" className="form-label">Branch</label>
 								<input type="text" className="form-control" id="branch" maxlength={60} data-cy="branchinput" value={branchName} onChange={e => setBranchName(e.target.value)} />
 							</div>
 						</div>

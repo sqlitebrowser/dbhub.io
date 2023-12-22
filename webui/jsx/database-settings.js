@@ -6,7 +6,6 @@ import Select from "react-dropdown-select";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 
-
 function LicenceEdit() {
 	const [branchLicences, setBranchLicences] = React.useState(settingsData.branchLicences);
 
@@ -60,7 +59,7 @@ function LicenceEdit() {
 							return (
 								<div>
 									<span onClick={() => methods.addItem(item)}>{item.label}</span>
-									{item.url !== '' ? (<><span> - </span><a href={item.url} target="_blank" rel="noopener noreferrer">info</a></>) : null}
+									{item.url !== '' ? (<><span> - </span><a href={item.url} target="_blank" rel="noopener noreferrer external">info</a></>) : null}
 								</div>
 							);
 						}}
@@ -71,8 +70,8 @@ function LicenceEdit() {
 	}
 
 	return (
-		<div className="form-group">
-			<label className="col-sm-2 control-label">Licence<span className="help-block">Can be set per branch</span></label>
+		<div className="row mb-2">
+			<label className="col-sm-2 col-form-label">Licence<div className="form-text">Can be set per branch</div></label>
 			<div className="col-sm-10">
 				<table className="table table-striped">
 					<thead>
@@ -156,8 +155,8 @@ function ShareEdit() {
 	}
 
 	return (
-		<div className="form-group">
-			<label className="col-sm-2 control-label">Share Database<span className="help-block">Make private databases visible to other users or give them write access to your databases</span></label>
+		<div className="row mb-2">
+			<label className="col-sm-2 col-form-label">Share Database<div className="form-text">Make private databases visible to other users or give them write access to your databases</div></label>
 			<div className="col-sm-10">
 				<table className="table table-striped">
 					<thead>
@@ -166,13 +165,11 @@ function ShareEdit() {
 							<th>Permissions</th>
 							<th>
 								<div className="input-group">
-									<span className="input-group-addon"><i className="glyphicon glyphicon-user"></i></span>
+									<span className="input-group-text"><i className="fa fa-user"></i></span>
 									<input id="addShareUserName" type="text" className="form-control" name="addShareUserName" placeholder="Username" data-cy="usernameinput" />
-									<div className="input-group-btn">
-										<button className="btn btn-default" type="button" onClick={() => addShare()} title="Add User" data-cy="adduserbtn">
-											<i className="glyphicon glyphicon-plus"></i>
-										</button>
-									</div>
+									<button className="btn btn-light" type="button" onClick={() => addShare()} title="Add User" data-cy="adduserbtn">
+										<i className="fa fa-plus"></i>
+									</button>
 								</div>
 							</th>
 						</tr>
@@ -300,87 +297,82 @@ export default function DatabaseSettings() {
 
 	return (<>
 		{statusMessage !== "" ? (
-			<div className="row">
-				<div className="col-md-12">
-					<div style={{textAlign: "center", paddingBottom: "8px"}}>
-						<h4 style={{color: statusMessageColour}}>&nbsp;{statusMessage}</h4>
-					</div>
+			<div className="row mb-2">
+				<div className="col-md-12 text-center mb-2">
+					<h6 style={{color: statusMessageColour}}>{statusMessage}</h6>
 				</div>
 			</div>
 		) : null}
-		<form action="/x/savesettings" method="post" className="form-horizontal">
+		<form action="/x/savesettings" method="post">
 			<input type="hidden" name="username" value={meta.owner} />
 			<input type="hidden" name="dbname" value={meta.database} />
-			<div className="form-group">
-				<label htmlFor="newname" className="col-sm-2 control-label">Name</label>
+			<div className="row mb-2">
+				<label htmlFor="newname" className="col-sm-2 col-form-label">Name</label>
 				<div className="col-sm-10">
 					<input id="newname" name="newname" value={name} onChange={(e) => setName(e.target.value)} data-cy="nameinput" className="form-control" required />
 				</div>
 			</div>
-			<div className="form-group">
-				<label htmlFor="onelinedesc" className="col-sm-2 control-label">One line description</label>
+			<div className="row mb-2">
+				<label htmlFor="onelinedesc" className="col-sm-2 col-form-label">One line description</label>
 				<div className="col-sm-10">
 					<input id="onelinedesc" name="onelinedesc" value={oneLineDescription} onChange={(e) => setOneLineDescription(e.target.value)} data-cy="onelinedescinput" className="form-control" />
 				</div>
 			</div>
-			<div className="form-group">
-				<label htmlFor="public" className="col-sm-2 control-label">Public?</label>
+			<div className="row mb-2">
+				<label className="col-sm-2 col-form-label">Public?</label>
 				<div className="col-sm-10">
-					<div className="btn-group" data-toggle="buttons">
-						<label className={"btn btn-default " + (isPublic ? "active" : null)} onClick={() => setPublic(true)} data-cy="public">
-							<input type="radio" name="public" checked={isPublic} value="true" /> Public
-						</label>
-						<label className={"btn btn-default " + (isPublic ? "" : "active")} onClick={() => setPublic(false)} data-cy="private">
-							<input type="radio" name="public" checked={!isPublic} value="false" /> Private
-						</label>
-					</div>
-					&nbsp;
+					<div className="btn-group" role="group">
+						<input type="radio" className="btn-check" name="public" autocomplete="off" checked={!isPublic} value="false" />
+						<label className="btn btn-outline-secondary" htmlFor="public" onClick={() => setPublic(false)} data-cy="private">Private</label>
+						<input type="radio" className="btn-check" name="public" autocomplete="off" checked={isPublic} value="true" />
+						<label className="btn btn-outline-secondary" htmlFor="public" onClick={() => setPublic(true)} data-cy="public">Public</label>
+					</div>&nbsp;
 					{isPublic ? <span>Database will be <b>public</b>. Everyone has read access to it.</span> : <span>Database will be <b>private</b>. Only you have access to it.</span>}
 				</div>
 			</div>
-			<div className="form-group">
-				<label htmlFor="selectdefaulttable" className="col-sm-2 control-label">Default table or view</label>
+			<div className="row mb-2">
+				<label htmlFor="selectdefaulttable" className="col-sm-2 col-form-label">Default table or view</label>
 				<div className="col-sm-10">
 					<Select name="selectdefaulttable" required={true} labelField="name" valueField="name" onChange={(values) => setDefaultTable(values[0].name)} options={tables} values={[{name: defaultTable}]} backspaceDelete={false} />
 					<input type="hidden" name="defaulttable" value={defaultTable} />
 				</div>
 			</div>
 			{meta.isLive === false ?
-				<div className="form-group">
-					<label htmlFor="selectbranch" className="col-sm-2 control-label">Default branch</label>
+				<div className="row mb-2">
+					<label htmlFor="selectbranch" className="col-sm-2 col-form-label">Default branch</label>
 					<div className="col-sm-10">
 						<Select name="selectbranch" required={true} labelField="name" valueField="name" onChange={(values) => switchDefaultBranch(values[0].name)} options={branches} values={[{name: defaultBranch}]} backspaceDelete={false} />
 						<input type="hidden" name="branch" value={defaultBranch} />
 					</div>
 				</div>
 			: null}
-			<div className="form-group">
-				<label htmlFor="sourceurl" className="col-sm-2 control-label">Source URL</label>
+			<div className="row mb-2">
+				<label htmlFor="sourceurl" className="col-sm-2 col-form-label">Source URL</label>
 				<div className="col-sm-10">
 					<input id="sourceurl" name="sourceurl" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} data-cy="sourceurl" className="form-control" />
 				</div>
 			</div>
 			{meta.isLive === false ? <LicenceEdit /> : null}
 			<ShareEdit />
-			<div className="form-group">
-				<label htmlFor="fulldesc" className="col-sm-2 control-label">Full length description<span className="help-block">Markdown (<a href="https://commonmark.org" target="_blank">CommonMark</a> format) is supported</span></label>
+			<div className="row mb-2">
+				<label htmlFor="fulldesc" className="col-sm-2 col-form-label">Full length description<div className="form-text">Markdown (<a href="https://commonmark.org" target="_blank" rel="noopener noreferrer external">CommonMark</a> format) is supported</div></label>
 				<div className="col-sm-10">
 					<MarkdownEditor editorId="fulldesc" rows={18} defaultIndex={1} initialValue={fullDescription} />
 				</div>
 			</div>
-			<div className="form-group">
+			<div className="row mb-2">
 				<div className="col-sm-offset-2 col-sm-10">
-					<button type="submit" className="btn btn-primary" data-cy="savebtn">Save</button>&nbsp;
-					<button type="button" className="btn btn-default" data-cy="cancelbtn" onClick={() => cancelSettings()}>Cancel</button>
+					<button type="submit" className="btn btn-success" data-cy="savebtn">Save</button>&nbsp;
+					<button type="button" className="btn btn-secondary" data-cy="cancelbtn" onClick={() => cancelSettings()}>Cancel</button>
 				</div>
 			</div>
 		</form>
 
-		<div className="panel panel-danger">
-			<div className="panel-heading">
-				<h3 className="panel-title">Destructive options</h3>
+		<div className="card mt-3">
+			<div className="card-header border-danger text-bg-danger bg-opacity-50">
+				Destructive options
 			</div>
-			<div className="panel-body">
+			<div className="card-body">
 				<button type="button" className="btn btn-danger" onClick={() => confirmDelete()} data-cy="delbtn">Delete database</button>
 			</div>
 		</div>

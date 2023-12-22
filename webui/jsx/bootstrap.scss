@@ -1,0 +1,16 @@
+$secondary: rgb(205, 205, 205);
+
+@import "~bootstrap/scss/bootstrap"; 
+
+a:not([rel~="external"]):not(.btn):not(.list-group-item) {
+	color: #181818;
+}
+
+a:not([rel~="external"]):not(.btn):not(.nav-link):not(.list-group-item) {
+	text-decoration: none;
+}
+
+a:not([rel~="external"]):not(.btn):not(.nav-link):not(.list-group-item):hover {
+	color: #23527c;
+	text-decoration: underline;
+}

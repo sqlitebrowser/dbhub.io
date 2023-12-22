@@ -47,33 +47,27 @@ function SavedVisualisationItem({name, visStatus, active, onSelectItem, onSaveIt
 						}
 					}}>
 						<div className="input-group">
-							<input type="text" className="form-control input-sm" data-cy="nameinput" value={editedName} onChange={e => setEditedName(e.target.value)} />
-							<div className="input-group-btn">
-								<button type="submit" className="btn btn-default btn-sm" disabled={editedName.trim() === "" ? "disabled" : null} data-cy="renameokbtn">Save</button>
-								<button type="button" className="btn btn-default btn-sm" onClick={() => {setEditedName(savedName); setEditingName(false);}}>Cancel</button>
-							</div>
+							<input type="text" className="form-control form-control-sm" data-cy="nameinput" value={editedName} onChange={e => setEditedName(e.target.value)} />
+							<button type="submit" className="btn btn-secondary btn-sm" disabled={editedName.trim() === "" ? "disabled" : null} data-cy="renameokbtn">Save</button>
+							<button type="button" className="btn btn-secondary btn-sm" onClick={() => {setEditedName(savedName); setEditingName(false);}}>Cancel</button>
 						</div>
 					</form>
 				</div>
 			);
 		} else {
-			// TODO With newer versions of Bootstrap it should be possible to a) replace the span tag for the actions with something else that looks better and which
-			// can be "officially" clicked and b) truncate the visualisation name in small windows so everything stays in one line.
 			return (
-				<button type="button" key={name} className="list-group-item active" data-cy="selectedvis">
+				<a key={name} className="list-group-item list-group-item-action active" data-cy="selectedvis">
 					<span onClick={e => {e.detail === 2 && setEditingName(true)}}>{visStatus.dirty || visStatus.newlyCreated ? <i>{savedName + " [" + (visStatus.newlyCreated ? "unsaved" : "modified") + "]"}</i> : savedName}</span>
-					<div role="toolbar" aria-label="Visualisation actions" className="btn-toolbar pull-right">
-						<div className="btn-group" role="group">
-							{authInfo.loggedInUser === meta.owner && (visStatus.dirty || visStatus.newlyCreated) ? <><span title="Save visualisation" data-cy="savebtn" onClick={() => onSaveItem(savedName)}><i className="fa fa-save" /></span>&nbsp;</> : null}
-							{authInfo.loggedInUser === meta.owner || visStatus.newlyCreated ? <><span title="Rename visualisation" data-cy="renamebtn" onClick={() => setEditingName(true)}><i className="fa fa-edit" /></span>&nbsp;</> : null}
-							{authInfo.loggedInUser === meta.owner || visStatus.newlyCreated ? <><span title="Delete visualisation" data-cy="deletebtn" onClick={() => onDeleteItem(savedName)}><i className="fa fa-trash" /></span>&nbsp;</> : null}
-						</div>
+					<div className="pull-right">
+						{authInfo.loggedInUser === meta.owner && (visStatus.dirty || visStatus.newlyCreated) ? <button type="button" className="btn btn-primary btn-sm" title="Save visualisation" data-cy="savebtn" onClick={() => onSaveItem(savedName)}><i className="fa fa-save" /></button> : null}
+						{authInfo.loggedInUser === meta.owner || visStatus.newlyCreated ? <button type="button" className="btn btn-primary btn-sm" title="Rename visualisation" data-cy="renamebtn" onClick={() => setEditingName(true)}><i className="fa fa-edit" /></button> : null}
+						{authInfo.loggedInUser === meta.owner || visStatus.newlyCreated ? <button type="button" className="btn btn-primary btn-sm" title="Delete visualisation" data-cy="deletebtn" onClick={() => onDeleteItem(savedName)}><i className="fa fa-trash" /></button> : null}
 					</div>
-				</button>
+				</a>
 			);
 		}
 	} else {
-		return <button type="button" key={name} className="list-group-item" onClick={() => onSelectItem(savedName)}>{visStatus.dirty || visStatus.newlyCreated ? <i>{savedName + " [" + (visStatus.newlyCreated ? "unsaved" : "modified") + "]"}</i> : savedName}</button>;
+		return <a href="#" key={name} className="list-group-item list-group-item-action" onClick={() => onSelectItem(savedName)}>{visStatus.dirty || visStatus.newlyCreated ? <i>{savedName + " [" + (visStatus.newlyCreated ? "unsaved" : "modified") + "]"}</i> : savedName}</a>;
 	}
 }
 
@@ -96,7 +90,7 @@ function SavedVisualisations({visualisations, visualisationsStatus, preselectedV
 		<div>
 			<h4>
 				Saved visualisations&nbsp;
-				<button type="button" className="btn btn-success btn-xs pull-right" data-cy="newvisbtn" onClick={() => onNewVisualisation()}><i className="fa fa-plus" />&nbsp;New</button>
+				<button type="button" className="btn btn-success btn-sm pull-right" data-cy="newvisbtn" onClick={() => onNewVisualisation()}><i className="fa fa-plus" />&nbsp;New</button>
 			</h4>
 			<div className="list-group" data-cy="savedvis">
 				{
@@ -567,12 +561,11 @@ export function VisualisationEditor() {
 		{meta.isLive === false ? (
 			<div className="row">
 				<div className="col-md-12">
-					<div className="form-group">
+					<div className="mb-2">
 						<label htmlFor="viewbranch">Branch:</label>&nbsp;
-						<div style={{display: "inline-block"}}>
+						<div className="d-inline-block">
 							<Select name="viewbranch" required={true} labelField="name" valueField="name" onChange={(values) => setSelectedBranch(values[0].name)} options={branches} values={[{name: selectedBranch}]} />
 						</div>
-						&nbsp;&nbsp;
 					</div>
 				</div>
 			</div>
@@ -603,10 +596,10 @@ export function VisualisationEditor() {
 						<TabPanel forceRender={true}>
 							<Visualisation name={selectedVisualisation} plotConfig={visualisations[selectedVisualisation]} branch={selectedBranch} setRawData={setRawData} setLastRunResultMessage={setLastRunResultMessage} />
 							{rawData !== null ? (<>
-								<button type="button" className={"btn btn-default" + (showDataTable ? " active" : "")} onClick={() => setShowDataTable(!showDataTable)}>{showDataTable ? "Hide data table" : "Show data table"}</button>&nbsp;
-								<button type="button" className="btn btn-default" onClick={() => exportDataTable()}>Export to CSV</button>
+								<button type="button" className={"btn btn-secondary" + (showDataTable ? " active" : "")} onClick={() => setShowDataTable(!showDataTable)}>{showDataTable ? "Hide data table" : "Show data table"}</button>&nbsp;
+								<button type="button" className="btn btn-secondary" onClick={() => exportDataTable()}>Export to CSV</button>
 								{visualisationsStatus[selectedVisualisation].newlyCreated ? null :
-									<>&nbsp;<button type="button" className={"btn btn-default" + (showEmbedHtml ? " active" : "")} onClick={() => setShowEmbedHtml(!showEmbedHtml)}>{showEmbedHtml ? "Hide embedding" : "Embed chart"}</button></>
+									<>&nbsp;<button type="button" className={"btn btn-secondary" + (showEmbedHtml ? " active" : "")} onClick={() => setShowEmbedHtml(!showEmbedHtml)}>{showEmbedHtml ? "Hide embedding" : "Embed chart"}</button></>
 								}
 							</>) : null}
 						</TabPanel>
@@ -624,57 +617,53 @@ export function VisualisationEditor() {
 									border: "1px solid grey",
 								}}
 							/>
-							<div style={{marginTop: "1em"}}>
+							<div className="mt-2">
 								<button type="button" className="btn btn-success" onClick={() => updatePlotConfig({sql: visualisationsStatus[selectedVisualisation].code}, true)} data-cy="runsqlbtn" disabled={visualisationsStatus[selectedVisualisation].code.trim() === "" ? "disabled" : null}>Run SQL</button>&nbsp;
-								<button type="button" className="btn btn-muted" value="Format SQL" onClick={formatSql} data-cy="formatsqlbtn">Format SQL</button>&nbsp;
-								<button type="button" className={"btn btn-muted" + (showDataTable ? " active" : "")} onClick={() => setShowDataTable(!showDataTable)}>{showDataTable ? "Hide data table" : "Show data table"}</button>&nbsp;
+								<button type="button" className="btn btn-light" value="Format SQL" onClick={formatSql} data-cy="formatsqlbtn">Format SQL</button>&nbsp;
+								<button type="button" className={"btn btn-light" + (showDataTable ? " active" : "")} onClick={() => setShowDataTable(!showDataTable)}>{showDataTable ? "Hide data table" : "Show data table"}</button>&nbsp;
 								<span data-cy="statusmsg">{lastRunResultMessage}</span>
 							</div>
 						</TabPanel>
 						<TabPanel>
-							<form className="form-horizontal">
-								<div className="form-group">
-									<label htmlFor="charttype" className="col-sm-2 control-label">Chart type</label>
+							<form>
+								<div className="row mb-2">
+									<label htmlFor="charttype" className="col-sm-2 col-form-label">Chart type</label>
 									<div className="col-sm-10">
 										<Select name="charttype" required={true} onChange={values => updatePlotConfig({chart_type: values[0].value})} options={chartTypes} values={[selectedChartType]} />
 									</div>
 								</div>
-								<div className="form-group">
-									<label htmlFor="xaxiscol" className="col-sm-2 control-label">X axis column</label>
+								<div className="row mb-2">
+									<label htmlFor="xaxiscol" className="col-sm-2 col-form-label">X axis column</label>
 									<div className="col-sm-10">
 										<Select name="xaxiscol" required={true} labelField="name" valueField="name" onChange={values => updatePlotConfig({x_axis_label: values[0].name})} options={columnList} values={[{name: visualisations[selectedVisualisation]?.x_axis_label}]} />
 									</div>
 								</div>
-								<div className="form-group">
-									<label htmlFor="yaxiscol" className="col-sm-2 control-label">Y axis column</label>
+								<div className="row mb-2">
+									<label htmlFor="yaxiscol" className="col-sm-2 col-form-label">Y axis column</label>
 									<div className="col-sm-10">
 										<Select name="yaxiscol" required={true} labelField="name" valueField="name" onChange={values => updatePlotConfig({y_axis_label: values[0].name})} options={columnList} values={[{name: visualisations[selectedVisualisation]?.y_axis_label}]} />
 									</div>
 								</div>
 								{visualisations[selectedVisualisation]?.chart_type !== "pie" ? (<>
-									<div className="form-group">
-										<label htmlFor="showxaxis" className="col-sm-2 control-label">Show X axis</label>
+									<div className="row mb-2">
+										<label htmlFor="showxaxis" className="col-sm-2 col-form-label">Show X axis</label>
 										<div className="col-sm-10">
-											<div className="btn-group" data-toggle="buttons">
-												<label className={"btn btn-default " + (visualisations[selectedVisualisation]?.show_x_label ? "active" : null)} onClick={() => updatePlotConfig({show_x_label: true})} data-cy="xtruetoggle">
-													<input type="radio" name="showxasis" checked={visualisations[selectedVisualisation]?.show_x_label} value="true" /> Yes
-												</label>
-												<label className={"btn btn-default " + (!visualisations[selectedVisualisation]?.show_x_label ? "active" : null)} onClick={() => updatePlotConfig({show_x_label: false})} data-cy="xfalsetoggle">
-													<input type="radio" name="showxasis" checked={visualisations[selectedVisualisation]?.show_x_label} value="false" /> No
-												</label>
+											<div className="btn-group" role="group">
+												<input type="radio" className="btn-check" name="showxaxis" autocomplete="off" checked={visualisations[selectedVisualisation]?.show_x_label} value="true" />
+												<label className="btn btn-outline-secondary" htmlFor="showxaxis" onClick={() => updatePlotConfig({show_x_label: true})} data-cy="xtruetoggle">Yes</label>
+												<input type="radio" className="btn-check" name="showxaxis" autocomplete="off" checked={!visualisations[selectedVisualisation]?.show_x_label} value="false" />
+												<label className="btn btn-outline-secondary" htmlFor="showxaxis" onClick={() => updatePlotConfig({show_x_label: false})} data-cy="xfalsetoggle">No</label>
 											</div>
 										</div>
 									</div>
-									<div className="form-group">
-										<label htmlhtmlFor="showyaxis" className="col-sm-2 control-label">Show Y axis</label>
+									<div className="row mb-2">
+										<label htmlhtmlFor="showyaxis" className="col-sm-2 col-form-label">Show Y axis</label>
 										<div className="col-sm-10">
-											<div className="btn-group" data-toggle="buttons">
-												<label className={"btn btn-default " + (visualisations[selectedVisualisation]?.show_y_label ? "active" : null)} onClick={() => updatePlotConfig({show_y_label: true})} data-cy="ytruetoggle">
-													<input type="radio" name="showyasis" checked={visualisations[selectedVisualisation]?.show_y_label} value="true" /> Yes
-												</label>
-												<label className={"btn btn-default " + (!visualisations[selectedVisualisation]?.show_y_label ? "active" : null)} onClick={() => updatePlotConfig({show_y_label: false})} data-cy="yfalsetoggle">
-													<input type="radio" name="showyasis" checked={visualisations[selectedVisualisation]?.show_y_label} value="false" /> No
-												</label>
+											<div className="btn-group" role="group">
+												<input type="radio" className="btn-check" name="showyaxis" autocomplete="off" checked={visualisations[selectedVisualisation]?.show_y_label} value="true" />
+												<label className="btn btn-outline-secondary" htmlFor="showyaxis" onClick={() => updatePlotConfig({show_y_label: true})} data-cy="ytruetoggle">Yes</label>
+												<input type="radio" className="btn-check" name="showyaxis" autocomplete="off" checked={!visualisations[selectedVisualisation]?.show_y_label} value="false" />
+												<label className="btn btn-outline-secondary" htmlFor="showyaxis" onClick={() => updatePlotConfig({show_y_label: false})} data-cy="yfalsetoggle">No</label>
 											</div>
 										</div>
 									</div>
@@ -683,11 +672,11 @@ export function VisualisationEditor() {
 						</TabPanel>
 					</Tabs>
 					{rawData !== null ? (
-						<div style={{marginTop: "1em"}}>
+						<div className="mt-2">
 							{showDataTable ? (<>
 								<h5>{rawData.Records.length + " row" + (rawData.Records.length !== 1 ? "s" : "")}</h5>
 								<div className="table-responsive">
-									<table className="table table-striped table-condensed table-bordered">
+									<table className="table table-striped table-sm table-bordered">
 										<thead>
 											<tr>{rawData.ColNames.map(n => <th>{n}</th>)}</tr>
 										</thead>
@@ -700,10 +689,10 @@ export function VisualisationEditor() {
 						</div>
 					) : null}
 					{showEmbedHtml ? (
-						<div style={{marginTop: "1em"}}>
-							<h5>You can embed the chart in other web pages by using this HTML code. Please keep in mind that renaming or deleting your visualisation is going to break the embedding.</h5>
+						<div className="mt-2">
+							<h6>You can embed the chart in other web pages by using this HTML code. Please keep in mind that renaming or deleting your visualisation is going to break the embedding.</h6>
 							<code>
-								&lt;iframe width="425" height="350" src={"\"" + window.location.origin + "/visembed/" + meta.owner + "/" + meta.database + "?visname=" + selectedVisualisation + "\""} title={selectedVisualisation + " - DBHub.io visualisation"} style="border: 1px solid black"&gt;&lt;/iframe&gt;
+								&lt;iframe width="425" height="350" src={"\"" + window.location.origin + "/visembed/" + meta.owner + "/" + meta.database + "?visname=" + selectedVisualisation + "\""} title={"\"" + selectedVisualisation + " - DBHub.io visualisation\""} style="border: 1px solid black"&gt;&lt;/iframe&gt;
 							</code>
 						</div>
 					) : null}

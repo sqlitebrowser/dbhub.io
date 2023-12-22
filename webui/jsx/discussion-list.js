@@ -5,22 +5,13 @@ import {getTimePeriod} from "./format";
 
 function DiscussionListRow({data, mergeRequests}) {
 	return (
-		<tr>
-			<td width="80px">
-				<div className="pull-right" style={{paddingTop: "6px"}}>
-					{data.open === true ? <i className="fa fa-minus-square-o fa-lg text-success" /> : <i className="fa fa fa-check-square-o fa-lg text-danger" />}
-				</div>
-				<div style={{paddingTop: "6px"}}># {data.disc_id}</div>
-			</td>
-			<td>
-				<span className="lead"><a className="blackLink" href={"/" + (mergeRequests ? "merge" : "discuss") + "/" + meta.owner + "/" + meta.database + "?id=" + data.disc_id}>{data.title}</a></span>
-				<div>
-					Created <span className="text-info" title={new Date(data.creation_date).toLocaleString()}>{getTimePeriod(data.creation_date, true)}</span> by <a className="blackLink" href={"/" + data.creator}>{data.avatar_url !== "" ? <img src={data.avatar_url} style={{verticalAlign: "top", border: "1px solid #8c8c8c"}} height="18" width="18" /> : null} {data.creator}</a>. Last modified <span className="text-info" title={new Date(data.last_modified).toLocaleString()}>{getTimePeriod(data.last_modified, true)}</span>
-
-					{data.comment_count > 0 ? <span> <i className="fa fa-comment-o"></i> <a className="blackLink" href={"/" + (mergeRequests ? "merge" : "discuss") + "/" + meta.owner + "/" + meta.database + "?id=" + data.disc_id}>{data.comment_count} comment{data.comment_count > 1 ? "s" : ""}</a></span> : null}
-				</div>
-			</td>
-		</tr>
+		<div className="card text-bg-light mt-1">
+			<div className="card-body">
+				<h5 className="card-title"># {data.disc_id} {data.open === true ? <i className="fa fa-minus-square-o fa-lg text-success fs-4" /> : <i className="fa fa fa-check-square-o fa-lg text-danger fs-4" />} <a href={"/" + (mergeRequests ? "merge" : "discuss") + "/" + meta.owner + "/" + meta.database + "?id=" + data.disc_id}>{data.title}</a></h5>
+				<h6 className="card-subtitle">Created <span className="text-info" title={new Date(data.creation_date).toLocaleString()}>{getTimePeriod(data.creation_date, true)}</span> by <a href={"/" + data.creator}>{data.avatar_url !== "" ? <img src={data.avatar_url} height="18" width="18" className="border border-secondary" /> : null} {data.creator}</a>. Last modified <span className="text-info" title={new Date(data.last_modified).toLocaleString()}>{getTimePeriod(data.last_modified, true)}</span></h6>
+				{data.comment_count > 0 ? <p className="card-text"> <i className="fa fa-comment-o"></i> <a href={"/" + (mergeRequests ? "merge" : "discuss") + "/" + meta.owner + "/" + meta.database + "?id=" + data.disc_id}>{data.comment_count} comment{data.comment_count > 1 ? "s" : ""}</a></p> : null}
+			</div>
+		</div>
 	);
 }
 
@@ -44,9 +35,9 @@ export default function DiscussionList({mergeRequests}) {
 				<div className="text-center">
 					<button className="btn btn-success" onClick={() => createDiscussion()}>{mergeRequests ? "New Merge Request" : "Start a new discussion"}</button>
 					&nbsp;
-					<div className="btn-group" data-toggle="buttons">
-						<label className={"btn btn-default " + (showOpen ? "active" : null)} onClick={() => setShowOpen(true)}>Open</label>
-						<label className={"btn btn-default " + (showOpen ? null : "active")} onClick={() => setShowOpen(false)}>Closed</label>
+					<div className="btn-group">
+						<label className={"btn btn-light " + (showOpen ? "active" : null)} onClick={() => setShowOpen(true)}>Open</label>
+						<label className={"btn btn-light " + (showOpen ? null : "active")} onClick={() => setShowOpen(false)}>Closed</label>
 					</div>
 				</div>
 			</div>
@@ -55,7 +46,7 @@ export default function DiscussionList({mergeRequests}) {
 
 	// Special case of no discussions at all
 	if (discussionData === null) {
-		return <>{buttonRow}<h4 data-cy="nodisc" className="text-center">This database does not have any {mergeRequests ? "merge requests" : "discussions"} yet</h4></>;
+		return <>{buttonRow}<h5 data-cy="nodisc" className="text-center mt-2">This database does not have any {mergeRequests ? "merge requests" : "discussions"} yet</h5></>;
 	}
 
 	// Render discussion items
@@ -65,15 +56,11 @@ export default function DiscussionList({mergeRequests}) {
 
 	// If no discussions are visible in the current selection print a message
 	if (rows.length === 0) {
-		return <>{buttonRow}<h4 data-cy="nodisc" className="text-center">This database does not have any {showOpen ? "open" : "closed"} {mergeRequests ? "merge requests" : "discussions"} yet</h4></>;
+		return <>{buttonRow}<h5 data-cy="nodisc" className="text-center mt-2">This database does not have any {showOpen ? "open" : "closed"} {mergeRequests ? "merge requests" : "discussions"} yet</h5></>;
 	}
 
 	return (<>
 		{buttonRow}
-		<table className="table table-striped table-responsive" style={{marginTop: "1em"}}>
-			<tbody>
-				{rows}
-			</tbody>
-		</table>
+		{rows}
 	</>);
 }

@@ -4,39 +4,25 @@
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div>
+<div class="container-fluid">
     <div id="db-header-root"></div>
     <div class="row">
-        <div class="col-md-1" style="padding: 0;">&nbsp;</div>
-        <div class="col-md-10">
-            <h2 style="text-align: center;">Create a new discussion</h2>
+        <div class="col-md-12">
+            <h3 class="text-center">Create a new discussion</h3>
             <form action="/x/creatediscuss" method="post">
-                <table class="table table-striped table-responsive settingsTable">
-                    <tr>
-                        <th style="vertical-align: middle;" width="25%">Title:</th>
-                        <td>
-                            <input id="title" name="title" size="50" maxlength="80"/>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align: top;">
-                            <b>Description</b><br /><br />
-                            <i>Markdown (<a href="http://commonmark.org" target="_blank">CommonMark</a> format) is supported</i></td>
-                        <td>
-                            <div class="markdown-editor" data-id="disctxt" data-rows="10" data-placeholder="Type in the discussion details then click the 'Create it' button" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                            <div style="text-align: center;">
-                                <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
-                                <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
-                                <input type="button" class="btn btn-default" value="Cancel" ng-click="cancelCreate()">
-                                <input type="submit" class="btn btn-primary" value="Create">
-                            </div>
-                        </td>
-                    </tr>
-                </table>
+                <div class="mb-2">
+                    <label for="title" class="form-label">Title</label>
+                    <input type="text" class="form-control" id="title" name="title" maxlength="80" required />
+                </div>
+                <div class="mb-2">
+                    <label for="disctxt" class="form-label">Description<div class="form-text">Markdown (<a href="http://commonmark.org" target="_blank" rel="noopener noreferrer external">CommonMark</a> format) is supported</div></label>
+                    <div class="markdown-editor" data-id="disctxt" data-rows="10" data-placeholder="Type in the discussion details then click the Create button"></div>
+                </div>
+
+                <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
+                <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
+                <input type="submit" class="btn btn-success" value="Create">
+                <input type="button" class="btn btn-secondary" value="Cancel" ng-click="cancelCreate()">
             </form>
         </div>
     </div>

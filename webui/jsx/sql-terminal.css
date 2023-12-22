@@ -4,6 +4,7 @@
 	flex-direction: column;
 	height: 600px;
 	padding: 8px;
+	font-size: 14px;
 
 	/* These are colours from the Solarized colour scheme */
 	border: 1px solid #eee8d5;
@@ -31,6 +32,5 @@
 
 .sql-terminal-input-prompt {
 	display: table-cell;
-	width: 1%;
 	font-family: "monospace";
 }

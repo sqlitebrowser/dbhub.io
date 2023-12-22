@@ -4,39 +4,19 @@
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div>
-    <div class="row" style="margin-bottom: 10px;">
-        <div class="col-md-2">&nbsp;</div>
-        <div class="col-md-8">
-            <h2 id="viewuser" style="margin-top: 10px;">
-                <div style="text-align: center;" data-cy="updates">Status updates</div>
-            </h2>
-        </div>
-        <div class="col-md-2">&nbsp;</div>
-    </div>
+<div class="container">
+    <h3 class="text-center"  data-cy="updates">Status updates</h3>
     [[ if .Updates ]]
-        <div ng-repeat="(dbname, entries) in updates" class="row">
-            <div class="col-md-2">&nbsp;</div>
-            <div class="col-md-8">
-                <table class="table table-striped table-responsive profileTable">
-                    <tr>
-                        <td style="background-color: #DCDCDC;"><a class="blackLink" href="/{{ dbname }}" style="font-weight: bold;" ng-bind="dbname"></a></td>
-                    </tr>
-                    <tr ng-repeat="row in entries">
-                        <td><a class="blackLink" href="{{ row.event_url }}" ng-bind="row.title"></a></td>
-                    </tr>
-                </table>
-            </div>
-            <div class="col-md-2">&nbsp;</div>
+        <div ng-repeat="(dbname, entries) in updates" class="card mb-2">
+            <div class="card-header"><a href="/{{ dbname }}" style="font-weight: bold;" ng-bind="dbname"></a></div>
+            <ul class="list-group list-group-flush">
+                <li ng-repeat="row in entries" class="list-group-item">
+                    <a href="{{ row.event_url }}" ng-bind="row.title"></a>
+                </li>
+            </ul>
         </div>
     [[ else ]]
-        <table class="table table-striped table-responsive profileTable">
-            <tr>
-                <td>
-                    <h4>No new status updates</h4>
-                </td>
-            </tr>
-        </table>
+        <h5 class="text-center">No new status updates</h5>
     [[ end ]]
 </div>
 [[ template "footer" . ]]

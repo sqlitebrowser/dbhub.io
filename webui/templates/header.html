@@ -1,18 +1,11 @@
 [[ define "header" ]]
-<div style="margin-left: 0.5%; margin-right: 0.5%; padding-left: 0.5%; padding-right: 0.5%;">
-    <div class="row" style="padding-top: 8px;">
-        <div id="logo" class="col-md-6">
-            <div class="pull-left">
-                <a href="/[[ .PageMeta.LoggedInUser ]]"><img src="/images/sqlitebrowser.svg" height="25"/>
-                    <span style="font-size: larger; vertical-align: bottom; color: black; padding-top: 3px;">DBHub.io</span>
-                </a>
-            </div>
-        </div>
-        <div id="auth" class="col-md-6">
-            <span class="pull-right">
-                <div id="authcontrol" />
-            </span>
-        </div>
+<nav class="navbar">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/[[ .PageMeta.LoggedInUser ]]">
+            <img src="/images/sqlitebrowser.svg" alt="Logo" height="25" />
+            DBHub.io
+        </a>
+        <div class="pull-right" id="authcontrol"></div>
     </div>
-</div>
+</nav>
 [[ end ]]

@@ -55,41 +55,38 @@ export default function TagCreate({commit}) {
 	}
 
 	return (<>
-		<h3 className="text-center">Create new tag or release<br /><small>on commit {commit.substring(0, 8)}</small></h3>
+		<h3 className="text-center">Create new tag or release</h3>
+		<h5 className="text-center"><small>on commit {commit.substring(0, 8)}</small></h5>
 		{statusMessage !== "" ? (
 			<div className="row">
-				<div className="col-md-12 text-center">
-					<div style={{paddingBottom: "1em"}}>
-						<h4 style={{color: statusMessageColour}}>{statusMessage}</h4>
-					</div>
+				<div className="col-md-12 text-center mb-2">
+					<h6 style={{color: statusMessageColour}}>{statusMessage}</h6>
 				</div>
 			</div>
 		) : null}
 		<form>
-			<div className="form-group">
-				<label htmlFor="typeselect" className="control-label">Tag or release?</label>
+			<div className="mb-2">
+				<label htmlFor="typeselect" className="form-label">Tag or release?</label>
 				<div>
-					<div className="btn-group" data-toggle="buttons">
-						<label className={"btn btn-default " + (type === "tag" ? "active" : null)} onClick={() => setType("tag")} data-cy="tagradio">
-							<input type="radio" name="typeselect" checked={type === "tag"} /> Tag
-						</label>
-						<label className={"btn btn-default " + (type === "release" ? "active" : null)} onClick={() => setType("release")} data-cy="relradio">
-							<input type="radio" name="typeselect" checked={type === "release"} /> Release
-						</label>
+					<div className="btn-group" role="group">
+						<input type="radio" className="btn-check" name="typeselect" autocomplete="off" checked={type === "tag"} />
+						<label className="btn btn-outline-secondary" htmlFor="typeselect" onClick={() => setType("tag")} data-cy="tagradio">Tag</label>
+						<input type="radio" className="btn-check" name="typeselect" autocomplete="off" checked={type === "release"} />
+						<label className="btn btn-outline-secondary" htmlFor="typeselect" onClick={() => setType("release")} data-cy="relradio">Release</label>
 					</div>
 					&nbsp;<span>This will be a new <b>{type}</b>.</span>
 				</div>
 			</div>
-			<div className="form-group">
-				<label htmlFor="tag">Name</label>
+			<div className="mb-2">
+				<label htmlFor="tag" className="form-label">Name</label>
 				<input type="text" className="form-control" id="tag" maxlength={80} data-cy="nameinput" value={name} onChange={e => setName(e.target.value)} required />
 			</div>
-			<div className="form-group">
-				<label htmlFor="tagdesc">Description</label>
+			<div className="mb-2">
+				<label htmlFor="tagdesc" className="form-label">Description</label>
 				<MarkdownEditor editorId="tagdesc" rows={10} placeholder="A description for this tag or release" />
 			</div>
 			<button type="button" className="btn btn-success" onClick={() => createTag()} data-cy="createbtn">Create</button>&nbsp;
-			<button type="button" className="btn btn-default" onClick={() => cancelCreate()} data-cy="cancelbtn">Cancel</button>
+			<button type="button" className="btn btn-secondary" onClick={() => cancelCreate()} data-cy="cancelbtn">Cancel</button>
 		</form>
 	</>);
 }

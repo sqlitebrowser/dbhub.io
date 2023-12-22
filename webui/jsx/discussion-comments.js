@@ -116,12 +116,12 @@ function DiscussionTopComment({setStatusMessage, setStatusMessageColour}) {
 	}
 
 	return (
-		<div className="panel panel-default">
-			<div className="panel-heading">
+		<div className="card text-bg-light">
+			<div className="card-header">
 				<h4>
-					<a className="blackLink" href={"/" + discussionData.creator}>{discussionData.avatar_url !== "" ? <img style={{border: "1px solid #8c8c8c"}} src={discussionData.avatar_url} height="30" width="30" /> : null}</a>&nbsp;
-					{editDiscussion ? <input className="form-control" id="disctitle" value={discTitle} onChange={(e) => setDiscTitle(e.target.value)} /> : <strong>{savedDiscTitle}<span className="text-muted"> #{discussionData.disc_id}</span></strong>}
-					{editDiscussion === false && (discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser) ? <span className="pull-right" style={{fontSize: "medium"}}><a className="blackLink" onClick={() => setEditDiscussion(true)}><i className="fa fa-pencil fa-fw"></i></a></span> : null}
+					<a href={"/" + discussionData.creator}>{discussionData.avatar_url !== "" ? <img src={discussionData.avatar_url} height="30" width="30" className="border border-secondary" /> : null}</a>&nbsp;
+					{editDiscussion ? <input className="form-control w-75 d-inline" id="disctitle" value={discTitle} onChange={(e) => setDiscTitle(e.target.value)} /> : <strong>{savedDiscTitle}<span className="text-muted"> #{discussionData.disc_id}</span></strong>}
+					{editDiscussion === false && (discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser) ? <span className="pull-right fs-6"><a onClick={() => setEditDiscussion(true)}><i className="fa fa-pencil fa-fw"></i></a></span> : null}
 				</h4>
 				{discussionData.open ?
 					<span className={"label label-success"}>
@@ -149,25 +149,25 @@ function DiscussionTopComment({setStatusMessage, setStatusMessageColour}) {
 					</span>
 				}
 			</div>
-			<div className="panel-body">
+			<div className="card-body">
 				{editDiscussion ? <>
 					<MarkdownEditor editorId="disctext" rows={10} initialValue={discBody} />
-					<input type="submit" className="btn btn-success" value="Save" style={{marginTop: "1em"}} onClick={() => updateDiscussion()} />&nbsp;
-					<input type="submit" className="btn btn-default" value="Cancel" style={{marginTop: "1em"}} onClick={() => setEditDiscussion(false)} />
+					<input type="submit" className="btn btn-success mt-2" value="Save" onClick={() => updateDiscussion()} />&nbsp;
+					<input type="submit" className="btn btn-secondary mt-2" value="Cancel" onClick={() => setEditDiscussion(false)} />
 				</> :
 					<span dangerouslySetInnerHTML={{__html: discBodyRendered}} />
 				}
 			</div>
 			{mrData !== null ? <>
-				<div className="panel-heading">
+				<div className="card-header">
 					<h4>Commit list</h4>
 					{discussionData.open ? <a href={"/diffs/" + discussionData.mr_details.source_owner + "/" + discussionData.mr_details.source_database_name + "?commit_a=" + mrData.commitList[mrData.commitList.length - 1].parent + "&commit_b=" + mrData.commitList[0].id}>View changes</a> : null}
 				</div>
 				<CommitList commits={mrData === null ? null : mrData.commitList} owner={discussionData.mr_details.source_owner} database={discussionData.mr_details.source_database_name} />
 				{discussionData.mr_details.state !== 1 && (discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser) ?
-					<div className="panel-body">
+					<div className="card-body">
 						{discussionData.open === true && meta.owner === authInfo.loggedInUser && mrData.destBranchNameOk === true && mrData.destBranchUsable === true ? <><input className="btn btn-success" value="Merge the request" onClick={() => mergeRequest()} />&nbsp;</> : null}
-						{discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser ? <input className="btn btn-default" value={discussionData.open ? "Close without merging" : "Reopen merge request"} onClick={() => closeRequest()} /> : null}
+						{discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser ? <input className="btn btn-secondary" value={discussionData.open ? "Close without merging" : "Reopen merge request"} onClick={() => closeRequest()} /> : null}
 					</div>
 				: null}
 			</> : null}
@@ -265,7 +265,7 @@ function DiscussionComment({commentData, setStatusMessage, setStatusMessageColou
 		return (
 			<div className="text-center">
 				<i className="fa fa-ban text-danger fa-2g"></i>&nbsp;
-				<a className="blackLink" href={"/" + commentData.commenter}>{commentData.commenter}</a>&nbsp;
+				<a href={"/" + commentData.commenter}>{commentData.commenter}</a>&nbsp;
 				<span className="text-info">{discussionData.mr_details === 1 ? "merged" : "closed"} this</span>&nbsp;
 				<span title={new Date(commentData.creation_date).toLocaleString()}>{getTimePeriod(commentData.creation_date, true)}</span>.
 			</div>
@@ -277,7 +277,7 @@ function DiscussionComment({commentData, setStatusMessage, setStatusMessageColou
 		return (
 			<div className="text-center">
 				<i className="fa fa-recycle text-success fa-2g"></i>&nbsp;
-				<a className="blackLink" href={"/" + commentData.commenter}>{commentData.commenter}</a>&nbsp;
+				<a href={"/" + commentData.commenter}>{commentData.commenter}</a>&nbsp;
 				<span className="text-info">reopened this</span>&nbsp;
 				<span title={new Date(commentData.creation_date).toLocaleString()}>{getTimePeriod(commentData.creation_date, true)}</span>.
 			</div>
@@ -286,24 +286,24 @@ function DiscussionComment({commentData, setStatusMessage, setStatusMessageColou
 
 	// Regular comment
 	return (
-		<div className="panel panel-default">
-			<div className="panel-heading">
-				<a className="blackLink" href={"/" + commentData.commenter}>{commentData.avatar_url !== "" ? <img style={{border: "1px solid #8c8c8c"}} src={commentData.avatar_url} height="30" width="30" /> : null}</a>&nbsp;
-				<a className="blackLink" href={"/" + commentData.commenter}>{commentData.commenter}</a>&nbsp;
-				<a name={"c" + commentData.com_id} href={"#c" + commentData.com_id} className="blackLink">commented</a>&nbsp;
+		<div className="card text-bg-light mt-2">
+			<div className="card-header">
+				<a href={"/" + commentData.commenter}>{commentData.avatar_url !== "" ? <img src={commentData.avatar_url} height="30" width="30" className="border border-secondary" /> : null}</a>&nbsp;
+				<a href={"/" + commentData.commenter}>{commentData.commenter}</a>&nbsp;
+				<a name={"c" + commentData.com_id} href={"#c" + commentData.com_id}>commented</a>&nbsp;
 				<span title={new Date(commentData.creation_date).toLocaleString()} className="text-info">{getTimePeriod(commentData.creation_date, true)}</span>
 				{commentData.commenter === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser ? (
-					<span className="pull-right" style={{fontSize: "medium"}}>
-						<a className="blackLink" onClick={() => setEditComment(!editComment)}><i className="fa fa-pencil fa-fw"></i></a>
-						<a className="blackLink" onClick={() => deleteComment()}><i className="fa fa-trash-o fa-fw"></i></a>
+					<span className="pull-right fs-6">
+						<a onClick={() => setEditComment(!editComment)}><i className="fa fa-pencil fa-fw"></i></a>
+						<a onClick={() => deleteComment()}><i className="fa fa-trash-o fa-fw"></i></a>
 					</span>
 				) : null}
 			</div>
-			<div className="panel-body">
+			<div className="card-body">
 				{editComment ? <>
 					<MarkdownEditor editorId={"com" + commentData.com_id} rows={10} initialValue={commentBody} />
-					<input type="submit" className="btn btn-success" value="Save" style={{marginTop: "1em"}} onClick={() => updateComment()} />&nbsp;
-					<input type="submit" className="btn btn-default" value="Cancel" style={{marginTop: "1em"}} onClick={() => setEditComment(false)} />
+					<input type="submit" className="btn btn-success mt-2" value="Save" onClick={() => updateComment()} />&nbsp;
+					<input type="submit" className="btn btn-secondary mt-2" value="Cancel" onClick={() => setEditComment(false)} />
 				</> :
 					<span dangerouslySetInnerHTML={{__html: commentBodyRendered}} />
 				}
@@ -391,41 +391,37 @@ export default function DiscussionComments() {
 
 	return (<>
 		<div className="row">
-			<div className="col-md-12 text-center" style={{marginBottom: "1em"}}>
+			<div className="col-md-12 text-center mb-2">
 				<button className="btn btn-success" onClick={() => createDiscussion()}>{mrData === null ? "Start a new discussion" : "New Merge Request"}</button>
 			</div>
 		</div>
 		{statusMessage !== "" ? (
 			<div className="row">
-				<div className="col-md-12 text-center">
-					<div style={{paddingBottom: "1em"}}>
-						<h4 style={{color: statusMessageColour}}>{statusMessage}</h4>
-					</div>
+				<div className="col-md-12 text-center mb-2">
+					<h6 style={{color: statusMessageColour}}>{statusMessage}</h6>
 				</div>
 			</div>
 		) : null}
 		{mrData !== null && mrData.licenceWarning !== "" ? (
 			<div className="row">
-				<div className="col-md-12 text-center">
-					<div style={{paddingBottom: "8px"}}>
-						<h4 className="text-warning">{mrData.licenceWarning}</h4>
-					</div>
+				<div className="col-md-12 text-center mb-2">
+					<h6 className="text-warning">{mrData.licenceWarning}</h6>
 				</div>
 			</div>
 		) : null}
 		<DiscussionTopComment setStatusMessage={setStatusMessage} setStatusMessageColour={setStatusMessageColour} />
 		{comments}
 		{authInfo.loggedInUser ? (
-			<div className="panel panel-default">
-				<div className="panel-body">
+			<div className="card mt-2">
+				<div className="card-body">
 					<MarkdownEditor editorId={"comtext"} rows={10} placeholder="Add your comment here..." onChange={v => setAddCommentText(v)} />
-					<input type="submit" className="btn btn-success" value="Add comment" style={{marginTop: "1em"}} onClick={() => addComment(false)} />&nbsp;
-					{discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser ? <input type="submit" className="btn btn-default" value={closeButtonText} style={{marginTop: "1em"}} onClick={() => addComment(true)} /> : null}
+					<input type="submit" className="btn btn-success mt-2" value="Add comment" onClick={() => addComment(false)} />&nbsp;
+					{discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser ? <input type="submit" className="btn btn-secondary mt-2" value={closeButtonText} onClick={() => addComment(true)} /> : null}
 				</div>
 			</div>
 		) : (
-			<div className="panel panel-default text-center">
-				<div className="panel-body">
+			<div className="card text-center mt-2">
+				<div className="card-body">
 					<a href="#/" onClick={() => signIn()}>Sign in</a> to join the discussion
 				</div>
 			</div>

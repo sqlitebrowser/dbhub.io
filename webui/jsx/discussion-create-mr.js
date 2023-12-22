@@ -172,51 +172,51 @@ export default function DiscussionCreateMr() {
 		<h3 className="text-center">Create a Merge Request</h3>
 		{statusMessage !== "" ? (
 			<div className="row">
-				<div className="col-md-12 text-center">
-					<div style={{paddingBottom: "1em"}}>
-						<h4 style={{color: statusMessageColour}}>{statusMessage}</h4>
-					</div>
+				<div className="col-md-12 text-center mb-2">
+					<h6 style={{color: statusMessageColour}}>{statusMessage}</h6>
 				</div>
 			</div>
 		) : null}
 		<form>
-			<div className="form-group">
-				<label htmlFor="title">Title</label>
+			<div className="mb-2">
+				<label className="form-label" htmlFor="title">Title</label>
 				<input type="text" className="form-control" id="title" placeholder="Please fill in a title for the new merge request" maxlength={80} value={title} onChange={e => setTitle(e.target.value)} required />
 			</div>
-			<div className="form-group">
-				<label htmlFor="sourcedb">Source database</label>
+			<div className="mb-2">
+				<label className="form-label" htmlFor="sourcedb">Source database</label>
 				<Select name="sourcedb" required={true} labelField="name" valueField="name" onChange={(values) => changeDb("source", values[0])} options={dbListData} values={[{name: sourceDbOwner + "/" + sourceDbName}]} />
-				<p className="help-block">Where the new data is coming from</p>
+				<div className="form-text">Where the new data is coming from</div>
 			</div>
-			<div className="form-group">
-				<label htmlFor="sourcebranch">Source branch</label>
+			<div className="mb-2">
+				<label className="form-label" htmlFor="sourcebranch">Source branch</label>
 				<Select name="sourcebranch" required={true} labelField="name" valueField="name" onChange={(values) => setSourceBranch(values[0].name)} options={sourceBranchListData} values={[{name: sourceBranch}]} />
-				<p className="help-block">The branch in the source database to use</p>
+				<div className="form-text">The branch in the source database to use</div>
 			</div>
-			<div className="form-group">
-				<label htmlFor="destdb">Destination database</label>
+			<div className="mb-2">
+				<label className="form-label" htmlFor="destdb">Destination database</label>
 				<Select name="destdb" required={true} labelField="name" valueField="name" onChange={(values) => changeDb("dest", values[0])} options={dbListData} values={[{name: destDbOwner + "/" + destDbName}]} />
-				<p className="help-block">Where you'd like the data merged into</p>
+				<div className="form-text">Where you'd like the data merged into</div>
 			</div>
-			<div className="form-group">
-				<label htmlFor="destbranch">Destination branch</label>
+			<div className="mb-2">
+				<label className="form-label" htmlFor="destbranch">Destination branch</label>
 				<Select name="destbranch" required={true} labelField="name" valueField="name" onChange={(values) => setDestBranch(values[0].name)} options={destBranchListData} values={[{name: destBranch}]} />
-				<p className="help-block">The target branch in the destination database</p>
+				<div className="form-text">The target branch in the destination database</div>
 			</div>
-			<div className="form-group">
-				<label htmlFor="desc">Description</label>
+			<div className="mb-2">
+				<label className="form-label" htmlFor="desc">Description</label>
 				<MarkdownEditor editorId="desc" rows={10} placeholder="Please add a summary for this merge request, describing what the new or changed data is for" />
-				<p className="help-block">The purpose of this merge request</p>
+				<div className="form-text">The purpose of this merge request</div>
 			</div>
 			<button type="button" className="btn btn-success" onClick={() => createMR()}>Create</button>&nbsp;
-			<button type="button" className="btn btn-default" onClick={() => cancelCreate()}>Cancel</button>
+			<button type="button" className="btn btn-secondary" onClick={() => cancelCreate()}>Cancel</button>
 		</form>
-		<div className="panel panel-default" style={{marginTop: "1em"}}>
-			<div className="panel-heading">
+		<div className="card text-bg-light mt-3">
+			<div className="card-header">
 				Changes between the source and destination
 			</div>
-			<CommitList commits={commitList} owner={sourceDbOwner} database={sourceDbName} />
+			<div className="card-body">
+				<CommitList commits={commitList} owner={sourceDbOwner} database={sourceDbName} />
+			</div>
 		</div>
 	</>);
 }

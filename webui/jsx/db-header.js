@@ -37,8 +37,8 @@ function ToggleButton({icon, textSet, textUnset, redirectUrl, updateUrl, pageUrl
 
 	return (
 		<div className="btn-group">
-			<button type="button" className="btn btn-default" onClick={toggleState} data-cy={cyToggle} disabled={disabled}><i className={"fa " + icon}></i> {state ? textSet : textUnset}</button>
-			<button type="button" className="btn btn-default" onClick={gotoPage} data-cy={cyPage}>{number}</button>
+			<button type="button" className="btn btn-outline-secondary text-reset" onClick={toggleState} data-cy={cyToggle} disabled={disabled}><i className={"fa " + icon}></i> {state ? textSet : textUnset}</button>
+			<button type="button" className="btn btn-outline-secondary text-reset" onClick={gotoPage} data-cy={cyPage}>{number}</button>
 		</div>
 	);
 }
@@ -66,10 +66,10 @@ export default function DbHeader() {
 
 		if (meta.forkOwner) {
 			forkedFrom = (
-				<div style={{fontSize: "small"}}>
+				<p className="fs-6 mb-0">
 					forked from <a href={"/" + meta.forkOwner}>{meta.forkOwner}</a> /&nbsp;
 					{meta.forkDeleted ? "deleted database" : <a href={"/" + meta.forkOwner + "/" + meta.forkDatabase}>{meta.forkDatabase}</a>}
-				</div>
+				</p>
 			);
 		}
 
@@ -78,7 +78,7 @@ export default function DbHeader() {
 
 	let settings = null;
 	if (authInfo.loggedIn && (meta.owner === authInfo.loggedInUser)) {
-		settings = <label id="settings" className={meta.pageSection === "db_settings" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/settings/" + meta.owner + "/" + meta.database} className="blackLink" title="Settings" data-cy="settingslink"><i className="fa fa-cog"></i> Settings</a></label>;
+		settings = <a id="settings" className={meta.pageSection === "db_settings" ? "nav-link active" : "nav-link"} href={"/settings/" + meta.owner + "/" + meta.database} title="Settings" data-cy="settingslink"><i className="fa fa-cog"></i> Settings</a>;
 	}
 
 	let publicString = "Private";
@@ -88,17 +88,17 @@ export default function DbHeader() {
 
 	let visibility = null;
 	if (meta.owner === authInfo.loggedInUser) {
-		visibility = <><b>Visibility:</b> <a className="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="vis">{publicString}</a></>;
+		visibility = <><b>Visibility:</b> <a href={"/settings/" + meta.owner + "/" + meta.database} data-cy="vis">{publicString}</a></>;
 	} else {
 		visibility = <><b>Visibility:</b> <span data-cy="vis">{publicString}</span></>;
 	}
 
 	let licence = null;
 	if (meta.owner === authInfo.loggedInUser) {
-		licence = <><b>Licence:</b> <a className="blackLink" href={"/settings/" + meta.owner + "/" + meta.database} data-cy="lic">{ meta.licence }</a></>;
+		licence = <><b>Licence:</b> <a href={"/settings/" + meta.owner + "/" + meta.database} data-cy="lic">{ meta.licence }</a></>;
 	} else {
 		if (meta.licenceUrl !== "") {
-			licence = <><b>Licence:</b> <a className="blackLink" href={ meta.licenceURL } data-cy="licurl">{ meta.licence }</a></>;
+			licence = <><b>Licence:</b> <a href={ meta.licenceURL } data-cy="licurl" rel="noopener noreferrer external">{ meta.licence }</a></>;
 		} else {
 			licence = <><b>Licence:</b> <span data-cy="licurl">{ meta.licence }</span></>;
 		}
@@ -108,11 +108,11 @@ export default function DbHeader() {
 	<>
 		<div className="row">
 			<div className="col-md-12">
-				<h2 id="viewdb" style={{marginTop: "10px"}}>
+				<h3 id="viewdb">
 					<div className="pull-left">
 						<div>
-							<a className="blackLink" href={"/" + meta.owner} data-cy="headerownerlnk">{meta.owner}</a> /&nbsp;
-							<a className="blackLink" href={"/" + meta.owner + "/" + meta.database} data-cy="headerdblnk">{meta.database}</a>
+							<a href={"/" + meta.owner} data-cy="headerownerlnk">{meta.owner}</a> /&nbsp;
+							<a href={"/" + meta.owner + "/" + meta.database} data-cy="headerdblnk">{meta.database}</a>
 						</div>
 						{forkedFrom}
 					</div>
@@ -143,32 +143,19 @@ export default function DbHeader() {
 						&nbsp;
 						{forkButton}
 					</div>
-				</h2>
+				</h3>
 			</div>
 		</div>
-		<div className="row" style={{paddingBottom: "5px", paddingTop: "10px"}}>
+		<div className="row mb-1 mt-2">
 		    <div className="col-md-6">
-			<label id="viewdata" className={meta.pageSection === "db_data" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/" + meta.owner + "/" + meta.database} className="blackLink" title="Data" data-cy="datalink"><i className="fa fa-database"></i> Data</a></label>
-
-			&nbsp; &nbsp; &nbsp;
-
-			<label id="viewvis" className={meta.pageSection === "db_vis" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/vis/" + meta.owner + "/" + meta.database} className="blackLink" title="Visualise" data-cy="vislink"><i className="fa fa-bar-chart"></i> Visualise</a></label>
-
-			&nbsp; &nbsp; &nbsp;
-
-			{meta.isLive && (meta.owner === authInfo.loggedInUser) ? <label id="viewexec" className={meta.pageSection === "db_exec" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/exec/" + meta.owner + "/" + meta.database} className="blackLink" title="Execute SQL" data-cy="execlink"><i className="fa fa-wrench"></i> Execute SQL</a></label> : null }
-
-			{meta.isLive && (meta.owner === authInfo.loggedInUser) ? <span>&nbsp; &nbsp; &nbsp;</span> : null }
-
-			<label id="viewdiscuss" className={meta.pageSection === "db_disc" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/discuss/" + meta.owner + "/" + meta.database} className="blackLink" title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions:</a> {meta.numDiscussions}</label>
-
-			<span>&nbsp; &nbsp; &nbsp;</span>
-
-			{meta.isLive ? null : <label id="viewmrs" className={meta.pageSection === "db_merge" ? "dbMenuLinkActive" : "dbMenuLink"}><a href={"/merge/" + meta.owner + "/" + meta.database} className="blackLink" title="Merge Requests" data-cy="mrlink"><i className="fa fa-clone"></i> Merge Requests:</a> {meta.numMRs}</label>}
-
-			{meta.isLive ? null : <span>&nbsp; &nbsp; &nbsp;</span> }
-
-			{settings}
+			<nav className="nav nav-tabs">
+				<a id="viewdata" className={meta.pageSection === "db_data" ? "nav-link active" : "nav-link"} href={"/" + meta.owner + "/" + meta.database} title="Data" data-cy="datalink"><i className="fa fa-database"></i> Data</a>
+				<a id="viewvis" className={meta.pageSection === "db_vis" ? "nav-link active" : "nav-link"} href={"/vis/" + meta.owner + "/" + meta.database} title="Visualise" data-cy="vislink"><i className="fa fa-bar-chart"></i> Visualise</a>
+				{meta.isLive && (meta.owner === authInfo.loggedInUser) ? <a id="viewexec" className={meta.pageSection === "db_exec" ? "nav-link active" : "nav-link"} href={"/exec/" + meta.owner + "/" + meta.database} title="Execute SQL" data-cy="execlink"><i className="fa fa-wrench"></i> Execute SQL</a> : null }
+				<a id="viewdiscuss" className={meta.pageSection === "db_disc" ? "nav-link active" : "nav-link"} href={"/discuss/" + meta.owner + "/" + meta.database} title="Discussions" data-cy="discusslink"><i className="fa fa-commenting"></i> Discussions: {meta.numDiscussions}</a>
+				{meta.isLive ? null : <a id="viewmrs" className={meta.pageSection === "db_merge" ? "nav-link active" : "nav-link"} href={"/merge/" + meta.owner + "/" + meta.database} title="Merge Requests" data-cy="mrlink"><i className="fa fa-clone"></i> Merge Requests: {meta.numMRs}</a>}
+				{settings}
+			</nav>
 		    </div>
 		    <div className="col-md-6">
 			<div className="pull-right">

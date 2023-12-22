@@ -8,9 +8,9 @@ export default function DatabaseWatchers({stars}) {
 
 	if (data === null) {
 		if (stars) {
-			return <h3 style={{textAlign: "center"}}>No-one has starred '{meta.owner + "/" + meta.database}' yet</h3>;
+			return <h4 className="text-center">No-one has starred '{meta.owner + "/" + meta.database}' yet</h4>;
 		} else {
-			return <h3 style={{textAlign: "center"}}>No-one is watching '{meta.owner + "/" + meta.database}' yet</h3>;
+			return <h4 className="text-center">No-one is watching '{meta.owner + "/" + meta.database}' yet</h4>;
 		}
 	}
 
@@ -18,14 +18,16 @@ export default function DatabaseWatchers({stars}) {
 	data.forEach(function(v) {
 		rows.push(
 			<li className="list-group-item">
-				<h4>• <a className="blackLink" href={"/" + v.Owner}>{v.display_name}</a></h4>
-				{stars ? "Starred" : "Started watching"} <span title={new Date(v.DateEntry).toLocaleString()}>{getTimePeriod(v.DateEntry, true)}</span>
+				<div className="d-flex w-100 justify-content-between">
+					<h5><a href={"/" + v.Owner}>{v.display_name}</a></h5>
+					<small>{stars ? "Starred" : "Started watching"} <span title={new Date(v.DateEntry).toLocaleString()}>{getTimePeriod(v.DateEntry, true)}</span></small>
+				</div>
 			</li>
 		);
 	});
 
 	return (
-		<ul className="list-group">
+		<ul className="list-group w-50">
 			{rows}
 		</ul>
 	);
