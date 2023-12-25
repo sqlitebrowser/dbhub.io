@@ -16,7 +16,7 @@
     "react-modal-image": "^2.6.0",
     "react-plotly.js": "^2.6.0",
     "react-simple-code-editor": "^0.13.1",
-    "react-tabs": "^6.0.0",
+    "react-tabs": "^6.0.2",
     "sql-formatter": "^12.2.0",
     "yarn": "^1.22.19"
   },
