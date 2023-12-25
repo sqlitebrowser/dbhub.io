@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 
 import ModalImage from "react-modal-image";
 
+import AboutPage from "./about-page";
 import Auth from "./auth";
 import BranchesTable from "./branches";
 import DatabaseCommits from "./database-commits";
@@ -26,6 +27,14 @@ import { Visualisation, VisualisationEditor } from "./visualisation-editor";
 import "../jsx/bootstrap.scss"
 import * as bootstrap from "bootstrap"
 
+
+{
+	const rootNode = document.getElementById("about-page");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<AboutPage />);
+	}
+}
 
 {
 	const rootNode = document.getElementById("db-header-root");

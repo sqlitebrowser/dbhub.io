@@ -52,6 +52,7 @@ node_modules
 # Generated JavaScript code
 webui/js/dbhub.js*
 webui/js/app.js
+webui/js/about-page.js
 webui/js/auth.js
 webui/js/branches.js
 webui/js/commit-list.js
