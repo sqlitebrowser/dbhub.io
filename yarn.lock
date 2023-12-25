@@ -1407,12 +1407,7 @@
   resolved "https://registry.npmjs.org/@types/json-schema/-/json-schema-7.0.11.tgz"
   integrity sha512-wOuvG1SN4Us4rez+tylwwwCV1psiNVOkJeM3AUWUNWg/jDQY2+HE/444y5gc+jBmRqASOm2Oeh5c1axHobwRKQ==
 
-"@types/node@*":
-  version "14.18.36"
-  resolved "https://registry.npmjs.org/@types/node/-/node-14.18.36.tgz"
-  integrity sha512-FXKWbsJ6a1hIrRxv+FoukuHnGTgEzKYGi7kilfMae96AL9UNkPFNWJEEYWzdRI9ooIkbr4AKldyuSTLql06vLQ==
-
-"@types/node@^18.17.5":
+"@types/node@*", "@types/node@^18.17.5":
   version "18.18.4"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.18.4.tgz#519fef47a13cf869be290c20fc6ae9b7fe887aa7"
   integrity sha512-t3rNFBgJRugIhackit2mVcLfF6IRc0JE4oeizPQL8Zrm8n2WY/0wOdpOPhdtG0V9Q2TlW/axbF1MJ6z+Yj/kKQ==
@@ -2232,10 +2227,10 @@ csstype@^3.0.2:
   resolved "https://registry.yarnpkg.com/csstype/-/csstype-3.1.2.tgz#1d4bf9d572f11c14031f0436e1c10bc1f571f50b"
   integrity sha512-I7K1Uu0MBPzaFKg4nI5Q7Vs2t+3gWWW648spaF+Rg7pI9ds18Ugn+lvg4SHczUdKlHI5LWBXyqfS8+DufyBsgQ==
 
-cypress@13.3.3:
-  version "13.3.3"
-  resolved "https://registry.yarnpkg.com/cypress/-/cypress-13.3.3.tgz#353e69b6543aee8aee4e91fa39bcecbab26ab564"
-  integrity sha512-mbdkojHhKB1xbrj7CrKWHi22uFx9P9vQFiR0sYDZZoK99OMp9/ZYN55TO5pjbXmV7xvCJ4JwBoADXjOJK8aCJw==
+cypress@13.6.1:
+  version "13.6.1"
+  resolved "https://registry.yarnpkg.com/cypress/-/cypress-13.6.1.tgz#c5f714f08551666ed3ac1fa95718eabb23a416df"
+  integrity sha512-k1Wl5PQcA/4UoTffYKKaxA0FJKwg8yenYNYRzLt11CUR0Kln+h7Udne6mdU1cUIdXBDTVZWtmiUjzqGs7/pEpw==
   dependencies:
     "@cypress/request" "^3.0.0"
     "@cypress/xvfb" "^1.2.4"
