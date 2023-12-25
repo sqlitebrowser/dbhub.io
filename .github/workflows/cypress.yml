@@ -23,7 +23,7 @@ jobs:
       with:
         node-version: 20
     - name: Cypress run
-      uses: cypress-io/github-action@v5
+      uses: cypress-io/github-action@v6
       with:
         wait-on: 'https://localhost:9443'
         wait-on-timeout: 180
