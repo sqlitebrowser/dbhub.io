@@ -16,9 +16,9 @@
     "react-modal-image": "^2.6.0",
     "react-plotly.js": "^2.6.0",
     "react-simple-code-editor": "^0.13.1",
-    "react-tabs": "^6.0.0",
+    "react-tabs": "^6.0.2",
     "sql-formatter": "^12.2.0",
-    "yarn": "^1.22.19"
+    "yarn": "^1.22.21"
   },
   "name": "dbhub.io",
   "version": "0.5.0",
@@ -60,14 +60,14 @@
   "license": "AGPL-3.0-or-later",
   "private": false,
   "devDependencies": {
-    "@babel/cli": "^7.20.7",
+    "@babel/cli": "^7.23.4",
     "autoprefixer": "^10.4.16",
     "css-loader": "^6.8.1",
     "postcss-loader": "^7.3.3",
     "sass": "^1.69.5",
     "sass-loader": "^13.3.2",
     "style-loader": "^3.3.3",
-    "webpack": "^5.76.0",
+    "webpack": "^5.89.0",
     "webpack-cli": "^5.0.1"
   }
 }
