@@ -4,10 +4,8 @@
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div class="container-fluid">
-    <div id="db-header-root"></div>
-    <div id="visualisation-editor"></div>
-</div>
+<div id="db-header-root"></div>
+<div class="container-fluid" id="visualisation-editor"></div>
 [[ template "script_db_header" . ]]
 <script>
     const branchData = [[ .Branches ]];

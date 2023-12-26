@@ -4,10 +4,8 @@
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div class="container-fluid">
-    <div id="db-header-root"></div>
-    <div id="discussion-comments"></div>
-</div>
+<div id="db-header-root"></div>
+<div class="container" id="discussion-comments"></div>
 [[ template "script_db_header" . ]]
 <script>
     const discussionData = [[ .DiscussionList ]][0];

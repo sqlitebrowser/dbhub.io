@@ -27,7 +27,7 @@ export default function DatabaseWatchers({stars}) {
 	});
 
 	return (
-		<ul className="list-group w-50">
+		<ul className="list-group">
 			{rows}
 		</ul>
 	);

@@ -105,7 +105,7 @@ export default function DbHeader() {
 	}
 
 	return (
-	<>
+	<div className="container-fluid">
 		<div className="row">
 			<div className="col-md-12">
 				<h3 id="viewdb">
@@ -166,6 +166,5 @@ export default function DbHeader() {
 			</div>
 		    </div>
 		</div>
-		</>
-	)
+	</div>);
 }

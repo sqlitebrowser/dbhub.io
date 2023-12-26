@@ -4,12 +4,10 @@
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div class="container-fluid">
-    [[ if and (ne .DB.Info.Owner "") (ne .DB.Info.Database "") ]]
-        <div id="db-header-root"></div>
-    [[ end ]]
-    <div id="upload-form" data-branch="[[ .SelectedBranch ]]"></div>
-</div>
+[[ if and (ne .DB.Info.Owner "") (ne .DB.Info.Database "") ]]
+    <div id="db-header-root"></div>
+[[ end ]]
+<div class="container" id="upload-form" data-branch="[[ .SelectedBranch ]]"></div>
 [[ template "script_db_header" . ]]
 <script>
     const uploadFormData = {
