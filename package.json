@@ -1,10 +1,7 @@
 {
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "babel-preset-react": "^6.24.1",
-    "babel-preset-react-app": "^10.0.1",
     "bootstrap": "5.2.3",
-    "cypress": "13.3.3",
     "plotly.js-basic-dist": "^2.22.0",
     "plotly.js-dist": "^2.22.0",
     "prismjs": "^1.29.0",
@@ -17,8 +14,7 @@
     "react-plotly.js": "^2.6.0",
     "react-simple-code-editor": "^0.13.1",
     "react-tabs": "^6.0.2",
-    "sql-formatter": "^12.2.0",
-    "yarn": "^1.22.21"
+    "sql-formatter": "^12.2.0"
   },
   "name": "dbhub.io",
   "version": "0.5.0",
@@ -62,12 +58,16 @@
   "devDependencies": {
     "@babel/cli": "^7.23.4",
     "autoprefixer": "^10.4.16",
+    "babel-preset-react": "^6.24.1",
+    "babel-preset-react-app": "^10.0.1",
     "css-loader": "^6.8.1",
+    "cypress": "13.3.3",
     "postcss-loader": "^7.3.3",
     "sass": "^1.69.5",
     "sass-loader": "^13.3.2",
     "style-loader": "^3.3.3",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.0.1"
+    "webpack-cli": "^5.0.1",
+    "yarn": "^1.22.21"
   }
 }
