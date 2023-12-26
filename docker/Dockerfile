@@ -21,11 +21,6 @@ RUN addgroup -S rabbitmq && \
     adduser -S -D -h /var/lib/rabbitmq -s /sbin/nologin -g "Linux User,,," -G rabbitmq rabbitmq && \
     chown -Rh rabbitmq: /opt/rabbitmq /var/log/rabbitmq
 
-# Use a fast Australian mirror for the Alpine package repositories
-# Without doing this, building the image can take 2+ hours. :(
-RUN echo "https://mirror.aarnet.edu.au/pub/alpine/v3.19/main" > /etc/apk/repositories && \
-    echo "https://mirror.aarnet.edu.au/pub/alpine/v3.19/community" >> /etc/apk/repositories
-
 # Install Git, Go, Memcached, Minio, and PostgreSQL
 RUN apk update && \
     apk upgrade && \
