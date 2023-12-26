@@ -29,7 +29,7 @@ require (
 	github.com/smtp2go-oss/smtp2go-go v1.0.2
 	github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47
 	golang.org/x/crypto v0.17.0
-	golang.org/x/oauth2 v0.14.0
+	golang.org/x/oauth2 v0.15.0
 )
 
 require (
@@ -67,7 +67,7 @@ require (
 	github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e // indirect
 	github.com/sqlitebrowser/blackfriday v9.0.0+incompatible // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	golang.org/x/net v0.18.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
