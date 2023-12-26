@@ -642,6 +642,24 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 //	* "sql" is the SQL query to execute, base64 encoded
 //	NOTE that the above example (base64) encoded sql is: "UPDATE table1 SET Name = 'Testing 1' WHERE id = 1"
 func executeHandler(w http.ResponseWriter, r *http.Request) {
+	// Note - This code is useful for very specific debugging of incoming POST data, so there's no need to leave it uncommented at all times
+	//if false {
+	//	// Duplicate the request body in such a way that the existing functions don't need changing
+	//	postData, err := io.ReadAll(r.Body)
+	//	r.Body = io.NopCloser(bytes.NewBuffer(postData))
+	//
+	//	// Write the post data into a file
+	//	tmpFileName := "/tmp/postdata.log"
+	//	tmpFile, err := os.OpenFile(tmpFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	//	if err != nil {
+	//		log.Printf("Couldn't open temp file '%s' for writing POST data: %v", tmpFileName, err)
+	//	} else {
+	//		fmt.Fprintf(tmpFile, "URL: '%s'\n", r.URL.Path)
+	//		fmt.Fprintf(tmpFile, "POST DATA: '%s'\n\n", postData)
+	//		defer tmpFile.Close()
+	//	}
+	//}
+
 	loggedInUser, err := checkAuth(w, r)
 	if err != nil {
 		jsonErr(w, err.Error(), http.StatusUnauthorized)
