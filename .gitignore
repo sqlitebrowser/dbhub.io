@@ -57,6 +57,7 @@ webui/js/auth.js
 webui/js/branches.js
 webui/js/commit-list.js
 webui/js/database-commits.js
+webui/js/database-contributors.js
 webui/js/database-settings.js
 webui/js/database-tags.js
 webui/js/database-view.js

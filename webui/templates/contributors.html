@@ -1,51 +1,18 @@
 [[ define "contributorsPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="contributorsView">
+<html>
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
 <div class="container-fluid">
     <div id="db-header-root"></div>
-    <div class="row">
-        <div class="col-md-12">
-            <div class="border border-secondary rounded">
-                <table class="table table-striped table-responsive m-0">
-                    <thead>
-                        <tr>
-                            <th>Contributor</th><th># of Commits</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr ng-repeat="row in Contributors">
-                            <td>
-                                <div style="padding-top: 4px;">
-                                    <img ng-if="row.avatar_url != ''" ng-attr-src="{{ decodeAmp(row.avatar_url) }}" height="30" width="30" style="border: 1px solid #8c8c8c;"/>
-                                    <a href="/{{ row.author_user_name }}" style="vertical-align: middle;">{{ row.author_name }}</a>
-                                </div>
-                            </td>
-                            <td>
-                                <div style="padding-top: 8px;" ng-bind="row.num_commits"></div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    <div id="database-contributors"></div>
 </div>
 [[ template "script_db_header" . ]]
-[[ template "footer" . ]]
 <script>
-    let app = angular.module('DBHub', ['ngSanitize']);
-    app.controller('contributorsView', function($scope) {
-        $scope.Contributors = [[ .Contributors ]];
-
-        // Change \u0026 to &
-        $scope.decodeAmp = function(str) {
-            return decodeURIComponent(str);
-        };
-    });
+    const contributorData = [[ .Contributors ]];
 </script>
+[[ template "footer" . ]]
 </body>
 </html>
 [[ end ]]
