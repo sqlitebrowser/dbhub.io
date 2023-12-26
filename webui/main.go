@@ -650,20 +650,23 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	// Ensure we have a valid logged in user
 	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
 		return
 	}
 
 	// Extract and validate the form variables
 	dbOwner, _, dbName, err := com.GetUFD(r, false)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing or incorrect data supplied")
 		return
 	}
 
@@ -671,7 +674,8 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	tl := r.PostFormValue("title")
 	err = com.ValidateDiscussionTitle(tl)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Invalid characters in the new discussions' title")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid characters in the new discussion's title")
 		return
 	}
 	discTitle := tl
@@ -679,12 +683,14 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate the discussions' text
 	txt := r.PostFormValue("disctxt")
 	if txt == "" {
-		errorPage(w, r, http.StatusBadRequest, "Discussion body can't be empty!")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Discussion body can't be empty")
 		return
 	}
 	err = com.Validate.Var(txt, "markdownsource")
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Invalid characters in the new discussions' main text field")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid characters in the new discussion's main text field")
 		return
 	}
 	discText := txt
@@ -692,30 +698,36 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName))
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName))
 		return
 	}
 
 	// Add the discussion detail to PostgreSQL
-	id, err := com.StoreDiscussion(dbOwner, dbName, loggedInUser, discTitle, discText, com.DISCUSSION,
+	var x struct {
+		ID int `json:"discuss_id"`
+	}
+	x.ID, err = com.StoreDiscussion(dbOwner, dbName, loggedInUser, discTitle, discText, com.DISCUSSION,
 		com.MergeRequestEntry{})
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	// Generate an event about the new discussion
 	details := com.EventDetails{
 		DBName:   dbName,
-		DiscID:   id,
+		DiscID:   x.ID,
 		Owner:    dbOwner,
 		Title:    discTitle,
 		Type:     com.EVENT_NEW_DISCUSSION,
-		URL:      fmt.Sprintf("/discuss/%s/%s?id=%d", url.PathEscape(dbOwner), url.PathEscape(dbName), id),
+		URL:      fmt.Sprintf("/discuss/%s/%s?id=%d", url.PathEscape(dbOwner), url.PathEscape(dbName), x.ID),
 		UserName: loggedInUser,
 	}
 	err = com.NewEvent(details)
@@ -732,8 +744,15 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Bounce to the discussions page
-	http.Redirect(w, r, fmt.Sprintf("/discuss/%s/%s?id=%d", dbOwner, dbName, id), http.StatusSeeOther)
+	// Indicate success to the caller, and return the ID # of the new discussion
+	y, err := json.MarshalIndent(x, "", " ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, string(y))
 }
 
 // Receives incoming requests from the merge request creation page, creating them if the info is correct

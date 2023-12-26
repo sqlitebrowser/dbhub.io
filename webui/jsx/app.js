@@ -14,6 +14,7 @@ import DatabaseView from "./database-view";
 import DatabaseWatchers from "./database-watchers";
 import DbHeader from "./db-header";
 import DiscussionComments from "./discussion-comments";
+import DiscussionCreateDiscuss from "./discussion-create-discuss";
 import DiscussionCreateMr from "./discussion-create-mr";
 import DiscussionList from "./discussion-list";
 import MarkdownEditor from "./markdown-editor";
@@ -118,6 +119,14 @@ import * as bootstrap from "bootstrap"
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<DiscussionComments />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("discussion-create-discuss");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<DiscussionCreateDiscuss />);
 	}
 }
 
