@@ -60,7 +60,7 @@
   "license": "AGPL-3.0-or-later",
   "private": false,
   "devDependencies": {
-    "@babel/cli": "^7.20.7",
+    "@babel/cli": "^7.23.4",
     "autoprefixer": "^10.4.16",
     "css-loader": "^6.8.1",
     "postcss-loader": "^7.3.3",
