@@ -30,6 +30,6 @@ export default function Auth() {
 			</>
 		);
 	} else {
-		return <a onClick={() => {return login()}} data-cy="loginlnk" className="align-middle">Login / Register</a>;
+		return <a href="#" onClick={() => {return login()}} data-cy="loginlnk" className="align-middle">Login / Register</a>;
 	}
 }
