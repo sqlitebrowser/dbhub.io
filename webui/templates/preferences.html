@@ -1,116 +1,20 @@
 [[ define "prefPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="prefView">
+<html>
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div class="container">
-    <h3 class="text-center">Preferences</h3>
-    <form action="/pref" method="post">
-        <h5>Used when uploading databases</h5>
-        <div class="mb-2">
-            <label for="fullname" class="form-label">Full Name</label>
-            <input type="text" class="form-control" id="fullname" name="fullname" maxlength="80" data-cy="fullname" value="{{ FullName }}" ng-attr-placeholder="{{ NamePlaceholder }}" required />
-        </div>
-        <div class="mb-2">
-            <label for="email" class="form-label">Email address</label>
-            <div class="form-text">If you don't want to use your real email address, use "[[ .PageMeta.LoggedInUser ]]@[[ .PageMeta.Server ]]".</div>
-            <input type="text" class="form-control" id="email" name="email" maxlength="80" data-cy="email" value="{{ EmailAddr }}" ng-attr-placeholder="{{ EmailPlaceholder }}" required />
-        </div>
-
-        <h5>Display options</h5>
-        <div class="mb-2">
-            <label for="maxrows" class="form-label">Maximum number of database rows to display</label>
-            <input type="number" class="form-control" id="maxrows" name="maxrows" maxlength="80" data-cy="numrows" value="[[ .MaxRows ]]" min="1" max="500" />
-        </div>
-
-        <input type="submit" class="btn btn-success" value="Update" data-cy="updatebtn" />
-    </form>
-
-    <hr />
-
-    <h5><a href="https://sqlitebrowser.org/" target="_blank" rel="noopener noreferrer external">DB4S</a> Integration</h5>
-    <div class="form-text">This is needed for easily making changes to your uploaded databases.</div>
-    <input type="submit" class="btn btn-primary" value="Generate new client certificate" ng-click="genCert()" data-cy="gencertbtn">
-
-    <hr />
-
-    <h5><a href="https://api.dbhub.io" target="_blank">API</a> keys</h5>
-    <table class="table table-striped table-responsive mb-2" data-cy="apikeystbl">
-        <tr>
-            <th>Key</th>
-            <th>Generation date</th>
-        </tr>
-        <tr ng-repeat="row in apiKeys">
-            <td>{{ row.key }}</td>
-            <td>{{ row.date_created | date : 'medium' }}</td>
-        </tr>
-        <tr ng-if="apiKeys === null">
-            <td colspan="2" class="text-center">You don't have any API keys yet</td>
-        </tr>
-    </table>
-    <div class="row text-center mb-2" ng-if="statusMessage != ''">
-        <h4 style="color: {{ statusMessageColour }};" data-cy="apistatus">{{ statusMessage }}</h4>
-    </div>
-    <input type="submit" class="btn btn-primary" value="Generate new API key" ng-click="apiKeyGen()" data-cy="genapibtn">
-</div>
-[[ template "footer" . ]]
+<div class="container" id="preferences-page"></div>
 <script>
-    let app = angular.module('DBHub', ['ngSanitize']);
-    app.controller('prefView', function($scope, $http, $httpParamSerializerJQLike) {
-        // API Keys
-        $scope.apiKeys = [[ .APIKeys ]];
-
-        // If the supplied display name is blank, we set a placeholder value instead
-        $scope.FullName = "";
-        $scope.NamePlaceholder = "";
-        if ("[[ .DisplayName ]]" === "") {
-            $scope.NamePlaceholder = "Jane Doe";
-        } else {
-            $scope.FullName = "[[ .DisplayName ]]";
-        }
-
-        // Same thing, but for email address
-        $scope.EmailAddr = "";
-        $scope.EmailPlaceholder = "";
-        if ("[[ .Email ]]" === "") {
-            $scope.EmailPlaceholder = "[[ .PageMeta.LoggedInUser ]]@[[ .PageMeta.Server ]]";
-        } else {
-            $scope.EmailAddr = "[[ .Email ]]";
-        }
-
-        // Generate new client certificate
-        $scope.genCert = function() {
-            window.location = '/x/gencert'
-        };
-
-        // Generate a new API key
-        $scope.statusMessage = "";
-        $scope.statusMessageColour = "red";
-        $scope.apiKeyGen = function() {
-            // Call the server to generate a new API key
-            $http.get("/x/apikeygen").then(
-                function success(response) {
-                    $scope.statusMessageColour = "green";
-                    $scope.statusMessage = "New API key '" + response.data["key"] + "' created";
-
-                    // Append the new key to the displayed list
-                    let newKey = {"key": response.data["key"], "date_created": response.data["date_created"]};
-                    if ($scope.apiKeys !== null) {
-                        $scope.apiKeys.push(newKey);
-                    } else {
-                        $scope.apiKeys = [newKey];
-                    }
-
-                }, function failure(response) {
-                    // Key creation failed, so display the returned error message
-                    $scope.statusMessageColour = "red";
-                    $scope.statusMessage = "Creating new API key failed: " + response.data;
-                }
-            )
-        };
-    });
+    const preferences = {
+        apiKeys: [[ .APIKeys ]],
+        email: "[[ .Email ]]",
+        fullName: "[[ .DisplayName ]]",
+        maxRows: [[ .MaxRows ]],
+        server: "[[ .PageMeta.Server ]]",
+    };
 </script>
+[[ template "footer" . ]]
 </body>
 </html>
 [[ end ]]

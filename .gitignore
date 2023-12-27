@@ -72,6 +72,7 @@ webui/js/discussion-list.js
 webui/js/export-data.js
 webui/js/format.js
 webui/js/markdown-editor.js
+webui/js/preferences-page.js
 webui/js/profile-page.js
 webui/js/sql-terminal.js
 webui/js/tag-create.js

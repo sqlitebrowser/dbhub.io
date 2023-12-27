@@ -3801,7 +3801,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate submitted form data
-	err = com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
+	err = com.Validate.Var(maxRows, "required,numeric,gte=1,lte=500")
 	if err != nil {
 		log.Printf("%s: Maximum rows value failed validation: %s", pageName, err)
 		w.WriteHeader(http.StatusBadRequest)

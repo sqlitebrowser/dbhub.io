@@ -20,6 +20,7 @@ import DiscussionCreateDiscuss from "./discussion-create-discuss";
 import DiscussionCreateMr from "./discussion-create-mr";
 import DiscussionList from "./discussion-list";
 import MarkdownEditor from "./markdown-editor";
+import PreferencesPage from "./preferences-page";
 import ProfilePage from "./profile-page";
 import SqlTerminal from "./sql-terminal";
 import TagCreate from "./tag-create";
@@ -238,6 +239,14 @@ import * as bootstrap from "bootstrap"
 
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<UploadForm branch={branch} />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("preferences-page");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<PreferencesPage />);
 	}
 }
 
