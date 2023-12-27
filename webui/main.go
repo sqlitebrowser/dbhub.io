@@ -449,7 +449,13 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect branch name")
 		return
 	}
+
 	bd := r.PostFormValue("branchdesc") // Optional
+	bd, err = url.QueryUnescape(bd)
+	if err != nil {
+		errorPage(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	// If given, validate the branch description field
 	var branchDesc string
@@ -671,20 +677,31 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the discussions' title
-	tl := r.PostFormValue("title")
-	err = com.ValidateDiscussionTitle(tl)
+	discTitle := r.PostFormValue("title")
+	discTitle, err = url.QueryUnescape(discTitle)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding discussion title")
+		return
+	}
+	err = com.ValidateDiscussionTitle(discTitle)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Invalid characters in the new discussion's title")
 		return
 	}
-	discTitle := tl
 
 	// Validate the discussions' text
 	txt := r.PostFormValue("disctxt")
 	if txt == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Discussion body can't be empty")
+		return
+	}
+	txt, err = url.QueryUnescape(txt)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding discussion text")
 		return
 	}
 	err = com.Validate.Var(txt, "markdownsource")
@@ -779,6 +796,12 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
+	srcOwner, err = url.QueryUnescape(srcOwner)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding source owner")
+		return
+	}
 	err = com.ValidateUser(srcOwner)
 	if err != nil {
 		log.Printf("Validation failed for username: '%s'- %s", com.SanitiseLogString(srcOwner), err)
@@ -793,6 +816,12 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
+		return
+	}
+	srcDBName, err = url.QueryUnescape(srcDBName)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding source database")
 		return
 	}
 	err = com.ValidateDB(srcDBName)
@@ -811,6 +840,12 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
+	srcBranch, err = url.QueryUnescape(srcBranch)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding source branch")
+		return
+	}
 	err = com.ValidateBranchName(srcBranch)
 	if err != nil {
 		log.Printf("Validation failed for branch name '%s': %s", com.SanitiseLogString(srcBranch), err)
@@ -825,6 +860,12 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
+		return
+	}
+	destOwner, err = url.QueryUnescape(destOwner)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding destination owner")
 		return
 	}
 	err = com.ValidateUser(destOwner)
@@ -843,6 +884,12 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err.Error())
 		return
 	}
+	destDBName, err = url.QueryUnescape(destDBName)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding destination database")
+		return
+	}
 	err = com.ValidateDB(destDBName)
 	if err != nil {
 		log.Printf("Validation failed for database name '%s': %s", com.SanitiseLogString(destDBName), err)
@@ -857,6 +904,12 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
+		return
+	}
+	destBranch, err = url.QueryUnescape(destBranch)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding destination branch")
 		return
 	}
 	err = com.ValidateBranchName(destBranch)
@@ -3704,7 +3757,8 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure we have a valid logged in user
 	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
 		return
 	}
 
@@ -3719,13 +3773,30 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Decode values
+	displayName, err = url.QueryUnescape(displayName)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding full name")
+		return
+	}
+
+	email, err = url.QueryUnescape(email)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding email address")
+		return
+	}
+
 	// Basic sanity check
 	if displayName == "" {
-		errorPage(w, r, http.StatusBadRequest, "Full name can't be blank!")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Full name can't be blank")
 		return
 	}
 	if email == "" {
-		errorPage(w, r, http.StatusBadRequest, "Email address can't be blank!")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Email address can't be blank")
 		return
 	}
 
@@ -3733,19 +3804,22 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	err = com.Validate.Var(maxRows, "required,numeric,min=1,max=500")
 	if err != nil {
 		log.Printf("%s: Maximum rows value failed validation: %s", pageName, err)
-		errorPage(w, r, http.StatusBadRequest, "Error when parsing maximum rows preference value")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error when parsing maximum rows preference value")
 		return
 	}
 	maxRowsNum, err := strconv.Atoi(maxRows)
 	if err != nil {
 		log.Printf("%s: Error converting string '%v' to integer: %s", pageName, com.SanitiseLogString(maxRows), err)
-		errorPage(w, r, http.StatusBadRequest, "Error when parsing preference data")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error when parsing preference data")
 		return
 	}
 	err = com.ValidateDisplayName(displayName)
 	if err != nil {
 		log.Printf("%s: Display name '%s' failed validation: %s", pageName, com.SanitiseLogString(displayName), err)
-		errorPage(w, r, http.StatusBadRequest, "Error when parsing full name value")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error when parsing full name value")
 		return
 	}
 	err = com.Validate.Var(email, "required,email")
@@ -3756,7 +3830,8 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 		em := fmt.Sprintf("%s@%s", loggedInUser, serverName[0])
 		if email != em {
 			log.Printf("%s: Email value failed validation: %s", pageName, err)
-			errorPage(w, r, http.StatusBadRequest, "Error when parsing email value")
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Error when parsing email value")
 			return
 		}
 	}
@@ -3764,11 +3839,13 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	// Make sure the email address isn't already assigned to a different user
 	a, _, err := com.GetUsernameFromEmail(email)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Error when checking email address")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error when checking email address")
 		return
 	}
 	if a != "" && strings.ToLower(a) != strings.ToLower(loggedInUser) {
-		errorPage(w, r, http.StatusBadRequest, "That email address is already associated with a different user")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "That email address is already associated with a different user")
 		return
 	}
 
@@ -3779,7 +3856,8 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	// Update the preference data in the database
 	err = com.SetUserPreferences(loggedInUser, maxRowsNum, displayName, email)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, "Error when updating preferences")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Error when updating preferences")
 		return
 	}
 
@@ -3909,6 +3987,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If set, validate the new database name
 	if newName != dbName {
+		newName, err = url.QueryUnescape(newName)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Error decoding database name")
+			return
+		}
+
 		err := com.ValidateDB(newName)
 		if err != nil {
 			log.Printf("Validation failed for new database name '%s': %s", com.SanitiseLogString(newName), err)
@@ -3925,6 +4010,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate characters and length of the one line description
 	if oneLineDesc != "" {
+		oneLineDesc, err = url.QueryUnescape(oneLineDesc)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Error decoding one line description")
+			return
+		}
+
 		err = com.Validate.Var(oneLineDesc, "markdownsource,max=120")
 		if err != nil {
 			log.Printf("One line description '%s' failed validation", com.SanitiseLogString(oneLineDesc))
@@ -3935,6 +4027,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate the full description
 	if fullDesc != "" {
+		fullDesc, err = url.QueryUnescape(fullDesc)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Error decoding full description")
+			return
+		}
+
 		err = com.Validate.Var(fullDesc, "markdownsource,max=8192") // 8192 seems reasonable.  Maybe too long?
 		if err != nil {
 			log.Printf("Full description '%s' failed validation", com.SanitiseLogString(fullDesc))
@@ -3944,6 +4043,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate the name of the default table
+	defTable, err = url.QueryUnescape(defTable)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error decoding default table")
+		return
+	}
+
 	err = com.ValidatePGTable(defTable)
 	if err != nil {
 		// Validation failed
