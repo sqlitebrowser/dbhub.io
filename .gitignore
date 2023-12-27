@@ -49,39 +49,6 @@ vendor
 # Node package cache
 node_modules
 
-# Generated JavaScript code
-webui/js/dbhub.js*
-webui/js/app.js
-webui/js/about-page.js
-webui/js/auth.js
-webui/js/branches.js
-webui/js/commit-list.js
-webui/js/database-commits.js
-webui/js/database-contributors.js
-webui/js/database-diff.js
-webui/js/database-forks.js
-webui/js/database-settings.js
-webui/js/database-tags.js
-webui/js/database-view.js
-webui/js/database-watchers.js
-webui/js/db-header.js
-webui/js/discussion-comments.js
-webui/js/discussion-create-discuss.js
-webui/js/discussion-create-mr.js
-webui/js/discussion-list.js
-webui/js/export-data.js
-webui/js/format.js
-webui/js/markdown-editor.js
-webui/js/preferences-page.js
-webui/js/profile-page.js
-webui/js/register-user-page.js
-webui/js/sql-terminal.js
-webui/js/tag-create.js
-webui/js/updates-page.js
-webui/js/upload-form.js
-webui/js/user-page.js
-webui/js/visualisation-editor.js
-
 # Local secrets
 .env
 

@@ -1,5 +1,5 @@
 # DBHub.io Web User Interface (WebUI)
-Uses Golang, AngularJS (being removed), React (replacing AngularJS) &amp; Bootstrap
+Uses Golang, React &amp; Bootstrap
 
 ![DBHub.io Database page](https://github.com/sqlitebrowser/db4s-screenshots/raw/master/dbhub/2017-01-08/Database%20page%20-%20logged%20in.png "DBHub.io Database page")
 ![DBHub.io Visualisation page](https://github.com/sqlitebrowser/db4s-screenshots/raw/master/dbhub/2017-01-08/Initial%20visualisation%20tab%20-%20logged%20in.png "DBHub.io Visualisation page")
