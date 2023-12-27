@@ -1,91 +1,16 @@
 [[ define "forksPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="forksView">
+<html>
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
 <div id="db-header-root"></div>
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <h3 class="text-center">
-                <span data-cy="forks">Forks of</span>
-                <a href="/[[ .DB.Info.Owner ]]" data-cy="ownerlnk">[[ .DB.Info.Owner ]]</a> /
-                <a href="/[[ .DB.Info.Owner ]]/[[ .DB.Info.Database ]]" data-cy="dblnk">[[ .DB.Info.Database ]]</a>
-            </h3>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            <table class="table" style="border-style: none;">
-                <tr ng-repeat="row in forks.Forks">
-                    <td style="border-style: none;">&nbsp;</td>
-                    <td style="border-style: none;">&nbsp;</td>
-                    <td style="border-style: none; font-family: Monospace; font-size: large; text-align: left; vertical-align: text-bottom;">
-                        <span ng-bind-html="rowIcons(row)"></span>
-                        <a href="/{{ row.database_owner }}">{{ row.database_owner }}</a> /
-                        <span ng-bind-html="rowURL(row)"></span>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
-</div>
+<div class="container" id="database-forks"></div>
 [[ template "script_db_header" . ]]
-[[ template "footer" . ]]
 <script>
-    let app = angular.module('DBHub', ['ngSanitize']);
-    app.controller('forksView', function($scope) {
-        $scope.forks = { Forks: [[ .Forks ]] }
-
-        // Display the appropriate fork icons for a database row
-        $scope.rowIcons = function(rowData) {
-            let returnList = "";
-            rowData.icon_list.forEach(function(item, index, array) {
-                switch (item) {
-                    case 0:
-                        returnList += "&nbsp; "; // Space
-                        break;
-                    case 1:
-                        returnList += "🜷"; // Root
-                        break;
-                    case 2:
-                        returnList += "┃ "; // Stem
-                        break;
-                    case 3:
-                        returnList += "┣ "; // Branch
-                        break;
-                    case 4:
-                        returnList += "┗"; // End
-                        break;
-                    default:
-                        returnList += "?"; // Unknown.  This shouldn't happen. ;)
-                }
-            });
-            return returnList;
-        };
-
-        // Ensure private and deleted databases display appropriately
-        $scope.rowURL = function(row) {
-            // Simple placeholder for deleted databases
-            if (row.deleted === true) {
-                return "deleted database";
-            }
-
-            // Create appropriate link or placeholder for public/private databases
-            if (row.public === true) {
-                return '<a href="/'+ row.database_owner + "/" + row.database_name +
-                    '">' + row.database_name + '</a>';
-            } else if (row.database_owner === "[[ .PageMeta.LoggedInUser ]]") {
-                // The logged in user should see their own private databases. Make sure it's not mistaken as public though.
-                return '<a href="/'+ row.database_owner + "/" + row.database_name +
-                    '">' + row.database_name + '</a> (private database)';
-            } else {
-                return "private database";
-            }
-        };
-    });
+    const forksData = [[ .Forks ]];
 </script>
+[[ template "footer" . ]]
 </body>
 </html>
 [[ end ]]

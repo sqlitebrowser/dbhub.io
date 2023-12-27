@@ -9,6 +9,7 @@ import BranchesTable from "./branches";
 import DatabaseCommits from "./database-commits";
 import DatabaseContributors from "./database-contributors";
 import DatabaseDiff from "./database-diff";
+import DatabaseForks from "./database-forks";
 import DatabaseSettings from "./database-settings";
 import DatabaseTags from "./database-tags";
 import DatabaseView from "./database-view";
@@ -84,6 +85,14 @@ import * as bootstrap from "bootstrap"
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<DatabaseDiff />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("database-forks");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<DatabaseForks />);
 	}
 }
 

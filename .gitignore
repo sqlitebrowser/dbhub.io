@@ -59,6 +59,7 @@ webui/js/commit-list.js
 webui/js/database-commits.js
 webui/js/database-contributors.js
 webui/js/database-diff.js
+webui/js/database-forks.js
 webui/js/database-settings.js
 webui/js/database-tags.js
 webui/js/database-view.js
