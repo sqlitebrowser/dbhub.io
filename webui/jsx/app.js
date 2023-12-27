@@ -22,6 +22,7 @@ import DiscussionList from "./discussion-list";
 import MarkdownEditor from "./markdown-editor";
 import PreferencesPage from "./preferences-page";
 import ProfilePage from "./profile-page";
+import RegisterUserPage from "./register-user-page";
 import SqlTerminal from "./sql-terminal";
 import TagCreate from "./tag-create";
 import UploadForm from "./upload-form";
@@ -211,6 +212,16 @@ import * as bootstrap from "bootstrap"
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<UserPage />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("register-user-page");
+	if (rootNode) {
+		const username = rootNode.dataset.username;
+
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<RegisterUserPage username={username} />);
 	}
 }
 

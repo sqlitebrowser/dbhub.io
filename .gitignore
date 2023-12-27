@@ -74,6 +74,7 @@ webui/js/format.js
 webui/js/markdown-editor.js
 webui/js/preferences-page.js
 webui/js/profile-page.js
+webui/js/register-user-page.js
 webui/js/sql-terminal.js
 webui/js/tag-create.js
 webui/js/upload-form.js

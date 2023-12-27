@@ -1,43 +1,11 @@
 [[ define "selectUserNamePage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="selectusernameView">
+<html>
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div class="container">
-    <h3 class="text-center">Select your preferred username</h3>
-    <form action="/register" method="post">
-        <div class="mb-2">
-            <label for="username" class="form-label">Username</label>
-            <input type="text" class="form-control" id="username" name="username" maxlength="80" value="[[ .Nick ]]" required />
-            <span id="availtext" ng-bind-html="checkMsg"></span>
-        </div>
-        <button type="button" class="btn btn-primary" ng-click="checkName()">Check</button>
-        <input type="submit" class="btn btn-success" value="Continue">
-    </form>
-</div>
+<div class="container" id="register-user-page" data-username="[[ .Nick ]]"></div>
 [[ template "footer" . ]]
-<script>
-    let app = angular.module('DBHub', ['ngSanitize']);
-    app.controller('selectusernameView', function($scope, $http) {
-        $scope.checkMsg = "";
-
-        $scope.checkName = function() {
-            let tempName = document.getElementById('username').value;
-            $http.get("/x/checkname?name=" + tempName)
-                .then(function (response) {
-                    let tempval = response.data;
-                    if (tempval !== "y") {
-                        $scope.checkMsg = '✘ Name not available';
-                        document.getElementById('availtext').style.color = "#FF0000";
-                    } else {
-                        $scope.checkMsg = '✔ Name is available';
-                        document.getElementById('availtext').style.color = "#00B000";
-                    }
-                })
-        };
-    });
-</script>
 </body>
 </html>
 [[ end ]]
