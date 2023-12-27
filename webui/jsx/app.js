@@ -25,6 +25,7 @@ import ProfilePage from "./profile-page";
 import RegisterUserPage from "./register-user-page";
 import SqlTerminal from "./sql-terminal";
 import TagCreate from "./tag-create";
+import UpdatesPage from "./updates-page";
 import UploadForm from "./upload-form";
 import UserPage from "./user-page";
 import { Visualisation, VisualisationEditor } from "./visualisation-editor";
@@ -240,6 +241,14 @@ import * as bootstrap from "bootstrap"
 
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<TagCreate commit={commit} />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("updates-page");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<UpdatesPage />);
 	}
 }
 

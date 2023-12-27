@@ -1,31 +1,14 @@
 [[ define "updatesPage" ]]
 <!doctype html>
-<html ng-app="DBHub" ng-controller="updatesView">
+<html>
 [[ template "head" . ]]
 <body>
 [[ template "header" . ]]
-<div class="container">
-    <h3 class="text-center"  data-cy="updates">Status updates</h3>
-    [[ if .Updates ]]
-        <div ng-repeat="(dbname, entries) in updates" class="card mb-2">
-            <div class="card-header"><a href="/{{ dbname }}" style="font-weight: bold;" ng-bind="dbname"></a></div>
-            <ul class="list-group list-group-flush">
-                <li ng-repeat="row in entries" class="list-group-item">
-                    <a href="{{ row.event_url }}" ng-bind="row.title"></a>
-                </li>
-            </ul>
-        </div>
-    [[ else ]]
-        <h5 class="text-center">No new status updates</h5>
-    [[ end ]]
-</div>
-[[ template "footer" . ]]
+<div class="container" id="updates-page"></div>
 <script>
-    let app = angular.module('DBHub', ['ngSanitize']);
-    app.controller('updatesView', function($scope) {
-        $scope.updates = [[ .Updates ]];
-    });
+    const updates = [[ .Updates ]];
 </script>
+[[ template "footer" . ]]
 </body>
 </html>
 [[ end ]]
