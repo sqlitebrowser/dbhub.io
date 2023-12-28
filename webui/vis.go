@@ -277,11 +277,11 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 
 func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		DB             com.SQLiteDBinfo
-		PageMeta       PageMetaInfo
-		Branches       map[string]com.BranchEntry
-		Visualisation  com.VisParamsV2
-		VisName        string
+		DB            com.SQLiteDBinfo
+		PageMeta      PageMetaInfo
+		Branches      map[string]com.BranchEntry
+		Visualisation com.VisParamsV2
+		VisName       string
 	}
 
 	// Get all meta information
