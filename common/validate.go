@@ -14,7 +14,6 @@ var (
 	regexDBName          = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\+,\ ]+$`)
 	regexDiscussTitle    = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\',\!,\@,\#,\&,\$,\+,\:,\;,\?,\ )]+$`)
 	regexFieldName       = regexp.MustCompile(`^[a-z,A-Z,0-9,\^,\.,\-,\_,\/,\(,\),\ )]+$`)
-	regexFolder          = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\/]+$`)
 	regexLicence         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexLicenceFullName = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexMarkDownSource  = regexp.MustCompile(`^[a-z,A-Z,0-9` + ",`," + `‘,’,“,”,\.,\-,\_,\/,\(,\),\[,\],\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
@@ -38,7 +37,6 @@ func init() {
 	Validate.RegisterValidation("discussiontitle", checkDiscussTitle)
 	Validate.RegisterValidation("displayname", checkDisplayName)
 	Validate.RegisterValidation("fieldname", checkFieldName)
-	Validate.RegisterValidation("folder", checkFolder)
 	Validate.RegisterValidation("licence", checkLicence)
 	Validate.RegisterValidation("licencefullname", checkLicenceFullName)
 	Validate.RegisterValidation("markdownsource", checkMarkDownSource)
@@ -117,16 +115,6 @@ func checkFieldName(fl valid.FieldLevel) bool {
 	//         * the ascii control ones
 	//         * special characters recognised by either SQLite or PostgreSQL
 	return regexFieldName.MatchString(fl.Field().String())
-}
-
-// checkFolder is a custom validation function for folder names
-// At the moment it allows alphanumeric and ".-_/" chars.  Will probably need more characters added.
-func checkFolder(fl valid.FieldLevel) bool {
-	// TODO: Replace this regex with something that allow for all valid unicode characters, minus:
-	//         * the Unicode control ones
-	//         * the ascii control ones
-	//         * special characters recognised by either SQLite or PostgreSQL
-	return regexFolder.MatchString(fl.Field().String())
 }
 
 // checkLicence is a custom validation function for licence (ID) names
@@ -259,15 +247,6 @@ func ValidateEmail(email string) error {
 // ValidateFieldName validates the SQLite field name
 func ValidateFieldName(fieldName string) error {
 	err := Validate.Var(fieldName, "required,fieldname,min=1,max=63") // 63 char limit seems reasonable
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// ValidateFolder validates the provided folder name
-func ValidateFolder(folder string) error {
-	err := Validate.Var(folder, "folder,max=127")
 	if err != nil {
 		return err
 	}

@@ -92,11 +92,6 @@ func GetDatabase(r *http.Request, allowGet bool) (dbName string, err error) {
 	return dbName, nil
 }
 
-// GetFolder always returns "/" as we don't support folders yet
-func GetFolder(r *http.Request, allowGet bool) (folder string, err error) {
-	return "/", nil
-}
-
 // GetFormBranch return the requested branch name, from get or post data
 func GetFormBranch(r *http.Request) (branch string, err error) {
 	// If no branch was given in the input, returns an empty string
@@ -455,10 +450,7 @@ func GetUFD(r *http.Request, allowGet bool) (userName string, dbFolder string, d
 	}
 
 	// Extract the folder
-	dbFolder, err = GetFolder(r, allowGet)
-	if err != nil {
-		return "", "", "", err
-	}
+	dbFolder = "/"
 
 	// Extract the database name
 	dbName, err = GetDatabase(r, allowGet)
