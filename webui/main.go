@@ -434,26 +434,30 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure we have a valid logged in user
 	if validSession != true {
-		errorPage(w, r, http.StatusUnauthorized, "You need to be logged in")
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "You need to be logged in")
 		return
 	}
 
 	// Extract and validate the form variables
 	dbOwner, dbName, commit, err := com.GetFormUDC(r)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect data supplied")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing or incorrect data supplied")
 		return
 	}
 	branchName, err := com.GetFormBranch(r)
 	if err != nil || branchName == "" {
-		errorPage(w, r, http.StatusBadRequest, "Missing or incorrect branch name")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Missing or incorrect branch name")
 		return
 	}
 
 	bd := r.PostFormValue("branchdesc") // Optional
 	bd, err = url.QueryUnescape(bd)
 	if err != nil {
-		errorPage(w, r, http.StatusBadRequest, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
@@ -462,7 +466,8 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	if bd != "" {
 		err = com.Validate.Var(bd, "markdownsource")
 		if err != nil {
-			errorPage(w, r, http.StatusBadRequest, "Invalid characters in branch description")
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Invalid characters in branch description")
 			return
 		}
 		branchDesc = bd
@@ -471,37 +476,43 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the requested database exists
 	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	if !exists {
-		errorPage(w, r, http.StatusNotFound, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName))
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, fmt.Sprintf("Database '%s/%s' doesn't exist", dbOwner, dbName))
 		return
 	}
 
 	// Read the branch heads list from the database
 	branches, err := com.GetBranches(dbOwner, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
 	// Make sure the branch name doesn't already exist
 	_, ok := branches[branchName]
 	if ok {
-		errorPage(w, r, http.StatusConflict, "A branch of that name already exists!")
+		w.WriteHeader(http.StatusConflict)
+		fmt.Fprint(w, "A branch of that name already exists!")
 		return
 	}
 
 	// Count the number of commits in the new branch
 	commitList, err := com.GetCommitList(dbOwner, dbName)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 	c, ok := commitList[commit]
 	if !ok {
-		errorPage(w, r, http.StatusBadRequest, fmt.Sprint("The given commit ID doesn't exist"))
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "The given commit ID doesn't exist")
 		return
 	}
 	commitCount := 1
@@ -524,7 +535,8 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	branches[branchName] = newBranch
 	err = com.StoreBranches(dbOwner, dbName, branches)
 	if err != nil {
-		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
@@ -536,8 +548,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Bounce to the branches page
-	http.Redirect(w, r, fmt.Sprintf("/branches/%s/%s", loggedInUser, dbName), http.StatusSeeOther)
+	w.WriteHeader(http.StatusOK)
 }
 
 // Receives incoming info for adding a comment to an existing discussion

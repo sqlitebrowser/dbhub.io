@@ -8,6 +8,7 @@ import Auth from "./auth";
 import BranchesTable from "./branches";
 import DatabaseCommits from "./database-commits";
 import DatabaseContributors from "./database-contributors";
+import DatabaseCreateBranch from "./database-create-branch";
 import DatabaseDiff from "./database-diff";
 import DatabaseForks from "./database-forks";
 import DatabaseSettings from "./database-settings";
@@ -19,7 +20,6 @@ import DiscussionComments from "./discussion-comments";
 import DiscussionCreateDiscuss from "./discussion-create-discuss";
 import DiscussionCreateMr from "./discussion-create-mr";
 import DiscussionList from "./discussion-list";
-import MarkdownEditor from "./markdown-editor";
 import PreferencesPage from "./preferences-page";
 import ProfilePage from "./profile-page";
 import RegisterUserPage from "./register-user-page";
@@ -80,6 +80,16 @@ import * as bootstrap from "bootstrap"
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<DatabaseContributors />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("database-create-branch");
+	if (rootNode) {
+		const commit = rootNode.dataset.commit;
+
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<DatabaseCreateBranch commit={commit} />);
 	}
 }
 
@@ -167,29 +177,6 @@ import * as bootstrap from "bootstrap"
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<DiscussionList mergeRequests={mergeRequests} />);
 	}
-}
-
-{
-	document.querySelectorAll(".markdown-editor").forEach((rootNode) => {
-		const editorId = rootNode.dataset.id;
-		const rows = rootNode.dataset.rows;
-		const placeholder = rootNode.dataset.placeholder;
-		const defaultIndex = rootNode.dataset.defaultIndex;
-		const initialValue = rootNode.dataset.initialValue;
-		const viewOnly = rootNode.dataset.viewOnly;
-		const onChange = rootNode.dataset.onChange;
-
-		const root = ReactDOM.createRoot(rootNode);
-		root.render(<MarkdownEditor
-			editorId={editorId}
-			rows={rows}
-			placeholder={placeholder}
-			defaultIndex={defaultIndex}
-			initialValue={initialValue}
-			viewOnly={viewOnly}
-			onChange={onChange}
-		/>);
-	});
 }
 
 {

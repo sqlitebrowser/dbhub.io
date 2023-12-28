@@ -5,28 +5,7 @@
 <body>
 [[ template "header" . ]]
 <div id="db-header-root"></div>
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <h3 class="text-center" data-cy="createbranch">Create new branch</h3>
-            <h5 class="text-center"><small>from commit [[ .Commit ]]</small></h5>
-            <form action="/x/createbranch" method="post">
-                <div class="mb-2">
-                    <label for="branch" class="form-label">Name for the new branch</label>
-                    <input type="text" class="form-control" id="branch" name="branch" maxlength="80" data-cy="nameinput" required />
-                </div>
-                <div class="mb-2">
-                    <label for="branchdesc" class="form-label">Branch description<div class="form-text">Markdown (<a href="http://commonmark.org" target="_blank" rel="noopener noreferrer external">CommonMark</a> format) is supported</div></label>
-                    <div class="markdown-editor" data-id="branchdesc" data-rows="10" data-placeholder="A description for this branch"></div>
-                </div>
-                <input type="hidden" name="commit" value="[[ .Commit ]]">
-                <input type="hidden" name="dbname" value="[[ .DB.Info.Database ]]">
-                <input type="hidden" name="username" value="[[ .DB.Info.Owner ]]">
-                <input type="submit" class="btn btn-success" value="Create" data-cy="createbtn">
-            </form>
-        </div>
-    </div>
-</div>
+<div class="container" id="database-create-branch" data-commit="[[ .Commit ]]"></div>
 [[ template "script_db_header" . ]]
 [[ template "footer" . ]]
 </body>

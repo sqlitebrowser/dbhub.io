@@ -552,7 +552,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the commit ID
-	commit, err := com.GetFormCommit(r)
+	pageData.Commit, err = com.GetFormCommit(r)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -575,9 +575,6 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// Fill out metadata for the page to be rendered
-	pageData.Commit = commit
 
 	// Render the page
 	t := tmpl.Lookup("createBranchPage")
