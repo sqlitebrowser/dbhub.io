@@ -26,7 +26,7 @@ describe('live databases', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody[0]).to.include.keys(['column_id', 'default_value', 'name', 'not_null'])
       }
     )
@@ -174,7 +174,7 @@ describe('live databases', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.include.members(["LIVE database upload testing.sqlite", 'Join Testing with index.sqlite'])
       }
     )
@@ -201,7 +201,7 @@ describe('live databases', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.property('rows_changed', 1)
         expect(jsonBody).to.have.property('status', 'OK')
 
@@ -219,7 +219,7 @@ describe('live databases', () => {
         }).then(
           (response) => {
             expect(response.status).to.eq(200)
-            let jsonBody = JSON.parse(response.body)
+            let jsonBody = response.body
             expect(jsonBody[0][0]).to.have.property('Name', 'Name')
             expect(jsonBody[0][0]).to.have.property('Type', 3)
             expect(jsonBody[0][0]).to.have.property('Value', 'Testing 1')
@@ -249,7 +249,7 @@ describe('live databases', () => {
         expect(response.status).to.eq(200)
 
         // Needs an extra step, due to the structure of the returned JSON
-        let temp = JSON.parse(response.body)
+        let temp = response.body
 
         let jsonBody = temp[0]
         expect(jsonBody).to.have.property('name', 'stuff')
@@ -284,7 +284,7 @@ describe('live databases', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody[2][0]).to.have.property('Name', 'Name')
         expect(jsonBody[2][0]).to.have.property('Type', 3)
         expect(jsonBody[2][0]).to.have.property('Value', 'Baz')
@@ -313,7 +313,7 @@ describe('live databases', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.members([
             "table1",
             "table2"
@@ -340,7 +340,7 @@ describe('live databases', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.property('status', 'OK')
 
         // Verify the database is no longer present
@@ -355,7 +355,7 @@ describe('live databases', () => {
         }).then(
           (response) => {
             expect(response.status).to.eq(200)
-            let jsonBody = JSON.parse(response.body)
+            let jsonBody = response.body
             expect(jsonBody).to.not.include.members(['LIVE database upload testing.sqlite'])
             expect(jsonBody).to.include.members(['Join Testing with index.sqlite'])
           }

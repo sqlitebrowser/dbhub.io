@@ -26,7 +26,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.include.keys(['branches', 'default_branch'])
         expect(jsonBody).to.have.property('default_branch', 'main')
         expect(jsonBody.branches.main).to.have.property('commit')
@@ -56,7 +56,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody[0]).to.include.keys(['column_id', 'default_value', 'name', 'not_null'])
       }
     )
@@ -82,7 +82,7 @@ describe('api tests', () => {
         expect(response.status).to.eq(200)
 
         // Needs an extra step, due to the structure of the returned JSON
-        let temp = JSON.parse(response.body)
+        let temp = response.body
         let jsonBody = temp[Object.keys(temp)[0]]
 
         expect(jsonBody).to.have.property('author_email', 'default@docker-dev.dbhub.io')
@@ -121,7 +121,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.include.members(["Assembly Election 2017.sqlite", 'Assembly Election 2017 with view.sqlite'])
       }
     )
@@ -144,7 +144,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.property('status', 'OK')
 
         // Verify the database is no longer present
@@ -158,7 +158,7 @@ describe('api tests', () => {
         }).then(
           (response) => {
             expect(response.status).to.eq(200)
-            let jsonBody = JSON.parse(response.body)
+            let jsonBody = response.body
             expect(jsonBody).to.include.members(['Assembly Election 2017 with view.sqlite'])
 
             // Restore the contents of the database
@@ -192,7 +192,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        commitA = Object.keys(JSON.parse(response.body))[0]
+        commitA = Object.keys(response.body)[0]
       }
     ).then(
       (response) => {
@@ -209,7 +209,7 @@ describe('api tests', () => {
         }).then(
           (response) => {
             expect(response.status).to.eq(200)
-            commitB = Object.keys(JSON.parse(response.body))[0]
+            commitB = Object.keys(response.body)[0]
           }
         ).then(
           (response) => {
@@ -231,7 +231,7 @@ describe('api tests', () => {
             }).then(
               (response) => {
                 expect(response.status).to.eq(200)
-                let jsonBody = JSON.parse(response.body)
+                let jsonBody = response.body
                 let diff = jsonBody["diff"][0]
                 expect(diff).to.have.property('object_name', 'Candidate_Names')
                 expect(diff).to.have.property('object_type', 'view')
@@ -301,7 +301,7 @@ describe('api tests', () => {
         expect(response.status).to.eq(200)
 
         // Needs an extra step, due to the structure of the returned JSON
-        let temp = JSON.parse(response.body)
+        let temp = response.body
 
         let jsonBody = temp[0]
         expect(jsonBody).to.have.property('name')
@@ -333,7 +333,7 @@ describe('api tests', () => {
       (response) => {
         expect(response.status).to.eq(200)
 
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.property('default_branch', 'main')
 
         // Test the "branches" structure
@@ -389,7 +389,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody[0][0]).to.have.property('Name', 'Firstname')
         expect(jsonBody[0][0]).to.have.property('Type', 3)
         expect(jsonBody[0][0]).to.have.property('Value', 'Steven')
@@ -433,7 +433,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.property('Some release name')
         expect(jsonBody['Some release name']).to.include.keys(['commit', 'date'])
         expect(jsonBody['Some release name']).to.have.property('description', 'Some release description')
@@ -462,7 +462,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.members([
             "Candidate_Information",
             "Constituency_Turnout_Information",
@@ -505,7 +505,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.property('Some tag name')
         expect(jsonBody['Some tag name']).to.include.keys(['commit', 'date'])
         expect(jsonBody['Some tag name']).to.have.property('description', 'Some tag description')
@@ -573,7 +573,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.members([
           "Candidate_Names"
           ]
@@ -600,7 +600,7 @@ describe('api tests', () => {
     }).then(
       (response) => {
         expect(response.status).to.eq(200)
-        let jsonBody = JSON.parse(response.body)
+        let jsonBody = response.body
         expect(jsonBody).to.have.property('web_page')
         expect(jsonBody.web_page).to.match(/.*\/default\/Assembly\ Election\ 2017\.sqlite$/)
       }
