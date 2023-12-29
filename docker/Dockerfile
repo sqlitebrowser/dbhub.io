@@ -31,7 +31,7 @@ RUN mkdir /install && \
     cd /install && \
     git clone https://github.com/postgrespro/jsquery.git && \
     cd jsquery && \
-    make USE_PGXS=1 && \
+    make USE_PGXS=1 -j "$(nproc)" && \
     make USE_PGXS=1 install
 
 # Create the DBHub.io OS user
@@ -118,7 +118,7 @@ RUN echo "Downloading SQLite source code" && \
     tar xfz sqlite.tar.gz && \
     cd sqlite-autoconf-* || exit 4 && \
     CPPFLAGS="-DSQLITE_ENABLE_COLUMN_METADATA=1 -DSQLITE_MAX_VARIABLE_NUMBER=250000 -DSQLITE_ENABLE_RTREE=1 -DSQLITE_ENABLE_GEOPOLY=1 -DSQLITE_ENABLE_FTS3=1 -DSQLITE_ENABLE_FTS3_PARENTHESIS=1 -DSQLITE_ENABLE_FTS5=1 -DSQLITE_ENABLE_STAT4=1 -DSQLITE_ENABLE_JSON1=1 -DSQLITE_SOUNDEX=1 -DSQLITE_ENABLE_MATH_FUNCTIONS=1 -DSQLITE_MAX_ATTACHED=125 -DSQLITE_ENABLE_MEMORY_MANAGEMENT=1 -DSQLITE_ENABLE_SNAPSHOT=1" ./configure --prefix=/sqlite --enable-dynamic-extensions=no && \
-    make -j9 && \
+    make -j "$(nproc)" && \
     make install && \
     cd .. && \
     rm -rf sqlite-autoconf-* && \
