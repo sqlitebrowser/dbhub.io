@@ -65,7 +65,7 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	key := keyRaw.String()
 
 	// Save the API key in PG database
-	err = com.APIKeySave(key, loggedInUser, creationTime)
+	uuid, err := com.APIKeySave(key, loggedInUser, creationTime)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -76,6 +76,7 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Return the API key to the caller
 	d := com.APIKey{
+		Uuid:        uuid,
 		Key:         key,
 		DateCreated: creationTime,
 	}

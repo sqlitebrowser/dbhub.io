@@ -196,38 +196,35 @@ func ApiCallLog(loggedInUser, dbOwner, dbName, operation, callerSw string) {
 }
 
 // APIKeySave saves a new API key to the PostgreSQL database
-func APIKeySave(key, loggedInUser string, dateCreated time.Time) error {
+func APIKeySave(key, loggedInUser string, dateCreated time.Time) (uuid string, err error) {
 	// Make sure the API key isn't already in the database
 	dbQuery := `
 		SELECT count(key)
 		FROM api_keys
 		WHERE key = $1`
 	var keyCount int
-	err := pdb.QueryRow(context.Background(), dbQuery, key).Scan(&keyCount)
+	err = pdb.QueryRow(context.Background(), dbQuery, key).Scan(&keyCount)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		log.Printf("Checking if an API key exists failed: %s", err)
-		return err
+		return
 	}
 	if keyCount != 0 {
 		// API key is already in our system
 		log.Printf("Duplicate API key (%s) generated for user '%s'", key, loggedInUser)
-		return fmt.Errorf("API generator created duplicate key.  Try again, just in case...")
+		return "", fmt.Errorf("API generator created duplicate key.  Try again, just in case...")
 	}
 
 	// Add the new API key to the database
 	dbQuery = `
 		INSERT INTO api_keys (user_id, key, date_created)
-		SELECT (SELECT user_id FROM users WHERE lower(user_name) = lower($1)), $2, $3`
-	commandTag, err := pdb.Exec(context.Background(), dbQuery, loggedInUser, key, dateCreated)
+		SELECT (SELECT user_id FROM users WHERE lower(user_name) = lower($1)), $2, $3
+		RETURNING concat(uuid, '')`
+	err = pdb.QueryRow(context.Background(), dbQuery, loggedInUser, key, dateCreated).Scan(&uuid)
 	if err != nil {
 		log.Printf("Adding API key to database failed: %v", err)
-		return err
+		return
 	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected when adding API key: %v, username: %v", numRows, key,
-			loggedInUser)
-	}
-	return nil
+	return
 }
 
 // CheckDBExists checks if a database exists. It does NOT perform any permission checks.
@@ -2076,7 +2073,7 @@ func GetBranches(dbOwner, dbName string) (branches map[string]BranchEntry, err e
 // GetAPIKeys returns the list of API keys for a user
 func GetAPIKeys(user string) ([]APIKey, error) {
 	dbQuery := `
-		SELECT key, date_created
+		SELECT uuid, key, date_created
 		FROM api_keys
 		WHERE user_id = (
 				SELECT user_id
@@ -2091,14 +2088,14 @@ func GetAPIKeys(user string) ([]APIKey, error) {
 	defer rows.Close()
 	var keys []APIKey
 	for rows.Next() {
-		var key string
+		var uuid, key string
 		var dateCreated time.Time
-		err = rows.Scan(&key, &dateCreated)
+		err = rows.Scan(&uuid, &key, &dateCreated)
 		if err != nil {
 			log.Printf("Error retrieving API key list: %v", err)
 			return nil, err
 		}
-		keys = append(keys, APIKey{Key: key, DateCreated: dateCreated})
+		keys = append(keys, APIKey{Uuid: uuid, Key: key, DateCreated: dateCreated})
 	}
 	return keys, nil
 }

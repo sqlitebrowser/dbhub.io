@@ -88,11 +88,11 @@ export default function PreferencesPage() {
 		apiKeysTable = (
 			<table className="table table-sm table-striped table-responsive mb-2" data-cy="apikeystbl">
 				<thead>
-					<tr><th>Key</th><th>Generation date</th></tr>
+					<tr><th>ID</th><th>Key</th><th>Generation date</th></tr>
 				</thead>
 				<tbody>
 					{apiKeys.map(row => (
-						<tr><td>{row.key}</td><td>{new Date(row.date_created).toLocaleString()}</td></tr>
+						<tr><td>{row.uuid}</td><td>{row.key}</td><td>{new Date(row.date_created).toLocaleString()}</td></tr>
 					))}
 				</tbody>
 			</table>

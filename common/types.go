@@ -127,6 +127,7 @@ type APIJSONIndex struct {
 
 // APIKey is an internal structure used for passing around user API keys
 type APIKey struct {
+	Uuid        string    `json:"uuid"`
 	Key         string    `json:"key"`
 	DateCreated time.Time `json:"date_created"`
 }
