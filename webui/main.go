@@ -23,7 +23,6 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	sqlite "github.com/gwenn/gosqlite"
-	"github.com/segmentio/ksuid"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"golang.org/x/oauth2"
@@ -56,33 +55,18 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate new API key
-	creationTime := time.Now()
-	keyRaw, err := ksuid.NewRandom()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	key := keyRaw.String()
-
-	// Save the API key in PG database
-	uuid, err := com.APIKeySave(key, loggedInUser, creationTime)
+	key, err := com.APIKeyGenerate(loggedInUser)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Log the key creation
-	log.Printf("New API key created for user '%s', key: '%s'", loggedInUser, key)
+	log.Printf("New API key created for user '%s', uuid: '%s'", loggedInUser, key.Uuid)
 
 	// Return the API key to the caller
-	d := com.APIKey{
-		Uuid:        uuid,
-		Key:         key,
-		DateCreated: creationTime,
-	}
-	data, err := json.Marshal(d)
+	data, err := json.Marshal(key)
 	if err != nil {
-		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

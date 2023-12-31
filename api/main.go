@@ -217,13 +217,6 @@ func checkAuth(c *gin.Context) {
 	var err error
 	var user string
 	if apiKey != "" {
-		// Validate the API key
-		err = com.CheckAPIKey(apiKey)
-		if err != nil {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
 		// Look up the owner of the API key
 		user, err = com.GetAPIKeyUser(apiKey)
 	} else {

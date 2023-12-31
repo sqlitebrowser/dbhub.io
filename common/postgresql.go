@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -195,6 +196,25 @@ func ApiCallLog(loggedInUser, dbOwner, dbName, operation, callerSw string) {
 	}
 }
 
+// APIKeyGenerate generates a random API key and saves it in the database
+func APIKeyGenerate(loggedInUser string) (key APIKey, err error) {
+	// Generate key
+	length := 40
+	data := make([]byte, length)
+	_, err = rand.Read(data)
+	if err != nil {
+		return
+	}
+	key.Key = strings.Trim(base64.URLEncoding.EncodeToString(data), "=")
+
+	// Set creation date
+	key.DateCreated = time.Now()
+
+	// Save new key
+	key.Uuid, err = APIKeySave(key.Key, loggedInUser, key.DateCreated)
+	return
+}
+
 // APIKeySave saves a new API key to the PostgreSQL database
 func APIKeySave(key, loggedInUser string, dateCreated time.Time) (uuid string, err error) {
 	// Make sure the API key isn't already in the database
@@ -210,7 +230,7 @@ func APIKeySave(key, loggedInUser string, dateCreated time.Time) (uuid string, e
 	}
 	if keyCount != 0 {
 		// API key is already in our system
-		log.Printf("Duplicate API key (%s) generated for user '%s'", key, loggedInUser)
+		log.Printf("Duplicate API key generated for user '%s'", loggedInUser)
 		return "", fmt.Errorf("API generator created duplicate key.  Try again, just in case...")
 	}
 
