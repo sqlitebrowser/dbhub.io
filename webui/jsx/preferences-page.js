@@ -1,11 +1,20 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
+import Button from "react-bootstrap/Button";
+import Modal from "react-bootstrap/Modal";
+
 import MarkdownEditor from "./markdown-editor";
+import { copyToClipboard } from "./clipboard";
 
 export default function PreferencesPage() {
 	const [statusMessage, setStatusMessage] = React.useState("");
 	const [statusMessageColour, setStatusMessageColour] = React.useState("");
+
+	const [showCreateApiKeyDialog, setShowCreateApiKeyDialog] = React.useState(false);
+	const [showNewApiKeyDialog, setShowNewApiKeyDialog] = React.useState(false);
+	const [lastNewApiKey, setLastNewApiKey] = React.useState("");
+	const [lastNewApiKeyId, setLastNewApiKeyId] = React.useState("");
 
 	const [fullName, setFullName] = React.useState(preferences.fullName);
 	const [email, setEmail] = React.useState(preferences.email);
@@ -63,14 +72,20 @@ export default function PreferencesPage() {
 			}
 
 			response.json().then(data => {
-				// Show success message
-				setStatusMessageColour("green");
-				setStatusMessage("New API key '" + data["key"] + "' created");
+				// Close create dialog
+				setShowCreateApiKeyDialog(false);
+
+				// Store new key
+				setLastNewApiKey(data["key"]);
+				setLastNewApiKeyId(data["uuid"]);
 
 				// Append key to list
 				let keys = apiKeys.slice();
 				keys.push(data);
 				setApiKeys(keys);
+
+				// Show success dialog
+				setShowNewApiKeyDialog(true);
 			});
 		})
 		.catch(error => {
@@ -83,16 +98,16 @@ export default function PreferencesPage() {
 	}
 
 	// Render table of all API keys
-	let apiKeysTable = <i>You don't have any API keys yet</i>;
+	let apiKeysTable = <p><i>You don't have any API keys yet</i></p>;
 	if (apiKeys) {
 		apiKeysTable = (
-			<table className="table table-sm table-striped table-responsive mb-2" data-cy="apikeystbl">
+			<table className="table table-sm table-striped table-responsive" data-cy="apikeystbl">
 				<thead>
-					<tr><th>ID</th><th>Key</th><th>Generation date</th></tr>
+					<tr><th>ID</th><th>Generation date</th></tr>
 				</thead>
 				<tbody>
 					{apiKeys.map(row => (
-						<tr><td>{row.uuid}</td><td>{row.key}</td><td>{new Date(row.date_created).toLocaleString()}</td></tr>
+						<tr><td>{row.uuid}</td><td>{new Date(row.date_created).toLocaleString()}</td></tr>
 					))}
 				</tbody>
 			</table>
@@ -139,7 +154,35 @@ export default function PreferencesPage() {
 		<hr />
 
 		<h5><a href="https://api.dbhub.io" target="_blank">API</a> keys</h5>
+		<button type="button" className="btn btn-primary mb-2" data-cy="genapibtn" onClick={() => setShowCreateApiKeyDialog(true)}>Generate new API key</button>
 		{apiKeysTable}
-		<button type="button" className="btn btn-primary" data-cy="genapibtn" onClick={() => genApiKey()}>Generate new API key</button>
+
+		<Modal show={showCreateApiKeyDialog} onHide={() => setShowCreateApiKeyDialog(false)}>
+			<Modal.Header closeButton>
+				<Modal.Title>Generate new API key</Modal.Title>
+			</Modal.Header>
+			<Modal.Body>
+				This will create a new API key for your user account. Clicking OK will show the API key. Make sure nobody else sees it. Please save it in a safe and secure location. You won't be able to see or retrieve it at a later time here. You can identify your keys using the value in the ID column.
+			</Modal.Body>
+			<Modal.Footer>
+				<Button variant="primary" onClick={() => genApiKey()} data-cy="apiokbtn">OK</Button>
+				<Button variant="secondary" onClick={() => setShowCreateApiKeyDialog(false)}>Cancel</Button>
+			</Modal.Footer>
+		</Modal>
+		<Modal show={showNewApiKeyDialog} onHide={() => setShowNewApiKeyDialog(false)}>
+			<Modal.Header closeButton>
+				<Modal.Title>New API key</Modal.Title>
+			</Modal.Header>
+			<Modal.Body>
+				{"Your API key with the id \"" + lastNewApiKeyId + "\" has been generated. It is:"}
+				<div className="input-group">
+					<input type="text" className="form-control" value={lastNewApiKey} id="api-key" />
+					<button className="btn btn-outline-secondary" type="button" title="Copy key to clipboard" onClick={() => copyToClipboard('api-key')}><span className="fa fa-clipboard"></span></button>
+				</div>
+			</Modal.Body>
+			<Modal.Footer>
+				<Button variant="primary" onClick={() => setShowNewApiKeyDialog(false)}>Close</Button>
+			</Modal.Footer>
+		</Modal>
 	</>);
 }

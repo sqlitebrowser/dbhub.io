@@ -2093,7 +2093,7 @@ func GetBranches(dbOwner, dbName string) (branches map[string]BranchEntry, err e
 // GetAPIKeys returns the list of API keys for a user
 func GetAPIKeys(user string) ([]APIKey, error) {
 	dbQuery := `
-		SELECT uuid, key, date_created
+		SELECT uuid, date_created
 		FROM api_keys
 		WHERE user_id = (
 				SELECT user_id
@@ -2108,14 +2108,14 @@ func GetAPIKeys(user string) ([]APIKey, error) {
 	defer rows.Close()
 	var keys []APIKey
 	for rows.Next() {
-		var uuid, key string
+		var uuid string
 		var dateCreated time.Time
-		err = rows.Scan(&uuid, &key, &dateCreated)
+		err = rows.Scan(&uuid, &dateCreated)
 		if err != nil {
 			log.Printf("Error retrieving API key list: %v", err)
 			return nil, err
 		}
-		keys = append(keys, APIKey{Uuid: uuid, Key: key, DateCreated: dateCreated})
+		keys = append(keys, APIKey{Uuid: uuid, DateCreated: dateCreated})
 	}
 	return keys, nil
 }

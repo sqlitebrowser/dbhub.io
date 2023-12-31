@@ -72,6 +72,7 @@ describe('logged-in user preferences page', () => {
   // Generate new API key
   it('generate new API key', () => {
     cy.get('[data-cy="genapibtn"]').click()
-    cy.get('[data-cy="apistatus"]').should('contain', 'created')
+    cy.get('[data-cy="apiokbtn"]').click()
+    cy.get('#api-key').should('exist')
   })
 })

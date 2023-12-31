@@ -7,6 +7,8 @@ import Select from "react-dropdown-select";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 
+import { copyToClipboard } from "./clipboard";
+
 export function DatabaseDescription({oneLineDescription, sourceUrl}) {
 	if (oneLineDescription === "" && sourceUrl === "") {
 		return;
@@ -68,14 +70,6 @@ export function DatabaseActions({table, numSelectedRows, allowInsert, setTable, 
 			);
 		};
 	};
-
-	// Copy value of an input element to the system clipboard
-	function copyToClipboard(element_id) {
-		let e = document.getElementById(element_id);
-		e.select();
-		e.setSelectionRange(0, 99999);
-		document.execCommand("copy");
-	}
 
 	// Dropdown input for selecting the current table
 	let tables = [];
