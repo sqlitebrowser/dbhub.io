@@ -217,13 +217,16 @@ func APIKeyGenerate(loggedInUser string) (key APIKey, err error) {
 
 // APIKeySave saves a new API key to the PostgreSQL database
 func APIKeySave(key, loggedInUser string, dateCreated time.Time) (uuid string, err error) {
+	// Hash the key
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+
 	// Make sure the API key isn't already in the database
 	dbQuery := `
 		SELECT count(key)
 		FROM api_keys
 		WHERE key = $1`
 	var keyCount int
-	err = pdb.QueryRow(context.Background(), dbQuery, key).Scan(&keyCount)
+	err = pdb.QueryRow(context.Background(), dbQuery, hash).Scan(&keyCount)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		log.Printf("Checking if an API key exists failed: %s", err)
 		return
@@ -239,7 +242,7 @@ func APIKeySave(key, loggedInUser string, dateCreated time.Time) (uuid string, e
 		INSERT INTO api_keys (user_id, key, date_created)
 		SELECT (SELECT user_id FROM users WHERE lower(user_name) = lower($1)), $2, $3
 		RETURNING concat(uuid, '')`
-	err = pdb.QueryRow(context.Background(), dbQuery, loggedInUser, key, dateCreated).Scan(&uuid)
+	err = pdb.QueryRow(context.Background(), dbQuery, loggedInUser, hash, dateCreated).Scan(&uuid)
 	if err != nil {
 		log.Printf("Adding API key to database failed: %v", err)
 		return
@@ -2122,12 +2125,15 @@ func GetAPIKeys(user string) ([]APIKey, error) {
 
 // GetAPIKeyUser returns the owner of a given API key.  Returns an empty string if the key has no known owner
 func GetAPIKeyUser(key string) (user string, err error) {
+	// Hash API key
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
+
 	dbQuery := `
 		SELECT user_name
 		FROM api_keys AS api, users
 		WHERE api.key = $1
 			AND api.user_id = users.user_id`
-	err = pdb.QueryRow(context.Background(), dbQuery, key).Scan(&user)
+	err = pdb.QueryRow(context.Background(), dbQuery, hash).Scan(&user)
 	if err != nil {
 		return
 	}
