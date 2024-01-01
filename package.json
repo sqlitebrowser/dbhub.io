@@ -62,7 +62,7 @@
     "babel-preset-react-app": "^10.0.1",
     "css-loader": "^6.8.1",
     "cypress": "13.3.3",
-    "postcss-loader": "^7.3.3",
+    "postcss-loader": "^7.3.4",
     "sass": "^1.69.6",
     "sass-loader": "^13.3.2",
     "style-loader": "^3.3.3",
