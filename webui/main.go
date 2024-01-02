@@ -39,6 +39,42 @@ var (
 	store *gsm.MemcacheStore
 )
 
+// apiKeyDelHandler deletes an existing API key
+func apiKeyDelHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Get the key ID
+	uuid := r.PostFormValue("uuid")
+	uuid, err = url.QueryUnescape(uuid)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if uuid == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "No key ID specified")
+		return
+	}
+
+	err = com.APIKeyDelete(loggedInUser, uuid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 // apiKeyGenHandler generates a new API key, stores it in the PG database, and returns the details to the caller
 func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
@@ -3312,6 +3348,7 @@ func main() {
 	http.Handle("/vis/", gz.GzipHandler(logReq(visualisePage)))
 	http.Handle("/visembed/", gz.GzipHandler(logReq(visEmbedPage)))
 	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))
+	http.Handle("/x/apikeydel", gz.GzipHandler(logReq(apiKeyDelHandler)))
 	http.Handle("/x/apikeygen", gz.GzipHandler(logReq(apiKeyGenHandler)))
 	http.Handle("/x/branchnames", gz.GzipHandler(logReq(branchNamesHandler)))
 	http.Handle("/x/callback", gz.GzipHandler(logReq(auth0CallbackHandler)))

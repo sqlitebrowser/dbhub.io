@@ -196,6 +196,21 @@ func ApiCallLog(loggedInUser, dbOwner, dbName, operation, callerSw string) {
 	}
 }
 
+// APIKeyDelete deletes an existing API key from the PostgreSQL database
+func APIKeyDelete(loggedInUser, uuid string) (err error) {
+	// Delete the API key
+	dbQuery := "DELETE FROM api_keys WHERE uuid=$1 AND user_id = (SELECT user_id FROM users WHERE lower(user_name) = lower($2))"
+	commandTag, err := pdb.Exec(context.Background(), dbQuery, uuid, loggedInUser)
+	if err != nil {
+		log.Printf("Deleting API key from database failed: %v", err)
+		return
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong number of rows (%d) affected when deleting api key with uuid '%s'", numRows, SanitiseLogString(uuid))
+	}
+	return
+}
+
 // APIKeyGenerate generates a random API key and saves it in the database
 func APIKeyGenerate(loggedInUser string) (key APIKey, err error) {
 	// Generate key

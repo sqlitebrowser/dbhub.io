@@ -3,6 +3,7 @@ const ReactDOM = require("react-dom");
 
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
+import { confirmAlert } from "react-confirm-alert";
 
 import MarkdownEditor from "./markdown-editor";
 import { copyToClipboard } from "./clipboard";
@@ -97,17 +98,72 @@ export default function PreferencesPage() {
 		});
 	}
 
+	// Deletes an API key
+	function deleteApiKey(uuid) {
+		confirmAlert({
+			title: "Confirm delete",
+			message: "Are you sure you want to delete the API key with the ID \"" + uuid + "\"? Access with it will no longer be possible.",
+			buttons: [
+				{
+					label: 'Yes',
+					onClick: () => {
+						// Send request to server
+						fetch("/x/apikeydel", {
+							method: "post",
+							headers: {
+								"Content-Type": "application/x-www-form-urlencoded"
+							},
+							body: new URLSearchParams({
+								"uuid": encodeURIComponent(uuid),
+							}),
+						}).then(response => {
+							if (!response.ok) {
+								return Promise.reject(response);
+							}
+
+							response.text().then(data => {
+								// Remove key from list
+								let keys = apiKeys.slice();
+								keys.find((o, i) => {
+									if (o.uuid === uuid) {
+										keys.splice(i, 1);
+										return true;
+									}
+								});
+								setApiKeys(keys);
+							});
+						})
+						.catch(error => {
+							// Key deletion failed, display the error message
+							error.text().then(text => {
+								setStatusMessageColour("red");
+								setStatusMessage("Deleting the API key failed: " + text);
+							});
+						});
+					},
+				},
+				{
+					label: 'No'
+				}
+			]
+		});
+	}
+
 	// Render table of all API keys
 	let apiKeysTable = <p><i>You don't have any API keys yet</i></p>;
 	if (apiKeys) {
 		apiKeysTable = (
-			<table className="table table-sm table-striped table-responsive" data-cy="apikeystbl">
+			<table className="table table-sm table-hover table-responsive" data-cy="apikeystbl">
 				<thead>
-					<tr><th>ID</th><th>Generation date</th></tr>
+					<tr><th>ID</th><th>Generation date</th><th></th></tr>
 				</thead>
 				<tbody>
 					{apiKeys.map(row => (
-						<tr><td>{row.uuid}</td><td>{new Date(row.date_created).toLocaleString()}</td></tr>
+						<tr>
+							<td>{row.uuid}</td>
+							<td>{new Date(row.date_created).toLocaleString()}</td>
+							<td><button type="button" className="btn btn-outline-danger" title="Delete this API key" onClick={() => deleteApiKey(row.uuid)}><span className="fa fa-trash"></span></button></td>
+						</tr>
 					))}
 				</tbody>
 			</table>
