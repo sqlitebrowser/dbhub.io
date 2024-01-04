@@ -131,6 +131,7 @@ type APIKey struct {
 	Key         string     `json:"key"`
 	DateCreated time.Time  `json:"date_created"`
 	ExpiryDate  *time.Time `json:"expiry_date"`
+	Comment     string     `json:"comment"`
 }
 
 type BranchEntry struct {

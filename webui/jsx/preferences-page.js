@@ -18,6 +18,7 @@ export default function PreferencesPage() {
 	const [lastNewApiKeyId, setLastNewApiKeyId] = React.useState("");
 	const [createApiKeyDialogExpiryEnabled, setCreateApiKeyDialogExpiryEnabled] = React.useState(true);
 	const [createApiKeyDialogExpiryDate, setCreateApiKeyDialogExpiryDate] = React.useState((new Date((new Date()).valueOf() + 1000*3600*24*365)).toISOString().split("T")[0]); // 365 days
+	const [createApiKeyDialogComment, setCreateApiKeyDialogComment] = React.useState("");
 
 	const [fullName, setFullName] = React.useState(preferences.fullName);
 	const [email, setEmail] = React.useState(preferences.email);
@@ -74,6 +75,7 @@ export default function PreferencesPage() {
 			},
 			body: new URLSearchParams({
 				"expiry": createApiKeyDialogExpiryEnabled ? encodeURIComponent(createApiKeyDialogExpiryDate) : "",
+				"comment": createApiKeyDialogComment,
 			}),
 		}).then(response => {
 			if (!response.ok) {
@@ -163,7 +165,7 @@ export default function PreferencesPage() {
 		apiKeysTable = (
 			<table className="table table-sm table-hover table-responsive" data-cy="apikeystbl">
 				<thead>
-					<tr><th>ID</th><th>Generation date</th><th>Expiry date</th><th></th></tr>
+					<tr><th>ID</th><th>Generation date</th><th>Expiry date</th><th>Description</th><th></th></tr>
 				</thead>
 				<tbody>
 					{apiKeys.map(row => (
@@ -171,6 +173,7 @@ export default function PreferencesPage() {
 							<td>{row.uuid}</td>
 							<td>{new Date(row.date_created).toLocaleString()}</td>
 							<td className={row.expiry_date && (new Date() >= new Date(row.expiry_date)) ? "table-warning" : ""}>{row.expiry_date ? Intl.DateTimeFormat().format(new Date(row.expiry_date)) : <i>never</i>}</td>
+							<td>{row.comment}</td>
 							<td><button type="button" className="btn btn-outline-danger" title="Delete this API key" onClick={() => deleteApiKey(row.uuid)}><span className="fa fa-trash"></span></button></td>
 						</tr>
 					))}
@@ -240,6 +243,11 @@ export default function PreferencesPage() {
 							<input type="date" className="form-control" id="createapikeyexpiry" required={createApiKeyDialogExpiryEnabled} disabled={!createApiKeyDialogExpiryEnabled} value={createApiKeyDialogExpiryDate} min={(new Date((new Date()).valueOf() + 1000*3600*24)).toISOString().split("T")[0]} onChange={e => setCreateApiKeyDialogExpiryDate(e.target.value)} />
 						</div>
 						<div className="form-text">We recommend setting an expiry date. The API key will no longer work after that date. This way it provides only limited access to attackers if stolen.</div>
+					</div>
+					<div className="mb-3">
+						<label htmlFor="createapikeydescr" className="form-label">Description</label>
+						<input type="text" className="form-control" id="createapikeydescr" value={createApiKeyDialogComment} onChange={e => setCreateApiKeyDialogComment(e.target.value)} />
+						<div className="form-text">Optionally you can provide a description of this API key. This can help identifying keys if you have multiple.</div>
 					</div>
 				</form>
 			</Modal.Body>

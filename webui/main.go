@@ -108,12 +108,26 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Get description
+	comment := r.PostFormValue("comment")
+	comment, err = url.QueryUnescape(comment)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if len(comment) > 255 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Description too long")
+		return
+	}
+
 	// Generate new API key
 	var expiryDateOpt *time.Time
 	if expiryDate.IsZero() == false {
 		expiryDateOpt = &expiryDate
 	}
-	key, err := com.APIKeyGenerate(loggedInUser, expiryDateOpt)
+	key, err := com.APIKeyGenerate(loggedInUser, expiryDateOpt, comment)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
