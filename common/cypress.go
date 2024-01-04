@@ -137,7 +137,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		"2MXwJkTQVonjJqNlpIFyA9BNtE6": "third",
 	}
 	for key, user := range keys {
-		_, err = APIKeySave(key, user, time.Now())
+		_, err = APIKeySave(key, user, time.Now(), nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

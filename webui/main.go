@@ -90,8 +90,30 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the expiry date
+	var expiryDate time.Time
+	expiry := r.PostFormValue("expiry")
+	expiry, err = url.QueryUnescape(expiry)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	if expiry != "" {
+		expiryDate, err = time.Parse("2006-01-02", expiry)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+	}
+
 	// Generate new API key
-	key, err := com.APIKeyGenerate(loggedInUser)
+	var expiryDateOpt *time.Time
+	if expiryDate.IsZero() == false {
+		expiryDateOpt = &expiryDate
+	}
+	key, err := com.APIKeyGenerate(loggedInUser, expiryDateOpt)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

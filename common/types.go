@@ -127,9 +127,10 @@ type APIJSONIndex struct {
 
 // APIKey is an internal structure used for passing around user API keys
 type APIKey struct {
-	Uuid        string    `json:"uuid"`
-	Key         string    `json:"key"`
-	DateCreated time.Time `json:"date_created"`
+	Uuid        string     `json:"uuid"`
+	Key         string     `json:"key"`
+	DateCreated time.Time  `json:"date_created"`
+	ExpiryDate  *time.Time `json:"expiry_date"`
 }
 
 type BranchEntry struct {

@@ -212,7 +212,7 @@ func APIKeyDelete(loggedInUser, uuid string) (err error) {
 }
 
 // APIKeyGenerate generates a random API key and saves it in the database
-func APIKeyGenerate(loggedInUser string) (key APIKey, err error) {
+func APIKeyGenerate(loggedInUser string, expiryDate *time.Time) (key APIKey, err error) {
 	// Generate key
 	length := 40
 	data := make([]byte, length)
@@ -225,13 +225,16 @@ func APIKeyGenerate(loggedInUser string) (key APIKey, err error) {
 	// Set creation date
 	key.DateCreated = time.Now()
 
+	// Set expiry date
+	key.ExpiryDate = expiryDate
+
 	// Save new key
-	key.Uuid, err = APIKeySave(key.Key, loggedInUser, key.DateCreated)
+	key.Uuid, err = APIKeySave(key.Key, loggedInUser, key.DateCreated, key.ExpiryDate)
 	return
 }
 
 // APIKeySave saves a new API key to the PostgreSQL database
-func APIKeySave(key, loggedInUser string, dateCreated time.Time) (uuid string, err error) {
+func APIKeySave(key, loggedInUser string, dateCreated time.Time, expiryDate *time.Time) (uuid string, err error) {
 	// Hash the key
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(key)))
 
@@ -254,10 +257,10 @@ func APIKeySave(key, loggedInUser string, dateCreated time.Time) (uuid string, e
 
 	// Add the new API key to the database
 	dbQuery = `
-		INSERT INTO api_keys (user_id, key, date_created)
-		SELECT (SELECT user_id FROM users WHERE lower(user_name) = lower($1)), $2, $3
+		INSERT INTO api_keys (user_id, key, date_created, expiry_date)
+		SELECT (SELECT user_id FROM users WHERE lower(user_name) = lower($1)), $2, $3, $4
 		RETURNING concat(uuid, '')`
-	err = pdb.QueryRow(context.Background(), dbQuery, loggedInUser, hash, dateCreated).Scan(&uuid)
+	err = pdb.QueryRow(context.Background(), dbQuery, loggedInUser, hash, dateCreated, expiryDate).Scan(&uuid)
 	if err != nil {
 		log.Printf("Adding API key to database failed: %v", err)
 		return
@@ -2111,7 +2114,7 @@ func GetBranches(dbOwner, dbName string) (branches map[string]BranchEntry, err e
 // GetAPIKeys returns the list of API keys for a user
 func GetAPIKeys(user string) ([]APIKey, error) {
 	dbQuery := `
-		SELECT uuid, date_created
+		SELECT uuid, date_created, expiry_date
 		FROM api_keys
 		WHERE user_id = (
 				SELECT user_id
@@ -2126,14 +2129,13 @@ func GetAPIKeys(user string) ([]APIKey, error) {
 	defer rows.Close()
 	var keys []APIKey
 	for rows.Next() {
-		var uuid string
-		var dateCreated time.Time
-		err = rows.Scan(&uuid, &dateCreated)
+		var key APIKey
+		err = rows.Scan(&key.Uuid, &key.DateCreated, &key.ExpiryDate)
 		if err != nil {
 			log.Printf("Error retrieving API key list: %v", err)
 			return nil, err
 		}
-		keys = append(keys, APIKey{Uuid: uuid, DateCreated: dateCreated})
+		keys = append(keys, key)
 	}
 	return keys, nil
 }
@@ -2147,7 +2149,8 @@ func GetAPIKeyUser(key string) (user string, err error) {
 		SELECT user_name
 		FROM api_keys AS api, users
 		WHERE api.key = $1
-			AND api.user_id = users.user_id`
+			AND api.user_id = users.user_id
+			AND (api.expiry_date is null OR api.expiry_date > now())`
 	err = pdb.QueryRow(context.Background(), dbQuery, hash).Scan(&user)
 	if err != nil {
 		return
