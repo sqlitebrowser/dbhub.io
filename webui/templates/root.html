@@ -1,8 +1,5 @@
 [[ define "rootPage" ]]
-<!doctype html>
-<html>
 [[ template "head" . ]]
-<body>
 <style>
     .lightbox-image, .lightbox-image > div {
         display: inline;
@@ -115,7 +112,6 @@
         </div>
     </div>
 </div>
-[[ template "footer" . ]]
 <script type="application/javascript">
     function uploadForm() {
         if (authInfo.loggedInUser === "") {
@@ -126,6 +122,5 @@
         }
     };
 </script>
-</body>
-</html>
+[[ template "footer" . ]]
 [[ end ]]
