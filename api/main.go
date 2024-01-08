@@ -8,15 +8,12 @@ package main
 
 import (
 	"crypto/tls"
-	"crypto/x509"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -26,9 +23,6 @@ import (
 )
 
 var (
-	// Our self signed Certificate Authority chain
-	ourCAPool *x509.CertPool
-
 	// Log file for incoming HTTPS requests
 	reqLog *os.File
 
@@ -103,26 +97,6 @@ func main() {
 	exitSignal := make(chan struct{}, 1)
 	go com.SignalHandler(&exitSignal)
 
-	// Load our self signed CA chain
-	ourCAPool = x509.NewCertPool()
-	certFile, err := os.ReadFile(com.Conf.DB4S.CAChain)
-	if err != nil {
-		log.Fatalf("Error opening Certificate Authority chain file: '%s'", err)
-	}
-	ok := ourCAPool.AppendCertsFromPEM(certFile)
-	if !ok {
-		log.Fatal("Error appending certificate file")
-	}
-
-	// Set up TLS configuration, using the self signed CA Cert chain, checking client certificates if given,
-	// and setting TLS1.2 as minimum
-	tlsConfig := &tls.Config{
-		ClientAuth: tls.VerifyClientCertIfGiven,
-		ClientCAs:  ourCAPool,
-		MinVersion: tls.VersionTLS12,
-		RootCAs:    ourCAPool,
-	}
-
 	// Register log file
 	gin.DisableConsoleColor()
 	gin.DefaultWriter = io.MultiWriter(reqLog)
@@ -147,7 +121,11 @@ func main() {
 	// Add recovery middleware
 	router.Use(gin.Recovery())
 
-	// Create HTTP server configuration
+	// Create TLS and HTTP server configurations
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
 	s := &http.Server{
 		Addr:           com.Conf.Api.BindAddress,
 		Handler:        router,
@@ -213,16 +191,8 @@ func checkAuth(c *gin.Context) {
 	// Extract the API key from the request
 	apiKey := c.PostForm("apikey")
 
-	// Check if an API key was provided
-	var err error
-	var user string
-	if apiKey != "" {
-		// Look up the owner of the API key
-		user, err = com.GetAPIKeyUser(apiKey)
-	} else {
-		// No API key was provided. Check for a client certificate instead
-		user, err = extractUserFromClientCert(c)
-	}
+	// Look up the owner of the API key
+	user, err := com.GetAPIKeyUser(apiKey)
 
 	// Check for any errors
 	if err != nil || user == "" {
@@ -261,44 +231,5 @@ func collectInfo(c *gin.Context) (loggedInUser, dbOwner, dbName, commitID string
 		err = fmt.Errorf("Database does not exist, or user isn't authorised to access it")
 		return
 	}
-	return
-}
-
-func extractUserFromClientCert(c *gin.Context) (userAcc string, err error) {
-	// Check if a client certificate was provided
-	if len(c.Request.TLS.PeerCertificates) == 0 {
-		err = errors.New("No client certificate provided")
-		return
-	}
-
-	// Extract the account name and associated server from the validated client certificate
-	cn := c.Request.TLS.PeerCertificates[0].Subject.CommonName
-	if cn == "" {
-		// Common name is empty
-		err = errors.New("Common name is blank in client certificate")
-		return
-	}
-	s := strings.Split(cn, "@")
-	if len(s) < 2 {
-		err = errors.New("Missing information in client certificate")
-		return
-	}
-	userAcc = s[0]
-	certServer := s[1]
-	if userAcc == "" || certServer == "" {
-		// Missing details in common name field
-		err = errors.New("Missing information in client certificate")
-		return
-	}
-
-	// Verify the running server matches the one in the certificate
-	db4sServer := com.Conf.DB4S.Server
-	if certServer != db4sServer {
-		err = fmt.Errorf("Server name in certificate '%s' doesn't match DB4S server '%s'", certServer,
-			db4sServer)
-		return
-	}
-
-	// Everything is ok, so return
 	return
 }
