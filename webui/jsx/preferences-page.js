@@ -23,7 +23,7 @@ export default function PreferencesPage() {
 	const [fullName, setFullName] = React.useState(preferences.fullName);
 	const [email, setEmail] = React.useState(preferences.email);
 	const [maxRows, setMaxRows] = React.useState(preferences.maxRows);
-	const [apiKeys, setApiKeys] = React.useState(preferences.apiKeys);
+	const [apiKeys, setApiKeys] = React.useState(preferences.apiKeys || []);
 
 	// Handler for the cancel button.  Just bounces back to the profile page
 	function cancel() {
