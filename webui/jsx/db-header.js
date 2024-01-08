@@ -148,7 +148,7 @@ export default function DbHeader() {
 		</div>
 		<div className="row mb-1 mt-2">
 		    <div className="col-md-6">
-			<nav className="nav nav-tabs">
+			<nav className="nav nav-underline">
 				<a id="viewdata" className={meta.pageSection === "db_data" ? "nav-link active" : "nav-link"} href={"/" + meta.owner + "/" + meta.database} title="Data" data-cy="datalink"><i className="fa fa-database"></i> Data</a>
 				<a id="viewvis" className={meta.pageSection === "db_vis" ? "nav-link active" : "nav-link"} href={"/vis/" + meta.owner + "/" + meta.database} title="Visualise" data-cy="vislink"><i className="fa fa-bar-chart"></i> Visualise</a>
 				{meta.isLive && (meta.owner === authInfo.loggedInUser) ? <a id="viewexec" className={meta.pageSection === "db_exec" ? "nav-link active" : "nav-link"} href={"/exec/" + meta.owner + "/" + meta.database} title="Execute SQL" data-cy="execlink"><i className="fa fa-wrench"></i> Execute SQL</a> : null }
