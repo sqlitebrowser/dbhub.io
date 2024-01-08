@@ -8,6 +8,7 @@ import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 
 import { copyToClipboard } from "./clipboard";
+import { userPrefTheme } from "./theme";
 
 export function DatabaseDescription({oneLineDescription, sourceUrl}) {
 	if (oneLineDescription === "" && sourceUrl === "") {
@@ -17,8 +18,8 @@ export function DatabaseDescription({oneLineDescription, sourceUrl}) {
 	return (
 		<div className="row">
 			<div className="col-md-12">
-				<div className="card text-bg-light border-secondary mb-2">
-					<div className="card-body p-2">
+				<div className="card border-secondary mb-2">
+					<div className="card-header p-2">
 						{oneLineDescription ? <b id="viewdesc" data-cy="onelinedesc">{oneLineDescription}</b> : null}
 						{sourceUrl ? <div><b>Source:</b> <a href={sourceUrl} data-cy="srcurl" rel="noopener noreferrer external">{sourceUrl}</a></div> : null}
 					</div>
@@ -34,7 +35,7 @@ export function DatabaseFullDescription({description}) {
 	}
 
 	return (
-		<div className="card text-bg-light mt-2">
+		<div className="card mt-2">
 			<div className="card-header">Description</div>
 			<div className="card-body" id="viewreadme" data-cy="repodescrip" dangerouslySetInnerHTML={{__html: description}} />
 		</div>
@@ -438,7 +439,7 @@ export default function DatabaseView() {
 		<DataGrid
 			// We are showing one page of rows unless this is the last page with a smaller number of rows.  The "+ 1" includes the header row.  The 35 is the default row height size in pixels.
 			style={{height: ((Math.min(rowCount - offset, maxRows) + 1) * 35) + "px", overflowY: "hidden"}}
-			className="rdg-light"
+			className={"rdg-" + userPrefTheme()}
 			renderers={{noRowsFallback: <DataGridNoRowsRender />}}
 			columns={columns}
 			rows={records}

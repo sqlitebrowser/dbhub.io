@@ -7,6 +7,7 @@ import { confirmAlert } from "react-confirm-alert";
 
 import MarkdownEditor from "./markdown-editor";
 import { copyToClipboard } from "./clipboard";
+import { userPrefTheme, setUserPrefTheme } from "./theme";
 
 export default function PreferencesPage() {
 	const [statusMessage, setStatusMessage] = React.useState("");
@@ -23,6 +24,7 @@ export default function PreferencesPage() {
 	const [fullName, setFullName] = React.useState(preferences.fullName);
 	const [email, setEmail] = React.useState(preferences.email);
 	const [maxRows, setMaxRows] = React.useState(preferences.maxRows);
+	const [colourTheme, setColourTheme] = React.useState(userPrefTheme());
 	const [apiKeys, setApiKeys] = React.useState(preferences.apiKeys || []);
 
 	// Handler for the cancel button.  Just bounces back to the profile page
@@ -47,6 +49,9 @@ export default function PreferencesPage() {
 			if (!response.ok) {
 				return Promise.reject(response);
 			}
+
+			// Save locally stored settings
+			setUserPrefTheme(colourTheme);
 
 			// Saving succeeded
 			window.location = "/" + authInfo.loggedInUser;
@@ -207,6 +212,13 @@ export default function PreferencesPage() {
 			<div className="mb-2">
 				<label className="form-label" htmlFor="maxrows">Maximum number of database rows to display</label>
 				<input type="number" className="form-control" id="maxrows" data-cy="numrows" value={maxRows} onChange={e => setMaxRows(e.target.value)} min="1" max="500" required />
+			</div>
+			<div className="mb-2">
+				<label className="form-label" htmlFor="theme">Colour theme</label>
+				<select className="form-select" id="theme" value={colourTheme} onChange={e => setColourTheme(e.target.value)}>
+					<option value="light">Light (default)</option>
+					<option value="dark">Dark (experimental)</option>
+				</select>
 			</div>
 
 			<button type="button" className="btn btn-success" data-cy="updatebtn" onClick={() => savePreferences()}>Save</button>&nbsp;

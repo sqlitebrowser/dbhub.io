@@ -1,13 +1,13 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
-import {getTimePeriod} from "./format";
+import { getTimePeriod } from "./format";
 
 function DatabasePanel({data, username}) {
 	const [isExpanded, setExpanded] = React.useState(false);
 
 	return (
-		<div className="card text-bg-light mb-1">
+		<div className="card mb-1">
 			<div className="card-header">
 				{username === authInfo.loggedInUser ? (<a href={"/settings/" + username + "/" + data.Database}><i className="fa fa-cog"></i></a>) : null}
 				&nbsp;

@@ -1,14 +1,14 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
-import {DatabasePanelGroup} from "./user-page";
-import {getTimePeriod} from "./format";
+import { DatabasePanelGroup } from "./user-page";
+import { getTimePeriod } from "./format";
 
 function WatchPanel({data, dateText}) {
 	const [isExpanded, setExpanded] = React.useState(false);
 
 	return (
-		<div className="card text-bg-light mb-1">
+		<div className="card mb-1">
 			<div className="card-header">
 				<a href={"/" + data.Owner}>{data.Owner}</a>&nbsp;/&nbsp;<a href={"/" + data.Owner + "/" + data.DBName}>{data.DBName}</a>
 				<span className="pull-right">
@@ -37,7 +37,7 @@ function WatchPanelGroup({title, noDatabasesMessage, databases, dateText}) {
 
 function SharedWithYouPanel({data}) {
 	return (
-		<div className="card text-bg-light mb-1">
+		<div className="card mb-1">
 			<div className="card-header">
 				<a href={"/" + data.owner_name + "/" + data.database_name}>{data.owner_name} / {data.database_name}</a>: {data.permission === "rw" ? "Read Write" : "Read Only"}
 			</div>
@@ -63,7 +63,7 @@ function SharedWithOthersPanel({data}) {
 	}
 
 	return (
-		<div className="card text-bg-light mb-1">
+		<div className="card mb-1">
 			<div className="card-header">
 				<a href={"/settings/" + authInfo.loggedInUser + "/" + data.database_name}><i className="fa fa-cog"></i></a>&nbsp;
 				<a href={"/" + authInfo.loggedInUser + "/" + data.database_name}>{data.database_name}</a>

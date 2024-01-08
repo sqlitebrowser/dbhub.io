@@ -29,10 +29,14 @@ import UpdatesPage from "./updates-page";
 import UploadForm from "./upload-form";
 import UserPage from "./user-page";
 import { Visualisation, VisualisationEditor } from "./visualisation-editor";
+import { applyUserPrefTheme } from "./theme";
 
 // Import Bootstrap
-import "../jsx/bootstrap.scss"
-import * as bootstrap from "bootstrap"
+import "../jsx/bootstrap.scss";
+import * as bootstrap from "bootstrap";
+
+// Apply theme
+applyUserPrefTheme();
 
 
 {

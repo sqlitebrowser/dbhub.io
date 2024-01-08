@@ -16,6 +16,10 @@
         }});
         </script>
     [[ end ]]
+    <script type="application/javascript">
+        const theme = localStorage.getItem("userPref_colourMode") || "light";
+        document.documentElement.setAttribute("data-bs-theme", theme);
+    </script>
 </head>
 <body>
 [[ end ]]

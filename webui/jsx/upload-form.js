@@ -2,6 +2,7 @@ const React = require("react");
 const ReactDOM = require("react-dom");
 
 import MarkdownEditor from "./markdown-editor";
+
 import Select from "react-dropdown-select";
 
 export default function UploadForm({branch}) {
@@ -150,7 +151,7 @@ export default function UploadForm({branch}) {
 			</>}
 
 			{live === false ?
-				<div className="card text-bg-light mt-2 mb-2">
+				<div className="card mt-2 mb-2">
 					<div className="card-header">
 						<a href="#/" onClick={() => setExpanded(!isExpanded)}>Advanced</a>
 						<span className="pull-right">

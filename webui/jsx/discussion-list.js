@@ -1,11 +1,11 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
 
-import {getTimePeriod} from "./format";
+import { getTimePeriod } from "./format";
 
 function DiscussionListRow({data, mergeRequests}) {
 	return (
-		<div className="card text-bg-light mt-1">
+		<div className="card mt-1">
 			<div className="card-body">
 				<h5 className="card-title"># {data.disc_id} {data.open === true ? <i className="fa fa-minus-square-o fa-lg text-success fs-4" /> : <i className="fa fa fa-check-square-o fa-lg text-danger fs-4" />} <a href={"/" + (mergeRequests ? "merge" : "discuss") + "/" + meta.owner + "/" + meta.database + "?id=" + data.disc_id}>{data.title}</a></h5>
 				<h6 className="card-subtitle">Created <span className="text-info" title={new Date(data.creation_date).toLocaleString()}>{getTimePeriod(data.creation_date, true)}</span> by <a href={"/" + data.creator}>{data.avatar_url !== "" ? <img src={data.avatar_url} height="18" width="18" className="border border-secondary" /> : null} {data.creator}</a>. Last modified <span className="text-info" title={new Date(data.last_modified).toLocaleString()}>{getTimePeriod(data.last_modified, true)}</span></h6>

@@ -3,7 +3,7 @@ const ReactDOM = require("react-dom");
 
 import MarkdownEditor from "./markdown-editor";
 import CommitList from "./commit-list";
-import {getTimePeriod} from "./format";
+import { getTimePeriod } from "./format";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 
@@ -116,7 +116,7 @@ function DiscussionTopComment({setStatusMessage, setStatusMessageColour}) {
 	}
 
 	return (
-		<div className="card text-bg-light">
+		<div className="card">
 			<div className="card-header">
 				<h4>
 					<a href={"/" + discussionData.creator}>{discussionData.avatar_url !== "" ? <img src={discussionData.avatar_url} height="30" width="30" className="border border-secondary" /> : null}</a>&nbsp;
@@ -286,7 +286,7 @@ function DiscussionComment({commentData, setStatusMessage, setStatusMessageColou
 
 	// Regular comment
 	return (
-		<div className="card text-bg-light mt-2">
+		<div className="card mt-2">
 			<div className="card-header">
 				<a href={"/" + commentData.commenter}>{commentData.avatar_url !== "" ? <img src={commentData.avatar_url} height="30" width="30" className="border border-secondary" /> : null}</a>&nbsp;
 				<a href={"/" + commentData.commenter}>{commentData.commenter}</a>&nbsp;

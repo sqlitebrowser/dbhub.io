@@ -210,7 +210,7 @@ export default function DiscussionCreateMr() {
 			<button type="button" className="btn btn-success" onClick={() => createMR()}>Create</button>&nbsp;
 			<button type="button" className="btn btn-secondary" onClick={() => cancelCreate()}>Cancel</button>
 		</form>
-		<div className="card text-bg-light mt-3">
+		<div className="card mt-3">
 			<div className="card-header">
 				Changes between the source and destination
 			</div>

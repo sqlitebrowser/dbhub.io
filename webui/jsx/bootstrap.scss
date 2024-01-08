@@ -14,3 +14,14 @@ a:not([rel~="external"]):not(.btn):not(.nav-link):not(.list-group-item):hover {
 	color: #23527c;
 	text-decoration: underline;
 }
+
+// Override colours when in dark mode
+@include color-mode(dark) {
+	a:not([rel~="external"]):not(.btn):not(.list-group-item) {
+		color: #e6e6e6;
+	}
+
+	a:not([rel~="external"]):not(.btn):not(.nav-link):not(.list-group-item):hover {
+		color: #408be8;
+	}
+}
