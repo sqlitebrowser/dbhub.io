@@ -1,5 +1,8 @@
 package main
 
+// FIXME: After the API and webui pieces are done, figure out how the DB4S end
+//        point and dio should be updated to use live databases too
+
 import (
 	"bytes"
 	"crypto/sha256"

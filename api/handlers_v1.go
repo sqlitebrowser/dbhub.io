@@ -14,6 +14,34 @@ import (
 	com "github.com/sqlitebrowser/dbhub.io/common"
 )
 
+// collectInfo is an internal function which xtracts the database owner, name, and commit ID from the request
+// and checks the permissions
+func collectInfo(c *gin.Context) (loggedInUser, dbOwner, dbName, commitID string, httpStatus int, err error) {
+	// Get user name
+	loggedInUser = c.MustGet("user").(string)
+
+	// Extract the database owner name, database name, and (optional) commit ID for the database from the request
+	dbOwner, dbName, commitID, err = com.GetFormODC(c.Request)
+	if err != nil {
+		httpStatus = http.StatusInternalServerError
+		return
+	}
+
+	// Check if the user has access to the requested database
+	// Check if the requested database exists
+	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	if err != nil {
+		httpStatus = http.StatusInternalServerError
+		return
+	}
+	if !exists {
+		httpStatus = http.StatusNotFound
+		err = fmt.Errorf("Database does not exist, or user isn't authorised to access it")
+		return
+	}
+	return
+}
+
 // branchesHandler returns the list of branches for a database
 // This can be run from the command line using curl, like this:
 //
@@ -63,19 +91,6 @@ func branchesHandler(c *gin.Context) {
 
 	// Return the list as JSON
 	c.JSON(http.StatusOK, brList)
-}
-
-// changeLogHandler handles requests for the Changelog (a html page)
-func changeLogHandler(c *gin.Context) {
-	var pageData struct {
-		ServerName string
-	}
-
-	// Pass through some variables, useful for the generated docs
-	pageData.ServerName = com.Conf.Web.ServerName
-
-	// Display our API changelog
-	c.HTML(http.StatusOK, "changelog", pageData)
 }
 
 // columnsHandler returns the list of columns in a table or view
@@ -1089,25 +1104,6 @@ func releasesHandler(c *gin.Context) {
 
 	// Return the list as JSON
 	c.JSON(200, rels)
-}
-
-// rootHandler handles requests for "/" and all unknown paths
-func rootHandler(c *gin.Context) {
-	var pageData struct {
-		ServerName string
-	}
-
-	// If the incoming request is for anything other than the index page, return a 404
-	if c.Request.URL.Path != "/" {
-		c.JSON(http.StatusNotFound, gin.H{"error": "page not found"})
-		return
-	}
-
-	// Pass through some variables, useful for the generated docs
-	pageData.ServerName = com.Conf.Web.ServerName
-
-	// Display our API documentation
-	c.HTML(http.StatusOK, "docs", pageData)
 }
 
 // tablesHandler returns the list of tables in a SQLite database

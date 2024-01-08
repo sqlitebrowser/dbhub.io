@@ -1,11 +1,5 @@
 package main
 
-// TODO: API functions that still need updating for Live databases
-//         * diff - already updated to just return an error for live databases.  needs testing though
-
-// FIXME: After the API and webui pieces are done, figure out how the DB4S end
-//        point and dio should be updated to use live databases too
-
 import (
 	"crypto/tls"
 	"fmt"
@@ -147,8 +141,8 @@ func main() {
 	router.Delims("[[", "]]")
 	router.LoadHTMLGlob(filepath.Join(com.Conf.Web.BaseDir, "api", "templates", "*.html"))
 
-	// Register API v1 handlers. All of them require authentication which is done by the checkAuth middleware
-	v1 := router.Group("/v1", checkAuth)
+	// Register API v1 handlers. All of them require authentication which is done by the authenticateV1 middleware
+	v1 := router.Group("/v1", authenticateV1)
 	{
 		v1.POST("/branches", branchesHandler)
 		v1.POST("/columns", columnsHandler)
@@ -186,8 +180,8 @@ func main() {
 	<-exitSignal
 }
 
-// checkAuth authenticates incoming requests
-func checkAuth(c *gin.Context) {
+// authenticateV1 authenticates incoming requests for the API v1 endpoints
+func authenticateV1(c *gin.Context) {
 	// Extract the API key from the request
 	apiKey := c.PostForm("apikey")
 
@@ -206,30 +200,34 @@ func checkAuth(c *gin.Context) {
 	return
 }
 
-// collectInfo is an internal function which xtracts the database owner, name, and commit ID from the request
-// and checks the permissions
-func collectInfo(c *gin.Context) (loggedInUser, dbOwner, dbName, commitID string, httpStatus int, err error) {
-	// Get user name
-	loggedInUser = c.MustGet("user").(string)
-
-	// Extract the database owner name, database name, and (optional) commit ID for the database from the request
-	dbOwner, dbName, commitID, err = com.GetFormODC(c.Request)
-	if err != nil {
-		httpStatus = http.StatusInternalServerError
-		return
+// changeLogHandler handles requests for the Changelog (a html page)
+func changeLogHandler(c *gin.Context) {
+	var pageData struct {
+		ServerName string
 	}
 
-	// Check if the user has access to the requested database
-	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
-	if err != nil {
-		httpStatus = http.StatusInternalServerError
+	// Pass through some variables, useful for the generated docs
+	pageData.ServerName = com.Conf.Web.ServerName
+
+	// Display our API changelog
+	c.HTML(http.StatusOK, "changelog", pageData)
+}
+
+// rootHandler handles requests for "/" and all unknown paths
+func rootHandler(c *gin.Context) {
+	var pageData struct {
+		ServerName string
+	}
+
+	// If the incoming request is for anything other than the index page, return a 404
+	if c.Request.URL.Path != "/" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "page not found"})
 		return
 	}
-	if !exists {
-		httpStatus = http.StatusNotFound
-		err = fmt.Errorf("Database does not exist, or user isn't authorised to access it")
-		return
-	}
-	return
+
+	// Pass through some variables, useful for the generated docs
+	pageData.ServerName = com.Conf.Web.ServerName
+
+	// Display our API documentation
+	c.HTML(http.StatusOK, "docs", pageData)
 }
