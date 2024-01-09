@@ -55,8 +55,8 @@ func JobQueueCheck() {
 			SELECT job_id, operation, submitter_node, details
 			FROM job_submissions
 			WHERE state = 'new'
-		    AND (target_node = 'any' OR target_node = $1)
-			AND completed_date IS NULL
+		    	AND (target_node = 'any' OR target_node = $1)
+				AND completed_date IS NULL
 			ORDER BY submission_date ASC
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1`

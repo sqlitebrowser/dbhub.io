@@ -445,5 +445,5 @@ func main() {
 	log.Printf("%s: listening for requests", com.Conf.Live.Nodename)
 
 	// Wait for exit signal
-	<- exitSignal
+	<-exitSignal
 }
