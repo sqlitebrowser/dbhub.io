@@ -138,7 +138,7 @@ func main() {
 
 	// Do the historical storage analysis if requested by the caller
 	if Historical {
-		for user, _ := range userList {
+		for user := range userList {
 			// Get the date the user signed up
 			details, err := com.User(user)
 			if err != nil {

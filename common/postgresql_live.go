@@ -36,7 +36,7 @@ func JobQueueCheck() {
 	}
 
 	// Loop around checking for newly submitted jobs
-	for _ = range CheckJobQueue {
+	for range CheckJobQueue {
 		if JobQueueDebug > 1 { // Only show when we have job queue debug verbosity turned up high
 			log.Printf("%s: JobQueueCheck() received event", Conf.Live.Nodename)
 		}
