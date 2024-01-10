@@ -121,7 +121,7 @@ function DiscussionTopComment({setStatusMessage, setStatusMessageColour}) {
 				<h4>
 					<a href={"/" + discussionData.creator}>{discussionData.avatar_url !== "" ? <img src={discussionData.avatar_url} height="30" width="30" className="border border-secondary" /> : null}</a>&nbsp;
 					{editDiscussion ? <input className="form-control w-75 d-inline" id="disctitle" value={discTitle} onChange={(e) => setDiscTitle(e.target.value)} /> : <strong>{savedDiscTitle}<span className="text-muted"> #{discussionData.disc_id}</span></strong>}
-					{editDiscussion === false && (discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser) ? <span className="pull-right fs-6"><a onClick={() => setEditDiscussion(true)}><i className="fa fa-pencil fa-fw"></i></a></span> : null}
+					{editDiscussion === false && (discussionData.creator === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser) ? <span className="pull-right fs-6"><a href="#/" onClick={() => setEditDiscussion(true)}><i className="fa fa-pencil fa-fw"></i></a></span> : null}
 				</h4>
 				{discussionData.open ?
 					<span className={"label label-success"}>
@@ -294,8 +294,8 @@ function DiscussionComment({commentData, setStatusMessage, setStatusMessageColou
 				<span title={new Date(commentData.creation_date).toLocaleString()} className="text-info">{getTimePeriod(commentData.creation_date, true)}</span>
 				{commentData.commenter === authInfo.loggedInUser || meta.owner === authInfo.loggedInUser ? (
 					<span className="pull-right fs-6">
-						<a onClick={() => setEditComment(!editComment)}><i className="fa fa-pencil fa-fw"></i></a>
-						<a onClick={() => deleteComment()}><i className="fa fa-trash-o fa-fw"></i></a>
+						<a href="#/" onClick={() => setEditComment(!editComment)}><i className="fa fa-pencil fa-fw"></i></a>
+						<a href="#/" onClick={() => deleteComment()}><i className="fa fa-trash-o fa-fw"></i></a>
 					</span>
 				) : null}
 			</div>
