@@ -112,12 +112,12 @@ func Diff(ownerA string, nameA string, commitA string, ownerB string, nameB stri
 		return Diffs{}, err
 	}
 
-	// Call dbDiff which does the actual diffing of the database files
-	return dbDiff(dbA, dbB, merge, includeData)
+	// Call DBDiff which does the actual diffing of the database files
+	return DBDiff(dbA, dbB, merge, includeData)
 }
 
-// dbDiff generates the differences between the two database files in dbA and dbD
-func dbDiff(dbA string, dbB string, merge MergeStrategy, includeData bool) (Diffs, error) {
+// DBDiff generates the differences between the two database files in dbA and dbB
+func DBDiff(dbA string, dbB string, merge MergeStrategy, includeData bool) (Diffs, error) {
 	var diff Diffs
 
 	// Check if this is the same database and exit early
@@ -129,19 +129,19 @@ func dbDiff(dbA string, dbB string, merge MergeStrategy, includeData bool) (Diff
 	var sdb *sqlite.Conn
 	sdb, err := sqlite.Open(dbA, sqlite.OpenReadOnly)
 	if err != nil {
-		log.Printf("Couldn't open database in dbDiff(): %s", err)
+		log.Printf("Couldn't open database in DBDiff(): %s", err)
 		return Diffs{}, err
 	}
 	defer sdb.Close()
 	if err = sdb.EnableExtendedResultCodes(true); err != nil {
-		log.Printf("Couldn't enable extended result codes in dbDiff(): %v", err.Error())
+		log.Printf("Couldn't enable extended result codes in DBDiff(): %v", err.Error())
 		return Diffs{}, err
 	}
 
 	// Attach the second database
 	err = sdb.Exec("ATTACH '" + dbB + "' AS aux")
 	if err != nil {
-		log.Printf("Couldn't attach database in dbDiff(): %s", err)
+		log.Printf("Couldn't attach database in DBDiff(): %s", err)
 		return Diffs{}, err
 	}
 
@@ -152,7 +152,7 @@ func dbDiff(dbA string, dbB string, merge MergeStrategy, includeData bool) (Diff
 		"SELECT name, type FROM aux.sqlite_master WHERE name NOT LIKE 'sqlite_%' AND (type != 'table' OR (type = 'table' AND sql NOT LIKE 'CREATE VIRTUAL%%'))\n" +
 		" ORDER BY name")
 	if err != nil {
-		log.Printf("Error when preparing statement for object list in dbDiff(): %s", err)
+		log.Printf("Error when preparing statement for object list in DBDiff(): %s", err)
 		return Diffs{}, err
 	}
 	defer stmt.Finalize()
@@ -169,7 +169,7 @@ func dbDiff(dbA string, dbB string, merge MergeStrategy, includeData bool) (Diff
 		return nil
 	})
 	if err != nil {
-		log.Printf("Error when diffing single object in dbDiff: %s", err)
+		log.Printf("Error when diffing single object in DBDiff: %s", err)
 		return Diffs{}, err
 	}
 
