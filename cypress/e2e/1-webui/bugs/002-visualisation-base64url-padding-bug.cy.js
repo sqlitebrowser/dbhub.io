@@ -8,7 +8,7 @@ describe('002-visualisation-base64url-padding-bug', () => {
   it('run a visualisation query whose base64url encoding does not have a padding character', () => {
     cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
     cy.get('[data-cy="newvisbtn"]').click()
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[name="usersql"]').type('{selectall}{backspace}').type(
       'SELECT Constituency_Name, Constituency_Number\n' +
       'FROM Constituency_Turnout_Information\n' +

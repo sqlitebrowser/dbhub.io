@@ -6,8 +6,8 @@ import Plotly from "plotly.js-basic-dist";
 import createPlotlyComponent from "react-plotly.js/factory";
 const Plot = createPlotlyComponent(Plotly);
 
-import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
-import "react-tabs/style/react-tabs.css";
+import Tab from "react-bootstrap/Tab";
+import Tabs from "react-bootstrap/Tabs";
 import Editor from "react-simple-code-editor";
 import {highlight, languages} from "prismjs/components/prism-core";
 import "prismjs/components/prism-sql";
@@ -588,12 +588,7 @@ export function VisualisationEditor() {
 					<div className="alert alert-info" role="alert">Select one of the saved visualisations or create a new visualisation.</div>
 				) : (<>
 					<Tabs>
-						<TabList>
-							<Tab data-cy="charttab">Chart</Tab>
-							<Tab data-cy="sqltab">SQL</Tab>
-							<Tab data-cy="settingstab">Chart settings</Tab>
-						</TabList>
-						<TabPanel forceRender={true}>
+						<Tab eventKey="chart" title="Chart">
 							<Visualisation name={selectedVisualisation} plotConfig={visualisations[selectedVisualisation]} branch={selectedBranch} setRawData={setRawData} setLastRunResultMessage={setLastRunResultMessage} />
 							{rawData !== null ? (<>
 								<button type="button" className={"btn btn-secondary" + (showDataTable ? " active" : "")} onClick={() => setShowDataTable(!showDataTable)}>{showDataTable ? "Hide data table" : "Show data table"}</button>&nbsp;
@@ -602,8 +597,8 @@ export function VisualisationEditor() {
 									<>&nbsp;<button type="button" className={"btn btn-secondary" + (showEmbedHtml ? " active" : "")} onClick={() => setShowEmbedHtml(!showEmbedHtml)}>{showEmbedHtml ? "Hide embedding" : "Embed chart"}</button></>
 								}
 							</>) : null}
-						</TabPanel>
-						<TabPanel>
+						</Tab>
+						<Tab eventKey="sql" title="SQL">
 							<Editor
 								name="usersql"
 								value={visualisationsStatus[selectedVisualisation].code}
@@ -623,10 +618,10 @@ export function VisualisationEditor() {
 								<button type="button" className={"btn btn-light" + (showDataTable ? " active" : "")} onClick={() => setShowDataTable(!showDataTable)}>{showDataTable ? "Hide data table" : "Show data table"}</button>&nbsp;
 								<span data-cy="statusmsg">{lastRunResultMessage}</span>
 							</div>
-						</TabPanel>
-						<TabPanel>
+						</Tab>
+						<Tab eventKey="settings" title="Chart settings">
 							<form>
-								<div className="row mb-2">
+								<div className="row mt-1 mb-2">
 									<label htmlFor="charttype" className="col-sm-2 col-form-label">Chart type</label>
 									<div className="col-sm-10">
 										<Select name="charttype" required={true} onChange={values => updatePlotConfig({chart_type: values[0].value})} options={chartTypes} values={[selectedChartType]} />
@@ -669,7 +664,7 @@ export function VisualisationEditor() {
 									</div>
 								</>) : null}
 							</form>
-						</TabPanel>
+						</Tab>
 					</Tabs>
 					{rawData !== null ? (
 						<div className="mt-2">

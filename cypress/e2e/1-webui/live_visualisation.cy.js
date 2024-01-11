@@ -13,7 +13,7 @@ describe('live visualisation', () => {
   it('save a visualisation', () => {
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="newvisbtn"]').click()
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[name="usersql"]').type(
       'SELECT table1.Name, table2.value\n' +
       'FROM table1 JOIN table2\n' +
@@ -35,7 +35,7 @@ describe('live visualisation', () => {
   it('save over an existing visualisation', () => {
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="newvisbtn"]').click()
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[name="usersql"]').type('{selectall}{backspace}').type(
       'SELECT table1.Name, table2.value\n' +
       'FROM table1, table2\n' +
@@ -59,7 +59,7 @@ describe('live visualisation', () => {
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Switch to the chart settings tab
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
 
     // Change the chart type
     cy.get('[name="charttype"]').parent().click()
@@ -69,7 +69,7 @@ describe('live visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="charttype"]').should('have.value', 'Pie chart')
     cy.get('[data-cy="xtruetoggle"]').should('not.exist')
 
@@ -81,7 +81,7 @@ describe('live visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="charttype"]').should('have.value', 'Horizontal bar chart')
     cy.get('[data-cy="xtruetoggle"]').should('exist')
   })
@@ -93,7 +93,7 @@ describe('live visualisation', () => {
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Switch to the chart settings tab
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
 
     // Change the X axis column value
     cy.get('[name="xaxiscol"]').parent().click()
@@ -103,7 +103,7 @@ describe('live visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="xaxiscol"]').should('have.value', 'value')
 
     // Switch to a different X axis column value
@@ -114,7 +114,7 @@ describe('live visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="xaxiscol"]').should('have.value', 'Name')
   })
 
@@ -129,7 +129,7 @@ describe('live visualisation', () => {
     // Create a visualisation with a third column
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="newvisbtn"]').click()
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[name="usersql"]').type('{selectall}{backspace}').type(
         'SELECT table1.Name, table2.value, table2.value2\n' +
         'FROM table1, table2\n' +
@@ -141,7 +141,7 @@ describe('live visualisation', () => {
     cy.wait(150) // Needs a bit of a delay here, otherwise any error status message may be missed
 
     // Switch to the chart settings tab
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
 
     // Change the Y axis column value
     cy.get('[name="yaxiscol"]').parent().click()
@@ -151,7 +151,7 @@ describe('live visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('new 1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="yaxiscol"]').should('have.value', 'value2')
 
     // Switch to a different Y axis column value
@@ -162,7 +162,7 @@ describe('live visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Join Testing with index.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('new 1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="yaxiscol"]').should('have.value', 'value')
   })
 
@@ -204,7 +204,7 @@ describe('live visualisation', () => {
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Click the format buttn
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[data-cy="formatsqlbtn"]').click()
 
     // Verify the changed text
@@ -227,7 +227,7 @@ describe('live visualisation', () => {
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('livetest1').click()
 
     // Click the Run SQL button
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[data-cy="runsqlbtn"]').click()
 
     // Verify the result

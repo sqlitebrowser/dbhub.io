@@ -26,7 +26,7 @@ describe('visualisation', () => {
   it('save a visualisation', () => {
     cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
     cy.get('[data-cy="newvisbtn"]').click()
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[name="usersql"]').type(
       'SELECT Constituency_Name, Constituency_Number, Turnout_pct\n' +
       'FROM Constituency_Turnout_Information\n' +
@@ -48,7 +48,7 @@ describe('visualisation', () => {
   it('save over an existing visualisation', () => {
     cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
     cy.get('[data-cy="newvisbtn"]').click()
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[name="usersql"]').type('{selectall}{backspace}').type(
       'SELECT Constituency_Name, Constituency_Number\n' +
       'FROM Constituency_Turnout_Information\n' +
@@ -72,7 +72,7 @@ describe('visualisation', () => {
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
 
     // Switch to the chart settings tab
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
 
     // Change the chart type
     cy.get('[name="charttype"]').parent().click()
@@ -82,7 +82,7 @@ describe('visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="charttype"]').should('have.value', 'Pie chart')
     cy.get('[data-cy="xtruetoggle"]').should('not.exist')
 
@@ -94,7 +94,7 @@ describe('visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="charttype"]').should('have.value', 'Horizontal bar chart')
     cy.get('[data-cy="xtruetoggle"]').should('exist')
   })
@@ -106,7 +106,7 @@ describe('visualisation', () => {
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
 
     // Switch to the chart settings tab
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
 
     // Change the X axis column value
     cy.get('[name="xaxiscol"]').parent().click()
@@ -116,7 +116,7 @@ describe('visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="xaxiscol"]').should('have.value', 'Constituency_Number')
 
     // Switch to a different X axis column value
@@ -127,7 +127,7 @@ describe('visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="xaxiscol"]').should('have.value', 'Constituency_Name')
   })
 
@@ -138,7 +138,7 @@ describe('visualisation', () => {
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
 
     // Switch to the chart settings tab
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
 
     // Change the Y axis column value
     cy.get('[name="yaxiscol"]').parent().click()
@@ -148,7 +148,7 @@ describe('visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="yaxiscol"]').should('have.value', 'Turnout_pct')
 
     // Switch to a different Y axis column value
@@ -159,7 +159,7 @@ describe('visualisation', () => {
     // Verify the change
     cy.visit('/vis/default/Assembly Election 2017 with view.sqlite')
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
-    cy.get('[data-cy="settingstab"]').click()
+    cy.get('[data-rr-ui-event-key="settings"]').click()
     cy.get('[name="yaxiscol"]').should('have.value', 'Constituency_Number')
   })
 
@@ -201,7 +201,7 @@ describe('visualisation', () => {
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
 
     // Click the format button
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[data-cy="formatsqlbtn"]').click()
     cy.wait(waitTime)
 
@@ -226,7 +226,7 @@ describe('visualisation', () => {
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
 
     // Click the Run SQL button
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[data-cy="runsqlbtn"]').click()
 
     // Verify the result
@@ -313,7 +313,7 @@ describe('visualisation', () => {
 
     // Ensure the visualisation drop down works ok
     cy.get('[data-cy="savedvis"]').get('.list-group-item').contains('test1').click()
-    cy.get('[data-cy="sqltab"]').click()
+    cy.get('[data-rr-ui-event-key="sql"]').click()
     cy.get('[name="usersql"]').should('contain',
       'SELECT Constituency_Name, Constituency_Number, Turnout_pct\n' +
       'FROM Constituency_Turnout_Information\n' +
