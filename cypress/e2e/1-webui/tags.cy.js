@@ -12,7 +12,7 @@ describe('tags', () => {
     cy.get('[data-cy="createtagrelbtn"]').click()
     cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('Some tag name').should('have.value', 'Some tag name')
     cy.get('[data-cy="tagdesc"]').type('{selectall}{backspace}').type('Some tag description').should('have.value', 'Some tag description')
-    cy.get('[data-cy="tagdesc-preview-tab"]').click()
+    cy.get('[data-rr-ui-event-key="tagdesc-preview-tab"]').click()
     cy.get('[data-cy="tagdesc-preview"]').should('contain', 'Some tag description')
     cy.get('[data-cy="createbtn"]').click()
     cy.visit('default/Assembly%20Election%202017.sqlite')
@@ -59,7 +59,7 @@ describe('tags', () => {
   it('change tag description', () => {
     cy.visit('tags/default/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="Some other name_desc-preview"]').should('contain', 'Some tag description')
-    cy.get('[data-cy="Some other name_desc-edit-tab"]').click()
+    cy.get('[data-rr-ui-event-key="Some other name_desc-edit-tab"]').click()
     cy.get('[data-cy="Some other name_desc"]').type('{selectall}{backspace}').type('A new description').should('have.value', 'A new description')
     cy.get('[data-cy="updatebtn"]').first().click()
     cy.reload()

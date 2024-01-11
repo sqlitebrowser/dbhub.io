@@ -357,7 +357,7 @@ export default function DatabaseSettings() {
 			<div className="row mb-2">
 				<label htmlFor="fulldesc" className="col-sm-2 col-form-label">Full length description<div className="form-text">Markdown (<a href="https://commonmark.org" target="_blank" rel="noopener noreferrer external">CommonMark</a> format) is supported</div></label>
 				<div className="col-sm-10">
-					<MarkdownEditor editorId="fulldesc" rows={18} defaultIndex={1} initialValue={fullDescription} />
+					<MarkdownEditor editorId="fulldesc" rows={18} defaultTab="preview" initialValue={fullDescription} />
 				</div>
 			</div>
 			<div className="row mb-2">

@@ -13,7 +13,7 @@ describe('releases', () => {
     cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('Some release name').should('have.value', 'Some release name')
     cy.get('[data-cy="relradio"]').click()
     cy.get('[data-cy="tagdesc"]').type('{selectall}{backspace}').type('Some release description').should('have.value', 'Some release description')
-    cy.get('[data-cy="tagdesc-preview-tab"]').click()
+    cy.get('[data-rr-ui-event-key="tagdesc-preview-tab"]').click()
     cy.get('[data-cy="tagdesc-preview"]').should('contain', 'Some release description')
     cy.get('[data-cy="createbtn"]').click()
     cy.visit('default/Assembly%20Election%202017.sqlite')
@@ -60,7 +60,7 @@ describe('releases', () => {
   it('change release description', () => {
     cy.visit('releases/default/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="Some other name_desc-preview"]').should('contain', 'Some release description')
-    cy.get('[data-cy="Some other name_desc-edit-tab"]').click()
+    cy.get('[data-rr-ui-event-key="Some other name_desc-edit-tab"]').click()
     cy.get('[data-cy="Some other name_desc"]').type('{selectall}{backspace}').type('A new description').should('have.value', 'A new description')
     cy.get('[data-cy="updatebtn"]').first().click()
     cy.reload()

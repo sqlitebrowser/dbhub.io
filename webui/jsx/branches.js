@@ -114,7 +114,7 @@ function BranchesTableRow({name, commit, description, setStatus}) {
 				{authInfo.loggedInUser === meta.owner ? <button className="btn btn-danger" onClick={() => {return deleteBranch()}} data-cy="delbtn">Delete</button> : null}
 			</td>
 			<td colSpan={3}>
-				<MarkdownEditor editorId={name + "_desc"} rows={10} placeholder="A description for this branch" defaultIndex={1} initialValue={description} viewOnly={meta.owner !== authInfo.loggedInUser} />
+				<MarkdownEditor editorId={name + "_desc"} rows={10} placeholder="A description for this branch" defaultTab="preview" initialValue={description} viewOnly={meta.owner !== authInfo.loggedInUser} />
 			</td>
 		</tr>
 	</>);

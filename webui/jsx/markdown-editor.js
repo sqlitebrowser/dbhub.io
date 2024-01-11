@@ -1,31 +1,26 @@
 const React = require("react");
 const ReactDOM = require("react-dom");
-import { Tab, Tabs, TabList, TabPanel } from "react-tabs";
+import Tab from "react-bootstrap/Tab";
+import Tabs from "react-bootstrap/Tabs";
 
-import "react-tabs/style/react-tabs.css";
-
-export default function MarkdownEditor({editorId, rows, placeholder, defaultIndex, initialValue, viewOnly, onChange}) {
+export default function MarkdownEditor({editorId, rows, placeholder, defaultTab, initialValue, viewOnly, onChange}) {
 	const [previewHtml, setPreviewHtml] = React.useState("");
 
 	if (rows === undefined) {
 		rows = 10;
 	}
 
-	if (defaultIndex === undefined) {
-		defaultIndex = 0;
-	}
-
 	if (viewOnly === undefined) {
 		viewOnly = false;
 	} else if (viewOnly === true) {
-		defaultIndex = 1;	// When in view-only mode, always change to the preview tab
+		defaultTab = "preview";	// When in view-only mode, always change to the preview tab
 	}
 
-	function tabChanged(index) {
+	function tabChanged(newTab) {
 		// Preview tab selected?
-		if (index === 1) {
+		if (newTab === (editorId + "-preview-tab")) {
 			// Retrieve latest markdown text from the text area
-			let txt = document.getElementById(editorId).value;
+			const txt = document.getElementById(editorId).value;
 
 			// Call the server, asking for a rendered version of the markdown
 			fetch("/x/markdownpreview/", {
@@ -45,8 +40,8 @@ export default function MarkdownEditor({editorId, rows, placeholder, defaultInde
 	// After first rendering the component, make sure to get the markdown render from the
 	// server
 	React.useEffect(() => {
-		if (defaultIndex === 1) {
-			tabChanged(1);
+		if (defaultTab === "preview") {
+			tabChanged(editorId + "-preview-tab");
 		}
 	}, []);
 
@@ -64,13 +59,9 @@ export default function MarkdownEditor({editorId, rows, placeholder, defaultInde
 	}
 
 	return (
-		<Tabs onSelect={(index) => tabChanged(index)} forceRenderTabPanel={true} defaultIndex={defaultIndex}>
-			<TabList>
-				<Tab data-cy={editorId + "-edit-tab"}>Edit</Tab>
-				<Tab data-cy={editorId + "-preview-tab"}>Preview</Tab>
-			</TabList>
-			<TabPanel>{editor}</TabPanel>
-			<TabPanel>{view}</TabPanel>
+		<Tabs onSelect={(index) => tabChanged(index)} defaultActiveKey={defaultTab === "preview" ? (editorId + "-preview-tab") : (editorId + "-edit-tab")}>
+			<Tab eventKey={editorId + "-edit-tab"} title="Edit">{editor}</Tab>
+			<Tab eventKey={editorId + "-preview-tab"} title="Preview">{view}</Tab>
 		</Tabs>
 	);
 }

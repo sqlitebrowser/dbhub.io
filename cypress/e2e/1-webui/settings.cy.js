@@ -191,10 +191,10 @@ describe('settings', () => {
    it('full description', () => {
      cy.visit('settings/default/Assembly%20Election%202017.sqlite')
      cy.get('[data-cy="fulldesc-preview"]').should('contain.text', 'No full description')
-     cy.get('[data-cy="fulldesc-edit-tab"]').click()
+     cy.get('[data-rr-ui-event-key="fulldesc-edit-tab"]').click()
      cy.get('[data-cy="fulldesc"]').should('contain.text', 'No full description')
      cy.get('[data-cy="fulldesc"]').type('{selectall}{backspace}Some new description')
-     cy.get('[data-cy="fulldesc-preview-tab"]').click()
+     cy.get('[data-rr-ui-event-key="fulldesc-preview-tab"]').click()
      cy.get('[data-cy="fulldesc-preview"]').should('contain.text', 'Some new description')
      cy.get('[data-cy="savebtn"]').click()
      cy.get('[data-cy="settingslink"]').click()

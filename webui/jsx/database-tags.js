@@ -105,7 +105,7 @@ function DatabaseTagRow({name, data, releases, setStatusMessage, setStatusMessag
 			{actionsCol}
 			{nameCol}
 			<td>
-				<MarkdownEditor editorId={savedTagName + "_desc"} rows={10} placeholder={"A description for this " + (releases ? "release" : "tag")} defaultIndex={1} initialValue={data.description} viewOnly={meta.owner !== authInfo.loggedInUser} />
+				<MarkdownEditor editorId={savedTagName + "_desc"} rows={10} placeholder={"A description for this " + (releases ? "release" : "tag")} defaultTab="preview" initialValue={data.description} viewOnly={meta.owner !== authInfo.loggedInUser} />
 			</td>
 			<td>
 				{data.avatar_url !== "" ? <img src={data.avatar_url} height="28" width="28" className="border border-secondary" /> : null}&nbsp;
