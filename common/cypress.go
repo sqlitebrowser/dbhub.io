@@ -67,6 +67,43 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Add some tags
+	commits, err := GetCommitList("default", "Assembly Election 2017.sqlite")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var commitID string
+	for _, commit := range commits {
+		commitID = commit.ID
+	}
+	err = CreateTag("default", "Assembly Election 2017.sqlite", "first",
+		"First tag", "Example Tagger", "example@example.org", commitID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = CreateTag("default", "Assembly Election 2017.sqlite", "second",
+		"Second tag", "Example Tagger", "example@example.org", commitID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Add some releases
+	err = CreateRelease("default", "Assembly Election 2017.sqlite", "first",
+		"First release", "Example Releaser", "example@example.org", commitID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = CreateRelease("default", "Assembly Election 2017.sqlite", "second",
+		"Second release", "Example Releaser", "example@example.org", commitID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// *** Add a test LIVE SQLite database (start) ***
 
 	// Open the live database file
@@ -129,12 +166,21 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 
 	// Add some API keys
 	keys := map[string]string{
+		// Old API key format
 		"2MXwA5jGZkIQ3UNEcKsuDNSPMlx": "default",
 		"2MXw0cd7IBAGR6mm0JX6O5BdySJ": "default",
 		"2MXwB8hvXgUHlCkXq5odLe4L05j": "default",
 		"2MXwGkD0il29I0e98rptPlfnABr": "first",
 		"2MXwIsi2wUIqvzN6lNkpxqmsDQK": "second",
 		"2MXwJkTQVonjJqNlpIFyA9BNtE6": "third",
+
+		// New API key format
+		"Rh3fPl6cl84XEw2FeWtj-FlUsn9OrxKz9oSJfe6kho7jT_1l5hizqw": "default",
+		"Sr7oqnzG_l5yqf-fOtifYBPhMghnwQwSuIhoSciMqES2eD6kq7s52Q": "default",
+		"JnEdDFCPFYggjNqIsS4kAUC_FJfEWdbseY4ZHH6ocgRhaLpok0VoeQ": "default",
+		"KqHOvobv-lPcwFFYhQe426JWrsejPDWcaTJt3AKDTICeZDxOVpLt6Q": "first",
+		"EdmNqQcJZQzIoArVCAu6bByhmVUe_Oa780avsoluO-yFixGxrQQuGw": "second",
+		"NvPG_Vh8uxK4BqkN7yJiRA4HP2HxCC0XXw0TBQGXbsaSlVhXZDrb1g": "third",
 	}
 	for key, user := range keys {
 		_, err = APIKeySave(key, user, time.Now(), nil, "Cypress tests")
@@ -147,6 +193,54 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 
 	// Log the database reset
 	log.Println("Test data added to database")
+	return
+}
+
+// CreateRelease is used for creating a release when running tests
+func CreateRelease(dbOwner, dbName, releaseName, releaseDescription, releaserName, releaserEmail, commitID string) (err error) {
+	// Retrieve the existing releases for the database
+	var releases map[string]ReleaseEntry
+	releases, err = GetReleases(dbOwner, dbName)
+	if err != nil {
+		return
+	}
+
+	// Create the new release
+	newRelease := ReleaseEntry{
+		Commit:        commitID,
+		Date:          time.Now(),
+		Description:   releaseDescription,
+		ReleaserEmail: releaserEmail,
+		ReleaserName:  releaserName,
+	}
+	releases[releaseName] = newRelease
+
+	// Store it in PostgreSQL
+	err = StoreReleases(dbOwner, dbName, releases)
+	return
+}
+
+// CreateTag is used for creating a tag when running tests
+func CreateTag(dbOwner, dbName, tagName, tagDescription, taggerName, taggerEmail, commitID string) (err error) {
+	// Retrieve the existing tags for the database
+	var tags map[string]TagEntry
+	tags, err = GetTags(dbOwner, dbName)
+	if err != nil {
+		return
+	}
+
+	// Create the new tag
+	newTag := TagEntry{
+		Commit:      commitID,
+		Date:        time.Now(),
+		Description: tagDescription,
+		TaggerEmail: taggerEmail,
+		TaggerName:  taggerName,
+	}
+	tags[tagName] = newTag
+
+	// Store it in PostgreSQL
+	err = StoreTags(dbOwner, dbName, tags)
 	return
 }
 
