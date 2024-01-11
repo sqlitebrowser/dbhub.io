@@ -5387,38 +5387,6 @@ func VisualisationRename(dbOwner, dbName, visName, visNewName string) (err error
 	return
 }
 
-// VisualisationSaveData saves visualisation result data for later retrieval
-func VisualisationSaveData(dbOwner, dbName, commitID, hash string, visData []VisRowV1) (err error) {
-	var commandTag pgconn.CommandTag
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		), d AS (
-			SELECT db.db_id
-			FROM sqlite_databases AS db, u
-			WHERE db.user_id = u.user_id
-				AND db_name = $2
-		)
-		INSERT INTO vis_result_cache (user_id, db_id, commit_id, hash, results)
-		SELECT (SELECT user_id FROM u), (SELECT db_id FROM d), $3, $4, $5
-		ON CONFLICT (db_id, user_id, commit_id, hash)
-			DO UPDATE
-			SET results = $5`
-	commandTag, err = pdb.Exec(context.Background(), dbQuery, dbOwner, dbName, commitID, hash, visData)
-	if err != nil {
-		log.Printf("Saving visualisation data for database '%s/%s', commit '%s', hash '%s' failed: %v", dbOwner,
-			dbName, commitID, hash, err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected while saving visualisation data for database '%s/%s', commit '%s', hash '%s'",
-			numRows, dbOwner, dbName, commitID, hash)
-	}
-	return
-}
-
 // VisualisationSaveParams saves a set of visualisation parameters for later retrieval
 func VisualisationSaveParams(dbOwner, dbName, visName string, visParams VisParamsV2) (err error) {
 	var commandTag pgconn.CommandTag

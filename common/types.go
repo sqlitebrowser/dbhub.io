@@ -320,11 +320,6 @@ type ForkEntry struct {
 	Deleted    bool       `json:"deleted"`
 }
 
-// JsonError holds the details of an error.  It's used by our API for returning error information
-type JsonError struct {
-	Error string `json:"error"`
-}
-
 type LicenceEntry struct {
 	FileFormat string `json:"file_format"`
 	FullName   string `json:"full_name"`
@@ -477,15 +472,4 @@ type VisParamsV2 struct {
 	SQL         string `json:"sql"`
 	XAXisColumn string `json:"x_axis_label"`
 	YAXisColumn string `json:"y_axis_label"`
-}
-
-type VisRowV1 struct {
-	Name  string
-	Value int
-}
-
-type WhereClause struct {
-	Column string
-	Type   string
-	Value  string
 }
