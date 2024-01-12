@@ -1,5 +1,12 @@
 [[ define "visembedPage" ]]
-[[ template "head" . ]]
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DBHub.io - [[ .PageMeta.Title ]]</title>
+</head>
+<body>
 <div class="container-fluid">
     <div id="visualisation" data-name="[[ .VisName ]]" data-plot-config="visualisationData" data-branch="[[ .DB.Info.Branch ]]"></div>
     <div class="row">
