@@ -3320,7 +3320,7 @@ func main() {
 	}
 
 	// Connect to job queue server
-	com.AmqpChan, err = com.ConnectQueue()
+	err = com.ConnectQueue()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -3344,13 +3344,11 @@ func main() {
 	go com.SendEmails()
 
 	// Start background goroutines to handle job queue responses
-	if !com.UseAMQP {
-		com.ResponseQueue = com.NewResponseQueue()
-		com.CheckResponsesQueue = make(chan struct{})
-		com.SubmitterInstance = com.RandomString(3)
-		go com.ResponseQueueCheck()
-		go com.ResponseQueueListen()
-	}
+	com.ResponseQueue = com.NewResponseQueue()
+	com.CheckResponsesQueue = make(chan struct{})
+	com.SubmitterInstance = com.RandomString(3)
+	go com.ResponseQueueCheck()
+	go com.ResponseQueueListen()
 
 	// Start background signal handler
 	exitSignal := make(chan struct{}, 1)
@@ -5864,7 +5862,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 	// Send a request to the job queue to set up the database
-	liveNode, err := com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID)
+	liveNode, err := com.LiveCreateDB(dbOwner, dbName, objectID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())

@@ -63,7 +63,7 @@ func main() {
 	}
 
 	// Connect to job queue server
-	com.AmqpChan, err = com.ConnectQueue()
+	err = com.ConnectQueue()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -87,13 +87,11 @@ func main() {
 	}
 
 	// Start background goroutines to handle job queue responses
-	if !com.UseAMQP {
-		com.ResponseQueue = com.NewResponseQueue()
-		com.CheckResponsesQueue = make(chan struct{})
-		com.SubmitterInstance = com.RandomString(3)
-		go com.ResponseQueueCheck()
-		go com.ResponseQueueListen()
-	}
+	com.ResponseQueue = com.NewResponseQueue()
+	com.CheckResponsesQueue = make(chan struct{})
+	com.SubmitterInstance = com.RandomString(3)
+	go com.ResponseQueueCheck()
+	go com.ResponseQueueListen()
 
 	// Start background signal handler
 	exitSignal := make(chan struct{}, 1)

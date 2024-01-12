@@ -1372,13 +1372,12 @@ func DisconnectPostgreSQL() {
 		pdb.Close()
 	}
 
-	if !UseAMQP {
-		// Don't bother trying to close the job responses listener connection, as it just blocks
-		//JobListenConn.Close(context.Background())
+	// Don't bother trying to close the job responses listener connection, as it just blocks
+	//JobListenConn.Close(context.Background())
 
-		if JobQueueConn != nil {
-			JobQueueConn.Close()
-		}
+	// We're ok to close the Job Queue connection though, as that one doesn't block
+	if JobQueueConn != nil {
+		JobQueueConn.Close()
 	}
 }
 

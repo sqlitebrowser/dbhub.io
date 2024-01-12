@@ -1444,7 +1444,7 @@ func uploadHandler(c *gin.Context) {
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), numBytes)
 
 		// Send a request to the job queue to set up the database
-		liveNode, err := com.LiveCreateDB(com.AmqpChan, dbOwner, dbName, objectID)
+		liveNode, err := com.LiveCreateDB(dbOwner, dbName, objectID)
 		if err != nil {
 			log.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{

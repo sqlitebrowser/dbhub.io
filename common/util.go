@@ -1142,12 +1142,6 @@ func SignalHandler(done *chan struct{}) {
 
 	// Shut down connections
 	DisconnectPostgreSQL()
-	if UseAMQP {
-		err := CloseMQChannel(AmqpChan)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 
 	// The application is ready to exit
 	*done <- struct{}{}
