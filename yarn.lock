@@ -2659,6 +2659,11 @@ get-intrinsic@^1.0.2:
     has "^1.0.3"
     has-symbols "^1.0.3"
 
+get-stdin@=8.0.0:
+  version "8.0.0"
+  resolved "https://registry.yarnpkg.com/get-stdin/-/get-stdin-8.0.0.tgz#cbad6a73feb75f6eeb22ba9e01f89aa28aa97a53"
+  integrity sha512-sY22aA6xchAzprjyqmSEQv4UbAAzRN0L2dQB0NlN5acTTK9Don6nhoc3eAbUnpZiCANAMfd/+40kVdKfFygohg==
+
 get-stream@^5.0.0, get-stream@^5.1.0:
   version "5.2.0"
   resolved "https://registry.npmjs.org/get-stream/-/get-stream-5.2.0.tgz"
@@ -3878,12 +3883,13 @@ source-map@^0.6.0:
   resolved "https://registry.npmjs.org/source-map/-/source-map-0.6.1.tgz"
   integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
 
-sql-formatter@^12.2.0:
-  version "12.2.0"
-  resolved "https://registry.yarnpkg.com/sql-formatter/-/sql-formatter-12.2.0.tgz#57a86a6ba37e586d85a518d1816d671eca5b7474"
-  integrity sha512-wNsPUdOD6nnN9RUgHlNprQtm+iLW5LTOy/T0/2DDr2UeWSP8mvlQHrx6TY+IG1nfu5Kipq9GaOtS9SVq8s0Vig==
+sql-formatter@^15.0.2:
+  version "15.0.2"
+  resolved "https://registry.yarnpkg.com/sql-formatter/-/sql-formatter-15.0.2.tgz#302b8846c347d5a3d1dd858306727cfeb36d7d0c"
+  integrity sha512-B8FTRc1dhb36lfuwSdiLhwrhkvT3PU/3es7YDPPQBOhbGHdXKlweAXTRS+QfCWk06ufAh118yFja6NcukBS4gg==
   dependencies:
     argparse "^2.0.1"
+    get-stdin "=8.0.0"
     nearley "^2.20.1"
 
 sshpk@^1.14.1:

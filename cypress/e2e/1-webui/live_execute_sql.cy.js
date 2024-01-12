@@ -24,8 +24,7 @@ describe('live execute', () => {
     // Verify the changed text
     cy.wait(waitTime)
     cy.get('.sql-terminal-input').find('textarea').should('contain',
-      'CREATE TABLE\n' +
-        '  livetest1 (field1 INTEGER, field2 TEXT, field3 INTEGER)')
+      'CREATE TABLE livetest1 (field1 INTEGER, field2 TEXT, field3 INTEGER)')
   })
 
   // "Execute SQL" button
