@@ -34,6 +34,7 @@ describe('logged-in user preferences page', () => {
     cy.get('[data-cy="numrows"]').should('have.attr', 'value', '10')
     cy.get('[data-cy="numrows"]').type('{selectall}{backspace}').type('25').should('have.value', '25')
     cy.get('[data-cy="updatebtn"]').click()
+    cy.wait(100)
     cy.visit('pref')
     cy.get('[data-cy="numrows"]').should('have.attr', 'value', '25')
   })

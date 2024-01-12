@@ -29,8 +29,8 @@ describe('logged-in user profile page', () => {
     cy.get('[data-cy="pubdbs"]').contains('Forks:').next().should('contain', '0')
     cy.get('[data-cy="pubdbs"]').contains('MRs:').next().should('contain', '0')
     cy.get('[data-cy="pubdbs"]').contains('Branches:').next().should('contain', '1')
-    cy.get('[data-cy="pubdbs"]').contains('Releases:').next().should('contain', '0')
-    cy.get('[data-cy="pubdbs"]').contains('Tags:').next().should('contain', '0')
+    cy.get('[data-cy="pubdbs"]').contains('Releases:').next().should('contain', '2')
+    cy.get('[data-cy="pubdbs"]').contains('Tags:').next().should('contain', '2')
     cy.get('[data-cy="pubdbs"]').contains('Downloads:').next().should('contain', '0')
   })
 

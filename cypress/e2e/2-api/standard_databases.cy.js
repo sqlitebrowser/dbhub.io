@@ -408,7 +408,7 @@ describe('api tests', () => {
   it('releases', () => {
     // Create a release, so we can test it using the API
     cy.visit('default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="rlscnt"]').should('contain', '0')
+    cy.get('[data-cy="rlscnt"]').should('contain', '2')
     cy.get('[data-cy="commitslnk"]').click()
     cy.get('[data-cy="createtagrelbtn"]').click()
     cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('Some release name').should('have.value', 'Some release name')
@@ -418,7 +418,7 @@ describe('api tests', () => {
     cy.get('[data-cy="tagdesc-preview"]').should('contain', 'Some release description')
     cy.get('[data-cy="createbtn"]').click()
     cy.visit('default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="rlscnt"]').should('contain', '1')
+    cy.get('[data-cy="rlscnt"]').should('contain', '3')
 
     // Test the release details via the api
     cy.request({
@@ -481,7 +481,7 @@ describe('api tests', () => {
   it('tags', () => {
     // Create a tag for us to test with
     cy.visit('default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="tagscnt"]').should('contain', '0')
+    cy.get('[data-cy="tagscnt"]').should('contain', '2')
     cy.get('[data-cy="commitslnk"]').click()
     cy.get('[data-cy="createtagrelbtn"]').click()
     cy.get('[data-cy="nameinput"]').type('{selectall}{backspace}').type('Some tag name').should('have.value', 'Some tag name')
@@ -490,7 +490,7 @@ describe('api tests', () => {
     cy.get('[data-cy="tagdesc-preview"]').should('contain', 'Some tag description')
     cy.get('[data-cy="createbtn"]').click()
     cy.visit('default/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="tagscnt"]').should('contain', '1')
+    cy.get('[data-cy="tagscnt"]').should('contain', '3')
 
     // Test the tag details using the API
     cy.request({

@@ -111,12 +111,12 @@ describe('database page', () => {
 
   // Tags
   it('Tags count', () => {
-    cy.get('[data-cy="tagscnt"]').should('contain', '0')
+    cy.get('[data-cy="tagscnt"]').should('contain', '2')
   })
 
   // Releases
   it('Releases count', () => {
-    cy.get('[data-cy="rlscnt"]').should('contain', '0')
+    cy.get('[data-cy="rlscnt"]').should('contain', '2')
   })
 
   // Contributors

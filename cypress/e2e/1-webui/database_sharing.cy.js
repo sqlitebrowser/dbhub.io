@@ -259,21 +259,23 @@ describe('database sharing', () => {
   })
 
   // Upload to shared read-write private standard database (should succeed)
-  it('Upload to shared read-write private standard database succeeds', () => {
-    cy.request("/x/test/switchdefault")
-    cy.visit('second/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="uploadbtn"').click()
-    cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="uploadbtn"').click()
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/second/Assembly Election 2017.sqlite')
-
-    cy.request("/x/test/switchfirst")
-    cy.visit('third/Assembly%20Election%202017.sqlite')
-    cy.get('[data-cy="uploadbtn"').click()
-    cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
-    cy.get('[data-cy="uploadbtn"').click()
-    cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/third/Assembly Election 2017.sqlite')
-
+  it('Upload to shared read-write private standard database succeeds (part 1)', () => {
+      cy.request("/x/test/switchdefault")
+      cy.visit('second/Assembly%20Election%202017.sqlite')
+      cy.get('[data-cy="uploadbtn"').click()
+      cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
+      cy.get('[data-cy="uploadbtn"').click()
+      cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/second/Assembly Election 2017.sqlite')
+  })
+  it('Upload to shared read-write private standard database succeeds (part 2)', () => {
+      cy.request("/x/test/switchfirst")
+      cy.visit('third/Assembly%20Election%202017.sqlite')
+      cy.get('[data-cy="uploadbtn"').click()
+      cy.get('input[type=file]').selectFile('cypress/test_data/Assembly Election 2017.sqlite')
+      cy.get('[data-cy="uploadbtn"').click()
+      cy.get('[data-cy="headerdblnk"').should('have.attr', 'href').and('equal', '/third/Assembly Election 2017.sqlite')
+  })
+  it('Upload to shared read-write private standard database succeeds (part 3)', () => {
     cy.request("/x/test/switchsecond")
     cy.visit('first/Assembly%20Election%202017.sqlite')
     cy.get('[data-cy="uploadbtn"').click()
