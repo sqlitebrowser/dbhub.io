@@ -14,7 +14,6 @@ type TomlConfig struct {
 	Live        LiveInfo
 	Memcache    MemcacheInfo
 	Minio       MinioInfo
-	MQ          MQInfo
 	Pg          PGInfo
 	Sign        SigningInfo
 	UserMgmt    UserMgmtInfo
@@ -91,15 +90,6 @@ type MinioInfo struct {
 	HTTPS     bool
 	Secret    string
 	Server    string
-}
-
-type MQInfo struct {
-	CertFile string `toml:"cert_file"`
-	KeyFile  string `toml:"key_file"`
-	Password string `toml:"password"`
-	Port     int    `toml:"port"`
-	Server   string `toml:"server"`
-	Username string `toml:"username"`
 }
 
 // PGInfo contains the PostgreSQL connection parameters
