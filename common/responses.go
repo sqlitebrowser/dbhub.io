@@ -93,18 +93,6 @@ func MetadataResponse(dbOwner, dbName string) (meta MetadataResponseContainer, e
 	return
 }
 
-// StatusResponseContainer holds a general status message response to a client request.
-type StatusResponseContainer struct {
-	Status string `json:"status"`
-}
-
-// UploadResponseContainer holds the response to a client upload. It's a temporary structure, mainly so the JSON
-// created for it is consistent between our various daemons
-type UploadResponseContainer struct {
-	CommitID string `json:"commit"`
-	URL      string `json:"url"`
-}
-
 // UploadResponse validates incoming upload requests from the db4s and api daemons, then processes the upload
 func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, targetUser, targetDB, commitID, serverSw string) (retMsg map[string]string, httpStatus int, err error) {
 	// Grab the uploaded file and form variables
@@ -526,10 +514,4 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	u += fmt.Sprintf(`?branch=%s&commit=%s`, branchName, returnCommitID)
 	retMsg = map[string]string{"commit_id": returnCommitID, "url": u}
 	return
-}
-
-// WebpageResponseContainer holds the response to a client request for the database webUI URL. It's a temporary structure,
-// mainly so the JSON created for it is consistent between our various daemons
-type WebpageResponseContainer struct {
-	WebPage string `json:"web_page"`
 }

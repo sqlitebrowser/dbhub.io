@@ -24,11 +24,6 @@ var (
 	Validate *valid.Validate
 )
 
-// VisGetFields is used when validating input
-type VisGetFields struct {
-	VisName string `validate:"required,visname,min=1,max=63"` // 63 char limit seems reasonable
-}
-
 func init() {
 	// Load validation code
 	Validate = valid.New()
@@ -320,34 +315,6 @@ func ValidateUserDB(user, db string) error {
 	}
 
 	err = ValidateDB(db)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// ValidateUserDBTable validates the provided user, database, and table name
-func ValidateUserDBTable(user, db, table string) error {
-	err := ValidateUserDB(user, db)
-	if err != nil {
-		return err
-	}
-
-	err = ValidatePGTable(table)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// ValidateUserEmail validates the provided username and email address
-func ValidateUserEmail(user, email string) error {
-	err := ValidateUser(user)
-	if err != nil {
-		return err
-	}
-
-	err = ValidateEmail(email)
 	if err != nil {
 		return err
 	}

@@ -445,8 +445,9 @@ func deleteHandler(c *gin.Context) {
 	}
 
 	// Return a "success" message
-	z := com.StatusResponseContainer{Status: "OK"}
-	c.JSON(200, z)
+	c.JSON(200, gin.H{
+		"status": "OK",
+	})
 }
 
 // diffHandler generates a diff between two databases or two versions of a database
@@ -1499,8 +1500,12 @@ func uploadHandler(c *gin.Context) {
 		})
 		return
 	}
-	z := com.UploadResponseContainer{CommitID: newCommit, URL: newURL}
-	c.JSON(http.StatusCreated, z) // Signal the successful database creation
+
+	// Signal the successful database creation
+	c.JSON(http.StatusCreated, gin.H{
+		"commit": newCommit,
+		"url": newURL,
+	})
 }
 
 // viewsHandler returns the list of views in a SQLite database
@@ -1618,7 +1623,7 @@ func webpageHandler(c *gin.Context) {
 	com.ApiCallLog(loggedInUser, dbOwner, dbName, "webpage", c.Request.UserAgent())
 
 	// Return the database webUI URL to the user
-	var z com.WebpageResponseContainer
-	z.WebPage = "https://" + com.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName
-	c.JSON(200, z)
+	c.JSON(200, gin.H{
+		"web_page": "https://" + com.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName,
+	})
 }
