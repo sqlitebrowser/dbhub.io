@@ -138,18 +138,6 @@ ALTER SEQUENCE public.database_downloads_dl_id_seq OWNED BY public.database_down
 
 
 --
--- Name: database_files; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.database_files (
-    db_sha256 text NOT NULL,
-    minio_server text NOT NULL,
-    minio_folder text NOT NULL,
-    minio_id text NOT NULL
-);
-
-
---
 -- Name: database_licences; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -616,19 +604,6 @@ ALTER SEQUENCE public.vis_query_runs_query_run_id_seq OWNED BY public.vis_query_
 
 
 --
--- Name: vis_result_cache; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.vis_result_cache (
-    db_id bigint NOT NULL,
-    user_id bigint NOT NULL,
-    commit_id text NOT NULL,
-    hash text NOT NULL,
-    results jsonb
-);
-
-
---
 -- Name: watchers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -751,14 +726,6 @@ ALTER TABLE ONLY public.api_keys
 
 ALTER TABLE ONLY public.database_downloads
     ADD CONSTRAINT database_downloads_pkey PRIMARY KEY (dl_id);
-
-
---
--- Name: database_files database_files_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.database_files
-    ADD CONSTRAINT database_files_pkey PRIMARY KEY (db_sha256);
 
 
 --
@@ -887,14 +854,6 @@ ALTER TABLE ONLY public.vis_params
 
 ALTER TABLE ONLY public.vis_query_runs
     ADD CONSTRAINT vis_query_runs_pk PRIMARY KEY (query_run_id);
-
-
---
--- Name: vis_result_cache vis_result_cache_pk; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vis_result_cache
-    ADD CONSTRAINT vis_result_cache_pk PRIMARY KEY (db_id, user_id, commit_id, hash);
 
 
 --
@@ -1219,14 +1178,6 @@ ALTER TABLE ONLY public.sqlite_databases
 
 ALTER TABLE ONLY public.vis_params
     ADD CONSTRAINT vis_params_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: vis_result_cache vis_result_cache_users_user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.vis_result_cache
-    ADD CONSTRAINT vis_result_cache_users_user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

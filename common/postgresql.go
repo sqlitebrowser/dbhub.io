@@ -3234,7 +3234,6 @@ func ResetDB() error {
 		"api_call_log",
 		"api_keys",
 		"database_downloads",
-		"database_files",
 		"database_licences",
 		"database_shares",
 		"database_stars",
@@ -3249,7 +3248,6 @@ func ResetDB() error {
 		"users",
 		"vis_params",
 		"vis_query_runs",
-		"vis_result_cache",
 		"watchers",
 	}
 
