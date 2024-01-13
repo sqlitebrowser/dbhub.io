@@ -3453,25 +3453,6 @@ func SendEmails() {
 	}
 }
 
-// SetClientCert stores a certificate for a given client
-func SetClientCert(newCert []byte, userName string) error {
-	SQLQuery := `
-		UPDATE users
-		SET client_cert = $1
-		WHERE lower(user_name) = lower($2)`
-	commandTag, err := pdb.Exec(context.Background(), SQLQuery, newCert, userName)
-	if err != nil {
-		log.Printf("Updating client certificate for '%s' failed: %v", userName, err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		errMsg := fmt.Sprintf("Wrong number of rows affected (%d) when storing client cert for '%s'", numRows, userName)
-		log.Printf(errMsg)
-		return errors.New(errMsg)
-	}
-	return nil
-}
-
 // SetUserPreferences sets the user's preference for maximum number of SQLite rows to display
 func SetUserPreferences(userName string, maxRows int, displayName, email string) error {
 	dbQuery := `

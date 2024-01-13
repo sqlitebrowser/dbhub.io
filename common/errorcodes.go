@@ -10,14 +10,3 @@ const (
 	JobQueueNoError JobQueueErrorCode = iota
 	JobQueueRequestedTableNotPresent
 )
-
-func JobQueueErrorString(errCode JobQueueErrorCode) string {
-	switch errCode {
-	case JobQueueNoError:
-		return "no error"
-	case JobQueueRequestedTableNotPresent:
-		return "Provided table or view name doesn't exist in this database"
-	default:
-		return "unknown error"
-	}
-}

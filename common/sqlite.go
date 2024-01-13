@@ -1765,14 +1765,6 @@ func EscapeValue(val DataValue) string {
 	}
 }
 
-// EscapeValues does the same as EscapeValue but for a slice of DataValues
-func EscapeValues(vals []DataValue) (escaped []string) {
-	for _, v := range vals {
-		escaped = append(escaped, EscapeValue(v))
-	}
-	return escaped
-}
-
 // GetPrimaryKeyAndOtherColumns figures out the primary key columns and the other columns of a table.
 // The schema and table parameters specify the schema and table names to use.
 // This function returns two arrays: One containing the list of primary key columns in the same order as they

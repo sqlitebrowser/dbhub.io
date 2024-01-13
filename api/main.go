@@ -194,8 +194,6 @@ func authenticateV1(c *gin.Context) {
 
 	// Save username
 	c.Set("user", user)
-
-	return
 }
 
 // changeLogHandler handles requests for the Changelog (a html page)

@@ -204,26 +204,6 @@ func GetFormOwner(r *http.Request, allowGet bool) (dbOwner string, err error) {
 	return dbOwner, nil
 }
 
-// GetFormRelease returns the requested release name, from get or post data
-func GetFormRelease(r *http.Request) (release string, err error) {
-	// If no release was given in the input, returns an empty string
-	a := r.FormValue("release")
-	if a == "" {
-		return "", nil
-	}
-
-	// Unescape, then validate the release name
-	c, err := url.QueryUnescape(a)
-	if err != nil {
-		return "", err
-	}
-	err = ValidateBranchName(c)
-	if err != nil {
-		return "", fmt.Errorf("Invalid release name: '%v'", c)
-	}
-	return c, nil
-}
-
 // GetFormSourceURL returns the source URL (if any) present in the form data
 func GetFormSourceURL(r *http.Request) (sourceURL string, err error) {
 	// Validate the source URL

@@ -684,8 +684,6 @@ func downloadHandler(c *gin.Context) {
 		})
 		return
 	}
-	return
-
 }
 
 // executeHandler executes a SQL query on a SQLite database.  It's used for running SQL queries which don't
