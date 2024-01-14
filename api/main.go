@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 var (
@@ -49,32 +50,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Connect to PostgreSQL server
-	err = com.ConnectPostgreSQL()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Connect to job queue server
-	err = com.ConnectQueue()
+	// Connect to database
+	err = database.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Connect to the Memcached server
 	err = com.ConnectCache()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Add the default user to the system
-	err = com.AddDefaultUser()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Add the default licences to the system
-	err = com.AddDefaultLicences()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -185,7 +168,7 @@ func authenticateV1(c *gin.Context) {
 	apiKey := c.PostForm("apikey")
 
 	// Look up the owner of the API key
-	user, err := com.GetAPIKeyUser(apiKey)
+	user, err := database.GetAPIKeyUser(apiKey)
 
 	// Check for any errors
 	if err != nil || user == "" {

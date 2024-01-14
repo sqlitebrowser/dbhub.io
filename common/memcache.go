@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 
 	"github.com/bradfitz/gomemcache/memcache"
 )
@@ -262,7 +263,7 @@ func UserStatusUpdates(userName string) (numUpdates int, err error) {
 		}
 
 		// There isn't a cached value for the user, so retrieve the list from PG and create an initial value
-		lst, err := StatusUpdates(userName)
+		lst, err := database.StatusUpdates(userName)
 		if err != nil {
 			return 0, err
 		}

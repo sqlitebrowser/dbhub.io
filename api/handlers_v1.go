@@ -13,6 +13,7 @@ import (
 	sqlite "github.com/gwenn/gosqlite"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 // APIJSONColumn is a copy of the Column type from github.com/gwenn/gosqlite, but including JSON field name info
@@ -40,7 +41,7 @@ func collectInfo(c *gin.Context) (loggedInUser, dbOwner, dbName, commitID string
 
 	// Check if the user has access to the requested database
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return
@@ -383,7 +384,7 @@ func deleteHandler(c *gin.Context) {
 	com.ApiCallLog(loggedInUser, dbOwner, dbName, "delete", c.Request.UserAgent())
 
 	// Check if the database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -597,7 +598,7 @@ func diffHandler(c *gin.Context) {
 	com.ApiCallLog(loggedInUser, dbOwnerA, dbNameA, "diff", c.Request.UserAgent())
 
 	// Check permissions of the first database
-	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwnerA, dbNameA, false)
+	allowed, err := database.CheckDBPermissions(loggedInUser, dbOwnerA, dbNameA, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -612,7 +613,7 @@ func diffHandler(c *gin.Context) {
 	}
 
 	// Check permissions of the second database
-	allowed, err = com.CheckDBPermissions(loggedInUser, dbOwnerB, dbNameB, false)
+	allowed, err = database.CheckDBPermissions(loggedInUser, dbOwnerB, dbNameB, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -753,7 +754,7 @@ func executeHandler(c *gin.Context) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -1009,7 +1010,7 @@ func queryHandler(c *gin.Context) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -1473,7 +1474,7 @@ func uploadHandler(c *gin.Context) {
 		}
 
 		// Enable the watch flag for the uploader for this database
-		err = com.ToggleDBWatch(dbOwner, dbOwner, dbName)
+		err = database.ToggleDBWatch(dbOwner, dbOwner, dbName)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),

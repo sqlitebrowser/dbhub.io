@@ -25,6 +25,7 @@ import (
 	sqlite "github.com/gwenn/gosqlite"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"golang.org/x/oauth2"
 )
@@ -75,7 +76,7 @@ func apiKeyDelHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = com.APIKeyDelete(loggedInUser, uuid)
+	err = database.APIKeyDelete(loggedInUser, uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -134,7 +135,7 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	if expiryDate.IsZero() == false {
 		expiryDateOpt = &expiryDate
 	}
-	key, err := com.APIKeyGenerate(loggedInUser, expiryDateOpt, comment)
+	key, err := database.APIKeyGenerate(loggedInUser, expiryDateOpt, comment)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -251,7 +252,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Determine the DBHub.io username matching the given Auth0 ID
-	userName, err := com.UserNameFromAuth0ID(auth0ID)
+	userName, err := database.UserNameFromAuth0ID(auth0ID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -261,7 +262,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	if userName == "" {
 		if email != "" {
 			// Check if the email address is already in our system
-			exists, err := com.CheckEmailExists(email)
+			exists, err := database.CheckEmailExists(email)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Email check failed.  Can't continue.")
 				return
@@ -310,7 +311,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// If Auth0 provided a picture URL for the user, check if it's different to what we already have (eg it may have
 	// been updated)
 	if avatarURL != "" {
-		usr, err := com.User(userName)
+		usr, err := database.User(userName)
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -318,7 +319,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		if usr.AvatarURL != avatarURL {
 			// The Auth0 provided pic URL is different to what we have already, so we update the database with the new
 			// value
-			err = com.UpdateAvatarURL(userName, avatarURL)
+			err = database.UpdateAvatarURL(userName, avatarURL)
 			if err != nil {
 				errorPage(w, r, http.StatusBadRequest, err.Error())
 				return
@@ -378,7 +379,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -472,7 +473,7 @@ func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo) (errCode int, 
 
 	// Retrieve the details and status updates count for the logged in user
 	if validSession {
-		ur, err := com.User(loggedInUser)
+		ur, err := database.User(loggedInUser)
 		if err != nil {
 			return http.StatusBadRequest, err
 		}
@@ -538,7 +539,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -689,7 +690,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -702,8 +703,8 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the comment to PostgreSQL
-	err = com.StoreComment(dbOwner, dbName, loggedInUser, discID, comText, discClose,
-		com.CLOSED_WITHOUT_MERGE) // com.CLOSED_WITHOUT_MERGE is ignored for discussions.  It's only used for MRs
+	err = database.StoreComment(dbOwner, dbName, loggedInUser, discID, comText, discClose,
+		database.CLOSED_WITHOUT_MERGE) // database.CLOSED_WITHOUT_MERGE is ignored for discussions.  It's only used for MRs
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -788,7 +789,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	discText := txt
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -804,8 +805,8 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	var x struct {
 		ID int `json:"discuss_id"`
 	}
-	x.ID, err = com.StoreDiscussion(dbOwner, dbName, loggedInUser, discTitle, discText, com.DISCUSSION,
-		com.MergeRequestEntry{})
+	x.ID, err = database.StoreDiscussion(dbOwner, dbName, loggedInUser, discTitle, discText, database.DISCUSSION,
+		database.MergeRequestEntry{})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -813,16 +814,16 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate an event about the new discussion
-	details := com.EventDetails{
+	details := database.EventDetails{
 		DBName:   dbName,
 		DiscID:   x.ID,
 		Owner:    dbOwner,
 		Title:    discTitle,
-		Type:     com.EVENT_NEW_DISCUSSION,
+		Type:     database.EVENT_NEW_DISCUSSION,
 		URL:      fmt.Sprintf("/discuss/%s/%s?id=%d", url.PathEscape(dbOwner), url.PathEscape(dbName), x.ID),
 		UserName: loggedInUser,
 	}
-	err = com.NewEvent(details)
+	err = database.NewEvent(details)
 	if err != nil {
 		log.Printf("Error when creating a new event: %s", err.Error())
 		return
@@ -1043,13 +1044,13 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the databases exist
-	srcExists, err := com.CheckDBPermissions(loggedInUser, srcOwner, srcDBName, false) // We don't require write access since MRs are considered public
+	srcExists, err := database.CheckDBPermissions(loggedInUser, srcOwner, srcDBName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	destExists, err := com.CheckDBPermissions(loggedInUser, destOwner, destDBName, false) // We don't require write access since MRs are considered public
+	destExists, err := database.CheckDBPermissions(loggedInUser, destOwner, destDBName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1062,7 +1063,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the details of the commits for the MR
-	mrDetails := com.MergeRequestEntry{
+	mrDetails := database.MergeRequestEntry{
 		DestBranch:   destBranch,
 		SourceBranch: srcBranch,
 		SourceDBName: srcDBName,
@@ -1089,7 +1090,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	var x struct {
 		ID int `json:"mr_id"`
 	}
-	x.ID, err = com.StoreDiscussion(destOwner, destDBName, loggedInUser, title, descrip, com.MERGE_REQUEST,
+	x.ID, err = database.StoreDiscussion(destOwner, destDBName, loggedInUser, title, descrip, database.MERGE_REQUEST,
 		mrDetails)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -1098,16 +1099,16 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate an event about the new merge request
-	details := com.EventDetails{
+	details := database.EventDetails{
 		DBName:   destDBName,
 		DiscID:   x.ID,
 		Owner:    destOwner,
 		Title:    title,
-		Type:     com.EVENT_NEW_MERGE_REQUEST,
+		Type:     database.EVENT_NEW_MERGE_REQUEST,
 		URL:      fmt.Sprintf("/merge/%s/%s?id=%d", url.PathEscape(destOwner), url.PathEscape(destDBName), x.ID),
 		UserName: loggedInUser,
 	}
-	err = com.NewEvent(details)
+	err = database.NewEvent(details)
 	if err != nil {
 		log.Printf("Error when creating a new event: %s", err.Error())
 		return
@@ -1190,7 +1191,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1203,7 +1204,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the user details
-	usr, err := com.User(loggedInUser)
+	usr, err := database.User(loggedInUser)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "An error occurred when retrieving user details")
@@ -1408,7 +1409,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the username is already in our system
-	exists, err := com.CheckUserExists(userName)
+	exists, err := database.CheckUserExists(userName)
 	if err != nil {
 		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
 		sess.Options.MaxAge = -1
@@ -1463,7 +1464,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the user to the system
-	err = com.AddUser(auth0ID, userName, email, displayName, avatarURL)
+	err = database.AddUser(auth0ID, userName, email, displayName, avatarURL)
 	if err != nil {
 		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
 		sess.Options.MaxAge = -1
@@ -1523,7 +1524,7 @@ func checkNameHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the username is already in our system
-	exists, err := com.CheckUserExists(userName)
+	exists, err := database.CheckUserExists(userName)
 	if err != nil {
 		fmt.Fprint(w, "n")
 		return
@@ -1550,7 +1551,7 @@ func checkUserExistsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the username exists
-	exists, err := com.CheckUserExists(userName)
+	exists, err := database.CheckUserExists(userName)
 	if err != nil {
 		return
 	}
@@ -1603,7 +1604,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2011,7 +2012,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since MRs are considered public
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2030,7 +2031,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 		deleteAllowed = true
 	} else {
 		// Retrieve the details for the requested comment, so we can check if the logged in user is the comment creator
-		rq, err := com.DiscussionComments(dbOwner, dbName, discID, comID)
+		rq, err := database.DiscussionComments(dbOwner, dbName, discID, comID)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err.Error())
@@ -2048,7 +2049,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the comment from PostgreSQL
-	err = com.DeleteComment(dbOwner, dbName, discID, comID)
+	err = database.DeleteComment(dbOwner, dbName, discID, comID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2101,7 +2102,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2274,7 +2275,7 @@ func deleteDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system, and the user has write access to it
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2385,7 +2386,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
@@ -2509,7 +2510,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2590,7 +2591,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2747,13 +2748,13 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the databases exist
-	srcExists, err := com.CheckDBPermissions(loggedInUser, srcOwner, srcDBName, false)
+	srcExists, err := database.CheckDBPermissions(loggedInUser, srcOwner, srcDBName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	destExists, err := com.CheckDBPermissions(loggedInUser, destOwner, destDBName, false)
+	destExists, err := database.CheckDBPermissions(loggedInUser, destOwner, destDBName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2829,7 +2830,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 		c.Parent = j.Parent
 		c.Message = j.Message
 		c.Timestamp = j.Timestamp
-		c.AuthorUsername, c.AuthorAvatar, err = com.GetUsernameFromEmail(j.AuthorEmail)
+		c.AuthorUsername, c.AuthorAvatar, err = database.GetUsernameFromEmail(j.AuthorEmail)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -2841,7 +2842,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 		// Check for licence changes
 		commitLicSHA := j.Tree.Entries[0].LicenceSHA
 		if commitLicSHA != destLicenceSHA {
-			lName, _, err := com.GetLicenceInfoFromSha256(srcOwner, commitLicSHA)
+			lName, _, err := database.GetLicenceInfoFromSha256(srcOwner, commitLicSHA)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -3008,7 +3009,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the user has access to the specific version of the source database requested
-	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	allowed, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3026,7 +3027,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the user doesn't have a database of the same name already
 	// Note the use of "loggedInUser" for the 2nd parameter in this call, unlike using "dbOwner" in the call above
-	exists, err := com.CheckDBPermissions(loggedInUser, loggedInUser, dbName, false)
+	exists, err := database.CheckDBPermissions(loggedInUser, loggedInUser, dbName, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3046,7 +3047,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Add the user to the watch list for the forked database
 	if !exists {
-		err = com.ToggleDBWatch(loggedInUser, loggedInUser, dbName)
+		err = database.ToggleDBWatch(loggedInUser, loggedInUser, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -3114,7 +3115,7 @@ func getDatabaseName(r *http.Request) (db com.DatabaseName, err error) {
 	}
 
 	// Retrieve correctly capitalised username for the database owner
-	usr, err := com.User(db.Owner)
+	usr, err := database.User(db.Owner)
 	if err != nil {
 		return db, err
 	}
@@ -3141,7 +3142,7 @@ func insertDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system, and the user has write access to it
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -3306,26 +3307,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Connect to PostgreSQL server
-	err = com.ConnectPostgreSQL()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Add the default user to the system
-	err = com.AddDefaultUser()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Add the default licences to PostgreSQL
-	err = com.AddDefaultLicences()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Connect to job queue server
-	err = com.ConnectQueue()
+	// Connect to database
+	err = database.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -3740,7 +3723,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -3753,7 +3736,7 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the names of the source & destination databases and branches
-	disc, err := com.Discussions(dbOwner, dbName, com.MERGE_REQUEST, mrID)
+	disc, err := database.Discussions(dbOwner, dbName, database.MERGE_REQUEST, mrID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -3783,8 +3766,8 @@ func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Change the status of the MR to closed, and indicate it was successfully merged
-	err = com.StoreComment(dbOwner, dbName, loggedInUser, mrID, "", true,
-		com.CLOSED_WITH_MERGE)
+	err = database.StoreComment(dbOwner, dbName, loggedInUser, mrID, "", true,
+		database.CLOSED_WITH_MERGE)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -3896,7 +3879,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the email address isn't already assigned to a different user
-	a, _, err := com.GetUsernameFromEmail(email)
+	a, _, err := database.GetUsernameFromEmail(email)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Error when checking email address")
@@ -3913,7 +3896,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO  commit data
 
 	// Update the preference data in the database
-	err = com.SetUserPreferences(loggedInUser, maxRowsNum, displayName, email)
+	err = database.SetUserPreferences(loggedInUser, maxRowsNum, displayName, email)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Error when updating preferences")
@@ -4014,15 +3997,15 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate the share information
 	// No need to take special security precautions here because only the owner of a database is allowed to edit the settings.
-	shares := make(map[string]com.ShareDatabasePermissions)
+	shares := make(map[string]database.ShareDatabasePermissions)
 	err = json.Unmarshal([]byte(sharesRaw), &shares)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	for user, access := range shares {
-		exists, err := com.CheckUserExists(user)
-		if exists == false || err != nil || (access != com.MayRead && access != com.MayReadAndWrite) {
+		exists, err := database.CheckUserExists(user)
+		if exists == false || err != nil || (access != database.MayRead && access != database.MayReadAndWrite) {
 			errorPage(w, r, http.StatusBadRequest, fmt.Sprintf(
 				"Validation failed for user '%s'", user))
 			return
@@ -4181,7 +4164,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			licSHA := dbEntry.LicenceSHA
 			var oldLic string
 			if licSHA != "" {
-				oldLic, _, err = com.GetLicenceInfoFromSha256(loggedInUser, licSHA)
+				oldLic, _, err = database.GetLicenceInfoFromSha256(loggedInUser, licSHA)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -4200,15 +4183,15 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 			// commit list, and update the branch with it
 			if oldLic != newLic {
 				// Retrieve the SHA256 of the new licence
-				newLicSHA, err := com.GetLicenceSha256FromName(loggedInUser, newLic)
+				newLicSHA, err := database.GetLicenceSha256FromName(loggedInUser, newLic)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
 				}
 
 				// Create a new dbTree entry for the database file
-				var e com.DBTreeEntry
-				e.EntryType = com.DATABASE
+				var e database.DBTreeEntry
+				e.EntryType = database.DATABASE
 				e.LastModified = dbEntry.LastModified.UTC()
 				e.LicenceSHA = newLicSHA
 				e.Name = dbEntry.Name
@@ -4216,18 +4199,18 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 				e.Size = dbEntry.Size
 
 				// Create a new dbTree structure for the new database entry
-				var t com.DBTree
+				var t database.DBTree
 				t.Entries = append(t.Entries, e)
 				t.ID = com.CreateDBTreeID(t.Entries)
 
 				// Retrieve the user details
-				usr, err := com.User(loggedInUser)
+				usr, err := database.User(loggedInUser)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, "An error occurred when retrieving user details")
 				}
 
 				// Create a new commit for the new tree
-				newCom := com.CommitEntry{
+				newCom := database.CommitEntry{
 					CommitterName:  c.AuthorName,
 					CommitterEmail: c.AuthorEmail,
 					Message:        fmt.Sprintf("Licence changed from '%s' to '%s'.", oldLic, newLic),
@@ -4302,13 +4285,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store the new share settings if they changed
-	oldShares, err := com.GetShares(dbOwner, dbName)
+	oldShares, err := database.GetShares(dbOwner, dbName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if reflect.DeepEqual(shares, oldShares) == false {
-		err = com.StoreShares(dbOwner, dbName, shares)
+		err = database.StoreShares(dbOwner, dbName, shares)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -4384,7 +4367,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4458,7 +4441,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Toggle on or off the starring of a database by a user
-	err = com.ToggleDBStar(loggedInUser, dbOwner, dbName)
+	err = database.ToggleDBStar(loggedInUser, dbOwner, dbName)
 	if err != nil {
 		fmt.Fprint(w, "-1") // -1 tells the front end not to update the displayed star count
 		return
@@ -4518,7 +4501,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4699,7 +4682,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure the database exists in the system, and the user has access to it
 	var exists bool
-	exists, err = com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	exists, err = database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4713,10 +4696,10 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	var maxRows int
 	if loggedInUser != "" {
 		// Retrieve the user preference data
-		maxRows = com.PrefUserMaxRows(loggedInUser)
+		maxRows = database.PrefUserMaxRows(loggedInUser)
 	} else {
 		// Not logged in, so use the default number of display rows
-		maxRows = com.DefaultNumDisplayRows
+		maxRows = database.DefaultNumDisplayRows
 	}
 
 	// Check if this is a live database
@@ -4973,7 +4956,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5128,7 +5111,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since discussions are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5140,7 +5123,7 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the discussion text
-	err = com.UpdateComment(dbOwner, dbName, loggedInUser, discID, comID, newTxt)
+	err = database.UpdateComment(dbOwner, dbName, loggedInUser, discID, comID, newTxt)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5169,7 +5152,7 @@ func updateDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system, and the user has write access to it
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5342,7 +5325,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since MRs are considered public
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false) // We don't require write access since MRs are considered public
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5355,7 +5338,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the discussion text
-	err = com.UpdateDiscussion(dbOwner, dbName, loggedInUser, discID, newTitle, newTxt)
+	err = database.UpdateDiscussion(dbOwner, dbName, loggedInUser, discID, newTitle, newTxt)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5435,7 +5418,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5549,7 +5532,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the database exists in the system
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5753,7 +5736,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists already
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5883,7 +5866,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enable the watch flag for the uploader for this database
-	err = com.ToggleDBWatch(dbOwner, dbOwner, dbName)
+	err = database.ToggleDBWatch(dbOwner, dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5917,7 +5900,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Toggle on or off the watching of a database by a user
-	err = com.ToggleDBWatch(loggedInUser, dbOwner, dbName)
+	err = database.ToggleDBWatch(loggedInUser, dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())

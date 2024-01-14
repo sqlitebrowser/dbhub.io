@@ -10,13 +10,14 @@ import (
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 func executePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		DB         com.SQLiteDBinfo
 		PageMeta   PageMetaInfo
-		SqlHistory []com.SqlHistoryItem
+		SqlHistory []database.SqlHistoryItem
 	}
 
 	// Get all meta information
@@ -32,7 +33,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
+	exists, err := database.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -70,7 +71,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get SQL history
-	pageData.SqlHistory, err = com.LiveSqlHistoryGet(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
+	pageData.SqlHistory, err = database.LiveSqlHistoryGet(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -117,7 +118,7 @@ func execClearHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete items
-	err = com.LiveSqlHistoryDeleteOld(loggedInUser, dbOwner, dbName, 0) // 0 means "keep 0 items"
+	err = database.LiveSqlHistoryDeleteOld(loggedInUser, dbOwner, dbName, 0) // 0 means "keep 0 items"
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -176,7 +177,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -206,7 +207,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	// there are validation or permission errors.
 	var logError = func(e error) {
 		// Store statement in sql terminal history
-		err = com.LiveSqlHistoryAdd(loggedInUser, dbOwner, dbName, sql, com.Error, map[string]interface{}{"error": e.Error()})
+		err = database.LiveSqlHistoryAdd(loggedInUser, dbOwner, dbName, sql, database.Error, map[string]interface{}{"error": e.Error()})
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err)
@@ -234,7 +235,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Store statement in sql terminal history
-		err = com.LiveSqlHistoryAdd(loggedInUser, dbOwner, dbName, sql, com.Queried, z)
+		err = database.LiveSqlHistoryAdd(loggedInUser, dbOwner, dbName, sql, database.Queried, z)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err)
@@ -244,7 +245,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 		z = com.ExecuteResponseContainer{RowsChanged: rowsChanged, Status: "OK"}
 
 		// Store statement in sql terminal history
-		err = com.LiveSqlHistoryAdd(loggedInUser, dbOwner, dbName, sql, com.Executed, z)
+		err = database.LiveSqlHistoryAdd(loggedInUser, dbOwner, dbName, sql, database.Executed, z)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err)

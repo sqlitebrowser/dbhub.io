@@ -1,7 +1,7 @@
 package main
 
 import (
-	com "github.com/sqlitebrowser/dbhub.io/common"
+	database "github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 type ActivityRange string
@@ -33,9 +33,9 @@ type PageMetaInfo struct {
 
 // ShareDatabasePermissionsOthers contains a list of user permissions for a given database
 type ShareDatabasePermissionsOthers struct {
-	DBName string                                  `json:"database_name"`
-	IsLive bool                                    `json:"is_live"`
-	Perms  map[string]com.ShareDatabasePermissions `json:"user_permissions"`
+	DBName string                                       `json:"database_name"`
+	IsLive bool                                         `json:"is_live"`
+	Perms  map[string]database.ShareDatabasePermissions `json:"user_permissions"`
 }
 
 type UpdateDataRequestRow struct {

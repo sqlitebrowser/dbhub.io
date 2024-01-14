@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 var (
@@ -57,32 +58,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Connect to PostgreSQL server
-	err = com.ConnectPostgreSQL()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Connect to job queue server
-	err = com.ConnectQueue()
+	// Connect to database
+	err = database.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Connect to the Memcached server
 	err = com.ConnectCache()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Add the default user to the system
-	err = com.AddDefaultUser()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Add the default licences to PostgreSQL
-	err = com.AddDefaultLicences()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -167,7 +150,7 @@ func branchListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(userAcc, dbOwner, dbName, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -371,7 +354,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(userAcc, dbOwner, dbName, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -514,7 +497,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure a licence by the same name (for this user) doesn't already exist, and the supplied display order isn't
 	// already used
-	licList, err := com.GetLicences(userAcc)
+	licList, err := database.GetLicences(userAcc)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -576,7 +559,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 	// Make sure this licence isn't a duplicate of an existing one
 	tmpSHA := sha256.Sum256(licText.Bytes())
 	licSHA := hex.EncodeToString(tmpSHA[:])
-	licCheckName, licCheckURL, err := com.GetLicenceInfoFromSha256(userAcc, string(licSHA[:]))
+	licCheckName, licCheckURL, err := database.GetLicenceInfoFromSha256(userAcc, string(licSHA[:]))
 	if err != nil && err.Error() != "No matching licence found, something has gone wrong!" {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -588,7 +571,7 @@ func licenceAddHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the licence in the database
-	err = com.StoreLicence(userAcc, licID, licText.Bytes(), sourceURL, dispOrder, licName, fileFormat)
+	err = database.StoreLicence(userAcc, licID, licText.Bytes(), sourceURL, dispOrder, licName, fileFormat)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Something went wrong when storing the new licence file: '%s'", err.Error()),
 			http.StatusInternalServerError)
@@ -630,7 +613,7 @@ func licenceGetHandler(w http.ResponseWriter, r *http.Request) {
 	licenceName := l
 
 	// Retrieve the licence from our database
-	lic, format, err := com.GetLicence(userAcc, licenceName)
+	lic, format, err := database.GetLicence(userAcc, licenceName)
 	if err != nil {
 		if err.Error() == "unknown licence" {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -681,7 +664,7 @@ func licenceListHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the list of licences as JSON
-	licList, err := com.GetLicences(userAcc)
+	licList, err := database.GetLicences(userAcc)
 	jsonLicList, err := json.MarshalIndent(licList, "", "  ")
 	if err != nil {
 		errMsg := fmt.Sprintf("Error when JSON marshalling the licence list: %v", err)
@@ -727,7 +710,7 @@ func licenceRemoveHandler(w http.ResponseWriter, r *http.Request) {
 	licenceName := l
 
 	// Check if the licence to be deleted is in the system
-	exists, err := com.CheckLicenceExists(userAcc, licenceName)
+	exists, err := database.CheckLicenceExists(userAcc, licenceName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -738,7 +721,7 @@ func licenceRemoveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Remove the licence from our database
-	err = com.DeleteLicence(userAcc, licenceName)
+	err = database.DeleteLicence(userAcc, licenceName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -770,7 +753,7 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(userAcc, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(userAcc, dbOwner, dbName, false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

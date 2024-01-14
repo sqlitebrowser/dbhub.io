@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 
 	"github.com/minio/minio-go"
 )
@@ -63,7 +64,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 
 	// Check permissions
 	if exists {
-		allowed, err := CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+		allowed, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 		if err != nil {
 			return 0, "", "", err
 		}
@@ -121,8 +122,8 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	}
 
 	// Create a dbTree entry for the individual database file
-	var e DBTreeEntry
-	e.EntryType = DATABASE
+	var e database.DBTreeEntry
+	e.EntryType = database.DATABASE
 	e.Name = dbName
 	e.Sha256 = sha
 	e.LastModified = lastModified.UTC()
@@ -141,7 +142,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 			}
 		} else {
 			// It's a new database, and the licence hasn't been specified
-			e.LicenceSHA, err = GetLicenceSha256FromName(loggedInUser, licenceName)
+			e.LicenceSHA, err = database.GetLicenceSha256FromName(loggedInUser, licenceName)
 			if err != nil {
 				return
 			}
@@ -153,7 +154,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 		}
 	} else {
 		// A licence was specified by the client, so use that
-		e.LicenceSHA, err = GetLicenceSha256FromName(loggedInUser, licenceName)
+		e.LicenceSHA, err = database.GetLicenceSha256FromName(loggedInUser, licenceName)
 		if err != nil {
 			return
 		}
@@ -171,7 +172,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 				}
 				if e.LicenceSHA != lic {
 					// The licence has changed, so we create a reasonable commit message indicating this
-					l, _, err := GetLicenceInfoFromSha256(loggedInUser, lic)
+					l, _, err := database.GetLicenceInfoFromSha256(loggedInUser, lic)
 					if err != nil {
 						return 0, "", "", err
 					}
@@ -196,12 +197,12 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	}
 
 	// Create a dbTree structure for the database entry
-	var t DBTree
+	var t database.DBTree
 	t.Entries = append(t.Entries, e)
 	t.ID = CreateDBTreeID(t.Entries)
 
 	// Retrieve the details for the user
-	usr, err := User(loggedInUser)
+	usr, err := database.User(loggedInUser)
 	if err != nil {
 		return
 	}
@@ -213,7 +214,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	}
 
 	// Construct a commit structure pointing to the tree
-	var c CommitEntry
+	var c database.CommitEntry
 	if authorName != "" {
 		c.AuthorName = authorName
 	} else {
@@ -308,7 +309,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 			return 0, "", "", err
 		}
 		var ok bool
-		var c2 CommitEntry
+		var c2 database.CommitEntry
 		c2.Parent = c.Parent
 		for c2.Parent != "" {
 			commitCount++
@@ -385,7 +386,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 
 	// If the database didn't previously exist, add the user to the watch list for the database
 	if !exists {
-		err = ToggleDBWatch(loggedInUser, dbOwner, dbName)
+		err = database.ToggleDBWatch(loggedInUser, dbOwner, dbName)
 		if err != nil {
 			return
 		}
@@ -435,7 +436,7 @@ func CommitLicenceSHA(dbOwner, dbName, commitID string) (licenceSHA string, err 
 }
 
 // CreateCommitID generate a stable SHA256 for a commit
-func CreateCommitID(c CommitEntry) string {
+func CreateCommitID(c database.CommitEntry) string {
 	var b bytes.Buffer
 	b.WriteString(fmt.Sprintf("tree %s\n", c.Tree.ID))
 	if c.Parent != "" {
@@ -456,10 +457,10 @@ func CreateCommitID(c CommitEntry) string {
 	return hex.EncodeToString(s[:])
 }
 
-// CreateDBTreeID generate the SHA256 for a tree
+// Createdatabase.DBTreeID generate the SHA256 for a tree
 // Tree entry structure is:
 // * [ entry type ] [ licence sha256] [ file sha256 ] [ file name ] [ last modified (timestamp) ] [ file size (bytes) ]
-func CreateDBTreeID(entries []DBTreeEntry) string {
+func CreateDBTreeID(entries []database.DBTreeEntry) string {
 	var b bytes.Buffer
 	for _, j := range entries {
 		b.WriteString(string(j.EntryType))
@@ -780,7 +781,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 // Returns the commit ID of the ancestor and a slice of the commits between them.  If no common ancestor exists, the
 // returned ancestorID will be an empty string. Created for use by our Merge Request functions.
 func GetCommonAncestorCommits(srcOwner, srcDBName, srcBranch, destOwner, destName,
-	destBranch string) (ancestorID string, commitList []CommitEntry, errType int, err error) {
+	destBranch string) (ancestorID string, commitList []database.CommitEntry, errType int, err error) {
 
 	// To determine the common ancestor, we retrieve the source and destination commit lists, then starting from the
 	// end of the source list, step backwards looking for a matching ID in the destination list.
@@ -834,7 +835,7 @@ func GetCommonAncestorCommits(srcOwner, srcDBName, srcBranch, destOwner, destNam
 		err = fmt.Errorf("Could not retrieve details for the source branch commit")
 		return
 	}
-	var sourcePath []CommitEntry
+	var sourcePath []database.CommitEntry
 	for {
 		sourcePath = append(sourcePath, s)
 		if s.Parent == "" {
@@ -854,7 +855,7 @@ func GetCommonAncestorCommits(srcOwner, srcDBName, srcBranch, destOwner, destNam
 		err = fmt.Errorf("Could not retrieve details for the destination branch commit")
 		return
 	}
-	var destPath []CommitEntry
+	var destPath []database.CommitEntry
 	for {
 		destPath = append(destPath, d)
 		if d.Parent == "" {
@@ -1143,7 +1144,7 @@ func SignalHandler(done *chan struct{}) {
 	}
 
 	// Shut down connections
-	DisconnectPostgreSQL()
+	database.Disconnect()
 
 	// The application is ready to exit
 	*done <- struct{}{}
@@ -1152,8 +1153,8 @@ func SignalHandler(done *chan struct{}) {
 
 // StatusUpdateCheck checks if a status update for the user exists for a given discussion or MR, and if so then removes it
 func StatusUpdateCheck(dbOwner, dbName string, thisID int, userName string) (numStatusUpdates int, err error) {
-	var lst map[string][]StatusUpdateEntry
-	lst, err = StatusUpdates(userName)
+	var lst map[string][]database.StatusUpdateEntry
+	lst, err = database.StatusUpdates(userName)
 	if err != nil {
 		return
 	}
@@ -1171,7 +1172,7 @@ func StatusUpdateCheck(dbOwner, dbName string, thisID int, userName string) (num
 				}
 
 				// Store the updated list for the user
-				err = StoreStatusUpdates(userName, lst)
+				err = database.StoreStatusUpdates(userName, lst)
 				if err != nil {
 					return
 				}

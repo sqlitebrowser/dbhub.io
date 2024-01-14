@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 
 	"github.com/minio/minio-go"
 )
@@ -46,7 +47,7 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName, objectID string) (dbPat
 	}
 
 	// Get the users' minio bucket name
-	usr, err := User(dbOwner)
+	usr, err := database.User(dbOwner)
 	if err != nil {
 		return
 	}

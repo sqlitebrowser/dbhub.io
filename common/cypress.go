@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 // CypressSeed empties the backend database, then adds pre-defined test data (PostgreSQL and Minio)
@@ -33,7 +34,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 
 	// Change the email address of the default user to match the local server
 	serverName := strings.Split(config.Conf.Web.ServerName, ":")
-	err := SetUserPreferences("default", 10, "Default system user", fmt.Sprintf("default@%s", serverName[0]))
+	err := database.SetUserPreferences("default", 10, "Default system user", fmt.Sprintf("default@%s", serverName[0]))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -141,7 +142,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enable the watch flag for the uploader for this database
-	err = ToggleDBWatch(dbOwner, dbOwner, dbName)
+	err = database.ToggleDBWatch(dbOwner, dbOwner, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -150,17 +151,17 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	// *** Add a test LIVE SQLite database (end) ***
 
 	// Add some test users
-	err = AddUser("auth0first", "first", fmt.Sprintf("first@%s", serverName[0]), "First test user", "")
+	err = database.AddUser("auth0first", "first", fmt.Sprintf("first@%s", serverName[0]), "First test user", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = AddUser("auth0second", "second", fmt.Sprintf("second@%s", serverName[0]), "Second test user", "")
+	err = database.AddUser("auth0second", "second", fmt.Sprintf("second@%s", serverName[0]), "Second test user", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = AddUser("auth0third", "third", fmt.Sprintf("third@%s", serverName[0]), "Third test user", "")
+	err = database.AddUser("auth0third", "third", fmt.Sprintf("third@%s", serverName[0]), "Third test user", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -185,7 +186,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		"NvPG_Vh8uxK4BqkN7yJiRA4HP2HxCC0XXw0TBQGXbsaSlVhXZDrb1g": "third",
 	}
 	for key, user := range keys {
-		_, err = APIKeySave(key, user, time.Now(), nil, "Cypress tests")
+		_, err = database.APIKeySave(key, user, time.Now(), nil, "Cypress tests")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

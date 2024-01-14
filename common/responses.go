@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 // BranchListResponseContainer holds the response to a client request for the database branch list. It's a temporary
@@ -49,12 +50,12 @@ type ExecuteResponseContainer struct {
 // MetadataResponseContainer holds the response to a client request for database metadata. It's a temporary structure,
 // mainly so the JSON created for it is consistent between our various daemons
 type MetadataResponseContainer struct {
-	Branches  map[string]BranchEntry  `json:"branches"`
-	Commits   map[string]CommitEntry  `json:"commits"`
-	DefBranch string                  `json:"default_branch"`
-	Releases  map[string]ReleaseEntry `json:"releases"`
-	Tags      map[string]TagEntry     `json:"tags"`
-	WebPage   string                  `json:"web_page"`
+	Branches  map[string]BranchEntry          `json:"branches"`
+	Commits   map[string]database.CommitEntry `json:"commits"`
+	DefBranch string                          `json:"default_branch"`
+	Releases  map[string]ReleaseEntry         `json:"releases"`
+	Tags      map[string]TagEntry             `json:"tags"`
+	WebPage   string                          `json:"web_page"`
 }
 
 // MetadataResponse returns the metadata for a database.  It's used by both the DB4S and API daemons, to ensure they
@@ -144,7 +145,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 
 	// Check permissions
 	if exists {
-		allowed, err := CheckDBPermissions(loggedInUser, targetUser, targetDB, true)
+		allowed, err := database.CheckDBPermissions(loggedInUser, targetUser, targetDB, true)
 		if err != nil {
 			return nil, http.StatusInternalServerError, err
 		}
@@ -192,8 +193,8 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 		}
 
 		// Make sure the licence is one that's known to us
-		var licenceList map[string]LicenceEntry
-		licenceList, err = GetLicences(loggedInUser)
+		var licenceList map[string]database.LicenceEntry
+		licenceList, err = database.GetLicences(loggedInUser)
 		if err != nil {
 			httpStatus = http.StatusInternalServerError
 			return

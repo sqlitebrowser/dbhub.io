@@ -10,6 +10,8 @@ import (
 	"time"
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	database "github.com/sqlitebrowser/dbhub.io/common/database"
+
 	"github.com/sqlitebrowser/dbhub.io/common/config"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 )
@@ -85,17 +87,17 @@ func branchesPage(w http.ResponseWriter, r *http.Request) {
 func commitsPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	type HistEntry struct {
-		AuthorEmail    string     `json:"author_email"`
-		AuthorName     string     `json:"author_name"`
-		AuthorUserName string     `json:"author_user_name"`
-		AvatarURL      string     `json:"avatar_url"`
-		CommitterEmail string     `json:"committer_email"`
-		CommitterName  string     `json:"committer_name"`
-		ID             string     `json:"id"`
-		Message        string     `json:"message"`
-		Parent         string     `json:"parent"`
-		Timestamp      time.Time  `json:"timestamp"`
-		Tree           com.DBTree `json:"tree"`
+		AuthorEmail    string          `json:"author_email"`
+		AuthorName     string          `json:"author_name"`
+		AuthorUserName string          `json:"author_user_name"`
+		AvatarURL      string          `json:"avatar_url"`
+		CommitterEmail string          `json:"committer_email"`
+		CommitterName  string          `json:"committer_name"`
+		ID             string          `json:"id"`
+		Message        string          `json:"message"`
+		Parent         string          `json:"parent"`
+		Timestamp      time.Time       `json:"timestamp"`
+		Tree           database.DBTree `json:"tree"`
 	}
 	var pageData struct {
 		Branches map[string]com.BranchEntry
@@ -176,7 +178,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 	// However, we don't want c1 and c2 to be included twice. This is why we assemble a list of all regular parent
 	// commit ids first as a look-up table for knowing when to stop traversing the other branches of the tree.
 	regularBranchCommitIds := map[string]bool{}
-	commitData := com.CommitEntry{Parent: rawList[headID].Parent}
+	commitData := database.CommitEntry{Parent: rawList[headID].Parent}
 	for commitData.Parent != "" {
 		commitData, ok = rawList[commitData.Parent]
 		if !ok {
@@ -212,7 +214,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return fmt.Errorf("Internal error when retrieving commit data")
 			}
-			uName, avatarURL, err := com.GetUsernameFromEmail(commit.AuthorEmail)
+			uName, avatarURL, err := database.GetUsernameFromEmail(commit.AuthorEmail)
 			if err != nil {
 				return err
 			}
@@ -401,7 +403,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 			c.Parent = j.Parent
 			c.Message = j.Message
 			c.Timestamp = j.Timestamp
-			c.AuthorUsername, c.AuthorAvatar, err = com.GetUsernameFromEmail(j.AuthorEmail)
+			c.AuthorUsername, c.AuthorAvatar, err = database.GetUsernameFromEmail(j.AuthorEmail)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -413,7 +415,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 			// Check for licence changes
 			commitLicSHA := j.Tree.Entries[0].LicenceSHA
 			if commitLicSHA != destLicenceSHA {
-				lName, _, err := com.GetLicenceInfoFromSha256(dbName.Owner, commitLicSHA)
+				lName, _, err := database.GetLicenceInfoFromSha256(dbName.Owner, commitLicSHA)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -484,7 +486,7 @@ func contributorsPage(w http.ResponseWriter, r *http.Request) {
 		// TODO: There are likely a bunch of ways to optimise this, from keeping the user name entries in a map to
 		// TODO  directly storing the username in the jsonb commit data.  Storing the user name entry in the jsonb is
 		// TODO  probably the way to go, as it would save lookups in a lot of places
-		u, avatarURL, err := com.GetUsernameFromEmail(j.AuthorEmail)
+		u, avatarURL, err := database.GetUsernameFromEmail(j.AuthorEmail)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -560,7 +562,7 @@ func createBranchPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
+	allowed, err := database.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -671,7 +673,7 @@ func createTagPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
+	allowed, err := database.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -711,7 +713,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -841,7 +843,7 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	}
 
 	// Check if the current user is allowed to write to the database
-	pageData.WriteEnabled, err = com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbOwner, dbName, true)
+	pageData.WriteEnabled, err = database.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -889,10 +891,10 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 
 	// Determine the number of rows to display
 	if pageData.PageMeta.LoggedInUser != "" {
-		pageData.DB.MaxRows = com.PrefUserMaxRows(pageData.PageMeta.LoggedInUser)
+		pageData.DB.MaxRows = database.PrefUserMaxRows(pageData.PageMeta.LoggedInUser)
 	} else {
 		// Not logged in, so use the default number of rows
-		pageData.DB.MaxRows = com.DefaultNumDisplayRows
+		pageData.DB.MaxRows = database.DefaultNumDisplayRows
 	}
 
 	// Render the full description as markdown
@@ -1011,9 +1013,9 @@ func diffPage(w http.ResponseWriter, r *http.Request) {
 
 func discussPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		CommentList    []com.DiscussionCommentEntry
+		CommentList    []database.DiscussionCommentEntry
 		DB             com.SQLiteDBinfo
-		DiscussionList []com.DiscussionEntry
+		DiscussionList []database.DiscussionEntry
 		SelectedID     int
 		PageMeta       PageMetaInfo
 	}
@@ -1052,7 +1054,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of discussions for this database
-	pageData.DiscussionList, err = com.Discussions(dbName.Owner, dbName.Database, com.DISCUSSION, pageData.SelectedID)
+	pageData.DiscussionList, err = database.Discussions(dbName.Owner, dbName.Database, database.DISCUSSION, pageData.SelectedID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1077,7 +1079,7 @@ func discussPage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Load the comments for the requested discussion
-		pageData.CommentList, err = com.DiscussionComments(dbName.Owner, dbName.Database, pageData.SelectedID, 0)
+		pageData.CommentList, err = database.DiscussionComments(dbName.Owner, dbName.Database, pageData.SelectedID, 0)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1217,13 +1219,13 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 
 func mergePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		CommentList         []com.DiscussionCommentEntry
+		CommentList         []database.DiscussionCommentEntry
 		CommitList          []com.CommitData
 		DB                  com.SQLiteDBinfo
 		DestBranchNameOK    bool
 		DestBranchUsable    bool
 		LicenceWarning      string
-		MRList              []com.DiscussionEntry
+		MRList              []database.DiscussionEntry
 		PageMeta            PageMetaInfo
 		SelectedID          int
 		StatusMessage       string
@@ -1267,7 +1269,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of MRs for this database
-	pageData.MRList, err = com.Discussions(dbName.Owner, dbName.Database, com.MERGE_REQUEST, pageData.SelectedID)
+	pageData.MRList, err = database.Discussions(dbName.Owner, dbName.Database, database.MERGE_REQUEST, pageData.SelectedID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1373,7 +1375,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 					mr.MRDetails.Commits = newCommitList
 
 					// Save the updated commit list back to PostgreSQL
-					err = com.UpdateMergeRequestCommits(dbName.Owner, dbName.Database, pageData.SelectedID,
+					err = database.UpdateMergeRequestCommits(dbName.Owner, dbName.Database, pageData.SelectedID,
 						mr.MRDetails.Commits)
 					if err != nil {
 						errorPage(w, r, http.StatusInternalServerError, err.Error())
@@ -1406,7 +1408,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 			c.Parent = j.Parent
 			c.Message = j.Message
 			c.Timestamp = j.Timestamp
-			c.AuthorUsername, c.AuthorAvatar, err = com.GetUsernameFromEmail(j.AuthorEmail)
+			c.AuthorUsername, c.AuthorAvatar, err = database.GetUsernameFromEmail(j.AuthorEmail)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -1419,7 +1421,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 			commitLicSHA := j.Tree.Entries[0].LicenceSHA
 			if commitLicSHA != destLicenceSHA {
 				licenceChanges = true
-				lName, _, err := com.GetLicenceInfoFromSha256(mr.MRDetails.SourceOwner, commitLicSHA)
+				lName, _, err := database.GetLicenceInfoFromSha256(mr.MRDetails.SourceOwner, commitLicSHA)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -1437,7 +1439,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Load the comments for the requested MR
-		pageData.CommentList, err = com.DiscussionComments(dbName.Owner, dbName.Database, pageData.SelectedID, 0)
+		pageData.CommentList, err = database.DiscussionComments(dbName.Owner, dbName.Database, pageData.SelectedID, 0)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1472,7 +1474,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Settings page.
 func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	var pageData struct {
-		APIKeys     []com.APIKey
+		APIKeys     []database.APIKey
 		DisplayName string
 		Email       string
 		MaxRows     int
@@ -1486,7 +1488,7 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	}
 
 	// Grab the display name and email address for the user
-	usr, err := com.User(loggedInUser)
+	usr, err := database.User(loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -1505,10 +1507,10 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	}
 
 	// Retrieve the user preference data
-	pageData.MaxRows = com.PrefUserMaxRows(loggedInUser)
+	pageData.MaxRows = database.PrefUserMaxRows(loggedInUser)
 
 	// Retrieve the list of API keys for the user
-	pageData.APIKeys, err = com.GetAPIKeys(loggedInUser)
+	pageData.APIKeys, err = database.GetAPIKeys(loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1530,9 +1532,9 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		PublicDBs        []com.DBInfo
 		PublicLiveDBS    []com.DBInfo
 		SharedWithOthers []ShareDatabasePermissionsOthers
-		SharedWithYou    []com.ShareDatabasePermissionsUser
-		Stars            []com.DBEntry
-		Watching         []com.DBEntry
+		SharedWithYou    []database.ShareDatabasePermissionsUser
+		Stars            []database.DBEntry
+		Watching         []database.DBEntry
 	}
 
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -1543,7 +1545,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	pageData.PageMeta.LoggedInUser = userName
 
 	// Check if the desired user exists
-	userExists, err := com.CheckUserExists(userName)
+	userExists, err := database.CheckUserExists(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -1601,7 +1603,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	for _, db := range pageData.PublicDBs {
 		var z ShareDatabasePermissionsOthers
 		z.DBName = db.Database
-		z.Perms, err = com.GetShares(userName, z.DBName)
+		z.Perms, err = database.GetShares(userName, z.DBName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1613,7 +1615,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	for _, db := range pageData.PrivateDBs {
 		var z ShareDatabasePermissionsOthers
 		z.DBName = db.Database
-		z.Perms, err = com.GetShares(userName, z.DBName)
+		z.Perms, err = database.GetShares(userName, z.DBName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1626,7 +1628,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		var z ShareDatabasePermissionsOthers
 		z.DBName = db.Database
 		z.IsLive = true
-		z.Perms, err = com.GetShares(userName, z.DBName)
+		z.Perms, err = database.GetShares(userName, z.DBName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1639,7 +1641,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		var z ShareDatabasePermissionsOthers
 		z.DBName = db.Database
 		z.IsLive = true
-		z.Perms, err = com.GetShares(userName, z.DBName)
+		z.Perms, err = database.GetShares(userName, z.DBName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -1656,14 +1658,14 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	pageData.SharedWithOthers = rawList
 
 	// Retrieve the list of all databases shared with the user
-	pageData.SharedWithYou, err = com.GetSharesForUser(userName)
+	pageData.SharedWithYou, err = database.GetSharesForUser(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Retrieve the details for the user
-	usr, err := com.User(userName)
+	usr, err := database.User(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -1740,7 +1742,7 @@ func releasesPage(w http.ResponseWriter, r *http.Request) {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
 			// database (and put it in the cache)
 			if _, ok := userNameCache[j.ReleaserEmail]; !ok {
-				eml, avatarURL, err := com.GetUsernameFromEmail(j.ReleaserEmail)
+				eml, avatarURL, err := database.GetUsernameFromEmail(j.ReleaserEmail)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -1825,10 +1827,10 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 		BranchLics       map[string]string
 		DB               com.SQLiteDBinfo
 		FullDescRendered string
-		Licences         map[string]com.LicenceEntry
+		Licences         map[string]database.LicenceEntry
 		NumLicences      int
 		PageMeta         PageMetaInfo
-		Shares           map[string]com.ShareDatabasePermissions
+		Shares           map[string]database.ShareDatabasePermissions
 	}
 	pageData.PageMeta.Title = "Database settings"
 
@@ -1920,7 +1922,7 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 			// If the licence SHA256 field isn't empty, look up the licence info corresponding to it
 			var a string
 			if licSHA != "" {
-				a, _, err = com.GetLicenceInfoFromSha256(dbName.Owner, licSHA)
+				a, _, err = database.GetLicenceInfoFromSha256(dbName.Owner, licSHA)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -1956,14 +1958,14 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	pageData.FullDescRendered = string(gfm.Markdown([]byte(pageData.DB.Info.FullDesc)))
 
 	// Retrieve the share settings
-	pageData.Shares, err = com.GetShares(dbName.Owner, dbName.Database)
+	pageData.Shares, err = database.GetShares(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	// Populate the licence list
-	pageData.Licences, err = com.GetLicences(pageData.PageMeta.LoggedInUser)
+	pageData.Licences, err = database.GetLicences(pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
 		return
@@ -1984,7 +1986,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		DB       com.SQLiteDBinfo
 		PageMeta PageMetaInfo
-		Stars    []com.DBEntry
+		Stars    []database.DBEntry
 	}
 	pageData.PageMeta.Title = "Stars"
 
@@ -2008,7 +2010,7 @@ func starsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve list of users who starred the database
-	pageData.Stars, err = com.UsersStarredDB(dbName.Owner, dbName.Database)
+	pageData.Stars, err = database.UsersStarredDB(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -2083,7 +2085,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 			// If the username/email address entry is already in the username cache then use it, else grab it from the
 			// database (and put it in the cache)
 			if _, ok := userNameCache[j.TaggerEmail]; !ok {
-				eml, avatarURL, err := com.GetUsernameFromEmail(j.TaggerEmail)
+				eml, avatarURL, err := database.GetUsernameFromEmail(j.TaggerEmail)
 				if err != nil {
 					errorPage(w, r, http.StatusInternalServerError, err.Error())
 					return
@@ -2118,7 +2120,7 @@ func tagsPage(w http.ResponseWriter, r *http.Request) {
 func updatesPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		PageMeta PageMetaInfo
-		Updates  map[string][]com.StatusUpdateEntry
+		Updates  map[string][]database.StatusUpdateEntry
 	}
 
 	// Get all meta information
@@ -2136,7 +2138,7 @@ func updatesPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the list of status updates for the user
-	pageData.Updates, err = com.StatusUpdates(pageData.PageMeta.LoggedInUser)
+	pageData.Updates, err = database.StatusUpdates(pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2160,7 +2162,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 		Branches       []string
 		DB             com.SQLiteDBinfo
 		DefaultBranch  string
-		Licences       map[string]com.LicenceEntry
+		Licences       map[string]database.LicenceEntry
 		NumLicences    int
 		PageMeta       PageMetaInfo
 		SelectedBranch string
@@ -2185,7 +2187,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	dbOwner, _, dbDatabase, _ := com.GetUFD(r, true)
 
 	// Retrieve correctly capitalised username for the database owner
-	usr, err := com.User(dbOwner)
+	usr, err := database.User(dbOwner)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -2198,7 +2200,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the user has write access to this database, also set the public/private button to the existing value
 	if dbName.Owner != "" && dbName.Database != "" {
-		writeAccess, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
+		writeAccess, err := database.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, true)
 		if err != nil {
 			errorPage(w, r, errCode, err.Error())
 			return
@@ -2227,7 +2229,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure the user has set their display name and email address
-	usr, err = com.User(pageData.PageMeta.LoggedInUser)
+	usr, err = database.User(pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving user details")
 		return
@@ -2239,7 +2241,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Populate the licence list
-	pageData.Licences, err = com.GetLicences(pageData.PageMeta.LoggedInUser)
+	pageData.Licences, err = database.GetLicences(pageData.PageMeta.LoggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Error when retrieving list of available licences")
 		return
@@ -2282,7 +2284,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// Check if the desired user exists
-	userExists, err := com.CheckUserExists(userName)
+	userExists, err := database.CheckUserExists(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return
@@ -2295,7 +2297,7 @@ func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// Retrieve the details for the user whose page we're looking at
-	usr, err := com.User(userName)
+	usr, err := database.User(userName)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -2334,7 +2336,7 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		DB       com.SQLiteDBinfo
 		PageMeta PageMetaInfo
-		Watchers []com.DBEntry
+		Watchers []database.DBEntry
 	}
 	pageData.PageMeta.Title = "Watchers"
 
@@ -2358,7 +2360,7 @@ func watchersPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve list of users watching the database
-	pageData.Watchers, err = com.UsersWatchingDB(dbName.Owner, dbName.Database)
+	pageData.Watchers, err = database.UsersWatchingDB(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, "Database query failed")
 		return

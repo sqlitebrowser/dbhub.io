@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 
 	sqlite "github.com/gwenn/gosqlite"
 )
 
 // Merge merges the commits in commitDiffList into the destination branch destBranch of the given database
-func Merge(destOwner, destName, destBranch, srcOwner, srcName string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
+func Merge(destOwner, destName, destBranch, srcOwner, srcName string, commitDiffList []database.CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
 	// Get the details of the head commit for the destination database branch
 	branchList, err := GetBranches(destOwner, destName) // Destination branch list
 	if err != nil {
@@ -54,7 +55,7 @@ func Merge(destOwner, destName, destBranch, srcOwner, srcName string, commitDiff
 
 // addCommitsForMerging simply adds the commits listed in commitDiffList to the destination branch of the databases.
 // It neither performs any merging nor does it create a merge commit.
-func addCommitsForMerging(destOwner, destName, destBranch string, commitDiffList []CommitEntry, newHead bool) (err error) {
+func addCommitsForMerging(destOwner, destName, destBranch string, commitDiffList []database.CommitEntry, newHead bool) (err error) {
 	// Get the details of the head commit for the destination database branch
 	branchList, err := GetBranches(destOwner, destName) // Destination branch list
 	if err != nil {
@@ -104,9 +105,9 @@ func addCommitsForMerging(destOwner, destName, destBranch string, commitDiffList
 }
 
 // performFastForward performs a merge by simply fast-forwarding to a new head.
-func performFastForward(destOwner, destName, destBranch, destCommitID string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
+func performFastForward(destOwner, destName, destBranch, destCommitID string, commitDiffList []database.CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
 	// Retrieve details for the logged in user
-	usr, err := User(loggedInUser)
+	usr, err := database.User(loggedInUser)
 	if err != nil {
 		return
 	}
@@ -123,7 +124,7 @@ func performFastForward(destOwner, destName, destBranch, destCommitID string, co
 	mrg.ID = CreateCommitID(mrg)
 
 	// Add the merge commit to the list of new commits to be added to the destination branch
-	var newCommitDiffList []CommitEntry
+	var newCommitDiffList []database.CommitEntry
 	newCommitDiffList = append(newCommitDiffList, mrg)
 	newCommitDiffList = append(newCommitDiffList, commitDiffList...)
 
@@ -137,7 +138,7 @@ func performFastForward(destOwner, destName, destBranch, destCommitID string, co
 }
 
 // performMerge takes the destination database and applies the changes from commitDiffList on it.
-func performMerge(destOwner, destName, destBranch, destCommitID, srcOwner, srcName string, commitDiffList []CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
+func performMerge(destOwner, destName, destBranch, destCommitID, srcOwner, srcName string, commitDiffList []database.CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
 	// Figure out the last common ancestor and the current head of the branch to merge
 	lastCommonAncestorId := commitDiffList[len(commitDiffList)-1].Parent
 	currentHeadToMerge := commitDiffList[0].ID
@@ -250,7 +251,7 @@ func performMerge(destOwner, destName, destBranch, destCommitID, srcOwner, srcNa
 	}
 
 	// Retrieve details for the logged in user
-	usr, err := User(loggedInUser)
+	usr, err := database.User(loggedInUser)
 	if err != nil {
 		return
 	}

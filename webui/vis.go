@@ -9,6 +9,7 @@ import (
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 func visualisePage(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +17,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		DB             com.SQLiteDBinfo
 		PageMeta       PageMetaInfo
 		Branches       map[string]com.BranchEntry
-		Visualisations map[string]com.VisParamsV2
+		Visualisations map[string]database.VisParamsV2
 	}
 
 	// Get all meta information
@@ -63,7 +64,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, false)
+	exists, err := database.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -176,7 +177,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a list of all saved visualisations for this database
-	pageData.Visualisations, err = com.GetVisualisations(dbName.Owner, dbName.Database)
+	pageData.Visualisations, err = database.GetVisualisations(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -241,7 +242,7 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	allowed, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -264,7 +265,7 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the saved visualisation for this database
-	err = com.VisualisationDeleteParams(dbOwner, dbName, visName)
+	err = database.VisualisationDeleteParams(dbOwner, dbName, visName)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -281,7 +282,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 		DB            com.SQLiteDBinfo
 		PageMeta      PageMetaInfo
 		Branches      map[string]com.BranchEntry
-		Visualisation com.VisParamsV2
+		Visualisation database.VisParamsV2
 		VisName       string
 	}
 
@@ -329,7 +330,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the database exists and the user has access to view it
-	exists, err := com.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, false)
+	exists, err := database.CheckDBPermissions(pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, false)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -450,7 +451,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get a list of all saved visualisations for this database
-	visualisations, err := com.GetVisualisations(dbName.Owner, dbName.Database)
+	visualisations, err := database.GetVisualisations(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -524,7 +525,7 @@ func visExecuteSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the requested database exists
-	exists, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
+	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -608,7 +609,7 @@ func visRename(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	allowed, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -641,7 +642,7 @@ func visRename(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Perform rename
-	err = com.VisualisationRename(dbOwner, dbName, visName, visNewName)
+	err = database.VisualisationRename(dbOwner, dbName, visName, visNewName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -684,7 +685,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the logged in user has the permissions to proceed
-	allowed, err := com.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
+	allowed, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, true)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)
@@ -713,7 +714,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err)
 		return
 	}
-	var data com.VisParamsV2
+	var data database.VisParamsV2
 	err = json.Unmarshal([]byte(bodyData), &data)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -758,7 +759,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the SQLite visualisation parameters
-	err = com.VisualisationSaveParams(dbOwner, dbName, visName, data)
+	err = database.VisualisationSaveParams(dbOwner, dbName, visName, data)
 	if err != nil {
 		log.Printf("Error occurred when saving visualisation '%s' for' '%s/%s', commit '%s': %s", com.SanitiseLogString(visName),
 			com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), com.SanitiseLogString(commitID), err.Error())

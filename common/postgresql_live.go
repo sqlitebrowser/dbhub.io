@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -32,7 +33,6 @@ var (
 
 // JobQueueCheck checks if newly submitted work is available for processing
 func JobQueueCheck() {
-
 	if JobQueueDebug > 0 {
 		log.Printf("%s: starting JobQueueCheck()...", config.Conf.Live.Nodename)
 	}
@@ -45,7 +45,7 @@ func JobQueueCheck() {
 
 		// Retrieve job details from the database
 		ctx := context.Background()
-		tx, err := JobQueueConn.Begin(ctx)
+		tx, err := database.JobQueue.Begin(ctx)
 		if err != nil {
 			log.Printf("%s: error in JobQueueCheck(): %s", config.Conf.Live.Nodename, err)
 			continue
@@ -345,7 +345,7 @@ func JobQueueCheck() {
 			UPDATE job_submissions
 			SET state = 'complete', completed_date = now()
 			WHERE job_id = $1`
-		t, err = JobQueueConn.Exec(ctx, dbQuery, jobID)
+		t, err = database.JobQueue.Exec(ctx, dbQuery, jobID)
 		if err != nil {
 			log.Printf("%s: error when updating job completion status to complete in backend database: %s", config.Conf.Live.Nodename, err)
 			responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
@@ -401,14 +401,14 @@ func JobQueueListen() {
 	}
 
 	// Listen for notify events
-	_, err := JobListenConn.Exec(context.Background(), "LISTEN job_submissions_queue")
+	_, err := database.JobListen.Exec(context.Background(), "LISTEN job_submissions_queue")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Start the endless loop handling database notifications
 	for {
-		_, err := JobListenConn.WaitForNotification(context.Background())
+		_, err := database.JobListen.WaitForNotification(context.Background())
 		if err != nil {
 			log.Printf("%s: error in JobQueueListen(): %s", config.Conf.Live.Nodename, err)
 		}
@@ -438,7 +438,7 @@ func JobSubmit[T any](response *T, targetNode, operation, requestingUser, dbOwne
 
 	// Start a new transaction
 	ctx := context.Background()
-	tx, err := JobQueueConn.Begin(ctx)
+	tx, err := database.JobQueue.Begin(ctx)
 	if err != nil {
 		log.Println(err)
 		return
@@ -509,7 +509,7 @@ func ResponseQueueCheck() {
 		var jobID, responseID int
 		var details string
 		ctx := context.Background()
-		rows, err := JobQueueConn.Query(ctx, dbQuery, SubmitterInstance)
+		rows, err := database.JobQueue.Query(ctx, dbQuery, SubmitterInstance)
 		if err != nil {
 			// Ignore any "no rows in result set" error
 			if !errors.Is(err, pgx.ErrNoRows) {
@@ -547,20 +547,20 @@ func ResponseQueueListen() {
 	}
 
 	// Listen for notify events
-	if JobListenConn == nil {
+	if database.JobListen == nil {
 		log.Fatalf("%v: ERROR, couldn't start ResponseQueueListen() as JobListenConn IS NILL", config.Conf.Live.Nodename)
 	}
-	if JobListenConn.IsClosed() {
+	if database.JobListen.IsClosed() {
 		log.Fatalf("%v: ERROR, couldn't start ResponseQueueListen() as connection to job responses listener is NOT open", config.Conf.Live.Nodename)
 	}
-	_, err := JobListenConn.Exec(context.Background(), "LISTEN job_responses_queue")
+	_, err := database.JobListen.Exec(context.Background(), "LISTEN job_responses_queue")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Start the endless loop handling database notifications
 	for {
-		n, err := JobListenConn.WaitForNotification(context.Background())
+		n, err := database.JobListen.WaitForNotification(context.Background())
 		if err != nil {
 			log.Printf("%s: error in ResponseQueueListen(): %s", config.Conf.Live.Nodename, err)
 		}
@@ -580,7 +580,7 @@ func ResponseQueueListen() {
 func ResponseComplete(responseID int) (err error) {
 	// Start a new transaction
 	ctx := context.Background()
-	tx, err := JobQueueConn.Begin(ctx)
+	tx, err := database.JobQueue.Begin(ctx)
 	if err != nil {
 		log.Println(err)
 		return
@@ -614,7 +614,7 @@ func ResponseComplete(responseID int) (err error) {
 func ResponseSubmit(jobID int, submitterNode string, payload []byte) (err error) {
 	// Start a new transaction
 	ctx := context.Background()
-	tx, err := JobQueueConn.Begin(ctx)
+	tx, err := database.JobQueue.Begin(ctx)
 	if err != nil {
 		log.Println(err)
 		return

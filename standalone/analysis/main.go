@@ -12,6 +12,7 @@ import (
 	"github.com/docker/go-units"
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 var (
@@ -34,15 +35,9 @@ func main() {
 		log.Println("Historical mode enabled")
 	}
 
-	// Connect to PostgreSQL server
-	err = com.ConnectPostgreSQL()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Connect to job queue server
+	// Connect to database
 	config.Conf.Live.Nodename = "Usage Analysis"
-	err = com.ConnectQueue()
+	err = database.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -141,7 +136,7 @@ func main() {
 	if Historical {
 		for user := range userList {
 			// Get the date the user signed up
-			details, err := com.User(user)
+			details, err := database.User(user)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -157,7 +152,7 @@ func main() {
 				log.Fatal(err)
 			}
 
-			type commitList map[string]com.CommitEntry
+			type commitList map[string]database.CommitEntry
 			dbCommits := make(map[string]commitList)
 
 			// Loop through the days, calculating the space used each day since they joined until today
@@ -200,7 +195,7 @@ func main() {
 }
 
 // SpaceUsedBetweenDates determines the storage space used by a standard database between two different dates
-func SpaceUsedBetweenDates(commitList map[string]com.CommitEntry, startDate, endDate time.Time) (spaceUsed int64, err error) {
+func SpaceUsedBetweenDates(commitList map[string]database.CommitEntry, startDate, endDate time.Time) (spaceUsed int64, err error) {
 	// Check every commit in the database, adding the ones between the start and end dates to the usage total
 	for _, commit := range commitList {
 		if commit.Timestamp.After(startDate) && commit.Timestamp.Before(endDate) {

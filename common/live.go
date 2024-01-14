@@ -1,8 +1,6 @@
 package common
 
 import (
-	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,8 +15,6 @@ import (
 	"github.com/sqlitebrowser/dbhub.io/common/config"
 
 	sqlite "github.com/gwenn/gosqlite"
-	"github.com/jackc/pgx/v5"
-	pgpool "github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -26,53 +22,10 @@ const (
 )
 
 var (
-	// JobListenConn is the PG server connection used for receiving PG notifications
-	JobListenConn *pgx.Conn
-
-	// JobQueueConn is the PG server connection used for submitting and retrieving jobs
-	JobQueueConn *pgpool.Pool
-
 	// JobQueueDebug tells the daemons whether or not to output debug messages while running job queue code
 	// Mostly useful for development / debugging purposes.  0 means no debug messages, higher values means more verbosity
 	JobQueueDebug = 0
-
-	// Configuration info for the PostgreSQL job queue
-	listenConfig *pgx.ConnConfig
 )
-
-// ConnectQueue creates the connections to the backend queue server
-func ConnectQueue() (err error) {
-	// Create the connection string for the dedicated PostgreSQL notification connection
-	listenConfig, err = pgx.ParseConfig(fmt.Sprintf("host=%s port=%d user= %s password = %s dbname=%s connect_timeout=10", config.Conf.Pg.Server, uint16(config.Conf.Pg.Port), config.Conf.Pg.Username, config.Conf.Pg.Password, config.Conf.Pg.Database))
-	if err != nil {
-		return
-	}
-	listenTLSConfig := tls.Config{}
-	if config.Conf.Environment.Environment == "production" {
-		listenTLSConfig.ServerName = config.Conf.Pg.Server
-		listenTLSConfig.InsecureSkipVerify = false
-	} else {
-		listenTLSConfig.InsecureSkipVerify = true
-	}
-	if config.Conf.Pg.SSL {
-		listenConfig.TLSConfig = &listenTLSConfig
-	} else {
-		listenConfig.TLSConfig = nil
-	}
-
-	// Connect to PostgreSQL based queue server
-	// Note: JobListenConn uses a dedicated, non-pooled connection to the job queue database, while JobQueueConn uses
-	// a standard database connection pool
-	JobListenConn, err = pgx.ConnectConfig(context.Background(), listenConfig)
-	if err != nil {
-		return fmt.Errorf("%s: couldn't connect to backend queue server: %v", config.Conf.Live.Nodename, err)
-	}
-	JobQueueConn, err = pgpool.New(context.Background(), pgConfig.ConnString())
-	if err != nil {
-		return fmt.Errorf("%s: couldn't connect to backend queue server: %v", config.Conf.Live.Nodename, err)
-	}
-	return
-}
 
 // LiveBackup asks the job queue backend to store the given database back into Minio
 func LiveBackup(liveNode, loggedInUser, dbOwner, dbName string) (err error) {

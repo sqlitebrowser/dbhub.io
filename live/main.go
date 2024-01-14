@@ -9,6 +9,7 @@ import (
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 func main() {
@@ -49,15 +50,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Connect to the main PostgreSQL server
-	err = com.ConnectPostgreSQL()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Connect to the job queue
+	// Connect to database
 	com.CheckJobQueue = make(chan struct{})
-	err = com.ConnectQueue()
+	err = database.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}
