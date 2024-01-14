@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
@@ -15,6 +16,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 
 	"github.com/aquilax/truncate"
 	pgx "github.com/jackc/pgx/v5"
@@ -32,6 +35,9 @@ import (
 var (
 	// PostgreSQL connection pool handle
 	pdb *pgpool.Pool
+
+	// PostgreSQL configuration info
+	pgConfig *pgpool.Config
 )
 
 // AddDefaultUser adds the default user to the system, so the referential integrity of licence user_id 0 works
@@ -51,7 +57,7 @@ func AddDefaultUser() error {
 	}
 
 	// Log addition of the default user
-	log.Printf("%v: default user added", Conf.Live.Nodename)
+	log.Printf("%v: default user added", config.Conf.Live.Nodename)
 	return nil
 }
 
@@ -556,6 +562,25 @@ func CheckUserExists(userName string) (bool, error) {
 
 // ConnectPostgreSQL creates a connection pool to the PostgreSQL server
 func ConnectPostgreSQL() (err error) {
+	// Set the main PostgreSQL database configuration values
+	pgConfig, err = pgpool.ParseConfig(fmt.Sprintf("host=%s port=%d user= %s password = %s dbname=%s pool_max_conns=%d connect_timeout=10", config.Conf.Pg.Server, uint16(config.Conf.Pg.Port), config.Conf.Pg.Username, config.Conf.Pg.Password, config.Conf.Pg.Database, config.Conf.Pg.NumConnections))
+	if err != nil {
+		return
+	}
+	clientTLSConfig := tls.Config{}
+	if config.Conf.Environment.Environment == "production" {
+		clientTLSConfig.ServerName = config.Conf.Pg.Server
+		clientTLSConfig.InsecureSkipVerify = false
+	} else {
+		clientTLSConfig.InsecureSkipVerify = true
+	}
+	if config.Conf.Pg.SSL {
+		pgConfig.ConnConfig.TLSConfig = &clientTLSConfig
+	} else {
+		pgConfig.ConnConfig.TLSConfig = nil
+	}
+
+	// Connect to database
 	pdb, err = pgpool.New(context.Background(), pgConfig.ConnString())
 	if err != nil {
 		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v", err)
@@ -563,17 +588,17 @@ func ConnectPostgreSQL() (err error) {
 
 	// migrate doesn't handle pgx connection strings, so we need to manually create something it can use
 	var mConnStr string
-	if Conf.Environment.Environment == "production" {
-		mConnStr = fmt.Sprintf("pgx5://%s@%s:%d/%s?password=%s&connect_timeout=10", Conf.Pg.Username, Conf.Pg.Server,
-			uint16(Conf.Pg.Port), Conf.Pg.Database, url.PathEscape(Conf.Pg.Password))
+	if config.Conf.Environment.Environment == "production" {
+		mConnStr = fmt.Sprintf("pgx5://%s@%s:%d/%s?password=%s&connect_timeout=10", config.Conf.Pg.Username, config.Conf.Pg.Server,
+			uint16(config.Conf.Pg.Port), config.Conf.Pg.Database, url.PathEscape(config.Conf.Pg.Password))
 	} else {
 		// Non-production, so probably our Docker test container
 		mConnStr = "pgx5://dbhub@localhost:5432/dbhub"
 	}
-	if Conf.Pg.SSL {
+	if config.Conf.Pg.SSL {
 		mConnStr += "&sslmode=require"
 	}
-	m, err := migrate.New(fmt.Sprintf("file://%s/database/migrations", Conf.Web.BaseDir), mConnStr)
+	m, err := migrate.New(fmt.Sprintf("file://%s/database/migrations", config.Conf.Web.BaseDir), mConnStr)
 	if err != nil {
 		return
 	}
@@ -586,7 +611,7 @@ func ConnectPostgreSQL() (err error) {
 	}
 
 	// Log successful connection
-	log.Printf("%v: connected to PostgreSQL server: %v:%v", Conf.Live.Nodename, Conf.Pg.Server, uint16(Conf.Pg.Port))
+	log.Printf("%v: connected to PostgreSQL server: %v:%v", config.Conf.Live.Nodename, config.Conf.Pg.Server, uint16(config.Conf.Pg.Port))
 	return nil
 }
 
@@ -1111,13 +1136,13 @@ func DeleteDatabase(dbOwner, dbName string) error {
 		commandTag, err = tx.Exec(context.Background(), dbQuery, dbOwner, dbName, newName)
 		if err != nil {
 			log.Printf("%s: deleting (forked) database entry failed for database '%s/%s': %v",
-				Conf.Live.Nodename, SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
+				config.Conf.Live.Nodename, SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 			return err
 		}
 		if numRows := commandTag.RowsAffected(); numRows != 1 {
 			log.Printf(
 				"%s: wrong number of rows (%d) affected when deleting (forked) database '%s/%s'",
-				Conf.Live.Nodename, numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
+				config.Conf.Live.Nodename, numRows, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		}
 
 		// Commit the transaction
@@ -1127,7 +1152,7 @@ func DeleteDatabase(dbOwner, dbName string) error {
 		}
 
 		// Log the database deletion
-		log.Printf("%s: database '%s/%s' deleted", Conf.Live.Nodename, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
+		log.Printf("%s: database '%s/%s' deleted", config.Conf.Live.Nodename, SanitiseLogString(dbOwner), SanitiseLogString(dbName))
 		return nil
 	}
 
@@ -1216,7 +1241,7 @@ func DeleteDatabase(dbOwner, dbName string) error {
 	}
 
 	// Log the database deletion
-	log.Printf("%s: (forked) database '%s/%s' deleted", Conf.Live.Nodename, SanitiseLogString(dbOwner),
+	log.Printf("%s: (forked) database '%s/%s' deleted", config.Conf.Live.Nodename, SanitiseLogString(dbOwner),
 		SanitiseLogString(dbName))
 	return nil
 }
@@ -1539,7 +1564,7 @@ func FlushViewCount() {
 	}
 
 	// Log the start of the loop
-	log.Printf("%s: periodic view count flushing loop started.  %d second refresh.", Conf.Live.Nodename, Conf.Memcache.ViewCountFlushDelay)
+	log.Printf("%s: periodic view count flushing loop started.  %d second refresh.", config.Conf.Live.Nodename, config.Conf.Memcache.ViewCountFlushDelay)
 
 	// Start the endless flush loop
 	var rows pgx.Rows
@@ -1609,11 +1634,11 @@ func FlushViewCount() {
 		}
 
 		// Wait before running the loop again
-		time.Sleep(Conf.Memcache.ViewCountFlushDelay * time.Second)
+		time.Sleep(config.Conf.Memcache.ViewCountFlushDelay * time.Second)
 	}
 
 	// If somehow the endless loop finishes, then record that in the server logs
-	log.Printf("%s: WARN: periodic view count flushing loop stopped.", Conf.Live.Nodename)
+	log.Printf("%s: WARN: periodic view count flushing loop stopped.", config.Conf.Live.Nodename)
 }
 
 // ForkDatabase forks the PostgreSQL entry for a SQLite database from one user to another
@@ -2906,7 +2931,7 @@ func LiveUserDBs(dbOwner string, public AccessType) (list []DBInfo, err error) {
 
 // LogDB4SConnect creates a DB4S default browse list entry
 func LogDB4SConnect(userAcc, ipAddr, userAgent string, downloadDate time.Time) error {
-	if Conf.DB4S.Debug {
+	if config.Conf.DB4S.Debug {
 		log.Printf("User '%s' just connected with '%s' and generated the default browse list", userAcc, SanitiseLogString(userAgent))
 	}
 
@@ -3363,7 +3388,7 @@ func SaveDBSettings(userName, dbName, oneLineDesc, fullDesc, defaultTable string
 // SendEmails sends status update emails to people watching databases
 func SendEmails() {
 	// If the SMTP2Go API key hasn't been configured, there's no use in trying to send emails
-	if Conf.Event.Smtp2GoKey == "" && os.Getenv("SMTP2GO_API_KEY") == "" {
+	if config.Conf.Event.Smtp2GoKey == "" && os.Getenv("SMTP2GO_API_KEY") == "" {
 		return
 	}
 
@@ -3431,7 +3456,7 @@ func SendEmails() {
 		}
 
 		// Pause before running the loop again
-		time.Sleep(Conf.Event.EmailQueueProcessingDelay * time.Second)
+		time.Sleep(config.Conf.Event.EmailQueueProcessingDelay * time.Second)
 	}
 }
 
@@ -3495,11 +3520,11 @@ func StatusUpdates(loggedInUser string) (statusUpdates map[string][]StatusUpdate
 func StatusUpdatesLoop() {
 	// Ensure a warning message is displayed on the console if the status update loop exits
 	defer func() {
-		log.Printf("%s: WARN: Status update loop exited", Conf.Live.Nodename)
+		log.Printf("%s: WARN: Status update loop exited", config.Conf.Live.Nodename)
 	}()
 
 	// Log the start of the loop
-	log.Printf("%s: status update processing loop started.  %d second refresh.", Conf.Live.Nodename, Conf.Event.Delay)
+	log.Printf("%s: status update processing loop started.  %d second refresh.", config.Conf.Live.Nodename, config.Conf.Event.Delay)
 
 	// Start the endless status update processing loop
 	var err error
@@ -3512,14 +3537,14 @@ func StatusUpdatesLoop() {
 	}
 	for {
 		// Wait at the start of the loop (simpler code then adding a delay before each continue statement below)
-		time.Sleep(Conf.Event.Delay * time.Second)
+		time.Sleep(config.Conf.Event.Delay * time.Second)
 
 		// Begin a transaction
 		var tx pgx.Tx
 		tx, err = pdb.Begin(context.Background())
 		if err != nil {
 			log.Printf("%s: couldn't begin database transaction for status update processing loop: %s",
-				Conf.Live.Nodename, err.Error())
+				config.Conf.Live.Nodename, err.Error())
 			continue
 		}
 
@@ -3675,19 +3700,19 @@ func StatusUpdatesLoop() {
 				switch ev.details.Type {
 				case EVENT_NEW_DISCUSSION:
 					msg = fmt.Sprintf("A new discussion has been created for %s/%s.\n\nVisit https://%s%s "+
-						"for the details", ev.details.Owner, ev.details.DBName, Conf.Web.ServerName,
+						"for the details", ev.details.Owner, ev.details.DBName, config.Conf.Web.ServerName,
 						ev.details.URL)
 					subj = fmt.Sprintf("DBHub.io: New discussion created on %s/%s", ev.details.Owner,
 						ev.details.DBName)
 				case EVENT_NEW_MERGE_REQUEST:
 					msg = fmt.Sprintf("A new merge request has been created for %s/%s.\n\nVisit https://%s%s "+
-						"for the details", ev.details.Owner, ev.details.DBName, Conf.Web.ServerName,
+						"for the details", ev.details.Owner, ev.details.DBName, config.Conf.Web.ServerName,
 						ev.details.URL)
 					subj = fmt.Sprintf("DBHub.io: New merge request created on %s/%s", ev.details.Owner,
 						ev.details.DBName)
 				case EVENT_NEW_COMMENT:
 					msg = fmt.Sprintf("A new comment has been created for %s/%s.\n\nVisit https://%s%s for "+
-						"the details", ev.details.Owner, ev.details.DBName, Conf.Web.ServerName,
+						"the details", ev.details.Owner, ev.details.DBName, config.Conf.Web.ServerName,
 						ev.details.URL)
 					subj = fmt.Sprintf("DBHub.io: New comment on %s/%s", ev.details.Owner,
 						ev.details.DBName)
@@ -3696,7 +3721,7 @@ func StatusUpdatesLoop() {
 				}
 				if eml.Valid {
 					// If the email address is of the form username@this_server (which indicates a non-functional email address), then skip it
-					serverName := strings.Split(Conf.Web.ServerName, ":")
+					serverName := strings.Split(config.Conf.Web.ServerName, ":")
 					if strings.HasSuffix(eml.String, serverName[0]) {
 						log.Printf("Skipping email '%v' to destination '%v', as it ends in '%v'",
 							truncate.Truncate(subj, 35, "...", truncate.PositionEnd), eml.String, serverName[0])
@@ -4919,13 +4944,13 @@ func UpdateModified(dbOwner, dbName string) (err error) {
 			AND db_name = $2`
 	commandTag, err := pdb.Exec(context.Background(), dbQuery, dbOwner, dbName)
 	if err != nil {
-		log.Printf("%s: updating last_modified for database '%s/%s' failed: %v", Conf.Live.Nodename, dbOwner,
+		log.Printf("%s: updating last_modified for database '%s/%s' failed: %v", config.Conf.Live.Nodename, dbOwner,
 			dbName, err)
 		return
 	}
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("%s: wrong number of rows (%d) affected when updating last_modified for database '%s/%s'",
-			Conf.Live.Nodename, numRows, dbOwner, dbName)
+			config.Conf.Live.Nodename, numRows, dbOwner, dbName)
 	}
 	return
 }

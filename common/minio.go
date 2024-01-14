@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sqlitebrowser/dbhub.io/common/config"
+
 	"github.com/minio/minio-go"
 )
 
@@ -20,13 +22,13 @@ var (
 // Note - this doesn't actually open a connection to the Minio server.
 func ConnectMinio() (err error) {
 	// Connect to the Minio server
-	minioClient, err = minio.New(Conf.Minio.Server, Conf.Minio.AccessKey, Conf.Minio.Secret, Conf.Minio.HTTPS)
+	minioClient, err = minio.New(config.Conf.Minio.Server, config.Conf.Minio.AccessKey, config.Conf.Minio.Secret, config.Conf.Minio.HTTPS)
 	if err != nil {
 		return fmt.Errorf("Problem with Minio server configuration: %v", err)
 	}
 
 	// Log Minio server end point
-	log.Printf("%v: minio server config ok. Address: %v", Conf.Live.Nodename, Conf.Minio.Server)
+	log.Printf("%v: minio server config ok. Address: %v", config.Conf.Live.Nodename, config.Conf.Minio.Server)
 	return nil
 }
 
@@ -83,7 +85,7 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName, objectID string) (dbPat
 	}
 
 	if JobQueueDebug > 0 {
-		log.Printf("%s: database file '%s/%s' written to filesystem at: '%s'", Conf.Live.Nodename, dbOwner, dbName, dbPath)
+		log.Printf("%s: database file '%s/%s' written to filesystem at: '%s'", config.Conf.Live.Nodename, dbOwner, dbName, dbPath)
 	}
 	return
 }
@@ -151,7 +153,7 @@ func MinioDeleteDatabase(source, dbOwner, dbName, bucket, id string) (err error)
 
 	if JobQueueDebug > 0 {
 		log.Printf("%s: [DELETE] '%s' removed Minio database object '%s/%s', using bucket '%s' and id '%s'",
-			Conf.Live.Nodename, source, dbOwner, dbName, bucket, id)
+			config.Conf.Live.Nodename, source, dbOwner, dbName, bucket, id)
 	}
 	return
 }
@@ -179,7 +181,7 @@ func MinioHandleClose(userDB *minio.Object) (err error) {
 // available though, use that
 func RetrieveDatabaseFile(bucket, id string) (newDB string, err error) {
 	// Check if the database file already exists
-	newDB = filepath.Join(Conf.DiskCache.Directory, bucket, id)
+	newDB = filepath.Join(config.Conf.DiskCache.Directory, bucket, id)
 	if _, err = os.Stat(newDB); os.IsNotExist(err) {
 		// * The database doesn't yet exist locally, so fetch it from Minio
 
@@ -199,7 +201,7 @@ func RetrieveDatabaseFile(bucket, id string) (newDB string, err error) {
 			defer MinioHandleClose(userDB)
 
 			// Create the needed directory path in the disk cache
-			err = os.MkdirAll(filepath.Join(Conf.DiskCache.Directory, bucket), 0750)
+			err = os.MkdirAll(filepath.Join(config.Conf.DiskCache.Directory, bucket), 0750)
 
 			// Save the database locally to the local disk cache, with ".new" on the end (will be renamed after file is
 			// finished writing)

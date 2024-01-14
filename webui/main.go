@@ -24,6 +24,7 @@ import (
 	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	sqlite "github.com/gwenn/gosqlite"
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 	"golang.org/x/oauth2"
 )
@@ -160,13 +161,13 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// Auth0 login part, mostly copied from https://github.com/auth0-samples/auth0-golang-web-app (MIT License)
 	conf := &oauth2.Config{
-		ClientID:     com.Conf.Auth0.ClientID,
-		ClientSecret: com.Conf.Auth0.ClientSecret,
-		RedirectURL:  "https://" + com.Conf.Web.ServerName + "/x/callback",
+		ClientID:     config.Conf.Auth0.ClientID,
+		ClientSecret: config.Conf.Auth0.ClientSecret,
+		RedirectURL:  "https://" + config.Conf.Web.ServerName + "/x/callback",
 		Scopes:       []string{"openid", "profile"},
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://" + com.Conf.Auth0.Domain + "/authorize",
-			TokenURL: "https://" + com.Conf.Auth0.Domain + "/oauth/token",
+			AuthURL:  "https://" + config.Conf.Auth0.Domain + "/authorize",
+			TokenURL: "https://" + config.Conf.Auth0.Domain + "/oauth/token",
 		},
 	}
 	code := r.URL.Query().Get("code")
@@ -185,7 +186,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve the user info (JSON format)
 	conn := conf.Client(context.Background(), token)
-	userInfo, err := conn.Get("https://" + com.Conf.Auth0.Domain + "/userinfo")
+	userInfo, err := conn.Get("https://" + config.Conf.Auth0.Domain + "/userinfo")
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -427,7 +428,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err error) {
 	// Retrieve session data (if any)
 	var u interface{}
-	if com.Conf.Environment.Environment == "production" {
+	if config.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			return "", false, err
@@ -435,7 +436,7 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 		u = sess.Values["UserName"]
 	} else {
 		// Non-production environments (eg dev, test) can directly set the logged in user
-		u = com.Conf.Environment.UserOverride
+		u = config.Conf.Environment.UserOverride
 		if u == "" {
 			u = nil
 		}
@@ -450,15 +451,15 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 
 func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo) (errCode int, err error) {
 	// Auth0 info
-	pageMeta.Auth0.CallbackURL = "https://" + com.Conf.Web.ServerName + "/x/callback"
-	pageMeta.Auth0.ClientID = com.Conf.Auth0.ClientID
-	pageMeta.Auth0.Domain = com.Conf.Auth0.Domain
+	pageMeta.Auth0.CallbackURL = "https://" + config.Conf.Web.ServerName + "/x/callback"
+	pageMeta.Auth0.ClientID = config.Conf.Auth0.ClientID
+	pageMeta.Auth0.Domain = config.Conf.Auth0.Domain
 
 	// Server name
-	pageMeta.Server = com.Conf.Web.ServerName
+	pageMeta.Server = config.Conf.Web.ServerName
 
 	// Pass along the environment setting
-	pageMeta.Environment = com.Conf.Environment.Environment
+	pageMeta.Environment = config.Conf.Environment.Environment
 
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
@@ -1451,7 +1452,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			// Check for the special case of username@server, which may fail standard email validation checks
 			// eg username@localhost, won't validate as an email address, but should be accepted anyway
-			serverName := strings.Split(com.Conf.Web.ServerName, ":")
+			serverName := strings.Split(config.Conf.Web.ServerName, ":")
 			em := fmt.Sprintf("%s@%s", userName, serverName[0])
 			if email != em {
 				log.Printf("Email value failed validation: %s", err)
@@ -3208,8 +3209,8 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Simulate logout for the test environment
-	if com.Conf.Environment.Environment == "test" {
-		com.Conf.Environment.UserOverride = ""
+	if config.Conf.Environment.Environment == "test" {
+		config.Conf.Environment.UserOverride = ""
 	}
 
 	// Bounce to the front page
@@ -3252,7 +3253,7 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 			loggedInUser = "-"
 		}
 
-		if com.Conf.Environment.Environment != "production" {
+		if config.Conf.Environment.Environment != "production" {
 			loggedInUser = "default"
 		}
 
@@ -3269,15 +3270,15 @@ func logReq(fn http.HandlerFunc) http.HandlerFunc {
 func main() {
 	// Read server configuration
 	var err error
-	if err = com.ReadConfig(); err != nil {
+	if err = config.ReadConfig(); err != nil {
 		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
 	// Set the node name used in various logging strings
-	com.Conf.Live.Nodename = "WebUI server"
+	config.Conf.Live.Nodename = "WebUI server"
 
 	// Set the temp dir environment variable
-	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
+	err = os.Setenv("TMPDIR", config.Conf.DiskCache.Directory)
 	if err != nil {
 		log.Fatalf("Setting temp directory environment variable failed: '%s'", err)
 	}
@@ -3288,16 +3289,16 @@ func main() {
 	}
 
 	// Open the request log for writing
-	reqLog, err = os.OpenFile(com.Conf.Web.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
+	reqLog, err = os.OpenFile(config.Conf.Web.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
 	if err != nil {
 		log.Fatalf("Error when opening request log: %s", err)
 	}
 	defer reqLog.Close()
-	log.Printf("%s: request log opened: %s", com.Conf.Live.Nodename, com.Conf.Web.RequestLog)
+	log.Printf("%s: request log opened: %s", config.Conf.Live.Nodename, config.Conf.Web.RequestLog)
 
 	// Parse our template files
 	tmpl = template.Must(template.New("templates").Delims("[[", "]]").ParseGlob(
-		filepath.Join(com.Conf.Web.BaseDir, "webui", "templates", "*.html")))
+		filepath.Join(config.Conf.Web.BaseDir, "webui", "templates", "*.html")))
 
 	// Connect to Minio server
 	err = com.ConnectMinio()
@@ -3336,7 +3337,7 @@ func main() {
 	}
 
 	// Setup session storage
-	store = gsm.NewMemcacheStore(com.MemcacheHandle(), "dbhub_", []byte(com.Conf.Web.SessionStorePassword))
+	store = gsm.NewMemcacheStore(com.MemcacheHandle(), "dbhub_", []byte(config.Conf.Web.SessionStorePassword))
 
 	// Start the view count flushing routine in the background
 	go com.FlushViewCount()
@@ -3433,7 +3434,7 @@ func main() {
 	http.Handle("/x/watch/", gz.GzipHandler(logReq(watchToggleHandler)))
 
 	// Add routes which are only useful during testing
-	if com.Conf.Environment.Environment == "test" {
+	if config.Conf.Environment.Environment == "test" {
 		http.Handle("/x/test/seed", gz.GzipHandler(logReq(com.CypressSeed)))
 		http.Handle("/x/test/envprod", gz.GzipHandler(logReq(com.EnvProd)))
 		http.Handle("/x/test/envtest", gz.GzipHandler(logReq(com.EnvTest)))
@@ -3446,177 +3447,177 @@ func main() {
 
 	// CSS
 	http.Handle("/css/font-awesome-4.7.0.min.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "font-awesome-4.7.0.min.css"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "css", "font-awesome-4.7.0.min.css"))
 	})))
 	http.Handle("/css/local.css", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "css", "local.css"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "css", "local.css"))
 	})))
 
 	// Fonts
 	http.Handle("/css/FontAwesome.otf", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "FontAwesome-4.7.0.otf"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "fonts", "FontAwesome-4.7.0.otf"))
 	})))
 	http.Handle("/css/fontawesome-webfont.eot", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.eot"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.eot"))
 	})))
 	http.Handle("/css/fontawesome-webfont.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.svg"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.svg"))
 	})))
 	http.Handle("/css/fontawesome-webfont.ttf", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.ttf"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.ttf"))
 	})))
 	http.Handle("/css/fontawesome-webfont.woff", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.woff"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.woff"))
 	})))
 	http.Handle("/css/fontawesome-webfont.woff2", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.woff2"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "fonts", "fontawesome-webfont-4.7.0.woff2"))
 	})))
 
 	// Javascript
 	http.Handle("/js/dbhub.js", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "js", "dbhub.js"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "js", "dbhub.js"))
 	})))
 
 	// Other static files
 	http.Handle("/images/auth0.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "auth0.svg"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "auth0.svg"))
 	})))
 	http.Handle("/images/sqlitebrowser.svg", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "sqlitebrowser.svg"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "sqlitebrowser.svg"))
 	})))
 	http.Handle("/favicon.ico", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "favicon.ico"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "favicon.ico"))
 	})))
 	http.Handle("/robots.txt", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "robots.txt"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "robots.txt"))
 	})))
 
 	// Landing page images
 	http.Handle("/images/db4s_screenshot1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot1.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot1.png"))
 	})))
 	http.Handle("/images/db4s_screenshot1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot1-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot1-50px.png"))
 	})))
 	http.Handle("/images/db4s_screenshot2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot2.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot2.png"))
 	})))
 	http.Handle("/images/db4s_screenshot2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot2-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot2-50px.png"))
 	})))
 	http.Handle("/images/db4s_screenshot3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot3.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot3.png"))
 	})))
 	http.Handle("/images/db4s_screenshot3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot3-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot3-50px.png"))
 	})))
 	http.Handle("/images/db4s_screenshot4.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot4.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot4.png"))
 	})))
 	http.Handle("/images/db4s_screenshot4-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot4-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "db4s_screenshot4-50px.png"))
 	})))
 	http.Handle("/images/pub_priv1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "pub_priv1.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "pub_priv1.png"))
 	})))
 	http.Handle("/images/pub_priv1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "pub_priv1-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "pub_priv1-50px.png"))
 	})))
 	http.Handle("/images/watch1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "watch1.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "watch1.png"))
 	})))
 	http.Handle("/images/watch1-46px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "watch1-46px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "watch1-46px.png"))
 	})))
 	http.Handle("/images/discussions1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions1.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "discussions1.png"))
 	})))
 	http.Handle("/images/discussions1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions1-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "discussions1-50px.png"))
 	})))
 	http.Handle("/images/discussions2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions2.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "discussions2.png"))
 	})))
 	http.Handle("/images/discussions2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions2-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "discussions2-50px.png"))
 	})))
 	http.Handle("/images/discussions3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions3.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "discussions3.png"))
 	})))
 	http.Handle("/images/discussions3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "discussions3-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "discussions3-50px.png"))
 	})))
 	http.Handle("/images/version_control_history1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "version_control_history1.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "version_control_history1.png"))
 	})))
 	http.Handle("/images/version_control_history1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "version_control_history1-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "version_control_history1-50px.png"))
 	})))
 	http.Handle("/images/version_control_history2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "version_control_history2.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "version_control_history2.png"))
 	})))
 	http.Handle("/images/version_control_history2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "version_control_history2-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "version_control_history2-50px.png"))
 	})))
 	http.Handle("/images/merge1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge1.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "merge1.png"))
 	})))
 	http.Handle("/images/merge1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge1-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "merge1-50px.png"))
 	})))
 	http.Handle("/images/merge2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge2.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "merge2.png"))
 	})))
 	http.Handle("/images/merge2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge2-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "merge2-50px.png"))
 	})))
 	http.Handle("/images/merge3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge3.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "merge3.png"))
 	})))
 	http.Handle("/images/merge3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge3-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "merge3-50px.png"))
 	})))
 	http.Handle("/images/merge4.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge4.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "merge4.png"))
 	})))
 	http.Handle("/images/merge4-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "merge4-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "merge4-50px.png"))
 	})))
 	http.Handle("/images/plotly1.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly1.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "plotly1.png"))
 	})))
 	http.Handle("/images/plotly1-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly1-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "plotly1-50px.png"))
 	})))
 	http.Handle("/images/plotly2.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly2.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "plotly2.png"))
 	})))
 	http.Handle("/images/plotly2-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly2-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "plotly2-50px.png"))
 	})))
 	http.Handle("/images/plotly3.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly3.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "plotly3.png"))
 	})))
 	http.Handle("/images/plotly3-50px.png", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "plotly3-50px.png"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "plotly3-50px.png"))
 	})))
 	http.Handle("/images/dbhub-vis-720.mp4", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "dbhub-vis-720.mp4"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "dbhub-vis-720.mp4"))
 	})))
 	http.Handle("/images/dbhub-vis-720.webm", gz.GzipHandler(logReq(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join(com.Conf.Web.BaseDir, "webui", "images", "dbhub-vis-720.webm"))
+		http.ServeFile(w, r, filepath.Join(config.Conf.Web.BaseDir, "webui", "images", "dbhub-vis-720.webm"))
 	})))
 
 	// Start webUI server
-	log.Printf("%s: listening on https://%s", com.Conf.Live.Nodename, com.Conf.Web.ServerName)
+	log.Printf("%s: listening on https://%s", config.Conf.Live.Nodename, config.Conf.Web.ServerName)
 	srv := &http.Server{
-		Addr:     com.Conf.Web.BindAddress,
+		Addr:     config.Conf.Web.BindAddress,
 		ErrorLog: com.HttpErrorLog(),
 		TLSConfig: &tls.Config{
 			MinVersion: tls.VersionTLS12, // TLS 1.2 is now the lowest acceptable level
 		},
 	}
-	go srv.ListenAndServeTLS(com.Conf.Web.Certificate, com.Conf.Web.CertificateKey)
+	go srv.ListenAndServeTLS(config.Conf.Web.Certificate, config.Conf.Web.CertificateKey)
 
 	// Wait for exit signal
 	<-exitSignal
@@ -3884,7 +3885,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Check for the special case of username@server, which may fail standard email validation checks
 		// eg username@localhost, won't validate as an email address, but should be accepted anyway
-		serverName := strings.Split(com.Conf.Web.ServerName, ":")
+		serverName := strings.Split(config.Conf.Web.ServerName, ":")
 		em := fmt.Sprintf("%s@%s", loggedInUser, serverName[0])
 		if email != em {
 			log.Printf("%s: Email value failed validation: %s", pageName, err)
@@ -4871,7 +4872,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Cache the data in memcache
-			err = com.CacheData(dataCacheKey, dataRows, com.Conf.Memcache.DefaultCacheTime)
+			err = com.CacheData(dataCacheKey, dataRows, config.Conf.Memcache.DefaultCacheTime)
 			if err != nil {
 				log.Printf("%s: Error when caching table data for '%s/%s': %v", pageName, com.SanitiseLogString(dbOwner),
 					com.SanitiseLogString(dbName), err)
@@ -5613,7 +5614,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set the maximum accepted database size for uploading
 	oversizeAllowed := false
-	for _, user := range com.Conf.UserMgmt.SizeOverrideUsers {
+	for _, user := range config.Conf.UserMgmt.SizeOverrideUsers {
 		if loggedInUser == user {
 			oversizeAllowed = true
 			break

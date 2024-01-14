@@ -10,6 +10,7 @@ import (
 	"time"
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
 )
 
@@ -695,12 +696,12 @@ func databasePage(w http.ResponseWriter, r *http.Request, dbOwner string, dbName
 	var pageData struct {
 		DB           com.SQLiteDBinfo
 		PageMeta     PageMetaInfo
-		DB4S         com.DB4SInfo
+		DB4S         config.DB4SConfig
 		WriteEnabled bool
 	}
 
 	pageData.PageMeta.PageSection = "db_data"
-	pageData.DB4S = com.Conf.DB4S
+	pageData.DB4S = config.Conf.DB4S
 
 	// Get all meta information
 	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
@@ -1494,7 +1495,7 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	pageData.Email = usr.Email
 
 	// Set the server name, used for the placeholder email address suggestion
-	serverName := strings.Split(com.Conf.Web.ServerName, ":")
+	serverName := strings.Split(config.Conf.Web.ServerName, ":")
 	pageData.PageMeta.Server = serverName[0]
 
 	// If the email address for the user is empty, use username@server by default.  This mirrors the suggestion on the

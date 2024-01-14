@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 // AddDefaultLicences adds the default licences to the PostgreSQL database.  Generally useful for populating a new
@@ -73,7 +75,7 @@ func AddDefaultLicences() (err error) {
 		txt := []byte{}
 		if l.Path != "" {
 			// Read the file contents
-			txt, err = os.ReadFile(filepath.Join(Conf.Licence.LicenceDir, l.Path))
+			txt, err = os.ReadFile(filepath.Join(config.Conf.Licence.LicenceDir, l.Path))
 			if err != nil {
 				return err
 			}
@@ -85,6 +87,6 @@ func AddDefaultLicences() (err error) {
 			return err
 		}
 	}
-	log.Printf("%s: default licences added", Conf.Live.Nodename)
+	log.Printf("%s: default licences added", config.Conf.Live.Nodename)
 	return nil
 }

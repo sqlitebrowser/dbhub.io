@@ -14,6 +14,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 var (
@@ -27,20 +28,20 @@ var (
 func main() {
 	// Read server configuration
 	var err error
-	if err = com.ReadConfig(); err != nil {
+	if err = config.ReadConfig(); err != nil {
 		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
 	// Set the node name used in various logging strings
-	com.Conf.Live.Nodename = "API server"
+	config.Conf.Live.Nodename = "API server"
 
 	// Open the request log for writing
-	reqLog, err = os.OpenFile(com.Conf.Api.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
+	reqLog, err = os.OpenFile(config.Conf.Api.RequestLog, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0750)
 	if err != nil {
 		log.Fatalf("Error when opening request log: %s", err)
 	}
 	defer reqLog.Close()
-	log.Printf("%s: request log opened: %s", com.Conf.Live.Nodename, com.Conf.Api.RequestLog)
+	log.Printf("%s: request log opened: %s", config.Conf.Live.Nodename, config.Conf.Api.RequestLog)
 
 	// Connect to Minio server
 	err = com.ConnectMinio()
@@ -119,7 +120,7 @@ func main() {
 	}
 
 	s := &http.Server{
-		Addr:           com.Conf.Api.BindAddress,
+		Addr:           config.Conf.Api.BindAddress,
 		Handler:        router,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
@@ -137,7 +138,7 @@ func main() {
 
 	// Parse our template files
 	router.Delims("[[", "]]")
-	router.LoadHTMLGlob(filepath.Join(com.Conf.Web.BaseDir, "api", "templates", "*.html"))
+	router.LoadHTMLGlob(filepath.Join(config.Conf.Web.BaseDir, "api", "templates", "*.html"))
 
 	// Register API v1 handlers. All of them require authentication which is done by the authenticateV1 middleware
 	v1 := router.Group("/v1", authenticateV1)
@@ -165,14 +166,14 @@ func main() {
 	router.GET("/", rootHandler)
 	router.GET("/changelog", changeLogHandler)
 	router.GET("/changelog.html", changeLogHandler)
-	router.StaticFile("/favicon.ico", filepath.Join(com.Conf.Web.BaseDir, "webui", "favicon.ico"))
+	router.StaticFile("/favicon.ico", filepath.Join(config.Conf.Web.BaseDir, "webui", "favicon.ico"))
 
 	// Generate the formatted server string
-	server = fmt.Sprintf("https://%s", com.Conf.Api.ServerName)
+	server = fmt.Sprintf("https://%s", config.Conf.Api.ServerName)
 
 	// Start API server
-	log.Printf("%s: listening on %s", com.Conf.Live.Nodename, server)
-	go s.ListenAndServeTLS(com.Conf.Api.Certificate, com.Conf.Api.CertificateKey)
+	log.Printf("%s: listening on %s", config.Conf.Live.Nodename, server)
+	go s.ListenAndServeTLS(config.Conf.Api.Certificate, config.Conf.Api.CertificateKey)
 
 	// Wait for exit signal
 	<-exitSignal
@@ -203,7 +204,7 @@ func changeLogHandler(c *gin.Context) {
 	}
 
 	// Pass through some variables, useful for the generated docs
-	pageData.ServerName = com.Conf.Web.ServerName
+	pageData.ServerName = config.Conf.Web.ServerName
 
 	// Display our API changelog
 	c.HTML(http.StatusOK, "changelog", pageData)
@@ -222,7 +223,7 @@ func rootHandler(c *gin.Context) {
 	}
 
 	// Pass through some variables, useful for the generated docs
-	pageData.ServerName = com.Conf.Web.ServerName
+	pageData.ServerName = config.Conf.Web.ServerName
 
 	// Display our API documentation
 	c.HTML(http.StatusOK, "docs", pageData)

@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 func visualisePage(w http.ResponseWriter, r *http.Request) {
@@ -217,7 +218,7 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	validSession := false
-	if com.Conf.Environment.Environment == "production" {
+	if config.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -225,7 +226,7 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = com.Conf.Environment.UserOverride
+		u = config.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -479,7 +480,7 @@ func visExecuteSQL(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
 	var loggedInUser string
 	var u interface{}
-	if com.Conf.Environment.Environment == "production" {
+	if config.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -487,7 +488,7 @@ func visExecuteSQL(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = com.Conf.Environment.UserOverride
+		u = config.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -584,7 +585,7 @@ func visRename(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	validSession := false
-	if com.Conf.Environment.Environment == "production" {
+	if config.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -592,7 +593,7 @@ func visRename(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = com.Conf.Environment.UserOverride
+		u = config.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -660,7 +661,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	validSession := false
-	if com.Conf.Environment.Environment == "production" {
+	if config.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -668,7 +669,7 @@ func visSave(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = com.Conf.Environment.UserOverride
+		u = config.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)

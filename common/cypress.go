@@ -10,6 +10,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 // CypressSeed empties the backend database, then adds pre-defined test data (PostgreSQL and Minio)
@@ -27,10 +29,10 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Switch to the default user
-	Conf.Environment.UserOverride = "default"
+	config.Conf.Environment.UserOverride = "default"
 
 	// Change the email address of the default user to match the local server
-	serverName := strings.Split(Conf.Web.ServerName, ":")
+	serverName := strings.Split(config.Conf.Web.ServerName, ":")
 	err := SetUserPreferences("default", 10, "Default system user", fmt.Sprintf("default@%s", serverName[0]))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -38,7 +40,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add test SQLite databases
-	testDB, err := os.Open(path.Join(Conf.Web.BaseDir, "cypress", "test_data", "Assembly Election 2017.sqlite"))
+	testDB, err := os.Open(path.Join(config.Conf.Web.BaseDir, "cypress", "test_data", "Assembly Election 2017.sqlite"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -52,7 +54,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	testDB2, err := os.Open(path.Join(Conf.Web.BaseDir, "cypress", "test_data", "Assembly Election 2017 with view.sqlite"))
+	testDB2, err := os.Open(path.Join(config.Conf.Web.BaseDir, "cypress", "test_data", "Assembly Election 2017 with view.sqlite"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -107,7 +109,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	// *** Add a test LIVE SQLite database (start) ***
 
 	// Open the live database file
-	liveDB1, err := os.Open(path.Join(Conf.Web.BaseDir, "cypress", "test_data", "Join Testing with index.sqlite"))
+	liveDB1, err := os.Open(path.Join(config.Conf.Web.BaseDir, "cypress", "test_data", "Join Testing with index.sqlite"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -247,43 +249,43 @@ func CreateTag(dbOwner, dbName, tagName, tagDescription, taggerName, taggerEmail
 // EnvProd changes the running environment to be "production"
 // NOTE - This route to call this is only available when the server is _started_ in the "test" environment
 func EnvProd(w http.ResponseWriter, r *http.Request) {
-	Conf.Environment.Environment = "production"
+	config.Conf.Environment.Environment = "production"
 	return
 }
 
 // EnvTest changes the running environment to be "test"
 // NOTE - This route to call this is only available when the server is _started_ in the "test" environment
 func EnvTest(w http.ResponseWriter, r *http.Request) {
-	Conf.Environment.Environment = "test"
+	config.Conf.Environment.Environment = "test"
 	return
 }
 
 // SwitchDefault changes the logged in user to be the user "default"
 func SwitchDefault(w http.ResponseWriter, r *http.Request) {
-	Conf.Environment.UserOverride = "default"
+	config.Conf.Environment.UserOverride = "default"
 	return
 }
 
 // SwitchFirst changes the logged in user to be the test user "first"
 func SwitchFirst(w http.ResponseWriter, r *http.Request) {
-	Conf.Environment.UserOverride = "first"
+	config.Conf.Environment.UserOverride = "first"
 	return
 }
 
 // SwitchSecond changes the logged in user to be the test user "second"
 func SwitchSecond(w http.ResponseWriter, r *http.Request) {
-	Conf.Environment.UserOverride = "second"
+	config.Conf.Environment.UserOverride = "second"
 	return
 }
 
 // SwitchThird changes the logged in user to be the test user "third"
 func SwitchThird(w http.ResponseWriter, r *http.Request) {
-	Conf.Environment.UserOverride = "third"
+	config.Conf.Environment.UserOverride = "third"
 	return
 }
 
 // TestLogout logs out the user for test runs
 func TestLogout(w http.ResponseWriter, r *http.Request) {
-	Conf.Environment.UserOverride = ""
+	config.Conf.Environment.UserOverride = ""
 	return
 }

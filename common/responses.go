@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 // BranchListResponseContainer holds the response to a client request for the database branch list. It's a temporary
@@ -89,7 +91,7 @@ func MetadataResponse(dbOwner, dbName string) (meta MetadataResponseContainer, e
 	}
 
 	// Generate the link to the web page of this database in the webUI module
-	meta.WebPage = "https://" + Conf.Web.ServerName + "/" + dbOwner + "/" + dbName
+	meta.WebPage = "https://" + config.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName
 	return
 }
 
@@ -503,10 +505,10 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 
 	// Generate the formatted server string
 	var server string
-	if Conf.DB4S.Port == 443 {
-		server = fmt.Sprintf("https://%s", Conf.DB4S.Server)
+	if config.Conf.DB4S.Port == 443 {
+		server = fmt.Sprintf("https://%s", config.Conf.DB4S.Server)
 	} else {
-		server = fmt.Sprintf("https://%s:%d", Conf.DB4S.Server, Conf.DB4S.Port)
+		server = fmt.Sprintf("https://%s:%d", config.Conf.DB4S.Server, config.Conf.DB4S.Port)
 	}
 
 	// Construct message data for returning to DB4S (only) callers

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sqlitebrowser/dbhub.io/common/config"
+
 	sqlite "github.com/gwenn/gosqlite"
 )
 
@@ -183,7 +185,7 @@ func performMerge(destOwner, destName, destBranch, destCommitID, srcOwner, srcNa
 	}
 
 	// Create a temporary file for the new database
-	tmpFile, err := os.CreateTemp(Conf.DiskCache.Directory, "dbhub-merge-*.db")
+	tmpFile, err := os.CreateTemp(config.Conf.DiskCache.Directory, "dbhub-merge-*.db")
 	if err != nil {
 		return
 	}

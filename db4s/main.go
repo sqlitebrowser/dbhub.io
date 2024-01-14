@@ -24,6 +24,7 @@ import (
 	gz "github.com/NYTimes/gziphandler"
 	"github.com/pkg/errors"
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 var (
@@ -37,15 +38,15 @@ var (
 func main() {
 	// Read server configuration
 	var err error
-	if err = com.ReadConfig(); err != nil {
+	if err = config.ReadConfig(); err != nil {
 		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
 	// Set the node name used in various logging strings
-	com.Conf.Live.Nodename = "DB4S end point server"
+	config.Conf.Live.Nodename = "DB4S end point server"
 
 	// Set the temp dir environment variable
-	err = os.Setenv("TMPDIR", com.Conf.DiskCache.Directory)
+	err = os.Setenv("TMPDIR", config.Conf.DiskCache.Directory)
 	if err != nil {
 		log.Fatalf("Setting temp directory environment variable failed: '%s'", err)
 	}
@@ -99,7 +100,7 @@ func main() {
 
 	// Load our self signed CA chain
 	ourCAPool = x509.NewCertPool()
-	certFile, err := os.ReadFile(com.Conf.DB4S.CAChain)
+	certFile, err := os.ReadFile(config.Conf.DB4S.CAChain)
 	if err != nil {
 		log.Fatalf("Error opening Certificate Authority chain file: '%s'", err)
 	}
@@ -127,7 +128,7 @@ func main() {
 		RootCAs:                  ourCAPool,
 	}
 	newServer := &http.Server{
-		Addr:         ":" + fmt.Sprint(com.Conf.DB4S.Port),
+		Addr:         ":" + fmt.Sprint(config.Conf.DB4S.Port),
 		ErrorLog:     com.HttpErrorLog(),
 		Handler:      gz.GzipHandler(mux),
 		TLSConfig:    newTLSConfig,
@@ -135,15 +136,15 @@ func main() {
 	}
 
 	// Generate the formatted server string
-	if com.Conf.DB4S.Port == 443 {
-		server = fmt.Sprintf("https://%s", com.Conf.DB4S.Server)
+	if config.Conf.DB4S.Port == 443 {
+		server = fmt.Sprintf("https://%s", config.Conf.DB4S.Server)
 	} else {
-		server = fmt.Sprintf("https://%s:%d", com.Conf.DB4S.Server, com.Conf.DB4S.Port)
+		server = fmt.Sprintf("https://%s:%d", config.Conf.DB4S.Server, config.Conf.DB4S.Port)
 	}
 
 	// Start server
-	log.Printf("%s: listening for requests on %s", com.Conf.Live.Nodename, server)
-	go newServer.ListenAndServeTLS(com.Conf.DB4S.Certificate, com.Conf.DB4S.CertificateKey)
+	log.Printf("%s: listening for requests on %s", config.Conf.Live.Nodename, server)
+	go newServer.ListenAndServeTLS(config.Conf.DB4S.Certificate, config.Conf.DB4S.CertificateKey)
 
 	// Wait for exit signal
 	<-exitSignal
@@ -218,7 +219,7 @@ func extractUserAndServer(w http.ResponseWriter, r *http.Request) (userAcc strin
 	}
 
 	// Verify the running server matches the one in the certificate
-	runningServer := com.Conf.DB4S.Server
+	runningServer := config.Conf.DB4S.Server
 	if certServer != runningServer {
 		err = fmt.Errorf("Server name in certificate '%s' doesn't match running server '%s'\n", certServer,
 			runningServer)
@@ -226,7 +227,7 @@ func extractUserAndServer(w http.ResponseWriter, r *http.Request) (userAcc strin
 	}
 
 	// If the user has been banned, reject their authentication
-	for _, u := range com.Conf.UserMgmt.BannedUsers {
+	for _, u := range config.Conf.UserMgmt.BannedUsers {
 		if u == userAcc {
 			log.Printf("Banned user '%s' attempted to connect using DB4S", userAcc)
 			err = errors.New("User has been banned.  Get in contact with us if you want the ban removed.")
@@ -815,7 +816,7 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// Set the maximum accepted database size for uploading
 	oversizeAllowed := false
-	for _, user := range com.Conf.UserMgmt.SizeOverrideUsers {
+	for _, user := range config.Conf.UserMgmt.SizeOverrideUsers {
 		if userAcc == user {
 			oversizeAllowed = true
 		}

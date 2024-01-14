@@ -1,27 +1,27 @@
-package common
+package config
 
 import "time"
 
 // TomlConfig is a top level structure containing the server configuration information
 type TomlConfig struct {
-	Api         ApiInfo
-	Auth0       Auth0Info
-	DB4S        DB4SInfo
-	Environment EnvInfo
-	DiskCache   DiskCacheInfo
-	Event       EventProcessingInfo
-	Licence     LicenceInfo
-	Live        LiveInfo
-	Memcache    MemcacheInfo
-	Minio       MinioInfo
-	Pg          PGInfo
-	Sign        SigningInfo
-	UserMgmt    UserMgmtInfo
-	Web         WebInfo
+	Api         ApiConfig
+	Auth0       Auth0Config
+	DB4S        DB4SConfig
+	Environment EnvConfig
+	DiskCache   DiskCacheConfig
+	Event       EventProcessingConfig
+	Licence     LicenceConfig
+	Live        LiveConfig
+	Memcache    MemcacheConfig
+	Minio       MinioConfig
+	Pg          PGConfig
+	Sign        SigningConfig
+	UserMgmt    UserMgmtConfig
+	Web         WebConfig
 }
 
-// ApiInfo contains configuration info for the API daemon
-type ApiInfo struct {
+// ApiConfig contains configuration info for the API daemon
+type ApiConfig struct {
 	BaseDir        string `toml:"base_dir"`
 	BindAddress    string `toml:"bind_address"`
 	Certificate    string `toml:"certificate"`
@@ -30,15 +30,15 @@ type ApiInfo struct {
 	ServerName     string `toml:"server_name"`
 }
 
-// Auth0Info contains the Auth0 connection info used authenticating webUI users
-type Auth0Info struct {
+// Auth0Config contains the Auth0 connection info used authenticating webUI users
+type Auth0Config struct {
 	ClientID     string
 	ClientSecret string
 	Domain       string
 }
 
-// DB4SInfo contains configuration info for the DB4S end point daemon
-type DB4SInfo struct {
+// DB4SConfig contains configuration info for the DB4S end point daemon
+type DB4SConfig struct {
 	CAChain        string `toml:"ca_chain"`
 	Certificate    string
 	CertificateKey string `toml:"certificate_key"`
@@ -47,53 +47,53 @@ type DB4SInfo struct {
 	Server         string
 }
 
-// DiskCacheInfo contains the path to the root of the local disk cache
-type DiskCacheInfo struct {
+// DiskCacheConfig contains the path to the root of the local disk cache
+type DiskCacheConfig struct {
 	Directory string
 }
 
-// EnvInfo holds information about the purpose of the running server.  eg "is this a production, docker,
+// EnvConfig holds information about the purpose of the running server.  eg "is this a production, docker,
 // or development" instance?
-type EnvInfo struct {
+type EnvConfig struct {
 	Environment  string
 	UserOverride string `toml:"user_override"`
 }
 
-// EventProcessingInfo hold configuration for the event processing loop
-type EventProcessingInfo struct {
+// EventProcessingConfig hold configuration for the event processing loop
+type EventProcessingConfig struct {
 	Delay                     time.Duration `toml:"delay"`
 	EmailQueueProcessingDelay time.Duration `toml:"email_queue_processing_delay"`
 	Smtp2GoKey                string        `toml:"smtp2go_key"` // The SMTP2GO API key
 }
 
-// LicenceInfo -> LicenceDir holds the path to the licence files
-type LicenceInfo struct {
+// LicenceConfig -> LicenceDir holds the path to the licence files
+type LicenceConfig struct {
 	LicenceDir string `toml:"licence_dir"`
 }
 
-// LiveInfo holds configuration info for the Live database daemon
-type LiveInfo struct {
+// LiveConfig holds configuration info for the Live database daemon
+type LiveConfig struct {
 	Nodename   string `toml:"node_name"`
 	StorageDir string `toml:"storage_dir"`
 }
 
-// MemcacheInfo contains the Memcached configuration parameters
-type MemcacheInfo struct {
+// MemcacheConfig contains the Memcached configuration parameters
+type MemcacheConfig struct {
 	DefaultCacheTime    int           `toml:"default_cache_time"`
 	Server              string        `toml:"server"`
 	ViewCountFlushDelay time.Duration `toml:"view_count_flush_delay"`
 }
 
-// MinioInfo contains the Minio connection parameters
-type MinioInfo struct {
+// MinioConfig contains the Minio connection parameters
+type MinioConfig struct {
 	AccessKey string `toml:"access_key"`
 	HTTPS     bool
 	Secret    string
 	Server    string
 }
 
-// PGInfo contains the PostgreSQL connection parameters
-type PGInfo struct {
+// PGConfig contains the PostgreSQL connection parameters
+type PGConfig struct {
 	Database       string
 	NumConnections int `toml:"num_connections"`
 	Port           int
@@ -103,22 +103,22 @@ type PGInfo struct {
 	Username       string
 }
 
-// SigningInfo contains the info used for signing DB4S client certificates
-type SigningInfo struct {
+// SigningConfig contains the info used for signing DB4S client certificates
+type SigningConfig struct {
 	CertDaysValid    int    `toml:"cert_days_valid"`
 	Enabled          bool   `toml:"enabled"`
 	IntermediateCert string `toml:"intermediate_cert"`
 	IntermediateKey  string `toml:"intermediate_key"`
 }
 
-// UserMgmtInfo contains the various settings for specific users, or groups of users
-type UserMgmtInfo struct {
+// UserMgmtConfig contains the various settings for specific users, or groups of users
+type UserMgmtConfig struct {
 	BannedUsers       []string `toml:"banned_users"`        // List of users banned from the service
 	SizeOverrideUsers []string `toml:"size_override_users"` // List of users allowed to override the database upload size limits
 }
 
-// WebInfo contains configuration info for the webUI daemon
-type WebInfo struct {
+// WebConfig contains configuration info for the webUI daemon
+type WebConfig struct {
 	BaseDir              string `toml:"base_dir"`
 	BindAddress          string `toml:"bind_address"`
 	Certificate          string `toml:"certificate"`

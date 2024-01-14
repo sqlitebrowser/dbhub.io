@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sqlitebrowser/dbhub.io/common/config"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -32,20 +34,20 @@ var (
 func JobQueueCheck() {
 
 	if JobQueueDebug > 0 {
-		log.Printf("%s: starting JobQueueCheck()...", Conf.Live.Nodename)
+		log.Printf("%s: starting JobQueueCheck()...", config.Conf.Live.Nodename)
 	}
 
 	// Loop around checking for newly submitted jobs
 	for range CheckJobQueue {
 		if JobQueueDebug > 1 { // Only show when we have job queue debug verbosity turned up high
-			log.Printf("%s: JobQueueCheck() received event", Conf.Live.Nodename)
+			log.Printf("%s: JobQueueCheck() received event", config.Conf.Live.Nodename)
 		}
 
 		// Retrieve job details from the database
 		ctx := context.Background()
 		tx, err := JobQueueConn.Begin(ctx)
 		if err != nil {
-			log.Printf("%s: error in JobQueueCheck(): %s", Conf.Live.Nodename, err)
+			log.Printf("%s: error in JobQueueCheck(): %s", config.Conf.Live.Nodename, err)
 			continue
 		}
 
@@ -62,20 +64,20 @@ func JobQueueCheck() {
 			LIMIT 1`
 		var jobID int
 		var details, subNode, op string
-		err = tx.QueryRow(ctx, dbQuery, Conf.Live.Nodename).Scan(&jobID, &op, &subNode, &details)
+		err = tx.QueryRow(ctx, dbQuery, config.Conf.Live.Nodename).Scan(&jobID, &op, &subNode, &details)
 		if err != nil {
 			// Ignore any "no rows in result set" error
 			if !errors.Is(err, pgx.ErrNoRows) {
-				log.Printf("%v: retrieve job details error: %v", Conf.Live.Nodename, err)
+				log.Printf("%v: retrieve job details error: %v", config.Conf.Live.Nodename, err)
 			} else if JobQueueDebug > 1 { // Only show when we have job queue debug verbosity turned up high
-				log.Printf("%s: --- No jobs waiting for processing ---", Conf.Live.Nodename)
+				log.Printf("%s: --- No jobs waiting for processing ---", config.Conf.Live.Nodename)
 			}
 			tx.Rollback(ctx)
 			continue
 		}
 
 		if JobQueueDebug > 0 {
-			log.Printf("%s: picked up event for jobID = %d", Conf.Live.Nodename, jobID)
+			log.Printf("%s: picked up event for jobID = %d", config.Conf.Live.Nodename, jobID)
 		}
 
 		// Change the "state" field for the job entry to something other than 'new' so it's not unintentionally
@@ -88,7 +90,7 @@ func JobQueueCheck() {
 		var responsePayload []byte
 		t, err = tx.Exec(ctx, dbQuery, jobID)
 		if err != nil {
-			log.Printf("%s: error when updating job completion status to complete in backend database: %s", Conf.Live.Nodename, err)
+			log.Printf("%s: error when updating job completion status to complete in backend database: %s", config.Conf.Live.Nodename, err)
 			responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 		}
 
@@ -96,7 +98,7 @@ func JobQueueCheck() {
 		numRows := t.RowsAffected()
 		if numRows != 1 {
 			msg := fmt.Sprintf("something went wrong when updating jobID '%d' to 'in progress', number of rows updated = %d", jobID, numRows)
-			log.Printf("%s: %s", Conf.Live.Nodename, msg)
+			log.Printf("%s: %s", config.Conf.Live.Nodename, msg)
 			responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, msg))
 		}
 
@@ -111,7 +113,7 @@ func JobQueueCheck() {
 		err = json.Unmarshal([]byte(details), &req)
 		if err != nil {
 			msg := fmt.Sprintf("error when unmarshalling job details: %v", err)
-			log.Printf("%s: %s", Conf.Live.Nodename, msg)
+			log.Printf("%s: %s", config.Conf.Live.Nodename, msg)
 			responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, msg))
 		}
 
@@ -119,58 +121,58 @@ func JobQueueCheck() {
 		switch op {
 		case "backup":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [BACKUP] on '%s/%s'", Conf.Live.Nodename, req.DBOwner, req.DBName)
+				log.Printf("%s: running [BACKUP] on '%s/%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName)
 			}
 
 			// Return status of backup operation
-			err = SQLiteBackupLive(Conf.Live.StorageDir, req.DBOwner, req.DBName)
+			err = SQLiteBackupLive(config.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 			var response JobResponseDBError
 			if err != nil {
 				response.Err = err.Error()
 			}
 			responsePayload, err = json.Marshal(response) // Use an empty error message to indicate success
 			if err != nil {
-				log.Printf("%s: error when serialising backup response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising backup response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		case "columns":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [COLUMNS] on '%s/%s': '%s'", Conf.Live.Nodename, req.DBOwner, req.DBName, req.Data)
+				log.Printf("%s: running [COLUMNS] on '%s/%s': '%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName, req.Data)
 			}
 
 			// Return the column list to the caller
-			columns, pk, err, errCode := SQLiteGetColumnsLive(Conf.Live.StorageDir, req.DBOwner, req.DBName, fmt.Sprintf("%s", req.Data))
+			columns, pk, err, errCode := SQLiteGetColumnsLive(config.Conf.Live.StorageDir, req.DBOwner, req.DBName, fmt.Sprintf("%s", req.Data))
 			response := JobResponseDBColumns{Columns: columns, PkColumns: pk, ErrCode: errCode}
 			if err != nil {
 				response.Err = err.Error()
 			}
 			responsePayload, err = json.Marshal(response)
 			if err != nil {
-				log.Printf("%s: error when serialising the column list response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising the column list response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		case "createdb":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [CREATE DATABASE] on '%s/%s'", Conf.Live.Nodename, req.DBOwner, req.DBName)
+				log.Printf("%s: running [CREATE DATABASE] on '%s/%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName)
 			}
 
 			// Return status of database creation
 			err = JobQueueCreateDatabase(req)
-			response := JobResponseDBCreate{NodeName: Conf.Live.Nodename}
+			response := JobResponseDBCreate{NodeName: config.Conf.Live.Nodename}
 			if err != nil {
 				response.Err = err.Error()
 			}
 			responsePayload, err = json.Marshal(response) // Use an empty error message to indicate success
 			if err != nil {
-				log.Printf("%s: error when serialising create database response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising create database response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		case "delete":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [DELETE] on '%s/%s'", Conf.Live.Nodename, req.DBOwner, req.DBName)
+				log.Printf("%s: running [DELETE] on '%s/%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName)
 			}
 
 			// Delete the database file from the node
@@ -181,41 +183,41 @@ func JobQueueCheck() {
 			}
 			responsePayload, err = json.Marshal(response)
 			if err != nil {
-				log.Printf("%s: error when serialising delete database response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising delete database response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		case "execute":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [EXECUTE] on '%s/%s': '%s'", Conf.Live.Nodename, req.DBOwner, req.DBName, req.Data)
+				log.Printf("%s: running [EXECUTE] on '%s/%s': '%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName, req.Data)
 			}
 
 			// Execute a SQL statement on the database
-			rowsChanged, err := SQLiteExecuteQueryLive(Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, fmt.Sprintf("%s", req.Data))
+			rowsChanged, err := SQLiteExecuteQueryLive(config.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, fmt.Sprintf("%s", req.Data))
 			response := JobResponseDBExecute{RowsChanged: rowsChanged}
 			if err != nil {
 				response.Err = err.Error()
 			}
 			responsePayload, err = json.Marshal(response)
 			if err != nil {
-				log.Printf("%s: error when serialising execute request response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising execute request response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		case "indexes":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [INDEXES] on '%s/%s'", Conf.Live.Nodename, req.DBOwner, req.DBName)
+				log.Printf("%s: running [INDEXES] on '%s/%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName)
 			}
 
 			// Return the list of indexes
-			indexes, err := SQLiteGetIndexesLive(Conf.Live.StorageDir, req.DBOwner, req.DBName)
+			indexes, err := SQLiteGetIndexesLive(config.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 			response := JobResponseDBIndexes{Indexes: indexes}
 			if err != nil {
 				response.Err = err.Error()
 			}
 			responsePayload, err = json.Marshal(response)
 			if err != nil {
-				log.Printf("%s: error when serialising index list response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising index list response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
@@ -224,31 +226,31 @@ func JobQueueCheck() {
 
 		case "query":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [QUERY] on '%s/%s': '%s'", Conf.Live.Nodename, req.DBOwner, req.DBName, req.Data)
+				log.Printf("%s: running [QUERY] on '%s/%s': '%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName, req.Data)
 			}
 
 			// Return the query result
-			rows, err := SQLiteRunQueryLive(Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, fmt.Sprintf("%s", req.Data))
+			rows, err := SQLiteRunQueryLive(config.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.RequestingUser, fmt.Sprintf("%s", req.Data))
 			response := JobResponseDBQuery{Results: rows}
 			if err != nil {
 				response.Err = err.Error()
 			}
 			responsePayload, err = json.Marshal(response)
 			if err != nil {
-				log.Printf("%s: error when serialising query response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising query response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		case "rowdata":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [ROWDATA] on '%s/%s'", Conf.Live.Nodename, req.DBOwner, req.DBName)
+				log.Printf("%s: running [ROWDATA] on '%s/%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName)
 			}
 
 			// Decode the base64 request data back to JSON
 			b64, err := base64.StdEncoding.DecodeString(req.Data.(string))
 			if err != nil {
 				msg := fmt.Sprintf("error when base64 decoding rowdata job details: %v", err)
-				log.Printf("%s: %s", Conf.Live.Nodename, msg)
+				log.Printf("%s: %s", config.Conf.Live.Nodename, msg)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, msg))
 				break
 			}
@@ -258,7 +260,7 @@ func JobQueueCheck() {
 			err = json.Unmarshal(b64, &reqData)
 			if err != nil {
 				msg := fmt.Sprintf("error when unmarshalling rowdata job details: %v", err)
-				log.Printf("%s: %s", Conf.Live.Nodename, msg)
+				log.Printf("%s: %s", config.Conf.Live.Nodename, msg)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, msg))
 				break
 			}
@@ -279,13 +281,13 @@ func JobQueueCheck() {
 			}
 			responsePayload, err = json.Marshal(resp)
 			if err != nil {
-				log.Printf("%s: error when serialising row data response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising row data response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		case "size":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [SIZE] on '%s/%s'", Conf.Live.Nodename, req.DBOwner, req.DBName)
+				log.Printf("%s: running [SIZE] on '%s/%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName)
 			}
 
 			// Return the on disk size of the database
@@ -296,46 +298,46 @@ func JobQueueCheck() {
 			}
 			responsePayload, err = json.Marshal(response)
 			if err != nil {
-				log.Printf("%s: error when serialising size check response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising size check response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		case "tables":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [TABLES] on '%s/%s'", Conf.Live.Nodename, req.DBOwner, req.DBName)
+				log.Printf("%s: running [TABLES] on '%s/%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName)
 			}
 
 			// Return the list of tables
-			tables, err := SQLiteGetTablesLive(Conf.Live.StorageDir, req.DBOwner, req.DBName)
+			tables, err := SQLiteGetTablesLive(config.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 			response := JobResponseDBTables{Tables: tables}
 			if err != nil {
 				response.Err = err.Error()
 			}
 			responsePayload, err = json.Marshal(response)
 			if err != nil {
-				log.Printf("%s: error when serialising table list response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising table list response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		case "views":
 			if JobQueueDebug > 0 {
-				log.Printf("%s: running [VIEWS] on '%s/%s'", Conf.Live.Nodename, req.DBOwner, req.DBName)
+				log.Printf("%s: running [VIEWS] on '%s/%s'", config.Conf.Live.Nodename, req.DBOwner, req.DBName)
 			}
 
 			// Return the list of views
-			views, err := SQLiteGetViewsLive(Conf.Live.StorageDir, req.DBOwner, req.DBName)
+			views, err := SQLiteGetViewsLive(config.Conf.Live.StorageDir, req.DBOwner, req.DBName)
 			response := JobResponseDBViews{Views: views}
 			if err != nil {
 				response.Err = err.Error()
 			}
 			responsePayload, err = json.Marshal(response)
 			if err != nil {
-				log.Printf("%s: error when serialising view list response json: %s", Conf.Live.Nodename, err)
+				log.Printf("%s: error when serialising view list response json: %s", config.Conf.Live.Nodename, err)
 				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 			}
 
 		default:
-			log.Printf("%v: notification received for unhandled operation '%s'\n", Conf.Live.Nodename, op)
+			log.Printf("%v: notification received for unhandled operation '%s'\n", config.Conf.Live.Nodename, op)
 		}
 
 		// Update the job completion status in the backend database
@@ -345,7 +347,7 @@ func JobQueueCheck() {
 			WHERE job_id = $1`
 		t, err = JobQueueConn.Exec(ctx, dbQuery, jobID)
 		if err != nil {
-			log.Printf("%s: error when updating job completion status to complete in backend database: %s", Conf.Live.Nodename, err)
+			log.Printf("%s: error when updating job completion status to complete in backend database: %s", config.Conf.Live.Nodename, err)
 			responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
 		}
 
@@ -353,7 +355,7 @@ func JobQueueCheck() {
 		numRows = t.RowsAffected()
 		if numRows != 1 {
 			msg := fmt.Sprintf("something went wrong when updating jobID '%d' to 'complete', number of rows updated = %d", jobID, numRows)
-			log.Printf("%s: %s", Conf.Live.Nodename, msg)
+			log.Printf("%s: %s", config.Conf.Live.Nodename, msg)
 			responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, msg))
 		}
 
@@ -368,7 +370,7 @@ func JobQueueCheck() {
 // JobQueueCreateDatabase creates a database on a live node
 func JobQueueCreateDatabase(req JobRequest) (err error) {
 	// Set up the live database locally
-	_, err = LiveRetrieveDatabaseMinio(Conf.Live.StorageDir, req.DBOwner, req.DBName, req.Data.(string))
+	_, err = LiveRetrieveDatabaseMinio(config.Conf.Live.StorageDir, req.DBOwner, req.DBName, req.Data.(string))
 	if err != nil {
 		log.Println(err)
 		// TODO: Update the job status to failed and notify the caller
@@ -379,7 +381,7 @@ func JobQueueCreateDatabase(req JobRequest) (err error) {
 
 // JobQueueGetSize returns the on disk size of a database on a live node
 func JobQueueGetSize(DBOwner, DBName string) (size int64, err error) {
-	dbPath := filepath.Join(Conf.Live.StorageDir, DBOwner, DBName, "live.sqlite")
+	dbPath := filepath.Join(config.Conf.Live.StorageDir, DBOwner, DBName, "live.sqlite")
 	var db os.FileInfo
 	db, err = os.Stat(dbPath)
 	if err != nil {
@@ -395,7 +397,7 @@ func JobQueueGetSize(DBOwner, DBName string) (size int64, err error) {
 func JobQueueListen() {
 	if JobQueueDebug > 0 {
 		// Log the start of the loop
-		log.Printf("%v: started JobQueueListen()", Conf.Live.Nodename)
+		log.Printf("%v: started JobQueueListen()", config.Conf.Live.Nodename)
 	}
 
 	// Listen for notify events
@@ -408,7 +410,7 @@ func JobQueueListen() {
 	for {
 		_, err := JobListenConn.WaitForNotification(context.Background())
 		if err != nil {
-			log.Printf("%s: error in JobQueueListen(): %s", Conf.Live.Nodename, err)
+			log.Printf("%s: error in JobQueueListen(): %s", config.Conf.Live.Nodename, err)
 		}
 
 		// Send an event to the goroutine that checks for submitted jobs
@@ -445,7 +447,7 @@ func JobSubmit[T any](response *T, targetNode, operation, requestingUser, dbOwne
 
 	// Safety check
 	if SubmitterInstance == "" {
-		err = fmt.Errorf("%s: ERROR - JobSubmit() called before SubmitterInstance was set", Conf.Live.Nodename)
+		err = fmt.Errorf("%s: ERROR - JobSubmit() called before SubmitterInstance was set", config.Conf.Live.Nodename)
 		return
 	}
 
@@ -457,14 +459,14 @@ func JobSubmit[T any](response *T, targetNode, operation, requestingUser, dbOwne
 	var jobID int
 	err = tx.QueryRow(ctx, dbQuery, targetNode, operation, SubmitterInstance, details).Scan(&jobID)
 	if err != nil {
-		log.Printf("%s: error when adding a job to the backend job submission table: %v", Conf.Live.Nodename, err)
+		log.Printf("%s: error when adding a job to the backend job submission table: %v", config.Conf.Live.Nodename, err)
 		return
 	}
 
 	// Double check the job was submitted ok
 	if jobID == 0 {
 		// Something went wrong when adding the new job
-		err = fmt.Errorf("%s: something went wrong when adding the new job to the queue.  Returned job_id was 0", Conf.Live.Nodename)
+		err = fmt.Errorf("%s: something went wrong when adding the new job to the queue.  Returned job_id was 0", config.Conf.Live.Nodename)
 		return
 	}
 
@@ -472,7 +474,7 @@ func JobSubmit[T any](response *T, targetNode, operation, requestingUser, dbOwne
 	tx.Commit(ctx)
 
 	if JobQueueDebug > 0 {
-		log.Printf("%s: job '%d' added to queue", Conf.Live.Nodename, jobID)
+		log.Printf("%s: job '%d' added to queue", config.Conf.Live.Nodename, jobID)
 	}
 
 	// Wait for response
@@ -487,14 +489,14 @@ func JobSubmit[T any](response *T, targetNode, operation, requestingUser, dbOwne
 func ResponseQueueCheck() {
 
 	if JobQueueDebug > 0 {
-		log.Printf("%s: starting ResponseQueueCheck()...", Conf.Live.Nodename)
+		log.Printf("%s: starting ResponseQueueCheck()...", config.Conf.Live.Nodename)
 	}
 
 	// Loop around checking for newly submitted responses
 	for range CheckResponsesQueue {
 
 		if JobQueueDebug > 0 {
-			log.Printf("%s: responseQueueCheck() received event", Conf.Live.Nodename)
+			log.Printf("%s: responseQueueCheck() received event", config.Conf.Live.Nodename)
 		}
 
 		// Check for new responses here
@@ -511,7 +513,7 @@ func ResponseQueueCheck() {
 		if err != nil {
 			// Ignore any "no rows in result set" error
 			if !errors.Is(err, pgx.ErrNoRows) {
-				log.Printf("%v: retrieve response details error: %v", Conf.Live.Nodename, err)
+				log.Printf("%v: retrieve response details error: %v", config.Conf.Live.Nodename, err)
 			}
 			continue
 		}
@@ -519,7 +521,7 @@ func ResponseQueueCheck() {
 		// For each new response, send its details to any matching waiting caller
 		_, err = pgx.ForEachRow(rows, []any{&responseID, &jobID, &details}, func() error {
 			if JobQueueDebug > 0 {
-				log.Printf("%s: picked up response %d for jobID %d", Conf.Live.Nodename, responseID, jobID)
+				log.Printf("%s: picked up response %d for jobID %d", config.Conf.Live.Nodename, responseID, jobID)
 			}
 
 			ResponseQueue.RLock()
@@ -531,7 +533,7 @@ func ResponseQueueCheck() {
 			return nil
 		})
 		if err != nil {
-			log.Printf("%s: error in ResponseQueueCheck when running pgx.ForEachRow(): '%v' ", Conf.Live.Nodename, err)
+			log.Printf("%s: error in ResponseQueueCheck when running pgx.ForEachRow(): '%v' ", config.Conf.Live.Nodename, err)
 			continue
 		}
 	}
@@ -541,15 +543,15 @@ func ResponseQueueCheck() {
 func ResponseQueueListen() {
 	if JobQueueDebug > 0 {
 		// Log the start of the loop
-		log.Printf("%v: started ResponseQueueListen()", Conf.Live.Nodename)
+		log.Printf("%v: started ResponseQueueListen()", config.Conf.Live.Nodename)
 	}
 
 	// Listen for notify events
 	if JobListenConn == nil {
-		log.Fatalf("%v: ERROR, couldn't start ResponseQueueListen() as JobListenConn IS NILL", Conf.Live.Nodename)
+		log.Fatalf("%v: ERROR, couldn't start ResponseQueueListen() as JobListenConn IS NILL", config.Conf.Live.Nodename)
 	}
 	if JobListenConn.IsClosed() {
-		log.Fatalf("%v: ERROR, couldn't start ResponseQueueListen() as connection to job responses listener is NOT open", Conf.Live.Nodename)
+		log.Fatalf("%v: ERROR, couldn't start ResponseQueueListen() as connection to job responses listener is NOT open", config.Conf.Live.Nodename)
 	}
 	_, err := JobListenConn.Exec(context.Background(), "LISTEN job_responses_queue")
 	if err != nil {
@@ -560,11 +562,11 @@ func ResponseQueueListen() {
 	for {
 		n, err := JobListenConn.WaitForNotification(context.Background())
 		if err != nil {
-			log.Printf("%s: error in ResponseQueueListen(): %s", Conf.Live.Nodename, err)
+			log.Printf("%s: error in ResponseQueueListen(): %s", config.Conf.Live.Nodename, err)
 		}
 
 		if JobQueueDebug > 0 && n.Payload == SubmitterInstance {
-			log.Printf("%s: picked up response notification for submitter '%s'", Conf.Live.Nodename, n.Payload)
+			log.Printf("%s: picked up response notification for submitter '%s'", config.Conf.Live.Nodename, n.Payload)
 		}
 
 		// Send an event to the response checking goroutine, letting it know there's a new response available
@@ -592,14 +594,14 @@ func ResponseComplete(responseID int) (err error) {
 		WHERE response_id = $1`
 	tag, err := tx.Exec(ctx, dbQuery, responseID)
 	if err != nil {
-		log.Printf("%s: error when updating a response in the backend job responses table: %v", Conf.Live.Nodename, err)
+		log.Printf("%s: error when updating a response in the backend job responses table: %v", config.Conf.Live.Nodename, err)
 		return
 	}
 
 	// Double check the response was updated ok
 	numRows := tag.RowsAffected()
 	if numRows != 1 {
-		err = fmt.Errorf("%s: something went wrong when updating a response in the job responses table.  Number of rows affected (%d) wasn't 1'", Conf.Live.Nodename, numRows)
+		err = fmt.Errorf("%s: something went wrong when updating a response in the job responses table.  Number of rows affected (%d) wasn't 1'", config.Conf.Live.Nodename, numRows)
 		return
 	}
 
@@ -625,14 +627,14 @@ func ResponseSubmit(jobID int, submitterNode string, payload []byte) (err error)
 		VALUES ($1, $2, $3)`
 	tag, err := tx.Exec(ctx, dbQuery, jobID, submitterNode, payload)
 	if err != nil {
-		log.Printf("%s: error when adding a response to the backend job responses table: %v", Conf.Live.Nodename, err)
+		log.Printf("%s: error when adding a response to the backend job responses table: %v", config.Conf.Live.Nodename, err)
 		return
 	}
 
 	// Double check the response was added ok
 	numRows := tag.RowsAffected()
 	if numRows != 1 {
-		err = fmt.Errorf("%s: something went wrong when adding the new response to the job responses table.  Number of rows (%d) wasn't 1", Conf.Live.Nodename, numRows)
+		err = fmt.Errorf("%s: something went wrong when adding the new response to the job responses table.  Number of rows (%d) wasn't 1", config.Conf.Live.Nodename, numRows)
 		return
 	}
 

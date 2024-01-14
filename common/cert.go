@@ -12,6 +12,8 @@ import (
 	"math/big"
 	"os"
 	"time"
+
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 // GenerateClientCert generates a new DBHub.io client certificate for the given user
@@ -21,7 +23,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 	// Use a template approach, similar to:
 	//   https://github.com/driskell/log-courier/blob/master/lc-tlscert/lc-tlscert.go
 	nowTime := time.Now()
-	emailAddress := fmt.Sprintf("%s@%s", userName, Conf.DB4S.Server)
+	emailAddress := fmt.Sprintf("%s@%s", userName, config.Conf.DB4S.Server)
 	newCert := x509.Certificate{
 		Subject: pkix.Name{
 			Organization: []string{"DB Browser for SQLite"},
@@ -30,7 +32,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 		BasicConstraintsValid: true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		IsCA:                  false,
-		NotAfter:              nowTime.AddDate(0, 0, Conf.Sign.CertDaysValid),
+		NotAfter:              nowTime.AddDate(0, 0, config.Conf.Sign.CertDaysValid),
 		NotBefore:             nowTime,
 	}
 
@@ -43,7 +45,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 	}
 
 	// Load the certificate used for signing (the intermediate certificate)
-	certFile, err := os.ReadFile(Conf.Sign.IntermediateCert)
+	certFile, err := os.ReadFile(config.Conf.Sign.IntermediateCert)
 	if err != nil {
 		log.Printf("%s: Error opening intermediate certificate file: %v", pageName, err)
 		return
@@ -60,7 +62,7 @@ func GenerateClientCert(userName string) (_ []byte, err error) {
 	}
 
 	// Load the private key for the intermediate certificate
-	intKeyFile, err := os.ReadFile(Conf.Sign.IntermediateKey)
+	intKeyFile, err := os.ReadFile(config.Conf.Sign.IntermediateKey)
 	if err != nil {
 		log.Printf("%s: Error opening intermediate certificate key: %v", pageName, err)
 		return

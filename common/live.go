@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 
 	sqlite "github.com/gwenn/gosqlite"
 	"github.com/jackc/pgx/v5"
@@ -32,20 +35,41 @@ var (
 	// JobQueueDebug tells the daemons whether or not to output debug messages while running job queue code
 	// Mostly useful for development / debugging purposes.  0 means no debug messages, higher values means more verbosity
 	JobQueueDebug = 0
+
+	// Configuration info for the PostgreSQL job queue
+	listenConfig *pgx.ConnConfig
 )
 
 // ConnectQueue creates the connections to the backend queue server
 func ConnectQueue() (err error) {
+	// Create the connection string for the dedicated PostgreSQL notification connection
+	listenConfig, err = pgx.ParseConfig(fmt.Sprintf("host=%s port=%d user= %s password = %s dbname=%s connect_timeout=10", config.Conf.Pg.Server, uint16(config.Conf.Pg.Port), config.Conf.Pg.Username, config.Conf.Pg.Password, config.Conf.Pg.Database))
+	if err != nil {
+		return
+	}
+	listenTLSConfig := tls.Config{}
+	if config.Conf.Environment.Environment == "production" {
+		listenTLSConfig.ServerName = config.Conf.Pg.Server
+		listenTLSConfig.InsecureSkipVerify = false
+	} else {
+		listenTLSConfig.InsecureSkipVerify = true
+	}
+	if config.Conf.Pg.SSL {
+		listenConfig.TLSConfig = &listenTLSConfig
+	} else {
+		listenConfig.TLSConfig = nil
+	}
+
 	// Connect to PostgreSQL based queue server
 	// Note: JobListenConn uses a dedicated, non-pooled connection to the job queue database, while JobQueueConn uses
 	// a standard database connection pool
 	JobListenConn, err = pgx.ConnectConfig(context.Background(), listenConfig)
 	if err != nil {
-		return fmt.Errorf("%s: couldn't connect to backend queue server: %v", Conf.Live.Nodename, err)
+		return fmt.Errorf("%s: couldn't connect to backend queue server: %v", config.Conf.Live.Nodename, err)
 	}
 	JobQueueConn, err = pgpool.New(context.Background(), pgConfig.ConnString())
 	if err != nil {
-		return fmt.Errorf("%s: couldn't connect to backend queue server: %v", Conf.Live.Nodename, err)
+		return fmt.Errorf("%s: couldn't connect to backend queue server: %v", config.Conf.Live.Nodename, err)
 	}
 	return
 }
@@ -59,12 +83,12 @@ func LiveBackup(liveNode, loggedInUser, dbOwner, dbName string) (err error) {
 		return
 	}
 
-	log.Printf("%s: node which handled the database backup request: %s", Conf.Live.Nodename, liveNode)
+	log.Printf("%s: node which handled the database backup request: %s", config.Conf.Live.Nodename, liveNode)
 
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned during database backup on '%s': '%v'", Conf.Live.Nodename, liveNode, resp.Err)
+		log.Printf("%s: an error was returned during database backup on '%s': '%v'", config.Conf.Live.Nodename, liveNode, resp.Err)
 	}
 	return
 }
@@ -85,7 +109,7 @@ func LiveColumns(liveNode, loggedInUser, dbOwner, dbName, table string) (columns
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned when retrieving the column list for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+		log.Printf("%s: an error was returned when retrieving the column list for '%s/%s': '%v'", config.Conf.Live.Nodename, dbOwner, dbName, resp.Err)
 	}
 	return
 }
@@ -102,12 +126,12 @@ func LiveCreateDB(dbOwner, dbName, objectID string) (liveNode string, err error)
 	// Return the name of the node which has the database
 	liveNode = resp.NodeName
 
-	log.Printf("%s: node which handled the database creation request: %s", Conf.Live.Nodename, liveNode)
+	log.Printf("%s: node which handled the database creation request: %s", config.Conf.Live.Nodename, liveNode)
 
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned during database creation on '%s': '%v'", Conf.Live.Nodename, resp.NodeName, resp.Err)
+		log.Printf("%s: an error was returned during database creation on '%s': '%v'", config.Conf.Live.Nodename, resp.NodeName, resp.Err)
 	}
 	return
 }
@@ -124,7 +148,7 @@ func LiveDelete(liveNode, loggedInUser, dbOwner, dbName string) (err error) {
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned during database deletion on '%s': '%v'", Conf.Live.Nodename, liveNode, resp.Err)
+		log.Printf("%s: an error was returned during database deletion on '%s': '%v'", config.Conf.Live.Nodename, liveNode, resp.Err)
 	}
 	return
 }
@@ -145,7 +169,7 @@ func LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql string) (rowsChang
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
 		if !strings.HasPrefix(err.Error(), "don't use exec with") {
-			log.Printf("%s: an error was returned when retrieving the execution result for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+			log.Printf("%s: an error was returned when retrieving the execution result for '%s/%s': '%v'", config.Conf.Live.Nodename, dbOwner, dbName, resp.Err)
 		}
 	}
 
@@ -171,7 +195,7 @@ func LiveIndexes(liveNode, loggedInUser, dbOwner, dbName string) (indexes []APIJ
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned when retrieving the index list for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+		log.Printf("%s: an error was returned when retrieving the index list for '%s/%s': '%v'", config.Conf.Live.Nodename, dbOwner, dbName, resp.Err)
 	}
 	return
 }
@@ -191,7 +215,7 @@ func LiveQuery(liveNode, loggedInUser, dbOwner, dbName, query string) (rows SQLi
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned when retrieving the query response for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+		log.Printf("%s: an error was returned when retrieving the query response for '%s/%s': '%v'", config.Conf.Live.Nodename, dbOwner, dbName, resp.Err)
 	}
 	return
 }
@@ -220,7 +244,7 @@ func LiveRowData(liveNode, loggedInUser, dbOwner, dbName string, reqData JobRequ
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned when retrieving the row data for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+		log.Printf("%s: an error was returned when retrieving the row data for '%s/%s': '%v'", config.Conf.Live.Nodename, dbOwner, dbName, resp.Err)
 	}
 	return
 }
@@ -240,7 +264,7 @@ func LiveSize(liveNode, loggedInUser, dbOwner, dbName string) (size int64, err e
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned when checking the on disk database size for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+		log.Printf("%s: an error was returned when checking the on disk database size for '%s/%s': '%v'", config.Conf.Live.Nodename, dbOwner, dbName, resp.Err)
 	}
 	return
 }
@@ -260,7 +284,7 @@ func LiveTables(liveNode, loggedInUser, dbOwner, dbName string) (tables []string
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned when retrieving the table list for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+		log.Printf("%s: an error was returned when retrieving the table list for '%s/%s': '%v'", config.Conf.Live.Nodename, dbOwner, dbName, resp.Err)
 	}
 	return
 }
@@ -301,7 +325,7 @@ func LiveViews(liveNode, loggedInUser, dbOwner, dbName string) (views []string, 
 	// Handle error response from the live node
 	if resp.Err != "" {
 		err = errors.New(resp.Err)
-		log.Printf("%s: an error was returned when retrieving the view list for '%s/%s': '%v'", Conf.Live.Nodename, dbOwner, dbName, resp.Err)
+		log.Printf("%s: an error was returned when retrieving the view list for '%s/%s': '%v'", config.Conf.Live.Nodename, dbOwner, dbName, resp.Err)
 	}
 	return
 }
@@ -312,13 +336,13 @@ func LiveViews(liveNode, loggedInUser, dbOwner, dbName string) (views []string, 
 // trying to delete that directory while other databases in their account are being worked with
 func RemoveLiveDB(dbOwner, dbName string) (err error) {
 	// Get the path to the database file, and it's containing directory
-	dbDir := filepath.Join(Conf.Live.StorageDir, dbOwner, dbName)
+	dbDir := filepath.Join(config.Conf.Live.StorageDir, dbOwner, dbName)
 	dbPath := filepath.Join(dbDir, "live.sqlite")
 	if _, err = os.Stat(dbPath); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			if JobQueueDebug > 0 {
 				log.Printf("%s: database file '%s/%s' was supposed to get deleted here, but was missing from "+
-					"filesystem path: '%s'", Conf.Live.Nodename, dbOwner, dbName, dbPath)
+					"filesystem path: '%s'", config.Conf.Live.Nodename, dbOwner, dbName, dbPath)
 			}
 			return
 		}
@@ -346,7 +370,7 @@ func RemoveLiveDB(dbOwner, dbName string) (err error) {
 	}
 
 	if JobQueueDebug > 0 {
-		log.Printf("%s: database file '%s/%s' removed from filesystem path: '%s'", Conf.Live.Nodename, dbOwner,
+		log.Printf("%s: database file '%s/%s' removed from filesystem path: '%s'", config.Conf.Live.Nodename, dbOwner,
 			dbName, dbPath)
 	}
 	return
@@ -371,7 +395,7 @@ func WaitForResponse[T any](jobID int, resp *T) (err error) {
 	err = json.Unmarshal([]byte(response.payload), resp)
 	if err != nil {
 		err = fmt.Errorf("couldn't decode response payload: '%s'", err)
-		log.Printf("%s: %s", Conf.Live.Nodename, err)
+		log.Printf("%s: %s", config.Conf.Live.Nodename, err)
 	}
 	return
 }

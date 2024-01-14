@@ -8,35 +8,36 @@ import (
 	"os"
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 func main() {
 	// Read server configuration
-	err := com.ReadConfig()
+	err := config.ReadConfig()
 	if err != nil {
 		log.Fatalf("Configuration file problem: '%s'", err)
 	}
 
 	// If node name and base directory were provided on the command line, then override the config file values
 	if len(os.Args) == 3 {
-		com.Conf.Live.Nodename = os.Args[1]
-		com.Conf.Live.StorageDir = os.Args[2]
+		config.Conf.Live.Nodename = os.Args[1]
+		config.Conf.Live.StorageDir = os.Args[2]
 	}
 
 	// If we don't have the node name or storage dir after reading both the config and command line, then abort
-	if com.Conf.Live.Nodename == "" || com.Conf.Live.StorageDir == "" {
+	if config.Conf.Live.Nodename == "" || config.Conf.Live.StorageDir == "" {
 		log.Fatal("Node name or Storage directory missing.  Aborting")
 	}
 
 	// If it doesn't exist, create the base directory for storing SQLite files
-	_, err = os.Stat(com.Conf.Live.StorageDir)
+	_, err = os.Stat(config.Conf.Live.StorageDir)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			log.Fatal(err)
 		}
 
 		// The target location doesn't exist
-		err = os.MkdirAll(com.Conf.Live.StorageDir, 0750)
+		err = os.MkdirAll(config.Conf.Live.StorageDir, 0750)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -83,7 +84,7 @@ func main() {
 	//	}
 	//}()
 
-	log.Printf("%s: listening for requests", com.Conf.Live.Nodename)
+	log.Printf("%s: listening for requests", config.Conf.Live.Nodename)
 
 	// Wait for exit signal
 	<-exitSignal

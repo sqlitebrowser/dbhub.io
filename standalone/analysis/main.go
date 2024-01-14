@@ -11,6 +11,7 @@ import (
 
 	"github.com/docker/go-units"
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 var (
@@ -22,7 +23,7 @@ var (
 
 func main() {
 	// Read server configuration
-	err := com.ReadConfig()
+	err := config.ReadConfig()
 	if err != nil {
 		log.Fatalf("Configuration file problem: '%s'", err)
 	}
@@ -40,7 +41,7 @@ func main() {
 	}
 
 	// Connect to job queue server
-	com.Conf.Live.Nodename = "Usage Analysis"
+	config.Conf.Live.Nodename = "Usage Analysis"
 	err = com.ConnectQueue()
 	if err != nil {
 		log.Fatal(err)
@@ -195,7 +196,7 @@ func main() {
 		}
 	}
 
-	log.Printf("%s run complete", com.Conf.Live.Nodename)
+	log.Printf("%s run complete", config.Conf.Live.Nodename)
 }
 
 // SpaceUsedBetweenDates determines the storage space used by a standard database between two different dates

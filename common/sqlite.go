@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sqlitebrowser/dbhub.io/common/config"
+
 	sqlite "github.com/gwenn/gosqlite"
 )
 
@@ -1326,14 +1328,14 @@ func SQLiteReadDatabasePage(bucket, id, loggedInUser, dbOwner, dbName, dbTable, 
 	var sdb *sqlite.Conn
 	if isLive {
 		// Open live database file
-		sdb, err = OpenSQLiteDatabaseLive(Conf.Live.StorageDir, dbOwner, dbName)
+		sdb, err = OpenSQLiteDatabaseLive(config.Conf.Live.StorageDir, dbOwner, dbName)
 		if err != nil {
 			return
 		}
 
 		// We also return the file size for live database files
 		var z os.FileInfo
-		z, err = os.Stat(filepath.Join(Conf.Live.StorageDir, dbOwner, dbName, "live.sqlite"))
+		z, err = os.Stat(filepath.Join(config.Conf.Live.StorageDir, dbOwner, dbName, "live.sqlite"))
 		if err != nil {
 			return
 		}

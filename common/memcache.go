@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/sqlitebrowser/dbhub.io/common/config"
+
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
@@ -48,7 +50,7 @@ func ClearCache() (err error) {
 // ConnectCache connects to the Memcached server
 func ConnectCache() error {
 	// Connect to memcached server
-	memCache = memcache.New(Conf.Memcache.Server)
+	memCache = memcache.New(config.Conf.Memcache.Server)
 
 	// Test the memcached connection
 	cacheTest := memcache.Item{Key: "connecttext", Value: []byte("1"), Expiration: 10}
@@ -58,7 +60,7 @@ func ConnectCache() error {
 	}
 
 	// Log successful connection message for Memcached
-	log.Printf("%v: connected to Memcached: %v", Conf.Live.Nodename, Conf.Memcache.Server)
+	log.Printf("%v: connected to Memcached: %v", config.Conf.Live.Nodename, config.Conf.Memcache.Server)
 
 	return nil
 }
@@ -139,7 +141,7 @@ func IncrementViewCount(dbOwner string, dbName string) error {
 		cachedData := memcache.Item{
 			Key:        cacheKey,
 			Value:      []byte(fmt.Sprintf("%d", cnt+1)),
-			Expiration: int32(Conf.Memcache.DefaultCacheTime),
+			Expiration: int32(config.Conf.Memcache.DefaultCacheTime),
 		}
 		err = memCache.Set(&cachedData)
 		if err != nil {
@@ -220,7 +222,7 @@ func SetUserStatusUpdates(userName string, numUpdates int) error {
 	cachedData := memcache.Item{
 		Key:        cacheKey,
 		Value:      []byte(fmt.Sprintf("%d", numUpdates)),
-		Expiration: int32(Conf.Memcache.DefaultCacheTime),
+		Expiration: int32(config.Conf.Memcache.DefaultCacheTime),
 	}
 	err := memCache.Set(&cachedData)
 	if err != nil {
@@ -272,7 +274,7 @@ func UserStatusUpdates(userName string) (numUpdates int, err error) {
 		cachedData := memcache.Item{
 			Key:        cacheKey,
 			Value:      []byte(fmt.Sprintf("%d", numUpdates)),
-			Expiration: int32(Conf.Memcache.DefaultCacheTime),
+			Expiration: int32(config.Conf.Memcache.DefaultCacheTime),
 		}
 		err = memCache.Set(&cachedData)
 		if err != nil {

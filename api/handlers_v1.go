@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	sqlite "github.com/gwenn/gosqlite"
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 // collectInfo is an internal function which xtracts the database owner, name, and commit ID from the request
@@ -1272,7 +1273,7 @@ func uploadHandler(c *gin.Context) {
 
 	// Set the maximum accepted database size for uploading
 	oversizeAllowed := false
-	for _, user := range com.Conf.UserMgmt.SizeOverrideUsers {
+	for _, user := range config.Conf.UserMgmt.SizeOverrideUsers {
 		if loggedInUser == user {
 			oversizeAllowed = true
 		}
@@ -1622,6 +1623,6 @@ func webpageHandler(c *gin.Context) {
 
 	// Return the database webUI URL to the user
 	c.JSON(200, gin.H{
-		"web_page": "https://" + com.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName,
+		"web_page": "https://" + config.Conf.Web.ServerName + "/" + dbOwner + "/" + dbName,
 	})
 }

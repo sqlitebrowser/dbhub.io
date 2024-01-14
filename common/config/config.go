@@ -1,7 +1,6 @@
-package common
+package config
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -11,20 +10,12 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mitchellh/go-homedir"
 )
 
 var (
 	// Conf holds our configuration info
 	Conf TomlConfig
-
-	// PostgreSQL configuration info
-	pgConfig *pgxpool.Config
-
-	// Configuration info for the PostgreSQL job queue
-	listenConfig *pgx.ConnConfig
 )
 
 // ReadConfig reads the server configuration file.
@@ -178,42 +169,6 @@ func ReadConfig() (err error) {
 		if os.MkdirAll(Conf.DiskCache.Directory, 0775) != nil {
 			return
 		}
-	}
-
-	// Set the main PostgreSQL database configuration values
-	pgConfig, err = pgxpool.ParseConfig(fmt.Sprintf("host=%s port=%d user= %s password = %s dbname=%s pool_max_conns=%d connect_timeout=10", Conf.Pg.Server, uint16(Conf.Pg.Port), Conf.Pg.Username, Conf.Pg.Password, Conf.Pg.Database, Conf.Pg.NumConnections))
-	if err != nil {
-		return
-	}
-	clientTLSConfig := tls.Config{}
-	if Conf.Environment.Environment == "production" {
-		clientTLSConfig.ServerName = Conf.Pg.Server
-		clientTLSConfig.InsecureSkipVerify = false
-	} else {
-		clientTLSConfig.InsecureSkipVerify = true
-	}
-	if Conf.Pg.SSL {
-		pgConfig.ConnConfig.TLSConfig = &clientTLSConfig
-	} else {
-		pgConfig.ConnConfig.TLSConfig = nil
-	}
-
-	// Create the connection string for the dedicated PostgreSQL notification connection
-	listenConfig, err = pgx.ParseConfig(fmt.Sprintf("host=%s port=%d user= %s password = %s dbname=%s connect_timeout=10", Conf.Pg.Server, uint16(Conf.Pg.Port), Conf.Pg.Username, Conf.Pg.Password, Conf.Pg.Database))
-	if err != nil {
-		return
-	}
-	listenTLSConfig := tls.Config{}
-	if Conf.Environment.Environment == "production" {
-		listenTLSConfig.ServerName = Conf.Pg.Server
-		listenTLSConfig.InsecureSkipVerify = false
-	} else {
-		listenTLSConfig.InsecureSkipVerify = true
-	}
-	if Conf.Pg.SSL {
-		listenConfig.TLSConfig = &listenTLSConfig
-	} else {
-		listenConfig.TLSConfig = nil
 	}
 
 	// Environment variable override for non-production logged-in user

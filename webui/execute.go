@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
+	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
 func executePage(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +94,7 @@ func execClearHistory(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	var err error
-	if com.Conf.Environment.Environment == "production" {
+	if config.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -101,7 +102,7 @@ func execClearHistory(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = com.Conf.Environment.UserOverride
+		u = config.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -130,7 +131,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	var loggedInUser string
 	var u interface{}
 	var err error
-	if com.Conf.Environment.Environment == "production" {
+	if config.Conf.Environment.Environment == "production" {
 		sess, err := store.Get(r, "dbhub-user")
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -138,7 +139,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 		}
 		u = sess.Values["UserName"]
 	} else {
-		u = com.Conf.Environment.UserOverride
+		u = config.Conf.Environment.UserOverride
 	}
 	if u != nil {
 		loggedInUser = u.(string)

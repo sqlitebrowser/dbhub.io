@@ -17,6 +17,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sqlitebrowser/dbhub.io/common/config"
+
 	"github.com/minio/minio-go"
 )
 
@@ -1115,7 +1117,7 @@ func SignalHandler(done *chan struct{}) {
 	z := make(chan os.Signal, 1)
 	signal.Notify(z, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-z
-	log.Printf("%s: received signal '%s', shutting down", Conf.Live.Nodename, sig)
+	log.Printf("%s: received signal '%s', shutting down", config.Conf.Live.Nodename, sig)
 
 	// On non-live nodes, wait for the job response queue to be empty. aka not be waiting on in-flight responses from the live nodes
 	if ResponseQueue != nil {
@@ -1124,18 +1126,18 @@ func SignalHandler(done *chan struct{}) {
 		queueLength := len(ResponseQueue.receivers)
 		ResponseQueue.RUnlock()
 		for queueLength > 0 {
-			log.Printf("%s: response queue not empty (%d), waiting for 1/2 second then trying again", Conf.Live.Nodename, queueLength)
+			log.Printf("%s: response queue not empty (%d), waiting for 1/2 second then trying again", config.Conf.Live.Nodename, queueLength)
 			time.Sleep(500 * time.Millisecond)
 			loop++
 			if loop >= 20 {
-				log.Printf("%s: response queue not empty (%d) after 10 seconds.  Exiting anyway", Conf.Live.Nodename, queueLength)
+				log.Printf("%s: response queue not empty (%d) after 10 seconds.  Exiting anyway", config.Conf.Live.Nodename, queueLength)
 				break
 			}
 			ResponseQueue.RLock()
 			queueLength = len(ResponseQueue.receivers)
 			ResponseQueue.RUnlock()
 			if queueLength == 0 {
-				log.Printf("%s: response queue now empty, shutting down", Conf.Live.Nodename)
+				log.Printf("%s: response queue now empty, shutting down", config.Conf.Live.Nodename)
 			}
 		}
 	}
@@ -1198,7 +1200,7 @@ func StatusUpdateCheck(dbOwner, dbName string, thisID int, userName string) (num
 // WriteDBtoDisk gets an uploaded database file from the user's incoming request, and writes it to a local temporary file
 func WriteDBtoDisk(loggedInUser, dbOwner, dbName string, newDB io.Reader) (numBytes int64, tempDB *os.File, sha string, sTbls []string, err error) {
 	// Create a temporary file to store the database in
-	tempDB, err = os.CreateTemp(Conf.DiskCache.Directory, "dbhub-upload-")
+	tempDB, err = os.CreateTemp(config.Conf.DiskCache.Directory, "dbhub-upload-")
 	if err != nil {
 		log.Printf("Error creating temporary file. User: '%s', Database: '%s/%s', Error: %v", loggedInUser,
 			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
