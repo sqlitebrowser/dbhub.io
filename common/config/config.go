@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
-	"github.com/mitchellh/go-homedir"
 )
 
 var (
@@ -26,7 +25,7 @@ func ReadConfig() (err error) {
 		// TODO: Might be a good idea to add permission checks of the dir & conf file, to ensure they're not
 		//       world readable.  Similar in concept to what ssh does for its config files.
 		var userHome string
-		userHome, err = homedir.Dir()
+		userHome, err = os.UserHomeDir()
 		if err != nil {
 			log.Printf("User home directory couldn't be determined: '%s'", err)
 			return

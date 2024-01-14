@@ -25,7 +25,6 @@ require (
 	github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237
 	github.com/jackc/pgx/v5 v5.5.2
 	github.com/minio/minio-go v6.0.14+incompatible
-	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/smtp2go-oss/smtp2go-go v1.0.2
 	github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47
@@ -60,6 +59,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/memcachier/mc v2.0.1+incompatible // indirect
 	github.com/microcosm-cc/bluemonday v1.0.16 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
