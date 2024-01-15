@@ -67,6 +67,12 @@ func apiKeyDelHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "No key ID specified")
 		return
 	}
+	err = com.ValidateUuid(uuid)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err.Error())
+		return
+	}
 
 	err = com.APIKeyDelete(loggedInUser, uuid)
 	if err != nil {

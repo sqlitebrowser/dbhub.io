@@ -19,6 +19,7 @@ var (
 	regexMarkDownSource  = regexp.MustCompile(`^[a-z,A-Z,0-9` + ",`," + `‘,’,“,”,\.,\-,\_,\/,\(,\),\[,\],\\,\!,\#,\',\",\@,\$,\*,\%,\^,\&,\+,\=,\:,\;,\<,\>,\,,\?,\~,\|,\ ,\012,\015]+$`)
 	regexPGTable         = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_,\(,\),\ ]+$`)
 	regexUsername        = regexp.MustCompile(`^[a-z,A-Z,0-9,\.,\-,\_]+$`)
+	regexUuid            = regexp.MustCompile(`^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$`)
 
 	// Validate is used for input validation
 	Validate *valid.Validate
@@ -37,6 +38,7 @@ func init() {
 	Validate.RegisterValidation("markdownsource", checkMarkDownSource)
 	Validate.RegisterValidation("pgtable", checkPGTableName)
 	Validate.RegisterValidation("username", checkUsername)
+	Validate.RegisterValidation("uuid", checkUuid)
 
 	// Custom validation functions
 	Validate.RegisterValidation("visname", checkVisName)
@@ -152,6 +154,10 @@ func checkUsername(fl valid.FieldLevel) bool {
 	//         * the ascii control ones
 	//         * special characters recognised by either SQLite or PostgreSQL
 	return regexUsername.MatchString(fl.Field().String())
+}
+
+func checkUuid(fl valid.FieldLevel) bool {
+	return regexUuid.MatchString(fl.Field().String())
 }
 
 // checkVisName is a custom validation function for Visualisation names
@@ -315,6 +321,15 @@ func ValidateUserDB(user, db string) error {
 	}
 
 	err = ValidateDB(db)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ValidateUuid validates a uuid
+func ValidateUuid(uuid string) error {
+	err := Validate.Var(uuid, "required,uuid")
 	if err != nil {
 		return err
 	}
