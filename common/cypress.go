@@ -148,17 +148,17 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	// *** Add a test LIVE SQLite database (end) ***
 
 	// Add some test users
-	err = AddUser("auth0first", "first", RandomString(32), fmt.Sprintf("first@%s", serverName[0]), "First test user", "")
+	err = AddUser("auth0first", "first", fmt.Sprintf("first@%s", serverName[0]), "First test user", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = AddUser("auth0second", "second", RandomString(32), fmt.Sprintf("second@%s", serverName[0]), "Second test user", "")
+	err = AddUser("auth0second", "second", fmt.Sprintf("second@%s", serverName[0]), "Second test user", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = AddUser("auth0third", "third", RandomString(32), fmt.Sprintf("third@%s", serverName[0]), "Third test user", "")
+	err = AddUser("auth0third", "third", fmt.Sprintf("third@%s", serverName[0]), "Third test user", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

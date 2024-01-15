@@ -454,7 +454,6 @@ type UserDetails struct {
 	Email       string
 	MinioBucket string
 	Password    string
-	PHash       []byte
 	PVerify     string
 	Username    string
 }

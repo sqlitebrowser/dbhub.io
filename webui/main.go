@@ -1456,9 +1456,7 @@ func createUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the user to the system
-	// NOTE: We generate a random password here (for now).  We may remove the password field itself from the
-	// database at some point, depending on whether we continue to support local database users
-	err = com.AddUser(auth0ID, userName, com.RandomString(32), email, displayName, avatarURL)
+	err = com.AddUser(auth0ID, userName, email, displayName, avatarURL)
 	if err != nil {
 		// Note : gorilla/sessions uses MaxAge < 0 to mean "delete this session"
 		sess.Options.MaxAge = -1

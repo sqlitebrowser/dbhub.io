@@ -23,7 +23,6 @@ import (
 	pgpool "github.com/jackc/pgx/v5/pgxpool"
 	"github.com/smtp2go-oss/smtp2go-go"
 	gfm "github.com/sqlitebrowser/github_flavored_markdown"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
@@ -39,12 +38,12 @@ var (
 func AddDefaultUser() error {
 	// Add the new user to the database
 	dbQuery := `
-		INSERT INTO users (auth0_id, user_name, email, password_hash, client_cert, display_name)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (auth0_id, user_name, email, client_cert, display_name)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (user_name)
 			DO NOTHING`
 	_, err := pdb.Exec(context.Background(), dbQuery, RandomString(16), "default", "default@dbhub.io",
-		RandomString(16), "", "Default system user")
+		"", "Default system user")
 	if err != nil {
 		log.Printf("Error when adding the default user to the database: %v", err)
 		// For now, don't bother logging a failure here.  This *might* need changing later on
@@ -57,14 +56,7 @@ func AddDefaultUser() error {
 }
 
 // AddUser adds a user to the system
-func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) error {
-	// Hash the user's password
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Printf("Failed to hash user password. User: '%v', error: %v.", SanitiseLogString(userName), err)
-		return err
-	}
-
+func AddUser(auth0ID, userName, email, displayName, avatarURL string) (err error) {
 	// Generate a new HTTPS client certificate for the user
 	cert := []byte("no cert")
 	if Conf.Sign.Enabled {
@@ -88,9 +80,9 @@ func AddUser(auth0ID, userName, password, email, displayName, avatarURL string) 
 
 	// Add the new user to the database
 	insertQuery := `
-		INSERT INTO users (auth0_id, user_name, email, password_hash, client_cert, display_name, avatar_url)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`
-	commandTag, err := pdb.Exec(context.Background(), insertQuery, auth0ID, userName, email, hash, cert, dn, av)
+		INSERT INTO users (auth0_id, user_name, email, client_cert, display_name, avatar_url)
+		VALUES ($1, $2, $3, $4, $5, $6)`
+	commandTag, err := pdb.Exec(context.Background(), insertQuery, auth0ID, userName, email, cert, dn, av)
 	if err != nil {
 		log.Printf("Adding user to database failed: %v", err)
 		return err
@@ -4951,12 +4943,12 @@ func UpdateModified(dbOwner, dbName string) (err error) {
 // User returns details for a user
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
-		SELECT user_name, coalesce(display_name, ''), coalesce(email, ''), coalesce(avatar_url, ''), password_hash,
+		SELECT user_name, coalesce(display_name, ''), coalesce(email, ''), coalesce(avatar_url, ''),
 		       date_joined, client_cert, coalesce(live_minio_bucket_name, '')
 		FROM users
 		WHERE lower(user_name) = lower($1)`
 	err = pdb.QueryRow(context.Background(), dbQuery, userName).Scan(&user.Username, &user.DisplayName, &user.Email, &user.AvatarURL,
-		&user.PHash, &user.DateJoined, &user.ClientCert, &user.MinioBucket)
+		&user.DateJoined, &user.ClientCert, &user.MinioBucket)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// The error was just "no such user found"
