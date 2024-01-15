@@ -1,0 +1,52 @@
+name: "go-dbhub library"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Install NodeJS 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+      # Build and start the DBHub.io daemons
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        path: daemons
+
+    - name: Build the DBHub.io daemons
+      run: cd daemons; sh ./build_dbhub_docker_and_local.sh
+
+    - name: Start the DBHub.io daemons
+      run: cd daemons; yarn docker:github
+
+      # Build and test the go-dbhub library
+    - name: Checkout go-dbhub library source code
+      uses: actions/checkout@v4
+      with:
+        repository: 'sqlitebrowser/go-dbhub'
+        path: library
+
+    - name: Set up Go for go-dbhub library
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Build the go-dbhub library
+      run: cd library; go build -v
+
+    - name: Test the go-dbhub library
+      run: cd library; go test -v
