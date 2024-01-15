@@ -448,7 +448,6 @@ func (u UserInfoSlice) Swap(i, j int) {
 
 type UserDetails struct {
 	AvatarURL   string
-	ClientCert  []byte
 	DateJoined  time.Time
 	DisplayName string
 	Email       string

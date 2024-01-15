@@ -38,12 +38,12 @@ var (
 func AddDefaultUser() error {
 	// Add the new user to the database
 	dbQuery := `
-		INSERT INTO users (auth0_id, user_name, email, client_cert, display_name)
+		INSERT INTO users (auth0_id, user_name, email, display_name)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (user_name)
 			DO NOTHING`
 	_, err := pdb.Exec(context.Background(), dbQuery, RandomString(16), "default", "default@dbhub.io",
-		"", "Default system user")
+		"Default system user")
 	if err != nil {
 		log.Printf("Error when adding the default user to the database: %v", err)
 		// For now, don't bother logging a failure here.  This *might* need changing later on
@@ -57,16 +57,6 @@ func AddDefaultUser() error {
 
 // AddUser adds a user to the system
 func AddUser(auth0ID, userName, email, displayName, avatarURL string) (err error) {
-	// Generate a new HTTPS client certificate for the user
-	cert := []byte("no cert")
-	if Conf.Sign.Enabled {
-		cert, err = GenerateClientCert(userName)
-		if err != nil {
-			log.Printf("Error when generating client certificate for '%s': %v", SanitiseLogString(userName), err)
-			return err
-		}
-	}
-
 	// If the display name or avatar URL are an empty string, we insert a NULL instead
 	var av, dn pgtype.Text
 	if displayName != "" {
@@ -80,9 +70,9 @@ func AddUser(auth0ID, userName, email, displayName, avatarURL string) (err error
 
 	// Add the new user to the database
 	insertQuery := `
-		INSERT INTO users (auth0_id, user_name, email, client_cert, display_name, avatar_url)
-		VALUES ($1, $2, $3, $4, $5, $6)`
-	commandTag, err := pdb.Exec(context.Background(), insertQuery, auth0ID, userName, email, cert, dn, av)
+		INSERT INTO users (auth0_id, user_name, email, display_name, avatar_url)
+		VALUES ($1, $2, $3, $4, $5)`
+	commandTag, err := pdb.Exec(context.Background(), insertQuery, auth0ID, userName, email, dn, av)
 	if err != nil {
 		log.Printf("Adding user to database failed: %v", err)
 		return err
@@ -4944,11 +4934,11 @@ func UpdateModified(dbOwner, dbName string) (err error) {
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
 		SELECT user_name, coalesce(display_name, ''), coalesce(email, ''), coalesce(avatar_url, ''),
-		       date_joined, client_cert, coalesce(live_minio_bucket_name, '')
+		       date_joined, coalesce(live_minio_bucket_name, '')
 		FROM users
 		WHERE lower(user_name) = lower($1)`
 	err = pdb.QueryRow(context.Background(), dbQuery, userName).Scan(&user.Username, &user.DisplayName, &user.Email, &user.AvatarURL,
-		&user.DateJoined, &user.ClientCert, &user.MinioBucket)
+		&user.DateJoined, &user.MinioBucket)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// The error was just "no such user found"
