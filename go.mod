@@ -23,7 +23,7 @@ require (
 	github.com/go-playground/validator/v10 v10.16.0
 	github.com/golang-migrate/migrate/v4 v4.17.0
 	github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237
-	github.com/jackc/pgx/v5 v5.5.1
+	github.com/jackc/pgx/v5 v5.5.2
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
