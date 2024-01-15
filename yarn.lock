@@ -3540,10 +3540,10 @@ react-dom@^18.2.0:
     loose-envify "^1.1.0"
     scheduler "^0.23.0"
 
-react-dropdown-select@^4.11.0:
-  version "4.11.0"
-  resolved "https://registry.yarnpkg.com/react-dropdown-select/-/react-dropdown-select-4.11.0.tgz#c572f35ca8bd5725f53d998cc5f60af713843373"
-  integrity sha512-L4sMYLI5SGNWG88jib50nBo17qBsu28eyawUwW5xHSoKc0k8JsUk1Cim8NOU7UxvLpUAi8EMSGJt7hfvtQ6sTQ==
+react-dropdown-select@^4.11.1:
+  version "4.11.1"
+  resolved "https://registry.yarnpkg.com/react-dropdown-select/-/react-dropdown-select-4.11.1.tgz#438896285302db54e7bab9a4a7b411cb5071f6d2"
+  integrity sha512-OPV3UN3gH0UEEA26SChtrwJuMKSQ3YgRr7vn5Hh/4rYO2iENRr4/jo2iwpv+gj4FsJVBbNa8R4NuxxeKJkGJYg==
   dependencies:
     "@emotion/react" "11.11.0"
     "@emotion/styled" "11.11.0"
