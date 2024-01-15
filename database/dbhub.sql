@@ -1,3 +1,5 @@
+-- noinspection SqlNoDataSourceInspectionForFile
+
 --
 -- PostgreSQL database dump
 --
@@ -15,6 +17,20 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: jsquery; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS jsquery WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION jsquery; Type: COMMENT; Schema: -; Owner:
+--
+
+COMMENT ON EXTENSION jsquery IS 'data type for jsonb inspection';
+
 
 --
 -- Name: permissions; Type: TYPE; Schema: public; Owner: -
