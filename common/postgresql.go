@@ -45,7 +45,7 @@ func AddDefaultUser() error {
 	// Add the new user to the database
 	dbQuery := `
 		INSERT INTO users (auth0_id, user_name, email, display_name)
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (user_name)
 			DO NOTHING`
 	_, err := pdb.Exec(context.Background(), dbQuery, RandomString(16), "default", "default@dbhub.io",
