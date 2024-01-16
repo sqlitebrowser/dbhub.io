@@ -15,6 +15,16 @@ import (
 	"github.com/sqlitebrowser/dbhub.io/common/config"
 )
 
+// APIJSONColumn is a copy of the Column type from github.com/gwenn/gosqlite, but including JSON field name info
+type APIJSONColumn struct {
+	Cid       int    `json:"column_id"`
+	Name      string `json:"name"`
+	DataType  string `json:"data_type"`
+	NotNull   bool   `json:"not_null"`
+	DfltValue string `json:"default_value"`
+	Pk        int    `json:"primary_key"`
+}
+
 // collectInfo is an internal function which xtracts the database owner, name, and commit ID from the request
 // and checks the permissions
 func collectInfo(c *gin.Context) (loggedInUser, dbOwner, dbName, commitID string, httpStatus int, err error) {
@@ -227,9 +237,9 @@ func columnsHandler(c *gin.Context) {
 	}
 
 	// Transfer the column info into our own structure, for better json formatting
-	var jsonCols []com.APIJSONColumn
+	var jsonCols []APIJSONColumn
 	for _, j := range cols {
-		jsonCols = append(jsonCols, com.APIJSONColumn{
+		jsonCols = append(jsonCols, APIJSONColumn{
 			Cid:       j.Cid,
 			Name:      j.Name,
 			DataType:  j.DataType,

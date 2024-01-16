@@ -1,5 +1,18 @@
 package main
 
+import (
+	com "github.com/sqlitebrowser/dbhub.io/common"
+)
+
+type ActivityRange string
+
+const (
+	TODAY      ActivityRange = "today"
+	THIS_WEEK                = "week"
+	THIS_MONTH               = "month"
+	ALL_TIME                 = "all"
+)
+
 type Auth0Set struct {
 	CallbackURL string
 	ClientID    string
@@ -16,6 +29,13 @@ type PageMetaInfo struct {
 	Protocol         string
 	Server           string
 	Title            string
+}
+
+// ShareDatabasePermissionsOthers contains a list of user permissions for a given database
+type ShareDatabasePermissionsOthers struct {
+	DBName string                                  `json:"database_name"`
+	IsLive bool                                    `json:"is_live"`
+	Perms  map[string]com.ShareDatabasePermissions `json:"user_permissions"`
 }
 
 type UpdateDataRequestRow struct {

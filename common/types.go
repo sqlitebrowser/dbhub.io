@@ -13,15 +13,6 @@ const (
 	DB_PUBLIC
 )
 
-type ActivityRange string
-
-const (
-	TODAY      ActivityRange = "today"
-	THIS_WEEK                = "week"
-	THIS_MONTH               = "month"
-	ALL_TIME                 = "all"
-)
-
 type ForkType int
 
 const (
@@ -99,16 +90,6 @@ type ActivityStats struct {
 	Starred   []ActivityRow
 	Uploads   []UploadRow
 	Viewed    []ActivityRow
-}
-
-// APIJSONColumn is a copy of the Column type from github.com/gwenn/gosqlite, but including JSON field name info
-type APIJSONColumn struct {
-	Cid       int    `json:"column_id"`
-	Name      string `json:"name"`
-	DataType  string `json:"data_type"`
-	NotNull   bool   `json:"not_null"`
-	DfltValue string `json:"default_value"`
-	Pk        int    `json:"primary_key"`
 }
 
 // APIJSONIndexColumn holds the details of one column of a SQLite database index.  It's used by our API for returning
@@ -361,13 +342,6 @@ const (
 	MayRead         ShareDatabasePermissions = "r"
 	MayReadAndWrite ShareDatabasePermissions = "rw"
 )
-
-// ShareDatabasePermissionsOthers contains a list of user permissions for a given database
-type ShareDatabasePermissionsOthers struct {
-	DBName string                              `json:"database_name"`
-	IsLive bool                                `json:"is_live"`
-	Perms  map[string]ShareDatabasePermissions `json:"user_permissions"`
-}
 
 // ShareDatabasePermissionsUser contains a list of shared database permissions for a given user
 type ShareDatabasePermissionsUser struct {

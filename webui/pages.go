@@ -1185,7 +1185,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	// Structure to hold page data
 	var pageData struct {
 		PageMeta PageMetaInfo
-		Stats    map[com.ActivityRange]com.ActivityStats
+		Stats    map[ActivityRange]com.ActivityStats
 	}
 
 	// Get all meta information
@@ -1196,13 +1196,13 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the database activity stats
-	pageData.Stats = make(map[com.ActivityRange]com.ActivityStats)
+	pageData.Stats = make(map[ActivityRange]com.ActivityStats)
 	statsAll, err := com.GetActivityStats()
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
-	pageData.Stats[com.ALL_TIME] = statsAll
+	pageData.Stats[ALL_TIME] = statsAll
 
 	// Set other relevant metadata
 	pageData.PageMeta.Title = `SQLite storage "in the cloud"`
@@ -1529,7 +1529,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		PrivateLiveDBS   []com.DBInfo
 		PublicDBs        []com.DBInfo
 		PublicLiveDBS    []com.DBInfo
-		SharedWithOthers []com.ShareDatabasePermissionsOthers
+		SharedWithOthers []ShareDatabasePermissionsOthers
 		SharedWithYou    []com.ShareDatabasePermissionsUser
 		Stars            []com.DBEntry
 		Watching         []com.DBEntry
@@ -1597,9 +1597,9 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 	}
 
 	// For each of the databases owned by the user, retrieve any share information
-	var rawList []com.ShareDatabasePermissionsOthers
+	var rawList []ShareDatabasePermissionsOthers
 	for _, db := range pageData.PublicDBs {
-		var z com.ShareDatabasePermissionsOthers
+		var z ShareDatabasePermissionsOthers
 		z.DBName = db.Database
 		z.Perms, err = com.GetShares(userName, z.DBName)
 		if err != nil {
@@ -1611,7 +1611,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		}
 	}
 	for _, db := range pageData.PrivateDBs {
-		var z com.ShareDatabasePermissionsOthers
+		var z ShareDatabasePermissionsOthers
 		z.DBName = db.Database
 		z.Perms, err = com.GetShares(userName, z.DBName)
 		if err != nil {
@@ -1623,7 +1623,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		}
 	}
 	for _, db := range pageData.PublicLiveDBS {
-		var z com.ShareDatabasePermissionsOthers
+		var z ShareDatabasePermissionsOthers
 		z.DBName = db.Database
 		z.IsLive = true
 		z.Perms, err = com.GetShares(userName, z.DBName)
@@ -1636,7 +1636,7 @@ func profilePage(w http.ResponseWriter, r *http.Request, userName string) {
 		}
 	}
 	for _, db := range pageData.PrivateLiveDBS {
-		var z com.ShareDatabasePermissionsOthers
+		var z ShareDatabasePermissionsOthers
 		z.DBName = db.Database
 		z.IsLive = true
 		z.Perms, err = com.GetShares(userName, z.DBName)
