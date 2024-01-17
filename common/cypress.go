@@ -18,7 +18,7 @@ import (
 // CypressSeed empties the backend database, then adds pre-defined test data (PostgreSQL and Minio)
 func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	// Clear out database data
-	if err := ResetDB(); err != nil {
+	if err := database.ResetDB(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
