@@ -341,7 +341,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Login completed, so record it and bounce them to their profile page
-	err = com.RecordWebLogin(userName)
+	err = database.RecordWebLogin(userName)
 	if err != nil {
 		// Although something went wrong here, lets just log it to our backend for admin follow up
 		log.Println(err)
@@ -5802,7 +5802,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Make a record of the upload
-		err = com.LogUpload(dbOwner, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
+		err = database.LogUpload(dbOwner, dbName, loggedInUser, r.RemoteAddr, "webui", userAgent, time.Now().UTC(), sha)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err.Error())

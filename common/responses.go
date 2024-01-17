@@ -495,7 +495,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	}
 
 	// Make a record of the upload
-	err = LogUpload(loggedInUser, targetDB, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now().UTC(), sha)
+	err = database.LogUpload(loggedInUser, targetDB, loggedInUser, r.RemoteAddr, serverSw, userAgent, time.Now().UTC(), sha)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return

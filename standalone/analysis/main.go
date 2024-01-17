@@ -125,7 +125,7 @@ func main() {
 
 		// Store the information in our PostgreSQL backend
 		for user, z := range userStorage {
-			err = com.AnalysisRecordUserStorage(user, now, z.Standard, z.Live)
+			err = database.AnalysisRecordUserStorage(user, now, z.Standard, z.Live)
 			if err != nil {
 				log.Fatalln()
 			}
@@ -180,7 +180,7 @@ func main() {
 				}
 
 				// Record the storage space used by the database (until this date) to our backend
-				err = com.AnalysisRecordUserStorage(user, pointInTime, spaceUsed, 0)
+				err = database.AnalysisRecordUserStorage(user, pointInTime, spaceUsed, 0)
 				if err != nil {
 					log.Fatalln()
 				}

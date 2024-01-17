@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -20,27 +19,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/smtp2go-oss/smtp2go-go"
 )
-
-// AnalysisRecordUserStorage adds a record to the backend database containing the amount of storage space used by a user
-func AnalysisRecordUserStorage(userName string, recordDate time.Time, spaceUsedStandard, spaceUsedLive int64) (err error) {
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		)
-		INSERT INTO analysis_space_used (user_id, analysis_date, standard_databases_bytes, live_databases_bytes)
-		VALUES ((SELECT user_id FROM u), $2, $3, $4)`
-	commandTag, err := database.DB.Exec(context.Background(), dbQuery, userName, recordDate, spaceUsedStandard, spaceUsedLive)
-	if err != nil {
-		log.Printf("Adding record of storage space used by '%s' failed: %s", userName, err)
-		return
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected when recording the storage space used by '%s'", numRows, userName)
-	}
-	return
-}
 
 // AnalysisUsersWithDBs returns the list of users with at least one database
 func AnalysisUsersWithDBs() (userList map[string]int, err error) {
@@ -67,50 +45,6 @@ func AnalysisUsersWithDBs() (userList map[string]int, err error) {
 		userList[user] = numDBs
 	}
 	return
-}
-
-// ApiCallLog records an API call operation.  Database name is optional, as not all API calls operate on a
-// database.  If a database name is provided however, then the database owner name *must* also be provided
-func ApiCallLog(loggedInUser, dbOwner, dbName, operation, callerSw string) {
-	var dbQuery string
-	var err error
-	var commandTag pgconn.CommandTag
-	if dbName != "" {
-		dbQuery = `
-		WITH loggedIn AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		), owner AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($2)
-		), d AS (
-			SELECT db.db_id
-			FROM sqlite_databases AS db, owner
-			WHERE db.user_id = owner.user_id
-				AND db.db_name = $3)
-		INSERT INTO api_call_log (caller_id, db_owner_id, db_id, api_operation, api_caller_sw)
-		VALUES ((SELECT user_id FROM loggedIn), (SELECT user_id FROM owner), (SELECT db_id FROM d), $4, $5)`
-		commandTag, err = database.DB.Exec(context.Background(), dbQuery, loggedInUser, dbOwner, dbName, operation, callerSw)
-	} else {
-		dbQuery = `
-		WITH loggedIn AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		)
-		INSERT INTO api_call_log (caller_id, api_operation, api_caller_sw)
-		VALUES ((SELECT user_id FROM loggedIn), $2, $3)`
-		commandTag, err = database.DB.Exec(context.Background(), dbQuery, loggedInUser, operation, callerSw)
-	}
-	if err != nil {
-		log.Printf("Adding api call log entry failed: %s", err)
-		return
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected when adding api call entry for user '%s'", numRows, SanitiseLogString(loggedInUser))
-	}
 }
 
 // CheckDBExists checks if a database exists. It does NOT perform any permission checks.
@@ -1635,175 +1569,6 @@ func LiveUserDBs(dbOwner string, public AccessType) (list []DBInfo, err error) {
 	return
 }
 
-// LogDB4SConnect creates a DB4S default browse list entry
-func LogDB4SConnect(userAcc, ipAddr, userAgent string, downloadDate time.Time) error {
-	if config.Conf.DB4S.Debug {
-		log.Printf("User '%s' just connected with '%s' and generated the default browse list", userAcc, SanitiseLogString(userAgent))
-	}
-
-	// If the user account isn't "public", then we look up the user id and store the info with the request
-	userID := 0
-	if userAcc != "public" {
-		dbQuery := `
-			SELECT user_id
-			FROM users
-			WHERE user_name = $1`
-
-		err := database.DB.QueryRow(context.Background(), dbQuery, userAcc).Scan(&userID)
-		if err != nil {
-			log.Printf("Looking up the user ID failed: %v", err)
-			return err
-		}
-		if userID == 0 {
-			// The username wasn't found in our system (!!!)
-			return fmt.Errorf("The user wasn't found in our system!")
-		}
-	}
-
-	// Store the high level connection info, so we can check for growth over time
-	dbQuery := `
-		INSERT INTO db4s_connects (user_id, ip_addr, user_agent, connect_date)
-		VALUES ($1, $2, $3, $4)`
-	commandTag, err := database.DB.Exec(context.Background(), dbQuery, userID, ipAddr, userAgent, downloadDate)
-	if err != nil {
-		log.Printf("Storing record of DB4S connection failed: %v", err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected while storing DB4S connection record for user '%s'", numRows, userAcc)
-	}
-	return nil
-}
-
-// LogDownload creates a download log entry
-func LogDownload(dbOwner, dbName, loggedInUser, ipAddr, serverSw, userAgent string, downloadDate time.Time, sha string) error {
-	// If the downloader isn't a logged in user, use a NULL value for that column
-	var downloader pgtype.Text
-	if loggedInUser != "" {
-		downloader.String = loggedInUser
-		downloader.Valid = true
-	}
-
-	// Store the download details
-	dbQuery := `
-		WITH d AS (
-			SELECT db.db_id, db.db_name
-			FROM sqlite_databases AS db
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE lower(user_name) = lower($1)
-				)
-				AND db.db_name = $2
-		)
-		INSERT INTO database_downloads (db_id, user_id, ip_addr, server_sw, user_agent, download_date, db_sha256)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($3)), $4, $5, $6, $7, $8`
-	commandTag, err := database.DB.Exec(context.Background(), dbQuery, dbOwner, dbName, downloader, ipAddr, serverSw, userAgent,
-		downloadDate, sha)
-	if err != nil {
-		log.Printf("Storing record of download '%s/%s', sha '%s' by '%v' failed: %v", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbName), sha, downloader, err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected while storing download record for '%s/%s'", numRows,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
-	}
-	return nil
-}
-
-// LogSQLiteQueryAfter adds memory allocation stats for the execution run of a user supplied SQLite query
-func LogSQLiteQueryAfter(insertID, memUsed, memHighWater int64) (err error) {
-	dbQuery := `
-		UPDATE vis_query_runs
-		SET memory_used = $2, memory_high_water = $3
-		WHERE query_run_id = $1`
-	commandTag, err := database.DB.Exec(context.Background(), dbQuery, insertID, memUsed, memHighWater)
-	if err != nil {
-		log.Printf("Adding memory stats for SQLite query run '%d' failed: %v", insertID, err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected while adding memory stats for SQLite query run '%d'",
-			numRows, insertID)
-	}
-	return nil
-}
-
-// LogSQLiteQueryBefore logs the basic info for a user supplied SQLite query
-func LogSQLiteQueryBefore(source, dbOwner, dbName, loggedInUser, ipAddr, userAgent, query string) (int64, error) {
-	// If the user isn't logged in, use a NULL value for that column
-	var queryUser pgtype.Text
-	if loggedInUser != "" {
-		queryUser.String = loggedInUser
-		queryUser.Valid = true
-	}
-
-	// Base64 encode the SQLite query string, just to be as safe as possible
-	encodedQuery := base64.StdEncoding.EncodeToString([]byte(query))
-
-	// Store the query details
-	dbQuery := `
-		WITH d AS (
-			SELECT db.db_id, db.db_name
-			FROM sqlite_databases AS db
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE lower(user_name) = lower($1)
-				)
-				AND db.db_name = $2
-		)
-		INSERT INTO vis_query_runs (db_id, user_id, ip_addr, user_agent, query_string, source)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($3)), $4, $5, $6, $7
-		RETURNING query_run_id`
-	var insertID int64
-	err := database.DB.QueryRow(context.Background(), dbQuery, dbOwner, dbName, queryUser, ipAddr, userAgent, encodedQuery, source).Scan(&insertID)
-	if err != nil {
-		log.Printf("Storing record of user SQLite query '%v' on '%s/%s' failed: %v", encodedQuery,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
-		return 0, err
-	}
-	return insertID, nil
-}
-
-// LogUpload creates an upload log entry
-func LogUpload(dbOwner, dbName, loggedInUser, ipAddr, serverSw, userAgent string, uploadDate time.Time, sha string) error {
-	// If the uploader isn't a logged in user, use a NULL value for that column
-	var uploader pgtype.Text
-	if loggedInUser != "" {
-		uploader.String = loggedInUser
-		uploader.Valid = true
-	}
-
-	// Store the upload details
-	dbQuery := `
-		WITH d AS (
-			SELECT db.db_id, db.db_name
-			FROM sqlite_databases AS db
-			WHERE user_id = (
-					SELECT user_id
-					FROM users
-					WHERE lower(user_name) = lower($1)
-				)
-				AND db.db_name = $2
-		)
-		INSERT INTO database_uploads (db_id, user_id, ip_addr, server_sw, user_agent, upload_date, db_sha256)
-		SELECT (SELECT db_id FROM d), (SELECT user_id FROM users WHERE lower(user_name) = lower($3)), $4, $5, $6, $7, $8`
-	commandTag, err := database.DB.Exec(context.Background(), dbQuery, dbOwner, dbName, uploader, ipAddr, serverSw, userAgent,
-		uploadDate, sha)
-	if err != nil {
-		log.Printf("Storing record of upload '%s/%s', sha '%s' by '%v' failed: %v", SanitiseLogString(dbOwner),
-			SanitiseLogString(dbName), sha, uploader, err)
-		return err
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		log.Printf("Wrong number of rows (%d) affected while storing upload record for '%s/%s'", numRows,
-			SanitiseLogString(dbOwner), SanitiseLogString(dbName))
-	}
-	return nil
-}
-
 // MinioLocation returns the Minio bucket and ID for a given database. dbOwner & dbName are from
 // owner/database URL fragment, loggedInUser is the name for the currently logged in user, for access permission
 // check.  Use an empty string ("") as the loggedInUser parameter if the true value isn't set or known.
@@ -2906,28 +2671,6 @@ func ViewCount(dbOwner, dbName string) (viewCount int, err error) {
 	if err != nil {
 		log.Printf("Retrieving view count for '%s/%s' failed: %v", SanitiseLogString(dbOwner), SanitiseLogString(dbName), err)
 		return 0, err
-	}
-	return
-}
-
-// RecordWebLogin records the start time of a user login session, for stats purposes
-func RecordWebLogin(userName string) (err error) {
-	// Add the new user to the database
-	dbQuery := `
-		WITH u AS (
-			SELECT user_id
-			FROM users
-			WHERE lower(user_name) = lower($1)
-		)
-		INSERT INTO webui_logins (user_id)
-		SELECT (SELECT user_id FROM u)`
-	commandTag, err := database.DB.Exec(context.Background(), dbQuery, userName)
-	if err != nil {
-		return
-	}
-	if numRows := commandTag.RowsAffected(); numRows != 1 {
-		err = fmt.Errorf("Wrong number of rows (%d) affected while adding a webUI login record for '%s' to the database",
-			numRows, SanitiseLogString(userName))
 	}
 	return
 }

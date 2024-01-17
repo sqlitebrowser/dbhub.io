@@ -965,7 +965,7 @@ func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbName, c
 	}
 
 	// Make a record of the download
-	err = LogDownload(dbOwner, dbName, loggedInUser, r.RemoteAddr, sourceSw, userAgent, time.Now(), logStr)
+	err = database.LogDownload(dbOwner, dbName, loggedInUser, r.RemoteAddr, sourceSw, userAgent, time.Now(), logStr)
 	if err != nil {
 		return
 	}

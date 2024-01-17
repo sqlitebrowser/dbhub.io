@@ -285,7 +285,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 			if ok {
 				userAgent = ua[0]
 			}
-			if err := com.LogDB4SConnect(userAcc, r.RemoteAddr, userAgent, time.Now().UTC()); err != nil {
+			if err := database.LogDB4SConnect(userAcc, r.RemoteAddr, userAgent, time.Now().UTC()); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -911,7 +911,7 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 	}
 
 	// Make a record of the download
-	err = com.LogDownload(dbOwner, dbName, userAcc, r.RemoteAddr, "db4s", userAgent, time.Now().UTC(),
+	err = database.LogDownload(dbOwner, dbName, userAcc, r.RemoteAddr, "db4s", userAgent, time.Now().UTC(),
 		bucket+id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

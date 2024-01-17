@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 
 	sqlite "github.com/gwenn/gosqlite"
 )
@@ -1601,7 +1602,7 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	default:
 		return SQLiteRecordSet{}, fmt.Errorf("Unknown source in SQLiteRunQueryDefensive()")
 	}
-	logID, err = LogSQLiteQueryBefore(source, dbOwner, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
+	logID, err = database.LogSQLiteQueryBefore(source, dbOwner, dbName, loggedInUser, r.RemoteAddr, userAgent, query)
 	if err != nil {
 		return SQLiteRecordSet{}, err
 	}
@@ -1622,7 +1623,7 @@ func SQLiteRunQueryDefensive(w http.ResponseWriter, r *http.Request, querySource
 	}
 
 	// Add the SQLite execution stats to the log record
-	err = LogSQLiteQueryAfter(logID, memUsed, memHighWater)
+	err = database.LogSQLiteQueryAfter(logID, memUsed, memHighWater)
 	if err != nil {
 		return SQLiteRecordSet{}, err
 	}
@@ -1640,7 +1641,7 @@ func SQLiteRunQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (r
 	defer sdb.Close()
 
 	// Log the SQL query (prior to executing it)
-	logID, err := LogSQLiteQueryBefore("LIVE api", dbOwner, dbName, loggedInUser, "-", "-", query)
+	logID, err := database.LogSQLiteQueryBefore("LIVE api", dbOwner, dbName, loggedInUser, "-", "-", query)
 	if err != nil {
 		return SQLiteRecordSet{}, err
 	}
@@ -1654,7 +1655,7 @@ func SQLiteRunQueryLive(baseDir, dbOwner, dbName, loggedInUser, query string) (r
 	}
 
 	// Add the SQLite execution stats to the log record
-	err = LogSQLiteQueryAfter(logID, memUsed, memHighWater)
+	err = database.LogSQLiteQueryAfter(logID, memUsed, memHighWater)
 	if err != nil {
 		return SQLiteRecordSet{}, err
 	}
