@@ -43,7 +43,7 @@ func main() {
 	}
 
 	// Get the list of all users with at least one database
-	userList, err := com.AnalysisUsersWithDBs()
+	userList, err := database.AnalysisUsersWithDBs()
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -67,7 +67,7 @@ func main() {
 			}
 
 			// Get the list of standard databases for a user
-			dbList, err := com.UserDBs(user, com.DB_BOTH)
+			dbList, err := database.UserDBs(user, database.DB_BOTH)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -76,7 +76,7 @@ func main() {
 			var spaceUsedStandard int64
 			for _, db := range dbList {
 				// Get the commit list for the database
-				commitList, err := com.GetCommitList(user, db.Database)
+				commitList, err := database.GetCommitList(user, db.Database)
 				if err != nil {
 					log.Println(err)
 				}
@@ -95,7 +95,7 @@ func main() {
 			}
 
 			// Get the list of live databases for a user
-			liveList, err := com.LiveUserDBs(user, com.DB_BOTH)
+			liveList, err := com.LiveUserDBs(user, database.DB_BOTH)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -103,7 +103,7 @@ func main() {
 			// For each live database, get the amount of space used
 			var spaceUsedLive int64
 			for _, db := range liveList {
-				_, liveNode, err := com.CheckDBLive(user, db.Database)
+				_, liveNode, err := database.CheckDBLive(user, db.Database)
 				if err != nil {
 					log.Fatal(err)
 					return
@@ -147,7 +147,7 @@ func main() {
 			}
 
 			// Get the list of standard databases for a user
-			dbList, err := com.UserDBs(user, com.DB_BOTH)
+			dbList, err := database.UserDBs(user, database.DB_BOTH)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -164,7 +164,7 @@ func main() {
 					// Get the commit list for the database, using a cache to reduce multiple database hits for the same info
 					commits, ok := dbCommits[db.Database]
 					if !ok {
-						commits, err = com.GetCommitList(user, db.Database)
+						commits, err = database.GetCommitList(user, db.Database)
 						if err != nil {
 							log.Println(err)
 						}

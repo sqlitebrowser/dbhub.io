@@ -16,7 +16,7 @@ import (
 // Merge merges the commits in commitDiffList into the destination branch destBranch of the given database
 func Merge(destOwner, destName, destBranch, srcOwner, srcName string, commitDiffList []database.CommitEntry, message, loggedInUser string) (newCommitID string, err error) {
 	// Get the details of the head commit for the destination database branch
-	branchList, err := GetBranches(destOwner, destName) // Destination branch list
+	branchList, err := database.GetBranches(destOwner, destName) // Destination branch list
 	if err != nil {
 		return
 	}
@@ -57,7 +57,7 @@ func Merge(destOwner, destName, destBranch, srcOwner, srcName string, commitDiff
 // It neither performs any merging nor does it create a merge commit.
 func addCommitsForMerging(destOwner, destName, destBranch string, commitDiffList []database.CommitEntry, newHead bool) (err error) {
 	// Get the details of the head commit for the destination database branch
-	branchList, err := GetBranches(destOwner, destName) // Destination branch list
+	branchList, err := database.GetBranches(destOwner, destName) // Destination branch list
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func addCommitsForMerging(destOwner, destName, destBranch string, commitDiffList
 	}
 
 	// Get destination commit list
-	destCommitList, err := GetCommitList(destOwner, destName)
+	destCommitList, err := database.GetCommitList(destOwner, destName)
 	if err != nil {
 		return err
 	}
@@ -86,17 +86,17 @@ func addCommitsForMerging(destOwner, destName, destBranch string, commitDiffList
 	}
 
 	// Update the branch list
-	b := BranchEntry{
+	b := database.BranchEntry{
 		Commit:      newHeadCommitId,
 		CommitCount: branchDetails.CommitCount + len(commitDiffList),
 		Description: branchDetails.Description,
 	}
 	branchList[destBranch] = b
-	err = StoreCommits(destOwner, destName, destCommitList)
+	err = database.StoreCommits(destOwner, destName, destCommitList)
 	if err != nil {
 		return err
 	}
-	err = StoreBranches(destOwner, destName, branchList)
+	err = database.StoreBranches(destOwner, destName, branchList)
 	if err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func performMerge(destOwner, destName, destBranch, destCommitID, srcOwner, srcNa
 
 	// Store merged database
 	_, newCommitID, _, err = AddDatabase(loggedInUser, destOwner, destName, false, destBranch, destCommitID,
-		KeepCurrentAccessType, "", message, "", tmpFile, time.Now(), time.Time{}, usr.DisplayName, usr.Email, usr.DisplayName, usr.Email,
+		database.KeepCurrentAccessType, "", message, "", tmpFile, time.Now(), time.Time{}, usr.DisplayName, usr.Email, usr.DisplayName, usr.Email,
 		[]string{currentHeadToMerge}, "")
 	if err != nil {
 		return

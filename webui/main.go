@@ -392,13 +392,13 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the branch info for the database
-	branchList, err := com.GetBranches(dbOwner, dbName)
+	branchList, err := database.GetBranches(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
 		return
 	}
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
+	defBranch, err := database.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -552,7 +552,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read the branch heads list from the database
-	branches, err := com.GetBranches(dbOwner, dbName)
+	branches, err := database.GetBranches(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -568,7 +568,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Count the number of commits in the new branch
-	commitList, err := com.GetCommitList(dbOwner, dbName)
+	commitList, err := database.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -592,13 +592,13 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create the branch
-	newBranch := com.BranchEntry{
+	newBranch := database.BranchEntry{
 		Commit:      commit,
 		CommitCount: commitCount,
 		Description: branchDesc,
 	}
 	branches[branchName] = newBranch
-	err = com.StoreBranches(dbOwner, dbName, branches)
+	err = database.StoreBranches(dbOwner, dbName, branches)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1216,7 +1216,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		// * It's a release *
 
 		// Read the releases list from the database
-		rels, err := com.GetReleases(dbOwner, dbName)
+		rels, err := database.GetReleases(dbOwner, dbName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err.Error())
@@ -1231,8 +1231,8 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Retrieve the size of the database for this release
-		var tmp com.SQLiteDBinfo
-		err = com.DBDetails(&tmp, loggedInUser, dbOwner, dbName, commit)
+		var tmp database.SQLiteDBinfo
+		err = database.DBDetails(&tmp, loggedInUser, dbOwner, dbName, commit)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err.Error())
@@ -1241,7 +1241,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		size := tmp.Info.DBEntry.Size
 
 		// Create the release
-		newRel := com.ReleaseEntry{
+		newRel := database.ReleaseEntry{
 			Commit:        commit,
 			Date:          time.Now(),
 			Description:   tagDesc,
@@ -1252,7 +1252,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 		rels[tagName] = newRel
 
 		// Store it in PostgreSQL
-		err = com.StoreReleases(dbOwner, dbName, rels)
+		err = database.StoreReleases(dbOwner, dbName, rels)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, err.Error())
@@ -1273,7 +1273,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	// * It's a tag *
 
 	// Read the tags list from the database
-	tags, err := com.GetTags(dbOwner, dbName)
+	tags, err := database.GetTags(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1288,7 +1288,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create the tag
-	newTag := com.TagEntry{
+	newTag := database.TagEntry{
 		Commit:      commit,
 		Date:        time.Now(),
 		Description: tagDesc,
@@ -1298,7 +1298,7 @@ func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	tags[tagName] = newTag
 
 	// Store it in PostgreSQL
-	err = com.StoreTags(dbOwner, dbName, tags)
+	err = database.StoreTags(dbOwner, dbName, tags)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -1616,7 +1616,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branchList, err := com.GetBranches(loggedInUser, dbName)
+	branchList, err := database.GetBranches(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1630,7 +1630,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure the branch being deleted isn't the default one
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
+	defBranch, err := database.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1645,21 +1645,21 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// release in place with no way to reach it
 
 	// Get the commit list for the database
-	commitList, err := com.GetCommitList(dbOwner, dbName)
+	commitList, err := database.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Get the tag list for the database
-	tags, err := com.GetTags(dbOwner, dbName)
+	tags, err := database.GetTags(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Get the release list for the database
-	rels, err := com.GetReleases(dbOwner, dbName)
+	rels, err := database.GetReleases(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1924,7 +1924,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Delete the branch
 	delete(branchList, branchName)
-	err = com.StoreBranches(dbOwner, dbName, branchList)
+	err = database.StoreBranches(dbOwner, dbName, branchList)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -1935,7 +1935,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	for cid := range lst {
 		delete(commitList, cid)
 	}
-	err = com.StoreCommits(dbOwner, dbName, commitList)
+	err = database.StoreCommits(dbOwner, dbName, commitList)
 	if err != nil {
 		log.Printf("Error when updating commit list while deleting branch '%s' of database '%s/%s': %s",
 			com.SanitiseLogString(branchName), com.SanitiseLogString(dbOwner), com.SanitiseLogString(dbName), err.Error())
@@ -2114,7 +2114,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(loggedInUser, dbName)
+	branches, err := database.GetBranches(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2136,7 +2136,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Determine the commit ID we'll be rewinding to
-	commitList, err := com.GetCommitList(dbOwner, dbName)
+	commitList, err := database.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2156,7 +2156,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If we're working on the default branch, check if the default table is present in the prior commit's version
 	// of the database.  If it's not, we need to clear the default table value
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
+	defBranch, err := database.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2187,7 +2187,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Retrieve the default table name for the database
-		defTbl, err := com.GetDefaultTableName(dbOwner, dbName)
+		defTbl, err := database.GetDefaultTableName(dbOwner, dbName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -2200,7 +2200,7 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if !defFound {
 			// The default table is present in the previous commit, so we clear the default table value
-			err = com.StoreDefaultTableName(dbOwner, dbName, "")
+			err = database.StoreDefaultTableName(dbOwner, dbName, "")
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
@@ -2286,7 +2286,7 @@ func deleteDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure this is a live database
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2409,7 +2409,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	// If this is a standard database, then invalidate it's memcache data
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err = database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
@@ -2461,7 +2461,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the database in PostgreSQL
-	err = com.DeleteDatabase(dbOwner, dbName)
+	err = database.DeleteDatabase(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "Internal server error")
@@ -2522,7 +2522,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing releases for the database
-	releases, err := com.GetReleases(loggedInUser, dbName)
+	releases, err := database.GetReleases(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2536,7 +2536,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Delete the release
 	delete(releases, relName)
-	err = com.StoreReleases(dbOwner, dbName, releases)
+	err = database.StoreReleases(dbOwner, dbName, releases)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2603,7 +2603,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing tags for the database
-	tags, err := com.GetTags(loggedInUser, dbName)
+	tags, err := database.GetTags(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2617,7 +2617,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Delete the tag
 	delete(tags, tagName)
-	err = com.StoreTags(dbOwner, dbName, tags)
+	err = database.StoreTags(dbOwner, dbName, tags)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2787,7 +2787,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	// * Retrieve the current licence for the destination branch *
 
 	// Retrieve the commit ID for the destination branch
-	destBranchList, err := com.GetBranches(destOwner, destDBName)
+	destBranchList, err := database.GetBranches(destOwner, destDBName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2804,7 +2804,7 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	destCommitID := b.Commit
 
 	// Retrieve the current licence for the destination branch, using the commit ID
-	commitList, err := com.GetCommitList(destOwner, destDBName)
+	commitList, err := database.GetCommitList(destOwner, destDBName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -2898,8 +2898,8 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure the database being requested isn't overly large
-	var tmp com.SQLiteDBinfo
-	err = com.DBDetails(&tmp, loggedInUser, dbOwner, dbName, commitID)
+	var tmp database.SQLiteDBinfo
+	err = database.DBDetails(&tmp, loggedInUser, dbOwner, dbName, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3039,7 +3039,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add the forked database info to PostgreSQL
-	_, err = com.ForkDatabase(dbOwner, dbName, loggedInUser)
+	_, err = database.ForkDatabase(dbOwner, dbName, loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -3153,7 +3153,7 @@ func insertDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure this is a live database
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -3954,7 +3954,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get live status
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -4104,7 +4104,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	var tables []string
 	if !isLive {
 		// Get the list of branches in the database
-		branchList, err := com.GetBranches(dbOwner, dbName)
+		branchList, err := database.GetBranches(dbOwner, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -4142,7 +4142,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Grab the complete commit list for the database
-		commitList, err := com.GetCommitList(dbOwner, dbName)
+		commitList, err := database.GetCommitList(dbOwner, dbName)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -4150,7 +4150,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Loop through the branches of the database, processing the user submitted licence choice for each
 		branchesUpdated := false
-		newBranchHeads := make(map[string]com.BranchEntry)
+		newBranchHeads := make(map[string]database.BranchEntry)
 		for bName, bEntry := range branchList {
 			// Get the previous licence entry for the branch
 			c, ok := commitList[bEntry.Commit]
@@ -4229,7 +4229,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 				// Add the commit to the new branch heads list, and set a flag indicating it needs to be stored to the
 				// database after the licence processing finishes
-				newBranchEntry := com.BranchEntry{
+				newBranchEntry := database.BranchEntry{
 					Commit:      newCom.ID,
 					CommitCount: bEntry.CommitCount + 1,
 					Description: bEntry.Description,
@@ -4244,13 +4244,13 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 
 		// If the branches were updated, store the new commit list and branch heads
 		if branchesUpdated {
-			err = com.StoreCommits(dbOwner, dbName, commitList)
+			err = database.StoreCommits(dbOwner, dbName, commitList)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
 			}
 
-			err = com.StoreBranches(dbOwner, dbName, newBranchHeads)
+			err = database.StoreBranches(dbOwner, dbName, newBranchHeads)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -4319,7 +4319,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// Note - It's useful to do this *after* the SaveDBSettings() call, so the cache invalidation code at the
 	// end of that function gets run and we don't have to repeat it here
 	if newName != "" && newName != dbName {
-		err = com.RenameDatabase(dbOwner, dbName, newName)
+		err = database.RenameDatabase(dbOwner, dbName, newName)
 		if err != nil {
 			errorPage(w, r, http.StatusBadRequest, err.Error())
 			return
@@ -4385,7 +4385,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(dbOwner, dbName)
+	branches, err := database.GetBranches(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4398,7 +4398,7 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set the default branch
-	err = com.StoreDefaultBranchName(dbOwner, dbName, branchName)
+	err = database.StoreDefaultBranchName(dbOwner, dbName, branchName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4456,7 +4456,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the updated star count
-	newStarCount, err := com.DBStars(dbOwner, dbName)
+	newStarCount, err := database.DBStars(dbOwner, dbName)
 	if err != nil {
 		fmt.Fprint(w, "-1") // -1 tells the front end not to update the displayed star count
 		return
@@ -4513,7 +4513,7 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(loggedInUser, dbName)
+	branches, err := database.GetBranches(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4569,13 +4569,13 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the branch name given is the default branch, check what the default table is set to for it and pass that
 	// info back as the one to have auto-selected in the drop down
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
+	defBranch, err := database.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if defBranch == branchName {
-		dt, err := com.GetDefaultTableName(dbOwner, dbName)
+		dt, err := database.GetDefaultTableName(dbOwner, dbName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -4705,7 +4705,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if this is a live database
 	var isLive bool
 	var liveNode string
-	isLive, liveNode, err = com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err = database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4968,7 +4968,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing branchHeads for the database
-	branches, err := com.GetBranches(loggedInUser, dbName)
+	branches, err := database.GetBranches(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4992,14 +4992,14 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If the branch being changed is the default branch, and it's being renamed, we need to update the default branch
 	// entry in the database with the new branch name
-	defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
+	defBranch, err := database.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if defBranch == branchName {
 		// Update the default branch name for the database
-		err = com.StoreDefaultBranchName(dbOwner, dbName, newName)
+		err = database.StoreDefaultBranchName(dbOwner, dbName, newName)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -5008,12 +5008,12 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Update the branch info
 	delete(branches, branchName)
-	branches[newName] = com.BranchEntry{
+	branches[newName] = database.BranchEntry{
 		Commit:      oldInfo.Commit,
 		CommitCount: oldInfo.CommitCount,
 		Description: newDesc,
 	}
-	err = com.StoreBranches(dbOwner, dbName, branches)
+	err = database.StoreBranches(dbOwner, dbName, branches)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5163,7 +5163,7 @@ func updateDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure this is a live database
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5430,7 +5430,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing releases for the database
-	releases, err := com.GetReleases(loggedInUser, dbName)
+	releases, err := database.GetReleases(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5445,7 +5445,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Update the release info
 	delete(releases, relName)
-	releases[newName] = com.ReleaseEntry{
+	releases[newName] = database.ReleaseEntry{
 		Commit:        oldInfo.Commit,
 		Date:          oldInfo.Date,
 		Description:   newDesc,
@@ -5454,7 +5454,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		Size:          oldInfo.Size,
 	}
 
-	err = com.StoreReleases(dbOwner, dbName, releases)
+	err = database.StoreReleases(dbOwner, dbName, releases)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5544,7 +5544,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Load the existing tags for the database
-	tags, err := com.GetTags(loggedInUser, dbName)
+	tags, err := database.GetTags(loggedInUser, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5559,7 +5559,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Update the tag info
 	delete(tags, tagName)
-	tags[newName] = com.TagEntry{
+	tags[newName] = database.TagEntry{
 		Commit:      oldInfo.Commit,
 		Date:        oldInfo.Date,
 		Description: newMsg,
@@ -5567,7 +5567,7 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 		TaggerName:  oldInfo.TaggerName,
 	}
 
-	err = com.StoreTags(dbOwner, dbName, tags)
+	err = database.StoreTags(dbOwner, dbName, tags)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5632,7 +5632,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Grab and validate the supplied "public" form field
-	var accessType com.SetAccessType
+	var accessType database.SetAccessType
 	public, err := com.GetPub(r)
 	if err != nil {
 		log.Printf("%s: Error when converting public value to boolean: %v", pageName, err)
@@ -5641,9 +5641,9 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if public {
-		accessType = com.SetToPublic
+		accessType = database.SetToPublic
 	} else {
-		accessType = com.SetToPrivate
+		accessType = database.SetToPrivate
 	}
 
 	// Grab and validate the supplied "live" form field
@@ -5763,7 +5763,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 		createBranch := false
 
 		if exists {
-			branchList, err := com.GetBranches(dbOwner, dbName)
+			branchList, err := database.GetBranches(dbOwner, dbName)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				fmt.Fprint(w, err.Error())
@@ -5775,7 +5775,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 				createBranch = true
 
 				// We also need a commit ID to branch from, so we use the head commit of the default branch
-				defBranch, err := com.GetDefaultBranchName(dbOwner, dbName)
+				defBranch, err := database.GetDefaultBranchName(dbOwner, dbName)
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					fmt.Fprint(w, err.Error())
@@ -5858,7 +5858,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update PG, so it has a record of this database existing and knows the node/queue name for querying it
-	err = com.LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, accessType)
+	err = database.LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, accessType)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -5918,7 +5918,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return the updated watchers count
-	newStarCount, err := com.DBWatchers(dbOwner, dbName)
+	newStarCount, err := database.DBWatchers(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())

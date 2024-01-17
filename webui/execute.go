@@ -15,7 +15,7 @@ import (
 
 func executePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		DB         com.SQLiteDBinfo
+		DB         database.SQLiteDBinfo
 		PageMeta   PageMetaInfo
 		SqlHistory []database.SqlHistoryItem
 	}
@@ -46,7 +46,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	// * Execution can only get here if the user has access to the requested database *
 
 	// Ensure this is a live database
-	isLive, liveNode, err := com.CheckDBLive(dbName.Owner, dbName.Database)
+	isLive, liveNode, err := database.CheckDBLive(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -57,7 +57,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, "")
+	err = database.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, "")
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -190,7 +190,7 @@ func execLiveSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Make sure this is a live database
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)

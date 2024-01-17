@@ -94,7 +94,7 @@ func LiveRetrieveDatabaseMinio(baseDir, dbOwner, dbName, objectID string) (dbPat
 // LiveStoreDatabaseMinio stores a live SQLite database in Minio
 func LiveStoreDatabaseMinio(db *os.File, dbOwner, dbName string, dbSize int64) (minioObjectID string, err error) {
 	// If the database doesn't already exist in the PG backend, then we generate a new Minio object id for it
-	exists, err := CheckDBExists(dbOwner, dbName)
+	exists, err := database.CheckDBExists(dbOwner, dbName)
 	if err != nil {
 		return
 	}

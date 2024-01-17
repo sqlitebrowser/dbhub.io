@@ -14,9 +14,9 @@ import (
 
 func visualisePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		DB             com.SQLiteDBinfo
+		DB             database.SQLiteDBinfo
 		PageMeta       PageMetaInfo
-		Branches       map[string]com.BranchEntry
+		Branches       map[string]database.BranchEntry
 		Visualisations map[string]database.VisParamsV2
 	}
 
@@ -78,7 +78,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	// * Execution can only get here if the user has access to the requested database *
 
 	// Check if this is a live database
-	isLive, liveNode, err := com.CheckDBLive(dbName.Owner, dbName.Database)
+	isLive, liveNode, err := database.CheckDBLive(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -88,7 +88,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	if !isLive {
 		// If a specific commit was requested, make sure it exists in the database commit history
 		if commitID != "" {
-			commitList, err := com.GetCommitList(dbName.Owner, dbName.Database)
+			commitList, err := database.GetCommitList(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -103,7 +103,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 		// If a specific release was requested, and no commit ID was given, retrieve the commit ID matching the release
 		if commitID == "" && releaseName != "" {
-			releases, err := com.GetReleases(dbName.Owner, dbName.Database)
+			releases, err := database.GetReleases(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve releases for database")
 				return
@@ -117,7 +117,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Read the branch heads list from the database
-		pageData.Branches, err = com.GetBranches(dbName.Owner, dbName.Database)
+		pageData.Branches, err = database.GetBranches(dbName.Owner, dbName.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -135,7 +135,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 		// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
 		if commitID == "" && tagName != "" {
-			tags, err := com.GetTags(dbName.Owner, dbName.Database)
+			tags, err := database.GetTags(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for database")
 				return
@@ -150,7 +150,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 		// If we still haven't determined the required commit ID, use the head commit of the default branch
 		if commitID == "" {
-			commitID, err = com.DefaultCommit(dbName.Owner, dbName.Database)
+			commitID, err = database.DefaultCommit(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -159,7 +159,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 
 		// Retrieve default branch name details
 		if branchName == "" {
-			branchName, err = com.GetDefaultBranchName(dbName.Owner, dbName.Database)
+			branchName, err = database.GetDefaultBranchName(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
 				return
@@ -170,7 +170,7 @@ func visualisePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, commitID)
+	err = database.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -279,9 +279,9 @@ func visDel(w http.ResponseWriter, r *http.Request) {
 
 func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		DB            com.SQLiteDBinfo
+		DB            database.SQLiteDBinfo
 		PageMeta      PageMetaInfo
-		Branches      map[string]com.BranchEntry
+		Branches      map[string]database.BranchEntry
 		Visualisation database.VisParamsV2
 		VisName       string
 	}
@@ -344,7 +344,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 	// * Execution can only get here if the user has access to the requested database *
 
 	// Check if this is a live database
-	isLive, _, err := com.CheckDBLive(dbName.Owner, dbName.Database)
+	isLive, _, err := database.CheckDBLive(dbName.Owner, dbName.Database)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -354,7 +354,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 	if !isLive {
 		// If a specific commit was requested, make sure it exists in the database commit history
 		if commitID != "" {
-			commitList, err := com.GetCommitList(dbName.Owner, dbName.Database)
+			commitList, err := database.GetCommitList(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -369,7 +369,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 
 		// If a specific release was requested, and no commit ID was given, retrieve the commit ID matching the release
 		if commitID == "" && releaseName != "" {
-			releases, err := com.GetReleases(dbName.Owner, dbName.Database)
+			releases, err := database.GetReleases(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve releases for database")
 				return
@@ -383,7 +383,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Read the branch heads list from the database
-		pageData.Branches, err = com.GetBranches(dbName.Owner, dbName.Database)
+		pageData.Branches, err = database.GetBranches(dbName.Owner, dbName.Database)
 		if err != nil {
 			errorPage(w, r, http.StatusInternalServerError, err.Error())
 			return
@@ -401,7 +401,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 
 		// If a specific tag was requested, and no commit ID was given, retrieve the commit ID matching the tag
 		if commitID == "" && tagName != "" {
-			tags, err := com.GetTags(dbName.Owner, dbName.Database)
+			tags, err := database.GetTags(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Couldn't retrieve tags for database")
 				return
@@ -416,7 +416,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 
 		// If we still haven't determined the required commit ID, use the head commit of the default branch
 		if commitID == "" {
-			commitID, err = com.DefaultCommit(dbName.Owner, dbName.Database)
+			commitID, err = database.DefaultCommit(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, err.Error())
 				return
@@ -425,7 +425,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 
 		// Retrieve default branch name details
 		if branchName == "" {
-			branchName, err = com.GetDefaultBranchName(dbName.Owner, dbName.Database)
+			branchName, err = database.GetDefaultBranchName(dbName.Owner, dbName.Database)
 			if err != nil {
 				errorPage(w, r, http.StatusInternalServerError, "Error retrieving default branch name")
 				return
@@ -436,7 +436,7 @@ func visEmbedPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the database details
-	err = com.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, commitID)
+	err = database.DBDetails(&pageData.DB, pageData.PageMeta.LoggedInUser, dbName.Owner, dbName.Database, commitID)
 	if err != nil {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
@@ -538,7 +538,7 @@ func visExecuteSQL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if this is a live database
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err)

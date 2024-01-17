@@ -78,7 +78,7 @@ func branchesHandler(c *gin.Context) {
 	database.ApiCallLog(loggedInUser, dbOwner, dbName, "branches", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -147,7 +147,7 @@ func columnsHandler(c *gin.Context) {
 	}
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -275,7 +275,7 @@ func commitsHandler(c *gin.Context) {
 	database.ApiCallLog(loggedInUser, dbOwner, dbName, "commits", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -290,7 +290,7 @@ func commitsHandler(c *gin.Context) {
 	}
 
 	// Retrieve the commits
-	commits, err := com.GetCommitList(dbOwner, dbName)
+	commits, err := database.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -330,10 +330,10 @@ func databasesHandler(c *gin.Context) {
 	database.ApiCallLog(loggedInUser, "", "", operation, c.Request.UserAgent())
 
 	// Retrieve the list of databases in the user account
-	var databases []com.DBInfo
+	var databases []database.DBInfo
 	if !live {
 		// Get the list of standard databases
-		databases, err = com.UserDBs(loggedInUser, com.DB_BOTH)
+		databases, err = database.UserDBs(loggedInUser, database.DB_BOTH)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -342,7 +342,7 @@ func databasesHandler(c *gin.Context) {
 		}
 	} else {
 		// Get the list of live databases
-		databases, err = com.LiveUserDBs(loggedInUser, com.DB_BOTH)
+		databases, err = com.LiveUserDBs(loggedInUser, database.DB_BOTH)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -399,7 +399,7 @@ func deleteHandler(c *gin.Context) {
 	}
 
 	// For a standard database, invalidate its memcache data
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": err.Error(),
@@ -448,7 +448,7 @@ func deleteHandler(c *gin.Context) {
 	}
 
 	// Delete the database in PostgreSQL
-	err = com.DeleteDatabase(dbOwner, dbName)
+	err = database.DeleteDatabase(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -628,7 +628,7 @@ func diffHandler(c *gin.Context) {
 	}
 
 	// If either database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwnerA, dbNameA)
+	isLive, _, err := database.CheckDBLive(dbOwnerA, dbNameA)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -641,7 +641,7 @@ func diffHandler(c *gin.Context) {
 		})
 		return
 	}
-	isLive, _, err = com.CheckDBLive(dbOwnerB, dbNameB)
+	isLive, _, err = database.CheckDBLive(dbOwnerB, dbNameB)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -769,7 +769,7 @@ func executeHandler(c *gin.Context) {
 	}
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -830,7 +830,7 @@ func indexesHandler(c *gin.Context) {
 	database.ApiCallLog(loggedInUser, dbOwner, dbName, "indexes", c.Request.UserAgent())
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -947,7 +947,7 @@ func metadataHandler(c *gin.Context) {
 	database.ApiCallLog(loggedInUser, dbOwner, dbName, "metadata", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -1025,7 +1025,7 @@ func queryHandler(c *gin.Context) {
 	}
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -1090,7 +1090,7 @@ func releasesHandler(c *gin.Context) {
 	database.ApiCallLog(loggedInUser, dbOwner, dbName, "releases", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -1105,7 +1105,7 @@ func releasesHandler(c *gin.Context) {
 	}
 
 	// Retrieve the list of releases
-	rels, err := com.GetReleases(dbOwner, dbName)
+	rels, err := database.GetReleases(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -1138,7 +1138,7 @@ func tablesHandler(c *gin.Context) {
 	database.ApiCallLog(loggedInUser, dbOwner, dbName, "tables", c.Request.UserAgent())
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -1232,7 +1232,7 @@ func tagsHandler(c *gin.Context) {
 	database.ApiCallLog(loggedInUser, dbOwner, dbName, "tags", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
-	isLive, _, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -1247,7 +1247,7 @@ func tagsHandler(c *gin.Context) {
 	}
 
 	// Retrieve the tags
-	tags, err := com.GetTags(dbOwner, dbName)
+	tags, err := database.GetTags(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -1386,7 +1386,7 @@ func uploadHandler(c *gin.Context) {
 		}
 
 		// Check if the database exists already
-		exists, err := com.CheckDBExists(loggedInUser, dbName)
+		exists, err := database.CheckDBExists(loggedInUser, dbName)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -1465,7 +1465,7 @@ func uploadHandler(c *gin.Context) {
 		}
 
 		// Update PG, so it has a record of this database existing and knows the node/queue name for querying it
-		err = com.LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, com.SetToPrivate)
+		err = database.LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, database.SetToPrivate)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -1514,7 +1514,7 @@ func uploadHandler(c *gin.Context) {
 	// Signal the successful database creation
 	c.JSON(http.StatusCreated, gin.H{
 		"commit": newCommit,
-		"url": newURL,
+		"url":    newURL,
 	})
 }
 
@@ -1539,7 +1539,7 @@ func viewsHandler(c *gin.Context) {
 	database.ApiCallLog(loggedInUser, loggedInUser, dbName, "views", c.Request.UserAgent())
 
 	// Check if the database is a live database, and get the node/queue to send the request to
-	isLive, liveNode, err := com.CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),

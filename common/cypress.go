@@ -48,7 +48,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 	defer testDB.Close()
 	_, _, _, err = AddDatabase("default", "default", "Assembly Election 2017.sqlite",
-		false, "", "", SetToPublic, "CC-BY-SA-4.0", "Initial commit",
+		false, "", "", database.SetToPublic, "CC-BY-SA-4.0", "Initial commit",
 		"http://data.nicva.org/dataset/assembly-election-2017", testDB, time.Now(), time.Time{},
 		"", "", "", "", nil, "")
 	if err != nil {
@@ -62,7 +62,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 	defer testDB2.Close()
 	_, _, _, err = AddDatabase("default", "default", "Assembly Election 2017 with view.sqlite",
-		false, "", "", SetToPrivate, "CC-BY-SA-4.0", "Initial commit",
+		false, "", "", database.SetToPrivate, "CC-BY-SA-4.0", "Initial commit",
 		"http://data.nicva.org/dataset/assembly-election-2017", testDB2, time.Now(), time.Time{},
 		"", "", "", "", nil, "")
 	if err != nil {
@@ -71,7 +71,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add some tags
-	commits, err := GetCommitList("default", "Assembly Election 2017.sqlite")
+	commits, err := database.GetCommitList("default", "Assembly Election 2017.sqlite")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -135,7 +135,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update PG, so it has a record of this database existing and knows the node/queue name for querying it
-	err = LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, SetToPrivate)
+	err = database.LiveAddDatabasePG(dbOwner, dbName, objectID, liveNode, database.SetToPrivate)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -202,14 +202,14 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 // CreateRelease is used for creating a release when running tests
 func CreateRelease(dbOwner, dbName, releaseName, releaseDescription, releaserName, releaserEmail, commitID string) (err error) {
 	// Retrieve the existing releases for the database
-	var releases map[string]ReleaseEntry
-	releases, err = GetReleases(dbOwner, dbName)
+	var releases map[string]database.ReleaseEntry
+	releases, err = database.GetReleases(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Create the new release
-	newRelease := ReleaseEntry{
+	newRelease := database.ReleaseEntry{
 		Commit:        commitID,
 		Date:          time.Now(),
 		Description:   releaseDescription,
@@ -219,21 +219,21 @@ func CreateRelease(dbOwner, dbName, releaseName, releaseDescription, releaserNam
 	releases[releaseName] = newRelease
 
 	// Store it in PostgreSQL
-	err = StoreReleases(dbOwner, dbName, releases)
+	err = database.StoreReleases(dbOwner, dbName, releases)
 	return
 }
 
 // CreateTag is used for creating a tag when running tests
 func CreateTag(dbOwner, dbName, tagName, tagDescription, taggerName, taggerEmail, commitID string) (err error) {
 	// Retrieve the existing tags for the database
-	var tags map[string]TagEntry
-	tags, err = GetTags(dbOwner, dbName)
+	var tags map[string]database.TagEntry
+	tags, err = database.GetTags(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Create the new tag
-	newTag := TagEntry{
+	newTag := database.TagEntry{
 		Commit:      commitID,
 		Date:        time.Now(),
 		Description: tagDescription,
@@ -243,7 +243,7 @@ func CreateTag(dbOwner, dbName, tagName, tagDescription, taggerName, taggerEmail
 	tags[tagName] = newTag
 
 	// Store it in PostgreSQL
-	err = StoreTags(dbOwner, dbName, tags)
+	err = database.StoreTags(dbOwner, dbName, tags)
 	return
 }
 

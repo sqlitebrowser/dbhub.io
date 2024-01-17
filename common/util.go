@@ -52,12 +52,12 @@ func HttpErrorLog() *log.Logger {
 
 // AddDatabase is handles database upload processing
 func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branchName,
-	commitID string, accessType SetAccessType, licenceName, commitMsg, sourceURL string, newDB io.Reader,
+	commitID string, accessType database.SetAccessType, licenceName, commitMsg, sourceURL string, newDB io.Reader,
 	lastModified, commitTime time.Time, authorName, authorEmail, committerName, committerEmail string,
 	otherParents []string, dbSha string) (numBytes int64, newCommitID string, calculatedDbSha string, err error) {
 
 	// Check if the database already exists in the system
-	exists, err := CheckDBExists(dbOwner, dbName)
+	exists, err := database.CheckDBExists(dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -94,16 +94,16 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	// Figure out the branch structure to use
 	var defBranch string
 	needDefaultBranchCreated := false
-	var branches map[string]BranchEntry
+	var branches map[string]database.BranchEntry
 	if exists {
 		// Load the existing branchHeads for the database
-		branches, err = GetBranches(dbOwner, dbName)
+		branches, err = database.GetBranches(dbOwner, dbName)
 		if err != nil {
 			return
 		}
 
 		// If no branch name was given, use the default for the database
-		defBranch, err = GetDefaultBranchName(dbOwner, dbName)
+		defBranch, err = database.GetDefaultBranchName(dbOwner, dbName)
 		if err != nil {
 			return
 		}
@@ -112,7 +112,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 		}
 	} else {
 		// No existing branches, so this will be the first
-		branches = make(map[string]BranchEntry)
+		branches = make(map[string]database.BranchEntry)
 
 		// Set the default branch name for the database
 		if branchName == "" {
@@ -185,11 +185,11 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	// Figure out new access type
 	var public bool
 	switch accessType {
-	case SetToPublic:
+	case database.SetToPublic:
 		public = true
-	case SetToPrivate:
+	case database.SetToPrivate:
 		public = false
-	case KeepCurrentAccessType:
+	case database.KeepCurrentAccessType:
 		public, err = CommitPublicFlag(loggedInUser, dbOwner, dbName, commitID)
 		if err != nil {
 			return
@@ -304,7 +304,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	// If the database already exists, count the number of commits in the new branch
 	commitCount := 1
 	if exists {
-		commitList, err := GetCommitList(dbOwner, dbName)
+		commitList, err := database.GetCommitList(dbOwner, dbName)
 		if err != nil {
 			return 0, "", "", err
 		}
@@ -347,7 +347,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 
 	// If the database already existed, update its contributor count
 	if exists {
-		err = UpdateContributorsCount(dbOwner, dbName)
+		err = database.UpdateContributorsCount(dbOwner, dbName)
 		if err != nil {
 			return
 		}
@@ -356,7 +356,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	// If a new branch was created, then update the branch count for the database
 	// Note, this could probably be merged into the StoreDatabase() call above, but it should be good enough for now
 	if createBranch {
-		err = StoreBranches(dbOwner, dbName, branches)
+		err = database.StoreBranches(dbOwner, dbName, branches)
 		if err != nil {
 			return
 		}
@@ -365,7 +365,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 	// If the newly uploaded database is on the default branch, check if the default table is present in this version
 	// of the database.  If it's not, we need to clear the default table value
 	if branchName == defBranch {
-		defTbl, err := GetDefaultTableName(dbOwner, dbName)
+		defTbl, err := database.GetDefaultTableName(dbOwner, dbName)
 		if err != nil {
 			return 0, "", "", err
 		}
@@ -377,7 +377,7 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 		}
 		if !defFound {
 			// The default table is present in the previous commit, so we clear the default table value
-			err = StoreDefaultTableName(dbOwner, dbName, "")
+			err = database.StoreDefaultTableName(dbOwner, dbName, "")
 			if err != nil {
 				return 0, "", "", err
 			}
@@ -414,8 +414,8 @@ func AddDatabase(loggedInUser, dbOwner, dbName string, createBranch bool, branch
 
 // CommitPublicFlag returns the public flag of a given commit
 func CommitPublicFlag(loggedInUser, dbOwner, dbName, commitID string) (public bool, err error) {
-	var DB SQLiteDBinfo
-	err = DBDetails(&DB, loggedInUser, dbOwner, dbName, commitID)
+	var DB database.SQLiteDBinfo
+	err = database.DBDetails(&DB, loggedInUser, dbOwner, dbName, commitID)
 	if err != nil {
 		return
 	}
@@ -424,7 +424,7 @@ func CommitPublicFlag(loggedInUser, dbOwner, dbName, commitID string) (public bo
 
 // CommitLicenceSHA returns the licence used by the database in a given commit
 func CommitLicenceSHA(dbOwner, dbName, commitID string) (licenceSHA string, err error) {
-	commits, err := GetCommitList(dbOwner, dbName)
+	commits, err := database.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		return "", err
 	}
@@ -506,14 +506,14 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 	}
 
 	// Get the commit list for the database
-	commitList, err := GetCommitList(dbOwner, dbName)
+	commitList, err := database.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Walk the branch history, making a list of the commit IDs to delete
 	delList := map[string]struct{}{}
-	branchList, err := GetBranches(dbOwner, dbName)
+	branchList, err := database.GetBranches(dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -553,12 +553,12 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 
 	// * To get here, we have the list of commits to delete *
 
-	tagList, err := GetTags(dbOwner, dbName)
+	tagList, err := database.GetTags(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
-	relList, err := GetReleases(dbOwner, dbName)
+	relList, err := database.GetReleases(dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -761,7 +761,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 	b.Commit = commitID
 	b.CommitCount = commitCount
 	branchList[branchName] = b
-	err = StoreBranches(dbOwner, dbName, branchList)
+	err = database.StoreBranches(dbOwner, dbName, branchList)
 	if err != nil {
 		return
 	}
@@ -773,7 +773,7 @@ func DeleteBranchHistory(dbOwner, dbName, branchName, commitID string) (isolated
 			delete(commitList, cid)
 		}
 	}
-	err = StoreCommits(dbOwner, dbName, commitList)
+	err = database.StoreCommits(dbOwner, dbName, commitList)
 	return
 }
 
@@ -789,7 +789,7 @@ func GetCommonAncestorCommits(srcOwner, srcDBName, srcBranch, destOwner, destNam
 	//   * If one is found, that one is the last common commit
 
 	// Get the details of the head commit for the source and destination database branches
-	branchList, err := GetBranches(destOwner, destName) // Destination branch list
+	branchList, err := database.GetBranches(destOwner, destName) // Destination branch list
 	if err != nil {
 		errType = http.StatusInternalServerError
 		return
@@ -801,7 +801,7 @@ func GetCommonAncestorCommits(srcOwner, srcDBName, srcBranch, destOwner, destNam
 		return
 	}
 	destCommitID := branchDetails.Commit
-	srcBranchList, err := GetBranches(srcOwner, srcDBName)
+	srcBranchList, err := database.GetBranches(srcOwner, srcDBName)
 	if err != nil {
 		errType = http.StatusInternalServerError
 		return
@@ -822,7 +822,7 @@ func GetCommonAncestorCommits(srcOwner, srcDBName, srcBranch, destOwner, destNam
 	}
 
 	// Get list of all commits
-	allCommits, err := GetCommitList(srcOwner, srcDBName)
+	allCommits, err := database.GetCommitList(srcOwner, srcDBName)
 	if err != nil {
 		errType = http.StatusInternalServerError
 		return
@@ -898,7 +898,7 @@ func GetCommonAncestorCommits(srcOwner, srcDBName, srcBranch, destOwner, destNam
 func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbName, commitID,
 	loggedInUser, sourceSw string) (bytesWritten int64, err error) {
 	// Check if the database is a live database, and get the node/queue to send requests to
-	isLive, liveNode, err := CheckDBLive(dbOwner, dbName)
+	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -982,7 +982,7 @@ func DownloadDatabase(w http.ResponseWriter, r *http.Request, dbOwner, dbName, c
 
 	// If downloaded by someone other than the owner, increment the download count for the database
 	if strings.ToLower(loggedInUser) != strings.ToLower(dbOwner) {
-		err = IncrementDownloadCount(dbOwner, dbName)
+		err = database.IncrementDownloadCount(dbOwner, dbName)
 		if err != nil {
 			return
 		}
@@ -1002,12 +1002,12 @@ func GetCurrentFunctionName() (FuncName string) {
 // IsCommitInBranchHistory checks if a given commit ID is in the history of the given branch
 func IsCommitInBranchHistory(dbOwner, dbName, branchName, commitID string) (bool, error) {
 	// Get the commit list for the database
-	commitList, err := GetCommitList(dbOwner, dbName)
+	commitList, err := database.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		return false, err
 	}
 
-	branchList, err := GetBranches(dbOwner, dbName)
+	branchList, err := database.GetBranches(dbOwner, dbName)
 	if err != nil {
 		return false, err
 	}
@@ -1044,61 +1044,6 @@ func IsCommitInBranchHistory(dbOwner, dbName, branchName, commitID string) (bool
 		}
 	}
 	return found, nil
-}
-
-// nextChild looks for the next child fork in a fork tree
-func nextChild(loggedInUser string, rawListPtr *[]ForkEntry, outputListPtr *[]ForkEntry, forkTrailPtr *[]int, iconDepth int) ([]ForkEntry, []int, bool) {
-	// TODO: This approach feels half arsed.  Maybe redo it as a recursive function instead?
-
-	// Resolve the pointers
-	rawList := *rawListPtr
-	outputList := *outputListPtr
-	forkTrail := *forkTrailPtr
-
-	// Grab the last database ID from the fork trail
-	parentID := forkTrail[len(forkTrail)-1:][0]
-
-	// Scan unprocessed rows for the first child of parentID
-	numResults := len(rawList)
-	for j := 1; j < numResults; j++ {
-		// Skip already processed entries
-		if rawList[j].Processed == false {
-			if rawList[j].ForkedFrom == parentID {
-				// * Found a fork of the parent *
-
-				// Set the icon list for display in the browser
-				for k := 0; k < iconDepth; k++ {
-					rawList[j].IconList = append(rawList[j].IconList, SPACE)
-				}
-				rawList[j].IconList = append(rawList[j].IconList, END)
-
-				// If the database is no longer public, then use placeholder details instead
-				if !rawList[j].Public && (strings.ToLower(rawList[j].Owner) != strings.ToLower(loggedInUser)) {
-					rawList[j].DBName = "private database"
-				}
-
-				// If the database is deleted, use a placeholder indicating that instead
-				if rawList[j].Deleted {
-					rawList[j].DBName = "deleted database"
-				}
-
-				// Add this database to the output list
-				outputList = append(outputList, rawList[j])
-
-				// Append this database ID to the fork trail
-				forkTrail = append(forkTrail, rawList[j].ID)
-
-				// Mark this database entry as processed
-				rawList[j].Processed = true
-
-				// Indicate a child fork was found
-				return outputList, forkTrail, true
-			}
-		}
-	}
-
-	// Indicate no child fork was found
-	return outputList, forkTrail, false
 }
 
 // RandomString generates a random alphanumeric string of the desired length

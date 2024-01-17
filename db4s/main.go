@@ -373,7 +373,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Get the branch heads list for the database
-	branchList, err := com.GetBranches(dbOwner, dbName)
+	branchList, err := database.GetBranches(dbOwner, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -395,7 +395,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 		branchName = bn
 	} else {
 		// No branch name was given, so retrieve the default for the database
-		branchName, err = com.GetDefaultBranchName(dbOwner, dbName)
+		branchName, err = database.GetDefaultBranchName(dbOwner, dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -413,7 +413,7 @@ func getHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Check that the commit is known to the database
-	commitList, err := com.GetCommitList(dbOwner, dbName)
+	commitList, err := database.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -935,7 +935,7 @@ func retrieveDatabase(w http.ResponseWriter, r *http.Request, pageName string, u
 
 	// If downloaded by someone other than the owner, increment the download count for the database
 	if strings.ToLower(userAcc) != strings.ToLower(dbOwner) {
-		err = com.IncrementDownloadCount(dbOwner, dbName)
+		err = database.IncrementDownloadCount(dbOwner, dbName)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -995,17 +995,17 @@ func userDatabaseList(userAcc string, user string) (dbList []byte, err error) {
 
 	// Retrieve the list of databases for the requested username.  Only include those accessible to the logged
 	// in user (userAcc) though
-	var pubSetting com.AccessType
+	var pubSetting database.AccessType
 	if strings.ToLower(userAcc) != strings.ToLower(user) {
 		// The user is requesting someone else's list, so only return public databases
-		pubSetting = com.DB_PUBLIC
+		pubSetting = database.DB_PUBLIC
 	} else {
 		// The logged in user is requesting their own database list, so give them both public and private
-		pubSetting = com.DB_BOTH
+		pubSetting = database.DB_BOTH
 	}
 
 	// Retrieve the database list
-	pubDBs, err := com.UserDBs(user, pubSetting)
+	pubDBs, err := database.UserDBs(user, pubSetting)
 	if err != nil {
 		return nil, err
 	}

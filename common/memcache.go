@@ -133,7 +133,7 @@ func IncrementViewCount(dbOwner string, dbName string) error {
 
 		// The cached value didn't exist, so we check if it has an entry in PostgreSQL already
 		// NOTE: This function returns 0 if there's no existing entry, so we can just increment whatever it gives us
-		cnt, err := ViewCount(dbOwner, dbName)
+		cnt, err := database.ViewCount(dbOwner, dbName)
 		if err != nil {
 			return err
 		}
@@ -159,7 +159,7 @@ func InvalidateCacheEntry(loggedInUser string, dbOwner string, dbName string, co
 	if commitID == "" {
 		// Get the list of all commits for the given database
 		var err error
-		l, err := GetCommitList(dbOwner, dbName) // Get the full commit list
+		l, err := database.GetCommitList(dbOwner, dbName) // Get the full commit list
 		if err != nil {
 			return err
 		}

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/sqlitebrowser/dbhub.io/common/config"
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 
 	sqlite "github.com/gwenn/gosqlite"
 )
@@ -128,7 +129,7 @@ func LiveExecute(liveNode, loggedInUser, dbOwner, dbName, sql string) (rowsChang
 
 	// If no error was thrown, then update the "last_modified" field for the database
 	if err == nil {
-		err = UpdateModified(dbOwner, dbName)
+		err = database.UpdateModified(dbOwner, dbName)
 	}
 	return
 }

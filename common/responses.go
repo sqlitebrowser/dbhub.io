@@ -18,21 +18,21 @@ import (
 // BranchListResponseContainer holds the response to a client request for the database branch list. It's a temporary
 // structure, mainly so the JSON created for it is consistent between our various daemons
 type BranchListResponseContainer struct {
-	Branches      map[string]BranchEntry `json:"branches"`
-	DefaultBranch string                 `json:"default_branch"`
+	Branches      map[string]database.BranchEntry `json:"branches"`
+	DefaultBranch string                          `json:"default_branch"`
 }
 
 // BranchListResponse returns the branch list for a database.  It's used by both the DB4S and API daemons, to ensure
 // they return exactly the same data
 func BranchListResponse(dbOwner, dbName string) (list BranchListResponseContainer, err error) {
 	// Retrieve the branch list for the database
-	list.Branches, err = GetBranches(dbOwner, dbName)
+	list.Branches, err = database.GetBranches(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Retrieve the default branch for the database
-	list.DefaultBranch, err = GetDefaultBranchName(dbOwner, dbName)
+	list.DefaultBranch, err = database.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -50,43 +50,43 @@ type ExecuteResponseContainer struct {
 // MetadataResponseContainer holds the response to a client request for database metadata. It's a temporary structure,
 // mainly so the JSON created for it is consistent between our various daemons
 type MetadataResponseContainer struct {
-	Branches  map[string]BranchEntry          `json:"branches"`
-	Commits   map[string]database.CommitEntry `json:"commits"`
-	DefBranch string                          `json:"default_branch"`
-	Releases  map[string]ReleaseEntry         `json:"releases"`
-	Tags      map[string]TagEntry             `json:"tags"`
-	WebPage   string                          `json:"web_page"`
+	Branches  map[string]database.BranchEntry  `json:"branches"`
+	Commits   map[string]database.CommitEntry  `json:"commits"`
+	DefBranch string                           `json:"default_branch"`
+	Releases  map[string]database.ReleaseEntry `json:"releases"`
+	Tags      map[string]database.TagEntry     `json:"tags"`
+	WebPage   string                           `json:"web_page"`
 }
 
 // MetadataResponse returns the metadata for a database.  It's used by both the DB4S and API daemons, to ensure they
 // return exactly the same data
 func MetadataResponse(dbOwner, dbName string) (meta MetadataResponseContainer, err error) {
 	// Get the branch heads list for the database
-	meta.Branches, err = GetBranches(dbOwner, dbName)
+	meta.Branches, err = database.GetBranches(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Get the default branch for the database
-	meta.DefBranch, err = GetDefaultBranchName(dbOwner, dbName)
+	meta.DefBranch, err = database.GetDefaultBranchName(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Get the complete commit list for the database
-	meta.Commits, err = GetCommitList(dbOwner, dbName)
+	meta.Commits, err = database.GetCommitList(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Get the releases for the database
-	meta.Releases, err = GetReleases(dbOwner, dbName)
+	meta.Releases, err = database.GetReleases(dbOwner, dbName)
 	if err != nil {
 		return
 	}
 
 	// Get the tags for the database
-	meta.Tags, err = GetTags(dbOwner, dbName)
+	meta.Tags, err = database.GetTags(dbOwner, dbName)
 	if err != nil {
 		return
 	}
@@ -137,7 +137,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	// TODO: These validation functions should probably be in the common library instead
 
 	// Check if the database exists already
-	exists, err := CheckDBExists(targetUser, targetDB)
+	exists, err := database.CheckDBExists(targetUser, targetDB)
 	if err != nil {
 		httpStatus = http.StatusInternalServerError
 		return
@@ -242,7 +242,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 	}
 
 	// If a public/private setting was provided then use it
-	var accessType SetAccessType
+	var accessType database.SetAccessType
 	if z := r.FormValue("public"); z != "" {
 		var public bool
 		public, err = strconv.ParseBool(z)
@@ -253,9 +253,9 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 		}
 
 		if public {
-			accessType = SetToPublic
+			accessType = database.SetToPublic
 		} else {
-			accessType = SetToPrivate
+			accessType = database.SetToPrivate
 		}
 	}
 
@@ -388,8 +388,8 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 		}
 
 		// Retrieve the branch list for the database
-		var branchList map[string]BranchEntry
-		branchList, err = GetBranches(targetUser, targetDB)
+		var branchList map[string]database.BranchEntry
+		branchList, err = database.GetBranches(targetUser, targetDB)
 		if err != nil {
 			httpStatus = http.StatusInternalServerError
 			return
@@ -397,7 +397,7 @@ func UploadResponse(w http.ResponseWriter, r *http.Request, loggedInUser, target
 
 		// If a branch name was given, check if it's a branch we know about
 		knownBranch := false
-		var brDetails BranchEntry
+		var brDetails database.BranchEntry
 		if branchName != "" {
 			brDetails, knownBranch = branchList[branchName]
 		}
