@@ -266,7 +266,7 @@ func commitsPage(w http.ResponseWriter, r *http.Request) {
 // Render the compare page, for creating new merge requests
 func comparePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		CommitList            []com.CommitData
+		CommitList            []CommitData
 		DB                    database.SQLiteDBinfo
 		DestDBBranches        []string
 		DestDBDefaultBranch   string
@@ -396,7 +396,7 @@ func comparePage(w http.ResponseWriter, r *http.Request) {
 
 		// Convert the commit entries into something we can display in a commit list
 		for _, j := range cList {
-			var c com.CommitData
+			var c CommitData
 			c.AuthorEmail = j.AuthorEmail
 			c.AuthorName = j.AuthorName
 			c.ID = j.ID
@@ -1220,7 +1220,7 @@ func frontPage(w http.ResponseWriter, r *http.Request) {
 func mergePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		CommentList         []database.DiscussionCommentEntry
-		CommitList          []com.CommitData
+		CommitList          []CommitData
 		DB                  database.SQLiteDBinfo
 		DestBranchNameOK    bool
 		DestBranchUsable    bool
@@ -1401,7 +1401,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 		// Add the commit author's username and avatar URL to the commit list entries, and check for licence changes
 		var licenceChanges bool
 		for _, j := range mr.MRDetails.Commits {
-			var c com.CommitData
+			var c CommitData
 			c.AuthorEmail = j.AuthorEmail
 			c.AuthorName = j.AuthorName
 			c.ID = j.ID

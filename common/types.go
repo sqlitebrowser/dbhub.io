@@ -39,14 +39,6 @@ const (
 	QuerySourceInternal
 )
 
-// SetDBType is used for setting what type of database we're working with
-type SetDBType int
-
-const (
-	DBTypeStandard SetDBType = iota
-	DBTypeLive
-)
-
 // APIJSONIndexColumn holds the details of one column of a SQLite database index.  It's used by our API for returning
 // index information
 type APIJSONIndexColumn struct {
@@ -59,18 +51,6 @@ type APIJSONIndex struct {
 	Name    string               `json:"name"`
 	Table   string               `json:"table"`
 	Columns []APIJSONIndexColumn `json:"columns"`
-}
-
-type CommitData struct {
-	AuthorAvatar   string    `json:"author_avatar"`
-	AuthorEmail    string    `json:"author_email"`
-	AuthorName     string    `json:"author_name"`
-	AuthorUsername string    `json:"author_username"`
-	ID             string    `json:"id"`
-	Parent         string    `json:"parent"`
-	LicenceChange  string    `json:"licence_change"`
-	Message        string    `json:"message"`
-	Timestamp      time.Time `json:"timestamp"`
 }
 
 type DatabaseName struct {

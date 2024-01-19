@@ -2820,10 +2820,10 @@ func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Convert the commit entries into something we can display in a commit list
 	var x struct {
-		CommitList []com.CommitData `json:"commit_list"`
+		CommitList []CommitData `json:"commit_list"`
 	}
 	for _, j := range cList {
-		var c com.CommitData
+		var c CommitData
 		c.AuthorEmail = j.AuthorEmail
 		c.AuthorName = j.AuthorName
 		c.ID = j.ID

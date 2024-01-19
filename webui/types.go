@@ -1,7 +1,9 @@
 package main
 
 import (
-	database "github.com/sqlitebrowser/dbhub.io/common/database"
+	"time"
+
+	"github.com/sqlitebrowser/dbhub.io/common/database"
 )
 
 type ActivityRange string
@@ -17,6 +19,18 @@ type Auth0Set struct {
 	CallbackURL string
 	ClientID    string
 	Domain      string
+}
+
+type CommitData struct {
+	AuthorAvatar   string    `json:"author_avatar"`
+	AuthorEmail    string    `json:"author_email"`
+	AuthorName     string    `json:"author_name"`
+	AuthorUsername string    `json:"author_username"`
+	ID             string    `json:"id"`
+	Parent         string    `json:"parent"`
+	LicenceChange  string    `json:"licence_change"`
+	Message        string    `json:"message"`
+	Timestamp      time.Time `json:"timestamp"`
 }
 
 type PageMetaInfo struct {
