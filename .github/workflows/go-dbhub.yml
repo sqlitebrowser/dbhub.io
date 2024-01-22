@@ -41,7 +41,7 @@ jobs:
         path: library
 
     - name: Set up Go for go-dbhub library
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: '1.21'
 
