@@ -52,7 +52,7 @@
   "private": false,
   "devDependencies": {
     "@babel/cli": "^7.23.4",
-    "autoprefixer": "^10.4.16",
+    "autoprefixer": "^10.4.17",
     "babel-preset-react": "^6.24.1",
     "babel-preset-react-app": "^10.0.1",
     "css-loader": "^6.9.0",
