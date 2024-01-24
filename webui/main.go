@@ -3421,6 +3421,7 @@ func main() {
 		http.Handle("/x/test/seed", gz.GzipHandler(logReq(com.CypressSeed)))
 		http.Handle("/x/test/envprod", gz.GzipHandler(logReq(com.EnvProd)))
 		http.Handle("/x/test/envtest", gz.GzipHandler(logReq(com.EnvTest)))
+		http.Handle("/x/test/gencert", gz.GzipHandler(logReq(com.GenCert)))
 		http.Handle("/x/test/switchdefault", gz.GzipHandler(logReq(com.SwitchDefault)))
 		http.Handle("/x/test/switchfirst", gz.GzipHandler(logReq(com.SwitchFirst)))
 		http.Handle("/x/test/switchsecond", gz.GzipHandler(logReq(com.SwitchSecond)))
