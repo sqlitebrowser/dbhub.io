@@ -166,59 +166,31 @@ func DeleteLicence(userName, licenceName string) (err error) {
 		return err
 	}
 
-	// * Check if there are databases present which use this licence.  If there are, then abort. *
-
-	// TODO: Get around to adding appropriate GIN indexes
-
-	// Note - This uses the JsQuery extension for PostgreSQL, which needs compiling on the server and adding in.
-	//        However, this seems like it'll be much more straight forward and usable for writing queries with than
-	//        using straight PG SQL
-	//        JsQuery repo: https://github.com/postgrespro/jsquery
-	//        Some useful examples: https://postgrespro.ru/media/2017/04/04/jsonb-pgconf.us-2017.pdf
+	// Check if there are databases present which use this licence.  If there are, then abort.
 	dbQuery := `
-		SELECT DISTINCT count(*)
-		FROM sqlite_databases AS db
-		WHERE db.commit_list @@ '*.licence = %s'
-			AND (user_id = (
-				SELECT user_id
-				FROM users
-				WHERE user_name = 'default'
-			)
-			OR user_id = (
-				SELECT user_id
-				FROM users
-				WHERE lower(user_name) = lower($1)
-			))`
-	// We do this because licSHA needs to be unquoted for JsQuery to work, and the Go PG driver mucks things
-	// up if it's given as a parameter to that (eg as $2)
-	dbQuery = fmt.Sprintf(dbQuery, licSHA)
-
-	// The same query in straight PG:
-	//dbQuery := `
-	//	WITH working_set AS (
-	//		SELECT DISTINCT db.db_id
-	//		FROM sqlite_databases AS db
-	//			CROSS JOIN jsonb_each(db.commit_list) AS firstjoin
-	//			CROSS JOIN jsonb_array_elements(firstjoin.value -> 'tree' -> 'entries') AS secondjoin
-	//		WHERE secondjoin ->> 'licence' = $2
-	//			AND (
-	//				user_id = (
-	//					SELECT user_id
-	//					FROM users
-	//					WHERE user_name = 'default'
-	//				)
-	//				OR user_id = (
-	//					SELECT user_id
-	//					FROM users
-	//					WHERE lower(user_name) = lower($1)
-	//				)
-	//			)
-	//	)
-	//	SELECT count(*)
-	//	FROM working_set`
-
+		WITH working_set AS (
+			SELECT DISTINCT db.db_id
+			FROM sqlite_databases AS db
+				CROSS JOIN jsonb_each(db.commit_list) AS firstjoin
+				CROSS JOIN jsonb_array_elements(firstjoin.value -> 'tree' -> 'entries') AS secondjoin
+			WHERE secondjoin ->> 'licence' = $2
+				AND (
+					user_id = (
+						SELECT user_id
+						FROM users
+						WHERE user_name = 'default'
+					)
+					OR user_id = (
+						SELECT user_id
+						FROM users
+						WHERE lower(user_name) = lower($1)
+					)
+				)
+		)
+		SELECT count(*)
+		FROM working_set`
 	var DBCount int
-	err = DB.QueryRow(context.Background(), dbQuery, userName).Scan(&DBCount)
+	err = DB.QueryRow(context.Background(), dbQuery, userName, licSHA).Scan(&DBCount)
 	if err != nil {
 		log.Printf("Checking if the licence is in use failed: %v", err)
 		return err
