@@ -58,7 +58,6 @@ const DefaultNumDisplayRows = 25
 
 // AddDefaultUser adds the default user to the system, so the referential integrity of licence user_id 0 works
 func AddDefaultUser() error {
-	// Make sure the default user doesn't exist already
 	existsAlready, err := CheckUserExists("default")
 	if err != nil {
 		return err
@@ -67,7 +66,7 @@ func AddDefaultUser() error {
 		return nil
 	}
 
-	// Add the new user to the database
+	// Add the default user to the database
 	dbQuery := `
 		INSERT INTO users (auth0_id, user_name, email, display_name)
 		VALUES ($1, $2, $3, $4)
@@ -76,12 +75,9 @@ func AddDefaultUser() error {
 	_, err = DB.Exec(context.Background(), dbQuery, "", "default", "default@dbhub.io",
 		"Default system user")
 	if err != nil {
-		log.Printf("Error when adding the default user to the database: %v", err)
-		// For now, don't bother logging a failure here.  This *might* need changing later on
+		log.Printf("%v: error when adding the default user to the database: %v", config.Conf.Live.Nodename, err)
 		return err
 	}
-
-	// Log addition of the default user
 	log.Printf("%v: default user added", config.Conf.Live.Nodename)
 	return nil
 }
