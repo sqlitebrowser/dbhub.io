@@ -248,16 +248,34 @@ func CreateTag(dbOwner, dbName, tagName, tagDescription, taggerName, taggerEmail
 }
 
 // EnvProd changes the running environment to be "production"
-// NOTE - This route to call this is only available when the server is _started_ in the "test" environment
+// NOTE - The route to call this is only available when the server is started in the "test" environment
 func EnvProd(w http.ResponseWriter, r *http.Request) {
 	config.Conf.Environment.Environment = "production"
 	return
 }
 
 // EnvTest changes the running environment to be "test"
-// NOTE - This route to call this is only available when the server is _started_ in the "test" environment
+// NOTE - The route to call this is only available when the server is started in the "test" environment
 func EnvTest(w http.ResponseWriter, r *http.Request) {
 	config.Conf.Environment.Environment = "test"
+	return
+}
+
+// GenCert generates a client certificate for the current user
+func GenCert(w http.ResponseWriter, r *http.Request) {
+	loggedInUser := config.Conf.Environment.UserOverride
+	newCert, err := GenerateClientCert(loggedInUser)
+	if err != nil {
+		log.Printf("Error generating client certificate for user '%s': %s!", loggedInUser, err)
+		return
+	}
+
+	// Send the client certificate to the user
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.cert.pem"`, loggedInUser))
+	// Note, don't use "application/x-x509-user-cert", otherwise the browser may try to install it!
+	// Useful reference info: https://pki-tutorial.readthedocs.io/en/latest/mime.html
+	w.Header().Set("Content-Type", "application/x-pem-file")
+	w.Write(newCert)
 	return
 }
 
