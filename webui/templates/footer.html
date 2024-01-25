@@ -52,11 +52,6 @@
 
 <script type="application/javascript">
     const authInfo = {
-        [[ if .PageMeta.LoggedInUser ]]
-            loggedIn: true,
-        [[ else ]]
-            loggedIn: false,
-        [[ end ]]
         loggedInUser: "[[ .PageMeta.LoggedInUser ]]",
         avatarUrl: "[[ .PageMeta.AvatarURL ]]",
         numStatusUpdates: [[ .PageMeta.NumStatusUpdates ]]

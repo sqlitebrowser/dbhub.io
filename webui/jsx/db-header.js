@@ -12,7 +12,7 @@ function ToggleButton({icon, textSet, textUnset, redirectUrl, updateUrl, pageUrl
 	}
 
 	function toggleState() {
-		if (authInfo.loggedIn !== true) {
+		if (!authInfo.loggedInUser) {
 			// User needs to be logged in
 			lock.show();
 			return;
@@ -77,7 +77,7 @@ export default function DbHeader() {
 	}
 
 	let settings = null;
-	if (authInfo.loggedIn && (meta.owner === authInfo.loggedInUser)) {
+	if (authInfo.loggedInUser && (meta.owner === authInfo.loggedInUser)) {
 		settings = <a id="settings" className={meta.pageSection === "db_settings" ? "nav-link active" : "nav-link"} href={"/settings/" + meta.owner + "/" + meta.database} title="Settings" data-cy="settingslink"><i className="fa fa-cog"></i> Settings</a>;
 	}
 
