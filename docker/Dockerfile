@@ -71,9 +71,10 @@ RUN echo "echo 127.0.0.1 docker-dev.dbhub.io docker-dev >> /etc/hosts" >> /usr/l
     echo "su - postgres -c '/usr/libexec/postgresql/pg_ctl start'" >> /usr/local/bin/start.sh && \
     echo "" >> /usr/local/bin/start.sh && \
     echo "# Delay long enough for the DBHub.io daemons to start" >> /usr/local/bin/start.sh && \
-    echo "sleep 1" >> /usr/local/bin/start.sh && \
+    echo "sleep 15" >> /usr/local/bin/start.sh && \
     echo "" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-webui >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
+    echo "sleep 5" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-api >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-db4s >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
     echo "su - dbhub -c 'if [ -f "${DBHUB_SOURCE}/.env" ]; then source ${DBHUB_SOURCE}/.env; fi; CONFIG_FILE=${CONFIG_FILE} /usr/local/bin/dbhub-live node1 /tmp/node1 >>/home/dbhub/output.log 2>&1 &'" >> /usr/local/bin/start.sh && \
@@ -119,7 +120,7 @@ RUN echo "cd ${DBHUB_SOURCE}" >> /usr/local/bin/compile.sh && \
     echo "ln -f -s /usr/local/bin/dbhub-analysis  /etc/periodic/15min/" >> /usr/local/bin/compile.sh && \
     echo "cd ${DBHUB_SOURCE}/webui" >> /usr/local/bin/compile.sh && \
     echo "PKG_CONFIG_PATH=/sqlite/lib/pkgconfig go build -gcflags \"all=-N -l\" -buildvcs=false -o /usr/local/bin/dbhub-webui ." >> /usr/local/bin/compile.sh && \
-    echo "/usr/local/bin/restart.sh" >> /usr/local/bin/compile.sh && \
+    echo 'if [ "$1" != "no" ]; then /usr/local/bin/restart.sh; fi' >> /usr/local/bin/compile.sh && \
     chmod +x /usr/local/bin/compile.sh
 
 # Create script to restart the DBHub.io webui and api daemons
@@ -170,7 +171,7 @@ RUN echo "# Kill the existing running daemons" >> /usr/local/bin/debug.sh && \
 
 # Build the DBHub.io daemons
 RUN cd / && git clone --branch master --depth 5 https://github.com/sqlitebrowser/dbhub.io
-RUN /usr/local/bin/compile.sh
+RUN /usr/local/bin/compile.sh no
 
 # Populate the DBHub.io database
 WORKDIR /usr/local/bin
