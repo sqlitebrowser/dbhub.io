@@ -17,6 +17,7 @@ export default function PreferencesPage() {
 	const [showNewApiKeyDialog, setShowNewApiKeyDialog] = React.useState(false);
 	const [lastNewApiKey, setLastNewApiKey] = React.useState("");
 	const [lastNewApiKeyId, setLastNewApiKeyId] = React.useState("");
+	const [createApiKeyDialogPermissions, setCreateApiKeyDialogPermissions] = React.useState("r");
 	const [createApiKeyDialogExpiryEnabled, setCreateApiKeyDialogExpiryEnabled] = React.useState(true);
 	const [createApiKeyDialogExpiryDate, setCreateApiKeyDialogExpiryDate] = React.useState((new Date((new Date()).valueOf() + 1000*3600*24*365)).toISOString().split("T")[0]); // 365 days
 	const [createApiKeyDialogComment, setCreateApiKeyDialogComment] = React.useState("");
@@ -79,6 +80,7 @@ export default function PreferencesPage() {
 				"Content-Type": "application/x-www-form-urlencoded"
 			},
 			body: new URLSearchParams({
+				"permissions": createApiKeyDialogPermissions,
 				"expiry": createApiKeyDialogExpiryEnabled ? encodeURIComponent(createApiKeyDialogExpiryDate) : "",
 				"comment": createApiKeyDialogComment,
 			}),
@@ -170,12 +172,13 @@ export default function PreferencesPage() {
 		apiKeysTable = (
 			<table className="table table-sm table-hover table-responsive" data-cy="apikeystbl">
 				<thead>
-					<tr><th>ID</th><th>Generation date</th><th>Expiry date</th><th>Description</th><th></th></tr>
+					<tr><th>ID</th><th>Permissions</th><th>Generation date</th><th>Expiry date</th><th>Description</th><th></th></tr>
 				</thead>
 				<tbody>
 					{apiKeys.map(row => (
 						<tr>
 							<td>{row.uuid}</td>
+							<td>{row.permissions === "rw" ? "Read and write" : row.permissions === "r" ? "Read only" : row.permissions}</td>
 							<td>{new Date(row.date_created).toLocaleString()}</td>
 							<td className={row.expiry_date && (new Date() >= new Date(row.expiry_date)) ? "table-warning" : ""}>{row.expiry_date ? Intl.DateTimeFormat().format(new Date(row.expiry_date)) : <i>never</i>}</td>
 							<td>{row.comment}</td>
@@ -246,6 +249,13 @@ export default function PreferencesPage() {
 					This will create a new API key for your user account. Clicking OK will show the API key. Make sure nobody else sees it. Please save it in a safe and secure location. You won't be able to see or retrieve it at a later time here. You can identify your keys using the value in the ID column.
 				</p>
 				<form>
+					<div className="mb-3">
+						<label htmlFor="createapikeypermissions" className="form-label">Permissions</label>
+						<select className="form-select" id="createapikeypermissions" value={createApiKeyDialogPermissions} onChange={e => setCreateApiKeyDialogPermissions(e.target.value)}>
+							<option value="r">Read only</option>
+							<option value="rw">Read and write</option>
+						</select>
+					</div>
 					<div className="mb-3">
 						<label htmlFor="createapikeyexpiry" className="form-label">Expiry date</label>
 						<div className="input-group">

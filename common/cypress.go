@@ -186,11 +186,16 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		"NvPG_Vh8uxK4BqkN7yJiRA4HP2HxCC0XXw0TBQGXbsaSlVhXZDrb1g": "third",
 	}
 	for key, user := range keys {
-		_, err = database.APIKeySave(key, user, time.Now(), nil, "Cypress tests")
+		_, err = database.APIKeySave(key, user, time.Now(), nil, database.MayReadAndWrite, "Cypress tests")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+	_, err = database.APIKeySave("ReuYtI49nGGA6rEYaBPxS6qdK4mlYRvToucoxjw4ZDiOT9tJ6NxRXw", "default", time.Now(), nil, database.MayRead, "Cypress tests (ro)")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	log.Println("API keys added to database")
 

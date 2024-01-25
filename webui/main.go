@@ -98,6 +98,19 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get description
+	permissionsRaw := r.PostFormValue("permissions")
+	var permissions database.ShareDatabasePermissions
+	if permissionsRaw == "r" {
+		permissions = database.MayRead
+	} else if permissionsRaw == "rw" {
+		permissions = database.MayReadAndWrite
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid permissions")
+		return
+	}
+
 	// Get the expiry date
 	var expiryDate time.Time
 	expiry := r.PostFormValue("expiry")
@@ -135,7 +148,7 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	if expiryDate.IsZero() == false {
 		expiryDateOpt = &expiryDate
 	}
-	key, err := database.APIKeyGenerate(loggedInUser, expiryDateOpt, comment)
+	key, err := database.APIKeyGenerate(loggedInUser, expiryDateOpt, permissions, comment)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -130,17 +130,17 @@ func main() {
 		v1.POST("/columns", columnsHandler)
 		v1.POST("/commits", commitsHandler)
 		v1.POST("/databases", databasesHandler)
-		v1.POST("/delete", deleteHandler)
+		v1.POST("/delete", authRequireWritePermission, deleteHandler)
 		v1.POST("/diff", diffHandler)
 		v1.POST("/download", downloadHandler)
-		v1.POST("/execute", executeHandler)
+		v1.POST("/execute", authRequireWritePermission, executeHandler)
 		v1.POST("/indexes", indexesHandler)
 		v1.POST("/metadata", metadataHandler)
 		v1.POST("/query", queryHandler)
 		v1.POST("/releases", releasesHandler)
 		v1.POST("/tables", tablesHandler)
 		v1.POST("/tags", tagsHandler)
-		v1.POST("/upload", uploadHandler)
+		v1.POST("/upload", authRequireWritePermission, uploadHandler)
 		v1.POST("/views", viewsHandler)
 		v1.POST("/webpage", webpageHandler)
 	}
@@ -167,8 +167,8 @@ func authenticateV1(c *gin.Context) {
 	// Extract the API key from the request
 	apiKey := c.PostForm("apikey")
 
-	// Look up the owner of the API key
-	user, err := database.GetAPIKeyUser(apiKey)
+	// Look up the details of the API key
+	user, key, err := database.GetAPIKeyBySecret(apiKey)
 
 	// Check for any errors
 	if err != nil || user == "" {
@@ -177,7 +177,18 @@ func authenticateV1(c *gin.Context) {
 	}
 
 	// Save username
+	c.Set("key_uuid", key.Uuid)
+	c.Set("key_permissions", key.Permissions)
 	c.Set("user", user)
+}
+
+// authRequireWritePermission is a middleware which denies requests when the API key used does not provide write permissions
+func authRequireWritePermission(c *gin.Context) {
+	permissions := c.MustGet("key_permissions").(database.ShareDatabasePermissions)
+	if permissions != database.MayReadAndWrite {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 }
 
 // changeLogHandler handles requests for the Changelog (a html page)
