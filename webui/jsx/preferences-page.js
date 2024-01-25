@@ -236,7 +236,7 @@ export default function PreferencesPage() {
 
 		<hr />
 
-		<h5><a href="https://api.dbhub.io" target="_blank">API</a> keys</h5>
+		<h5><a href={dbhubApi.url} target="_blank">API</a> keys</h5>
 		<button type="button" className="btn btn-primary mb-2" data-cy="genapibtn" onClick={() => setShowCreateApiKeyDialog(true)}>Generate new API key</button>
 		{apiKeysTable}
 

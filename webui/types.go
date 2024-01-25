@@ -34,6 +34,7 @@ type CommitData struct {
 }
 
 type PageMetaInfo struct {
+	ApiUrl           string
 	Auth0            Auth0Set
 	AvatarURL        string
 	Environment      string

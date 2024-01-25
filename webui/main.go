@@ -475,6 +475,9 @@ func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo) (errCode int, 
 	// Pass along the environment setting
 	pageMeta.Environment = config.Conf.Environment.Environment
 
+	// API info
+	pageMeta.ApiUrl = "https://" + config.Conf.Api.ServerName
+
 	// Retrieve session data (if any)
 	loggedInUser, validSession, err := checkLogin(r)
 	if err != nil {
