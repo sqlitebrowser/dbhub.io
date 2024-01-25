@@ -1,0 +1,50 @@
+name: dio CLI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install NodeJS 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    # Build and start the DBHub.io server daemons
+    - name: Checkout the DBHub.io source code
+      uses: actions/checkout@v4
+      with:
+        path: daemons
+
+    - name: Build the DBHub.io daemons
+      run: cd daemons; yarn docker:build
+
+    - name: Update the daemon config file
+      run: cd daemons; sed -i 's/bind_address = ":9443"/bind_address = "0.0.0.0:9443"/' docker/config.toml
+
+    - name: Start the DBHub.io daemons
+      run: cd daemons; docker run -itd --rm --name dbhub-build --net host dbhub-build:latest && sleep 5
+
+    # Build and test dio
+    - name: Checkout dio source code
+      uses: actions/checkout@v4
+      with:
+        repository: 'sqlitebrowser/dio'
+        path: cli
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Build dio
+      run: cd cli; go build -v
+
+    - name: Test dio
+      run: cd cli; IS_TESTING=yes go test ./cmd -v -check.v
