@@ -15,6 +15,15 @@ const (
 	ALL_TIME                 = "all"
 )
 
+type APIKey struct {
+	Uuid        string                            `json:"uuid"`
+	Key         string                            `json:"key"`
+	DateCreated time.Time                         `json:"date_created"`
+	ExpiryDate  *time.Time                        `json:"expiry_date"`
+	Comment     string                            `json:"comment"`
+	Permissions database.ShareDatabasePermissions `json:"permissions"`
+}
+
 type Auth0Set struct {
 	CallbackURL string
 	ClientID    string

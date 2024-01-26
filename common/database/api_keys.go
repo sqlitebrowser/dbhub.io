@@ -14,14 +14,15 @@ import (
 	pgx "github.com/jackc/pgx/v5"
 )
 
-// APIKey is an internal structure used for passing around user API keys
+// APIKey is the model type for the api_keys table
 type APIKey struct {
-	Uuid        string                   `json:"uuid"`
-	Key         string                   `json:"key"`
-	DateCreated time.Time                `json:"date_created"`
-	ExpiryDate  *time.Time               `json:"expiry_date"`
-	Comment     string                   `json:"comment"`
-	Permissions ShareDatabasePermissions `json:"permissions"`
+	ID          int64
+	Uuid        string
+	Key         string
+	DateCreated time.Time
+	ExpiryDate  *time.Time
+	Comment     string
+	Permissions ShareDatabasePermissions
 }
 
 // APIKeyDelete deletes an existing API key from the PostgreSQL database
@@ -105,7 +106,7 @@ func APIKeySave(key, loggedInUser string, dateCreated time.Time, expiryDate *tim
 // GetAPIKeys returns the list of API keys for a user
 func GetAPIKeys(user string) ([]APIKey, error) {
 	dbQuery := `
-		SELECT uuid, date_created, expiry_date, permissions, coalesce(comment, '')
+		SELECT key_id, uuid, date_created, expiry_date, permissions, coalesce(comment, '')
 		FROM api_keys
 		WHERE user_id = (
 				SELECT user_id
@@ -121,7 +122,7 @@ func GetAPIKeys(user string) ([]APIKey, error) {
 	var keys []APIKey
 	for rows.Next() {
 		var key APIKey
-		err = rows.Scan(&key.Uuid, &key.DateCreated, &key.ExpiryDate, &key.Permissions, &key.Comment)
+		err = rows.Scan(&key.ID, &key.Uuid, &key.DateCreated, &key.ExpiryDate, &key.Permissions, &key.Comment)
 		if err != nil {
 			log.Printf("Error retrieving API key list: %v", err)
 			return nil, err
@@ -137,12 +138,12 @@ func GetAPIKeyBySecret(secret string) (user string, key APIKey, err error) {
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(secret)))
 
 	dbQuery := `
-		SELECT user_name, uuid, date_created, expiry_date, permissions, coalesce(comment, '')
+		SELECT user_name, key_id, uuid, date_created, expiry_date, permissions, coalesce(comment, '')
 		FROM api_keys AS api, users
 		WHERE api.key = $1
 			AND api.user_id = users.user_id
 			AND (api.expiry_date is null OR api.expiry_date > now())`
-	err = DB.QueryRow(context.Background(), dbQuery, hash).Scan(&user, &key.Uuid, &key.DateCreated, &key.ExpiryDate, &key.Permissions, &key.Comment)
+	err = DB.QueryRow(context.Background(), dbQuery, hash).Scan(&user, &key.ID, &key.Uuid, &key.DateCreated, &key.ExpiryDate, &key.Permissions, &key.Comment)
 	if err != nil {
 		return
 	}

@@ -1474,7 +1474,7 @@ func mergePage(w http.ResponseWriter, r *http.Request) {
 // Renders the user Settings page.
 func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	var pageData struct {
-		APIKeys     []database.APIKey
+		APIKeys     []APIKey
 		DisplayName string
 		Email       string
 		MaxRows     int
@@ -1510,10 +1510,19 @@ func prefPage(w http.ResponseWriter, r *http.Request, loggedInUser string) {
 	pageData.MaxRows = database.PrefUserMaxRows(loggedInUser)
 
 	// Retrieve the list of API keys for the user
-	pageData.APIKeys, err = database.GetAPIKeys(loggedInUser)
+	apiKeys, err := database.GetAPIKeys(loggedInUser)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
+	}
+	for _, k := range apiKeys {
+		pageData.APIKeys = append(pageData.APIKeys, APIKey{
+			Uuid:        k.Uuid,
+			DateCreated: k.DateCreated,
+			ExpiryDate:  k.ExpiryDate,
+			Comment:     k.Comment,
+			Permissions: k.Permissions,
+		})
 	}
 
 	// Render the page

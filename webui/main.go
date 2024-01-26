@@ -158,7 +158,14 @@ func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("New API key created for user '%s', uuid: '%s'", loggedInUser, key.Uuid)
 
 	// Return the API key to the caller
-	data, err := json.Marshal(key)
+	data, err := json.Marshal(APIKey{
+		Uuid:        key.Uuid,
+		Key:         key.Key,
+		DateCreated: key.DateCreated,
+		ExpiryDate:  key.ExpiryDate,
+		Comment:     key.Comment,
+		Permissions: key.Permissions,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
