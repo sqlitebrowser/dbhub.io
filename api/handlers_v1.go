@@ -66,16 +66,13 @@ func collectInfo(c *gin.Context) (loggedInUser, dbOwner, dbName, commitID string
 //	* "dbname" is the name of the database
 func branchesHandler(c *gin.Context) {
 	// Do auth check, grab request info
-	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
 	if err != nil {
 		c.JSON(httpStatus, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "branches", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
@@ -125,9 +122,6 @@ func columnsHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "columns", c.Request.UserAgent())
 
 	// Extract the table name
 	table, err := com.GetFormTable(c.Request, false)
@@ -263,16 +257,13 @@ func columnsHandler(c *gin.Context) {
 //	* "dbname" is the name of the database
 func commitsHandler(c *gin.Context) {
 	// Do auth check, grab request info
-	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
 	if err != nil {
 		c.JSON(httpStatus, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "commits", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
@@ -321,13 +312,6 @@ func databasesHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	operation := "databases"
-	if live {
-		operation = "LIVE databases"
-	}
-	database.ApiCallLog(loggedInUser, "", "", operation, c.Request.UserAgent())
 
 	// Retrieve the list of databases in the user account
 	var databases []database.DBInfo
@@ -379,9 +363,6 @@ func deleteHandler(c *gin.Context) {
 		return
 	}
 	dbOwner := loggedInUser
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "delete", c.Request.UserAgent())
 
 	// Check if the database exists
 	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
@@ -593,10 +574,6 @@ func diffHandler(c *gin.Context) {
 		return
 	}
 
-	// Record the api call in our backend database
-	// Note - Lets not bother adding additional api logging fields just for the diff function at this stage
-	database.ApiCallLog(loggedInUser, dbOwnerA, dbNameA, "diff", c.Request.UserAgent())
-
 	// Check permissions of the first database
 	allowed, err := database.CheckDBPermissions(loggedInUser, dbOwnerA, dbNameA, false)
 	if err != nil {
@@ -685,9 +662,6 @@ func downloadHandler(c *gin.Context) {
 		return
 	}
 
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "download", c.Request.UserAgent())
-
 	// Return the requested database to the user
 	_, err = com.DownloadDatabase(c.Writer, c.Request, dbOwner, dbName, commitID, loggedInUser, "api")
 	if err != nil {
@@ -739,9 +713,6 @@ func executeHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "execute", c.Request.UserAgent())
 
 	// Grab the incoming SQLite query
 	rawInput := c.PostForm("sql")
@@ -825,9 +796,6 @@ func indexesHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "indexes", c.Request.UserAgent())
 
 	// Check if the database is a live database, and get the node/queue to send the request to
 	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
@@ -935,16 +903,13 @@ func indexesHandler(c *gin.Context) {
 //	* "dbname" is the name of the database
 func metadataHandler(c *gin.Context) {
 	// Do auth check, grab request info
-	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
 	if err != nil {
 		c.JSON(httpStatus, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "metadata", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
@@ -995,9 +960,6 @@ func queryHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "query", c.Request.UserAgent())
 
 	// Grab the incoming SQLite query
 	rawInput := c.PostForm("sql")
@@ -1078,16 +1040,13 @@ func queryHandler(c *gin.Context) {
 //	* "dbname" is the name of the database
 func releasesHandler(c *gin.Context) {
 	// Do auth check, grab request info
-	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
 	if err != nil {
 		c.JSON(httpStatus, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "releases", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
@@ -1133,9 +1092,6 @@ func tablesHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "tables", c.Request.UserAgent())
 
 	// Check if the database is a live database, and get the node/queue to send the request to
 	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
@@ -1220,16 +1176,13 @@ func tablesHandler(c *gin.Context) {
 //	* "dbname" is the name of the database
 func tagsHandler(c *gin.Context) {
 	// Do auth check, grab request info
-	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
 	if err != nil {
 		c.JSON(httpStatus, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "tags", c.Request.UserAgent())
 
 	// If the database is a live database, we return an error message
 	isLive, _, err := database.CheckDBLive(dbOwner, dbName)
@@ -1488,13 +1441,6 @@ func uploadHandler(c *gin.Context) {
 		x["url"] = server + filepath.Join("/", dbOwner, dbName)
 	}
 
-	// Record the api call in our backend database
-	operation := "upload"
-	if live {
-		operation = "LIVE upload"
-	}
-	database.ApiCallLog(loggedInUser, loggedInUser, dbName, operation, c.Request.UserAgent())
-
 	// Construct the response message
 	var ok bool
 	var newCommit, newURL string
@@ -1534,9 +1480,6 @@ func viewsHandler(c *gin.Context) {
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, loggedInUser, dbName, "views", c.Request.UserAgent())
 
 	// Check if the database is a live database, and get the node/queue to send the request to
 	isLive, liveNode, err := database.CheckDBLive(dbOwner, dbName)
@@ -1621,16 +1564,13 @@ func viewsHandler(c *gin.Context) {
 //	* "dbname" is the name of the database being queried
 func webpageHandler(c *gin.Context) {
 	// Authenticate user and collect requested database details
-	loggedInUser, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
+	_, dbOwner, dbName, _, httpStatus, err := collectInfo(c)
 	if err != nil {
 		c.JSON(httpStatus, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-
-	// Record the api call in our backend database
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, "webpage", c.Request.UserAgent())
 
 	// Return the database webUI URL to the user
 	c.JSON(200, gin.H{

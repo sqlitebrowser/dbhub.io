@@ -124,7 +124,7 @@ func main() {
 	router.LoadHTMLGlob(filepath.Join(config.Conf.Web.BaseDir, "api", "templates", "*.html"))
 
 	// Register API v1 handlers. All of them require authentication which is done by the authenticateV1 middleware
-	v1 := router.Group("/v1", authenticateV1)
+	v1 := router.Group("/v1", authenticateV1, callLogV1)
 	{
 		v1.POST("/branches", branchesHandler)
 		v1.POST("/columns", columnsHandler)
@@ -189,6 +189,21 @@ func authRequireWritePermission(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
+}
+
+// callLogV1 is a middleware to log authenticated calls to API v1 endpoints to the database
+func callLogV1(c *gin.Context) {
+	loggedInUser := c.MustGet("user").(string)
+	endpoint := c.Request.URL.Path
+	userAgent := c.Request.UserAgent()
+
+	dbOwner, dbName, _, err := com.GetFormODC(c.Request)
+	if err != nil {
+		dbOwner = ""
+		dbName = ""
+	}
+
+	database.ApiCallLog(loggedInUser, dbOwner, dbName, endpoint, userAgent)
 }
 
 // changeLogHandler handles requests for the Changelog (a html page)
