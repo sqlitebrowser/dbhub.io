@@ -176,16 +176,15 @@ func authenticateV1(c *gin.Context) {
 		return
 	}
 
-	// Save username
-	c.Set("key_uuid", key.Uuid)
-	c.Set("key_permissions", key.Permissions)
+	// Save username and key
 	c.Set("user", user)
+	c.Set("key", key)
 }
 
 // authRequireWritePermission is a middleware which denies requests when the API key used does not provide write permissions
 func authRequireWritePermission(c *gin.Context) {
-	permissions := c.MustGet("key_permissions").(database.ShareDatabasePermissions)
-	if permissions != database.MayReadAndWrite {
+	key := c.MustGet("key").(database.APIKey)
+	if key.Permissions != database.MayReadAndWrite {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
@@ -194,6 +193,7 @@ func authRequireWritePermission(c *gin.Context) {
 // callLogV1 is a middleware to log authenticated calls to API v1 endpoints to the database
 func callLogV1(c *gin.Context) {
 	loggedInUser := c.MustGet("user").(string)
+	key := c.MustGet("key").(database.APIKey)
 	endpoint := c.Request.URL.Path
 	userAgent := c.Request.UserAgent()
 
@@ -203,7 +203,7 @@ func callLogV1(c *gin.Context) {
 		dbName = ""
 	}
 
-	database.ApiCallLog(loggedInUser, dbOwner, dbName, endpoint, userAgent)
+	database.ApiCallLog(key, loggedInUser, dbOwner, dbName, endpoint, userAgent)
 }
 
 // changeLogHandler handles requests for the Changelog (a html page)
