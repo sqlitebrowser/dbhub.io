@@ -192,10 +192,22 @@ func authRequireWritePermission(c *gin.Context) {
 
 // callLogV1 is a middleware to log authenticated calls to API v1 endpoints to the database
 func callLogV1(c *gin.Context) {
+	// Time at the start of the request
+	t := time.Now()
+
+	// Process request
+	c.Next()
+
+	// Calculate runtime of the request and retrieve other information
+	runtime := time.Since(t)
 	loggedInUser := c.MustGet("user").(string)
 	key := c.MustGet("key").(database.APIKey)
 	endpoint := c.Request.URL.Path
 	userAgent := c.Request.UserAgent()
+	method := c.Request.Method
+	statusCode := c.Writer.Status()
+	requestSize := c.Request.ContentLength
+	responseSize := c.Writer.Size()
 
 	dbOwner, dbName, _, err := com.GetFormODC(c.Request)
 	if err != nil {
@@ -203,7 +215,7 @@ func callLogV1(c *gin.Context) {
 		dbName = ""
 	}
 
-	database.ApiCallLog(key, loggedInUser, dbOwner, dbName, endpoint, userAgent)
+	database.ApiCallLog(key, loggedInUser, dbOwner, dbName, endpoint, userAgent, method, statusCode, runtime, requestSize, responseSize)
 }
 
 // changeLogHandler handles requests for the Changelog (a html page)
