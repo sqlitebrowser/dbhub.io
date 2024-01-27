@@ -27,6 +27,7 @@ import SqlTerminal from "./sql-terminal";
 import TagCreate from "./tag-create";
 import UpdatesPage from "./updates-page";
 import UploadForm from "./upload-form";
+import UsagePage from "./usage-page";
 import UserPage from "./user-page";
 import { Visualisation, VisualisationEditor } from "./visualisation-editor";
 import { applyUserPrefTheme } from "./theme";
@@ -266,6 +267,14 @@ applyUserPrefTheme();
 	if (rootNode) {
 		const root = ReactDOM.createRoot(rootNode);
 		root.render(<ProfilePage />);
+	}
+}
+
+{
+	const rootNode = document.getElementById("usage-page");
+	if (rootNode) {
+		const root = ReactDOM.createRoot(rootNode);
+		root.render(<UsagePage />);
 	}
 }
 

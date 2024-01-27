@@ -190,8 +190,8 @@ func checkVisName(fl valid.FieldLevel) bool {
 func ReservedUsernamesCheck(userName string) error {
 	reserved := []string{"about", "account", "accounts", "admin", "administrator", "blog", "ceo", "compare", "dbhub",
 		"default", "demo", "download", "forks", "legal", "login", "logout", "mail", "news", "pref", "printer", "public",
-		"reference", "register", "root", "sales", "star", "stars", "system", "table", "upload", "uploaddata", "vis",
-		"watchers"}
+		"reference", "register", "root", "sales", "star", "stars", "system", "table", "upload", "uploaddata", "usage",
+		"vis", "watchers"}
 	for _, word := range reserved {
 		if strings.ToLower(userName) == strings.ToLower(word) {
 			return fmt.Errorf("That username is not available: %s\n", userName)

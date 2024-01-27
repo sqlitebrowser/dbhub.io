@@ -3390,6 +3390,7 @@ func main() {
 	http.Handle("/tags/", gz.GzipHandler(logReq(tagsPage)))
 	http.Handle("/updates/", gz.GzipHandler(logReq(updatesPage)))
 	http.Handle("/upload/", gz.GzipHandler(logReq(uploadPage)))
+	http.Handle("/usage", gz.GzipHandler(logReq(usagePage)))
 	http.Handle("/vis/", gz.GzipHandler(logReq(visualisePage)))
 	http.Handle("/visembed/", gz.GzipHandler(logReq(visEmbedPage)))
 	http.Handle("/watchers/", gz.GzipHandler(logReq(watchersPage)))

@@ -26,7 +26,7 @@ export default function Auth() {
 				&nbsp;
 				{updates}
 				&nbsp;
-				<a href={"/" + authInfo.loggedInUser} className="align-middle">Home</a> | <a href="/pref" className="align-middle">Preferences</a> | <a href="/logout" className="align-middle">Log out</a>
+				<a href={"/" + authInfo.loggedInUser} className="align-middle">Home</a> | <a href="/usage" className="align-middle">Usage</a> | <a href="/pref" className="align-middle">Preferences</a> | <a href="/logout" className="align-middle">Log out</a>
 			</>
 		);
 	} else {

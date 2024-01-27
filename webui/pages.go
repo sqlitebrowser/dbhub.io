@@ -2268,6 +2268,47 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func usagePage(w http.ResponseWriter, r *http.Request) {
+	var pageData struct {
+		PageMeta PageMetaInfo
+		ApiUsage []database.ApiUsage
+	}
+
+	// Get all meta information
+	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+
+	// Require login
+	errCode, err = requireLogin(pageData.PageMeta)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+
+	// Retrieve API usage data for the current user
+	now := time.Now()
+	oneYearAgo := now.AddDate(-1, 0, 0)
+	oneYearAgo = oneYearAgo.AddDate(0, 0, -oneYearAgo.Day()+1) // Adjust to first of month
+	pageData.ApiUsage, err = database.ApiUsageData(pageData.PageMeta.LoggedInUser, oneYearAgo, now)
+	if err != nil {
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Fill out page metadata
+	pageData.PageMeta.Title = "Usage information"
+
+	// Render the page
+	t := tmpl.Lookup("usagePage")
+	err = t.Execute(w, pageData)
+	if err != nil {
+		log.Printf("Error: %s", err)
+	}
+}
+
 func userPage(w http.ResponseWriter, r *http.Request, userName string) {
 	// Structure to hold page data
 	var pageData struct {

@@ -3,8 +3,10 @@ package common
 /* Shared backend code we need that is specific to testing with Cypress */
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"path"
@@ -199,6 +201,23 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("API keys added to database")
 
+	// Initialise random number generator with a static seed. This makes sure we get
+	// reproducible numbers in each run.
+	rand.Seed(0)
+
+	// Simulate random API calls to fill usage table. This produces a relative uninteresting call log where
+	// the simulated values are fairly evenly distributed.
+	for i := 0; i < 500; i++ {
+		sql := `INSERT INTO api_call_log (api_call_date, caller_id, db_owner_id, db_id, api_operation, api_caller_sw, key_id, method, status_code, runtime, request_size, response_size) VALUES
+			($1, 1, 1, 1, '/v1/query', 'Cypress test', (SELECT key_id FROM api_keys WHERE user_id = 1 LIMIT 1), 'POST', 200, $2, $3, $4)`
+		_, err := database.DB.Exec(context.Background(), sql, getRandomDate(), getRandomInt(500000, 7000000), getRandomInt(50, 300), getRandomInt(200, 5000))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	log.Println("API usage data added to database")
+
 	// Log the database reset
 	log.Println("Test data added to database")
 	return
@@ -312,4 +331,17 @@ func SwitchThird(w http.ResponseWriter, r *http.Request) {
 func TestLogout(w http.ResponseWriter, r *http.Request) {
 	config.Conf.Environment.UserOverride = ""
 	return
+}
+
+func getRandomDate() time.Time {
+	min := time.Now().AddDate(0, -3, 0).Unix() // Three months ago
+	max := time.Now().Unix()
+	diff := max - min
+
+	random := rand.Int63n(diff) + min
+	return time.Unix(random, 0)
+}
+
+func getRandomInt(min, max int) int {
+	return rand.Intn(max-min) + min
 }

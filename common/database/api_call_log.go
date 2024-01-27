@@ -8,6 +8,14 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+type ApiUsage struct {
+	Date         string `json:"date"`
+	NumCalls     int64  `json:"num_calls"`
+	Runtime      int64  `json:"runtime"`
+	RequestSize  int64  `json:"request_size"`
+	ResponseSize int64  `json:"response_size"`
+}
+
 // ApiCallLog records an API call operation.  Database name is optional, as not all API calls operate on a
 // database.  If a database name is provided however, then the database owner name *must* also be provided
 func ApiCallLog(key APIKey, loggedInUser, dbOwner, dbName, operation, callerSw, method string, statusCode int, runtime time.Duration, requestSize int64, responseSize int) {
@@ -50,4 +58,35 @@ func ApiCallLog(key APIKey, loggedInUser, dbOwner, dbName, operation, callerSw, 
 	if numRows := commandTag.RowsAffected(); numRows != 1 {
 		log.Printf("Wrong number of rows (%d) affected when adding api call entry for user '%s'", numRows, loggedInUser)
 	}
+}
+
+func ApiUsageData(user string, from, to time.Time) (usage []ApiUsage, err error) {
+	query := `
+		WITH userData AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		SELECT to_char(api_call_date, 'YYYY-MM-DD') AS dt, count(*) AS num_calls, (sum(runtime) / 1000)::bigint AS runtime, sum(request_size) AS request_size, sum(response_size) AS response_size
+		FROM api_call_log
+		WHERE caller_id=(SELECT user_id FROM userData) AND api_call_date>=$2 AND api_call_date<=$3
+		GROUP BY dt ORDER BY dt`
+	rows, err := DB.Query(context.Background(), query, user, from, to)
+	if err != nil {
+		log.Printf("Querying API usage data failed: %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var day ApiUsage
+		err = rows.Scan(&day.Date, &day.NumCalls, &day.Runtime, &day.RequestSize, &day.ResponseSize)
+		if err != nil {
+			log.Printf("Error retrieving API usage data: %v", err)
+			return nil, err
+		}
+		usage = append(usage, day)
+	}
+
+	return
 }
