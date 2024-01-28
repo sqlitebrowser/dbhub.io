@@ -51,6 +51,7 @@ type UserDetails struct {
 	Password    string
 	PVerify     string
 	Username    string
+	IsAdmin     bool
 }
 
 // DefaultNumDisplayRows is the number of rows to display by default on the database page
@@ -68,8 +69,8 @@ func AddDefaultUser() error {
 
 	// Add the default user to the database
 	dbQuery := `
-		INSERT INTO users (auth0_id, user_name, email, display_name)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO users (auth0_id, user_name, email, display_name, is_admin)
+		VALUES ($1, $2, $3, $4, true)
 		ON CONFLICT (user_name)
 			DO NOTHING`
 	_, err = DB.Exec(context.Background(), dbQuery, "", "default", "default@dbhub.io",
@@ -296,11 +297,11 @@ func UpdateAvatarURL(userName, avatarURL string) error {
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
 		SELECT user_name, coalesce(display_name, ''), coalesce(email, ''), coalesce(avatar_url, ''),
-		       date_joined, coalesce(live_minio_bucket_name, '')
+		       date_joined, coalesce(live_minio_bucket_name, ''), is_admin
 		FROM users
 		WHERE lower(user_name) = lower($1)`
 	err = DB.QueryRow(context.Background(), dbQuery, userName).Scan(&user.Username, &user.DisplayName, &user.Email, &user.AvatarURL,
-		&user.DateJoined, &user.MinioBucket)
+		&user.DateJoined, &user.MinioBucket, &user.IsAdmin)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// The error was just "no such user found"

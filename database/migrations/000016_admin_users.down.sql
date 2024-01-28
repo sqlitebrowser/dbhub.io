@@ -1,0 +1,5 @@
+BEGIN;
+
+ALTER TABLE users DROP COLUMN is_admin;
+
+COMMIT;

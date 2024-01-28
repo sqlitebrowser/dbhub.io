@@ -14,7 +14,7 @@ function ApiUsage() {
 
 	// Exit early if there is no data yet
 	if (apiUsageData === null) {
-		return <div className="alert alert-info" role="alert">We did not get any API calls from you recently.</div>;
+		return <div className="alert alert-info" role="alert">{"We did not get any API calls from " + (authInfo.loggedInUser === usageUser ? "you" : "this user") + " recently."}</div>;
 	}
 
 	// Define available plots
@@ -201,7 +201,7 @@ function ApiUsage() {
 
 export default function UsagePage() {
 	return (<>
-		<h3 className="text-center">Usage information</h3>
+		<h3 className="text-center">{"Usage information" + (authInfo.loggedInUser === usageUser ? "" : (" for user '" + usageUser + "'"))}</h3>
 
 		<h4>API calls</h4>
 		<ApiUsage />

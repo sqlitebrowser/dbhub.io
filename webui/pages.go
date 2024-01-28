@@ -2271,6 +2271,7 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 func usagePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
 		PageMeta PageMetaInfo
+		User     string
 		ApiUsage []database.ApiUsage
 	}
 
@@ -2288,11 +2289,29 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// User for which to show usage information
+	pageData.User = pageData.PageMeta.LoggedInUser
+
+	// Check if current user is admin
+	user, err := database.User(pageData.PageMeta.LoggedInUser)
+	if err != nil {
+		errorPage(w, r, errCode, err.Error())
+		return
+	}
+
+	if user.IsAdmin {
+		// If the current user has admin right allow showing usage information for other users
+		userOverride, _ := com.GetUsername(r, true)
+		if userOverride != "" {
+			pageData.User = userOverride
+		}
+	}
+
 	// Retrieve API usage data for the current user
 	now := time.Now()
 	oneYearAgo := now.AddDate(-1, 0, 0)
 	oneYearAgo = oneYearAgo.AddDate(0, 0, -oneYearAgo.Day()+1) // Adjust to first of month
-	pageData.ApiUsage, err = database.ApiUsageData(pageData.PageMeta.LoggedInUser, oneYearAgo, now)
+	pageData.ApiUsage, err = database.ApiUsageData(pageData.User, oneYearAgo, now)
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
