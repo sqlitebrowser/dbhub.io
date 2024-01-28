@@ -18,7 +18,8 @@ func AddDefaultUsageLimits() (err error) {
 	// Insert default and unlimited usage limits
 	sql := `INSERT INTO usage_limits (id, name, description, rate_limits) VALUES
 		(1, 'default', 'Default limits for new users', '[{"limit": 10, "period": "s", "increase": 10}]'),
-		(2, 'unlimited', 'No usage limits (intended for testing and developers)', NULL)
+		(2, 'unlimited', 'No usage limits (intended for testing and developers)', NULL),
+		(3, 'banned', 'No access to the API at all', '[{"limit": 0, "period": "M", "increase": 0}]')
 		ON CONFLICT (id) DO NOTHING`
 	_, err = DB.Exec(context.Background(), sql)
 	if err != nil {

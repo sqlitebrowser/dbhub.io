@@ -173,6 +173,11 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	err = database.AddUser("auth0banned", "banned", fmt.Sprintf("banned@%s", serverName[0]), "Banned test user", "")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Add some API keys
 	keys := map[string]string{
@@ -192,6 +197,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		"EdmNqQcJZQzIoArVCAu6bByhmVUe_Oa780avsoluO-yFixGxrQQuGw": "second",
 		"NvPG_Vh8uxK4BqkN7yJiRA4HP2HxCC0XXw0TBQGXbsaSlVhXZDrb1g": "third",
 		"R4btZIUCGfLeIPJN1qDtBRuz7I6YWhiM2F0EOh3-neoLxqd9h7J8uw": "limited",
+		"bpS7m7zstkN-wxX0UMaUS11MfrSqlMsYkwmqZWbh1DThNgw5xhnnyA": "banned",
 	}
 	for key, user := range keys {
 		_, err = database.APIKeySave(key, user, time.Now(), nil, database.MayReadAndWrite, "Cypress tests")
@@ -238,7 +244,8 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 	database.SetUserLimits("first", 2)
 	database.SetUserLimits("second", 2)
 	database.SetUserLimits("third", 2)
-	database.SetUserLimits("limited", 3) // ID=3 should be the 'restrictive' limit that was just created
+	database.SetUserLimits("banned", 3)  // ID=3 is the 'banned' limit
+	database.SetUserLimits("limited", 4) // ID=4 should be the 'restrictive' limit that was just created
 	log.Println("Assigned usage limits to users")
 
 	// Log the database reset

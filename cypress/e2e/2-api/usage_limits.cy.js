@@ -1,5 +1,6 @@
 const unlimitedKey = "Rh3fPl6cl84XEw2FeWtj-FlUsn9OrxKz9oSJfe6kho7jT_1l5hizqw"; // Key of user 'default'
 const limitedKey = "R4btZIUCGfLeIPJN1qDtBRuz7I6YWhiM2F0EOh3-neoLxqd9h7J8uw"; // Key of user 'limited'
+const bannedKey = "bpS7m7zstkN-wxX0UMaUS11MfrSqlMsYkwmqZWbh1DThNgw5xhnnyA"; // Key of user 'banned'
 const waitTime = 150;
 
 describe("usage_limits", () => {
@@ -7,13 +8,19 @@ describe("usage_limits", () => {
 		// Seed data
 		cy.request("/x/test/seed")
 
-		// Set up required share for limited user
+		// Set up required shares for limited and banned users
 		cy.visit("settings/default/Join Testing with index.sqlite")
-		cy.get('[data-cy="settingslink"]').click()
+
 		cy.get('[data-cy="usernameinput"]').type("limited")
 		cy.get('[data-cy="adduserbtn"]').click()
 		cy.get('input[name="shareperm-limited"]').parents(".react-dropdown-select").click()
 		cy.get('input[name="shareperm-limited"]').parents(".react-dropdown-select").find(".react-dropdown-select-item").contains("Read only").click({force: true})
+
+		cy.get('[data-cy="usernameinput"]').type("banned")
+		cy.get('[data-cy="adduserbtn"]').click()
+		cy.get('input[name="shareperm-banned"]').parents(".react-dropdown-select").click()
+		cy.get('input[name="shareperm-banned"]').parents(".react-dropdown-select").find(".react-dropdown-select-item").contains("Read only").click({force: true})
+
 		cy.get('[data-cy="savebtn"]').click()
 		cy.wait(waitTime)
 	})
@@ -125,6 +132,23 @@ describe("usage_limits", () => {
 			form: true,
 			body: {
 				apikey: limitedKey,
+				dbowner: "default",
+				dbname: "Join Testing with index.sqlite",
+			},
+		}).then(response => {
+			expect(response.status).to.eq(429)
+		})
+	})
+
+	// Bannned users cannot even make a single API call
+	it("banned", () => {
+		cy.request({
+			method: "POST",
+			url: "https://localhost:9444/v1/webpage",
+			failOnStatusCode: false,
+			form: true,
+			body: {
+				apikey: bannedKey,
 				dbowner: "default",
 				dbname: "Join Testing with index.sqlite",
 			},

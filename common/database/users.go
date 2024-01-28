@@ -206,12 +206,12 @@ func PrefUserMaxRows(loggedInUser string) int {
 }
 
 // SetUserLimits sets the user's usage limits to the provided configuration
-func SetUserLimits(userName string, usage_limits_id int) error {
+func SetUserLimits(userName string, usageLimitsId int) error {
 	dbQuery := `
 		UPDATE users
 		SET usage_limits_id = $2
 		WHERE lower(user_name) = lower($1)`
-	commandTag, err := DB.Exec(context.Background(), dbQuery, userName, usage_limits_id)
+	commandTag, err := DB.Exec(context.Background(), dbQuery, userName, usageLimitsId)
 	if err != nil {
 		log.Printf("Updating user limits failed for user '%s'. Error: '%v'", userName, err)
 		return err
