@@ -2270,9 +2270,11 @@ func uploadPage(w http.ResponseWriter, r *http.Request) {
 
 func usagePage(w http.ResponseWriter, r *http.Request) {
 	var pageData struct {
-		PageMeta PageMetaInfo
-		User     string
-		ApiUsage []database.ApiUsage
+		PageMeta      PageMetaInfo
+		User          string
+		ApiUsage      []database.ApiUsage
+		UsageLimits   []database.UsageLimit
+		CurrentLimits int
 	}
 
 	// Get all meta information
@@ -2292,19 +2294,29 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	// User for which to show usage information
 	pageData.User = pageData.PageMeta.LoggedInUser
 
-	// Check if current user is admin
-	user, err := database.User(pageData.PageMeta.LoggedInUser)
+	// Check if the current user is an admin user
+	auhenticatedUser, err := database.User(pageData.PageMeta.LoggedInUser)
 	if err != nil {
-		errorPage(w, r, errCode, err.Error())
+		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	if user.IsAdmin {
+	if auhenticatedUser.IsAdmin {
 		// If the current user has admin right allow showing usage information for other users
 		userOverride, _ := com.GetUsername(r, true)
 		if userOverride != "" {
 			pageData.User = userOverride
 		}
+
+		// Only admins get the list of configured usage limits and the current limits for the selected user
+		pageData.UsageLimits, _ = database.GetUsageLimits()
+
+		selectedUser, e := database.User(pageData.User)
+		if e != nil {
+			errorPage(w, r, http.StatusInternalServerError, err.Error())
+			return
+		}
+		pageData.CurrentLimits = selectedUser.UsageLimitsId
 	}
 
 	// Retrieve API usage data for the current user

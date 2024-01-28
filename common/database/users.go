@@ -43,15 +43,16 @@ type StatusUpdateEntry struct {
 }
 
 type UserDetails struct {
-	AvatarURL   string
-	DateJoined  time.Time
-	DisplayName string
-	Email       string
-	MinioBucket string
-	Password    string
-	PVerify     string
-	Username    string
-	IsAdmin     bool
+	AvatarURL     string
+	DateJoined    time.Time
+	DisplayName   string
+	Email         string
+	MinioBucket   string
+	Password      string
+	PVerify       string
+	Username      string
+	UsageLimitsId int
+	IsAdmin       bool
 }
 
 // DefaultNumDisplayRows is the number of rows to display by default on the database page
@@ -297,11 +298,11 @@ func UpdateAvatarURL(userName, avatarURL string) error {
 func User(userName string) (user UserDetails, err error) {
 	dbQuery := `
 		SELECT user_name, coalesce(display_name, ''), coalesce(email, ''), coalesce(avatar_url, ''),
-		       date_joined, coalesce(live_minio_bucket_name, ''), is_admin
+		       date_joined, coalesce(live_minio_bucket_name, ''), usage_limits_id, is_admin
 		FROM users
 		WHERE lower(user_name) = lower($1)`
 	err = DB.QueryRow(context.Background(), dbQuery, userName).Scan(&user.Username, &user.DisplayName, &user.Email, &user.AvatarURL,
-		&user.DateJoined, &user.MinioBucket, &user.IsAdmin)
+		&user.DateJoined, &user.MinioBucket, &user.UsageLimitsId, &user.IsAdmin)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// The error was just "no such user found"

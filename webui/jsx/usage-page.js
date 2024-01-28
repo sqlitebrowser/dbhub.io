@@ -7,6 +7,68 @@ import Plotly from "plotly.js-basic-dist";
 import createPlotlyComponent from "react-plotly.js/factory";
 const Plot = createPlotlyComponent(Plotly);
 
+function UsageLimitsSelect() {
+	const [statusMessage, setStatusMessage] = React.useState("");
+	const [statusMessageColour, setStatusMessageColour] = React.useState("");
+
+	const [selectedLimits, setSelectedLimits] = React.useState(currentLimits);
+
+	// Send changed limits to the server for saving
+	function saveLimits() {
+		// Send the preferences
+		fetch("/x/savelimits", {
+			method: "post",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded"
+			},
+			body: new URLSearchParams({
+				"username": encodeURIComponent(usageUser),
+				"usage_limits": selectedLimits,
+			}),
+		}).then(response => {
+			if (!response.ok) {
+				return Promise.reject(response);
+			}
+
+			setStatusMessageColour("green");
+			setStatusMessage("Changes saved");
+		})
+		.catch(error => {
+			// Saving failed, display the error message
+			error.text().then(text => {
+				setStatusMessageColour("red");
+				setStatusMessage("Saving failed: " + text);
+			});
+		});
+	}
+
+	// Don't show the usage limits selection if there is no data on usage limits. This is the case for all non-admin users.
+	if (usageLimits === null) {
+		return;
+	}
+
+	return (<>
+		<h4>Configure usage limits</h4>
+		{statusMessage !== "" ? (
+			<div className="row">
+				<div className="col-md-12 text-center mb-2">
+					<h6 style={{color: statusMessageColour}}>{statusMessage}</h6>
+				</div>
+			</div>
+		) : null}
+		<form>
+			<div className="mb-3">
+				<label htmlFor="selectedlimits" className="form-label">Applied usage limits</label>
+				<select className="form-select" value={selectedLimits} onChange={e => setSelectedLimits(parseInt(e.target.value))}>
+					{usageLimits.map(l => <option value={l.id}>{l.name}</option>)}
+				</select>
+				<div className="form-text">{usageLimits.find(v => v.id === selectedLimits).description}</div>
+			</div>
+			<button type="button" className="btn btn-primary" onClick={() => saveLimits()}>Save</button>
+		</form>
+	</>);
+}
+
 function ApiUsage() {
 	const [selectedValue, setSelectedValue] = React.useState("num_calls");
 	const [selectedTime, setSelectedTime] = React.useState("daily");
@@ -202,6 +264,8 @@ function ApiUsage() {
 export default function UsagePage() {
 	return (<>
 		<h3 className="text-center">{"Usage information" + (authInfo.loggedInUser === usageUser ? "" : (" for user '" + usageUser + "'"))}</h3>
+
+		<UsageLimitsSelect />
 
 		<h4>API calls</h4>
 		<ApiUsage />

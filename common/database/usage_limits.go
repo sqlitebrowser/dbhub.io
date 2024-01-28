@@ -13,6 +13,14 @@ type RateLimit struct {
 	Increase int    `json:"increase"` // Number of tokens restored after that period
 }
 
+// Model type for the usage_limits table
+type UsageLimit struct {
+	ID          int         `json:"id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	RateLimits  []RateLimit `json:"rate_limits"`
+}
+
 // AddDefaultUsageLimits adds the default usage limits to the system so the the default value for users is valid
 func AddDefaultUsageLimits() (err error) {
 	// Insert default and unlimited usage limits
@@ -53,6 +61,29 @@ func RateLimitsForUser(user string) (limits []RateLimit, err error) {
 	if err != nil {
 		log.Printf("Querying usage limits failed for user '%s': %v", user, err)
 		return nil, err
+	}
+
+	return
+}
+
+// GetUsageLimits returns a list of all usage limits
+func GetUsageLimits() (usageLimits []UsageLimit, err error) {
+	query := `SELECT id, name, description, rate_limits FROM usage_limits`
+	rows, err := DB.Query(context.Background(), query)
+	if err != nil {
+		log.Printf("Database query failed: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var u UsageLimit
+		err = rows.Scan(&u.ID, &u.Name, &u.Description, &u.RateLimits)
+		if err != nil {
+			log.Printf("Error retrieving usage limits list: %v", err)
+			return
+		}
+		usageLimits = append(usageLimits, u)
 	}
 
 	return

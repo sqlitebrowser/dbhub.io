@@ -3423,6 +3423,7 @@ func main() {
 	http.Handle("/x/insertdata/", gz.GzipHandler(logReq(insertDataHandler)))
 	http.Handle("/x/markdownpreview/", gz.GzipHandler(logReq(markdownPreview)))
 	http.Handle("/x/mergerequest/", gz.GzipHandler(logReq(mergeRequestHandler)))
+	http.Handle("/x/savelimits", gz.GzipHandler(logReq(saveLimitsHandler)))
 	http.Handle("/x/savesettings", gz.GzipHandler(logReq(saveSettingsHandler)))
 	http.Handle("/x/setdefaultbranch/", gz.GzipHandler(logReq(setDefaultBranchHandler)))
 	http.Handle("/x/star/", gz.GzipHandler(logReq(starToggleHandler)))
@@ -3939,6 +3940,58 @@ func requireLogin(pageMeta PageMetaInfo) (errCode int, err error) {
 	if pageMeta.LoggedInUser == "" {
 		return http.StatusUnauthorized, fmt.Errorf("You need to be logged in")
 	}
+	return
+}
+
+// Handles saving of new usage limits for a user
+func saveLimitsHandler(w http.ResponseWriter, r *http.Request) {
+	// Retrieve session data (if any)
+	loggedInUser, validSession, err := checkLogin(r)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Ensure we have a valid logged in user
+	if validSession != true {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Check if the current user is an admin user
+	auhenticatedUser, err := database.User(loggedInUser)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if !auhenticatedUser.IsAdmin {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Get username from request
+	username, err := com.GetUsername(r, false)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Get usage limits from request
+	u := r.PostFormValue("usage_limits")
+	usageLimitsId, err := strconv.Atoi(u)
+	if usageLimitsId == 0 || err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Set new usage limits for user
+	err = database.SetUserLimits(username, usageLimitsId)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	return
 }
 
