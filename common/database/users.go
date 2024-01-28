@@ -205,6 +205,24 @@ func PrefUserMaxRows(loggedInUser string) int {
 	return maxRows
 }
 
+// SetUserLimits sets the user's usage limits to the provided configuration
+func SetUserLimits(userName string, usage_limits_id int) error {
+	dbQuery := `
+		UPDATE users
+		SET usage_limits_id = $2
+		WHERE lower(user_name) = lower($1)`
+	commandTag, err := DB.Exec(context.Background(), dbQuery, userName, usage_limits_id)
+	if err != nil {
+		log.Printf("Updating user limits failed for user '%s'. Error: '%v'", userName, err)
+		return err
+	}
+	if numRows := commandTag.RowsAffected(); numRows != 1 {
+		log.Printf("Wrong # of rows (%v) affected when updating user limits. User: '%s'", numRows,
+			userName)
+	}
+	return nil
+}
+
 // SetUserPreferences sets the user's preference for maximum number of SQLite rows to display
 func SetUserPreferences(userName string, maxRows int, displayName, email string) error {
 	dbQuery := `

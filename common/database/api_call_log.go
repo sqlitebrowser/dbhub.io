@@ -2,9 +2,11 @@ package database
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
+	pgx "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -86,6 +88,28 @@ func ApiUsageData(user string, from, to time.Time) (usage []ApiUsage, err error)
 			return nil, err
 		}
 		usage = append(usage, day)
+	}
+
+	return
+}
+
+// ApiUsageStatsLastPeriod returns the number of API calls and the timestamp of the last API call for a given user and
+// period. The period is between now and `period` time ago.
+func ApiUsageStatsLastPeriod(user string, period time.Duration) (count int, lastCall time.Time, err error) {
+	query := `
+		WITH userData AS (
+			SELECT user_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		SELECT count(*) AS num_calls, max(api_call_date) AS last_call
+		FROM api_call_log
+		WHERE caller_id=(SELECT user_id FROM userData) AND api_call_date>=$2
+		GROUP BY caller_id`
+	err = DB.QueryRow(context.Background(), query, user, time.Now().Add(-period)).Scan(&count, &lastCall)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		log.Printf("Querying API usage stats failed for user '%s': %v", user, err)
+		return
 	}
 
 	return

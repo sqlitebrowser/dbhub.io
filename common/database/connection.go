@@ -104,6 +104,12 @@ func Connect() (err error) {
 		return fmt.Errorf("%s: couldn't connect to backend queue server: %v", config.Conf.Live.Nodename, err)
 	}
 
+	// Add default usage limits to the system
+	err = AddDefaultUsageLimits()
+	if err != nil {
+		return
+	}
+
 	// Add the default user to the system
 	err = AddDefaultUser()
 	if err != nil {
@@ -153,6 +159,7 @@ func ResetDB() error {
 		"events",
 		"sql_terminal_history",
 		"sqlite_databases",
+		"usage_limits",
 		"users",
 		"vis_params",
 		"vis_query_runs",
@@ -176,6 +183,7 @@ func ResetDB() error {
 		"events_event_id_seq",
 		"sql_terminal_history_history_id_seq",
 		"sqlite_databases_db_id_seq",
+		"usage_limits_id_seq",
 		"users_user_id_seq",
 		"vis_query_runs_query_run_id_seq",
 	}
@@ -207,6 +215,12 @@ func ResetDB() error {
 			log.Printf("Error restarting sequence while resetting database: %v", err)
 			return err
 		}
+	}
+
+	// Add default usage limits to the system
+	err = AddDefaultUsageLimits()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Add the default user to the system

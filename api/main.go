@@ -123,8 +123,11 @@ func main() {
 	router.Delims("[[", "]]")
 	router.LoadHTMLGlob(filepath.Join(config.Conf.Web.BaseDir, "api", "templates", "*.html"))
 
-	// Register API v1 handlers. All of them require authentication which is done by the authenticateV1 middleware
-	v1 := router.Group("/v1", authenticateV1, callLogV1)
+	// Register API v1 handlers. There is three middlewares which apply to all of them:
+	// 1) authentication is required
+	// 2) usage limits are applied; because these are applied per user this needs to happen after authentication
+	// 3) authenticated and permitted calls are logged
+	v1 := router.Group("/v1", authenticateV1, limit, callLogV1)
 	{
 		v1.POST("/branches", branchesHandler)
 		v1.POST("/columns", columnsHandler)

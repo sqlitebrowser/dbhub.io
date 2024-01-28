@@ -168,6 +168,11 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	err = database.AddUser("auth0limited", "limited", fmt.Sprintf("limited@%s", serverName[0]), "Limited test user", "")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Add some API keys
 	keys := map[string]string{
@@ -186,6 +191,7 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		"KqHOvobv-lPcwFFYhQe426JWrsejPDWcaTJt3AKDTICeZDxOVpLt6Q": "first",
 		"EdmNqQcJZQzIoArVCAu6bByhmVUe_Oa780avsoluO-yFixGxrQQuGw": "second",
 		"NvPG_Vh8uxK4BqkN7yJiRA4HP2HxCC0XXw0TBQGXbsaSlVhXZDrb1g": "third",
+		"R4btZIUCGfLeIPJN1qDtBRuz7I6YWhiM2F0EOh3-neoLxqd9h7J8uw": "limited",
 	}
 	for key, user := range keys {
 		_, err = database.APIKeySave(key, user, time.Now(), nil, database.MayReadAndWrite, "Cypress tests")
@@ -217,6 +223,23 @@ func CypressSeed(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	log.Println("API usage data added to database")
+
+	// Add more restrictive usage limit for testing (max 1 call per second and 2 calls per hour)
+	sql := `INSERT INTO usage_limits (name, description, rate_limits) VALUES ('restrictive', 'Used for Cypress testing', '[{"limit": 1, "period": "s", "increase": 1}, {"limit": 2, "period": "h", "increase": 4}]')`
+	_, err = database.DB.Exec(context.Background(), sql)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Println("restrictive usage limit created")
+
+	// Assign usage limits to test users. ID=2 always is the unlimited configuration.
+	database.SetUserLimits("default", 2)
+	database.SetUserLimits("first", 2)
+	database.SetUserLimits("second", 2)
+	database.SetUserLimits("third", 2)
+	database.SetUserLimits("limited", 3) // ID=3 should be the 'restrictive' limit that was just created
+	log.Println("Assigned usage limits to users")
 
 	// Log the database reset
 	log.Println("Test data added to database")
