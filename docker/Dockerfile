@@ -8,7 +8,7 @@ LABEL maintainer="Justin Clift <justin@postgresql.org>"
 # Install Git, Go, Memcached, Minio, and PostgreSQL
 RUN apk update && \
     apk upgrade && \
-    apk add --no-cache bison ca-certificates 'curl>7.61.0' file flex git go libc-dev make memcached minio openssl openssl-dev postgresql postgresql-dev shadow yarn
+    apk add --no-cache bison ca-certificates 'curl>7.61.0' file flex git go libc-dev make memcached minio openssl openssl-dev postgresql postgresql-dev shadow yarn libmemcached
 
 # Add PostgreSQL jsquery extension
 RUN mkdir /install && \

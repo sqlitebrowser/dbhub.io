@@ -29,6 +29,7 @@
     "cypress:testff": "./node_modules/.bin/cypress run -b firefox",
     "docker:attach": "docker attach dbhub-build",
     "docker:build": "docker build --tag dbhub-build docker",
+    "docker:clearcache": "docker exec -it dbhub-build memflush -s 127.0.0.1:11211",
     "docker:debug": "docker exec -it dbhub-build /bin/sh /usr/local/bin/debug.sh",
     "docker:emptydb": "docker exec -it dbhub-build pkill dbhub- && docker exec -itu postgres dbhub-build sh -c 'dropdb dbhub && createdb -O dbhub dbhub'",
     "docker:exec": "docker exec -it dbhub-build /bin/sh",
