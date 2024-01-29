@@ -8,7 +8,7 @@
     "react": "^18.2.0",
     "react-bootstrap": "^2.9.2",
     "react-confirm-alert": "^3.0.6",
-    "react-data-grid": "^7.0.0-beta.41",
+    "react-data-grid": "^7.0.0-beta.42",
     "react-dom": "^18.2.0",
     "react-dropdown-select": "^4.11.1",
     "react-modal-image": "^2.6.0",
