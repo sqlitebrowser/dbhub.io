@@ -3530,10 +3530,10 @@ react-confirm-alert@^3.0.6:
   resolved "https://registry.yarnpkg.com/react-confirm-alert/-/react-confirm-alert-3.0.6.tgz#f7552ec839c1e189370cef02ffed3035e7ca2e22"
   integrity sha512-rplP6Ed9ZSNd0KFV5BUzk4EPQ77BxsrayllBXGFuA8xPXc7sbBjgU5KUrNpl7aWFmP7mXRlVXfuy1IT5DbffYw==
 
-react-data-grid@^7.0.0-beta.41:
-  version "7.0.0-beta.41"
-  resolved "https://registry.yarnpkg.com/react-data-grid/-/react-data-grid-7.0.0-beta.41.tgz#4de30876df528cf0ecf8d2922b674917c15b50c6"
-  integrity sha512-WmTP/PV+vtVjIaGVLgyG6WAhqvuPBM8I54bsR7oJZl6w43+mIasZM9rEBWjQ52XHJEy41/tjcMBIMNiWqoEbrQ==
+react-data-grid@^7.0.0-beta.42:
+  version "7.0.0-beta.42"
+  resolved "https://registry.yarnpkg.com/react-data-grid/-/react-data-grid-7.0.0-beta.42.tgz#75382b3e1a9a708bb5de24326c3f2023b197c3d3"
+  integrity sha512-N5ToEOxMlQGkRYhed3ahFz34fgJTccrCA9PZqIGVoO1vsZADNISXk6ywODJOdCz/1yB78MLu+T7q6cnJd2024A==
   dependencies:
     clsx "^2.0.0"
 
