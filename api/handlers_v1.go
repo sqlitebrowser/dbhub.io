@@ -1256,15 +1256,6 @@ func uploadHandler(c *gin.Context) {
 		return
 	}
 
-	// The "public" user isn't allowed to make changes
-	if loggedInUser == "public" {
-		log.Printf("User from '%s' attempted to add a database using the public certificate", c.Request.RemoteAddr)
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "You're using the 'public' certificate, which isn't allowed to make changes on the server",
-		})
-		return
-	}
-
 	// Check whether the uploaded database is too large
 	if maxSize != -1 {
 		if c.Request.ContentLength > maxSize {
@@ -1289,7 +1280,7 @@ func uploadHandler(c *gin.Context) {
 	// Process the upload
 	var httpStatus int
 	var x map[string]string
-	dbOwner := loggedInUser // We always use the API key / cert owner as the database owner for uploads
+	dbOwner := loggedInUser // We always use the API key user as the database owner for uploads
 	if !live {
 		x, httpStatus, err = com.UploadResponse(c.Writer, c.Request, loggedInUser, dbOwner, dbName, commitID, "api")
 		if err != nil {
