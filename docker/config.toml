@@ -58,9 +58,6 @@ cert_days_valid = 365
 intermediate_cert = "/dbhub.io/docker/certs/intermediate-docker.cert.pem"
 intermediate_key = "/dbhub.io/docker/certs/intermediate-docker.key.pem"
 
-[usermgmt]
-banned_users = [""]
-
 [web]
 base_dir = "/dbhub.io"
 bind_address = ":9443"

@@ -16,7 +16,6 @@ type TomlConfig struct {
 	Minio       MinioConfig
 	Pg          PGConfig
 	Sign        SigningConfig
-	UserMgmt    UserMgmtConfig
 	Web         WebConfig
 }
 
@@ -109,11 +108,6 @@ type SigningConfig struct {
 	Enabled          bool   `toml:"enabled"`
 	IntermediateCert string `toml:"intermediate_cert"`
 	IntermediateKey  string `toml:"intermediate_key"`
-}
-
-// UserMgmtConfig contains the various settings for specific users, or groups of users
-type UserMgmtConfig struct {
-	BannedUsers       []string `toml:"banned_users"`        // List of users banned from the service
 }
 
 // WebConfig contains configuration info for the webUI daemon
