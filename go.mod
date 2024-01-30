@@ -14,7 +14,7 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/aquilax/truncate v1.0.0
-	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
+	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/bradleypeabody/gorilla-sessions-memcache v0.0.0-20181103040241-659414f458e1
 	github.com/docker/go-units v0.5.0
 	github.com/gin-contrib/cors v1.5.0

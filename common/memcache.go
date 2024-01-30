@@ -2,12 +2,15 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
+	"crypto/tls"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"strconv"
 	"strings"
 
@@ -49,15 +52,26 @@ func ClearCache() (err error) {
 }
 
 // ConnectCache connects to the Memcached server
-func ConnectCache() error {
-	// Connect to memcached server
+func ConnectCache() (err error) {
 	memCache = memcache.New(config.Conf.Memcache.Server)
+	if config.Conf.Environment.Environment == "production" {
+		z := strings.Split(config.Conf.Memcache.Server, ":")
+		serverName := z[0]
+		memCache.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			var td tls.Dialer
+			td.Config = &tls.Config{
+				// This REQUIRES the memcached server to be configured with the full cert chain, not just it's own cert
+				ServerName: serverName,
+			}
+			return td.DialContext(context.Background(), network, addr)
+		}
+	}
 
 	// Test the memcached connection
 	cacheTest := memcache.Item{Key: "connecttext", Value: []byte("1"), Expiration: 10}
-	err := memCache.Set(&cacheTest)
+	err = memCache.Set(&cacheTest)
 	if err != nil {
-		return fmt.Errorf("Couldn't connect to memcached server: %s", err)
+		return fmt.Errorf("%s: couldn't connect to memcached server: %s", config.Conf.Live.Nodename, err)
 	}
 
 	// Log successful connection message for Memcached
