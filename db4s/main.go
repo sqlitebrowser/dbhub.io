@@ -798,14 +798,13 @@ func metadataGetHandler(w http.ResponseWriter, r *http.Request) {
 //	    https://db4s.dbhub.io:5550/someuser
 func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	// Set the maximum accepted database size for uploading
-	oversizeAllowed := false
-	for _, user := range config.Conf.UserMgmt.SizeOverrideUsers {
-		if userAcc == user {
-			oversizeAllowed = true
-		}
+	maxSize, err := database.MaxUploadSizeForUser(userAcc)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	if !oversizeAllowed {
-		r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+	if maxSize != -1 {
+		r.Body = http.MaxBytesReader(w, r.Body, maxSize)
 	}
 
 	// The "public" user isn't allowed to make changes
@@ -827,20 +826,20 @@ func postHandler(w http.ResponseWriter, r *http.Request, userAcc string) {
 	}
 
 	// Validate the target user
-	err := com.ValidateUser(targetUser)
+	err = com.ValidateUser(targetUser)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Check whether the uploaded database is too large
-	if !oversizeAllowed {
-		if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+	if maxSize != -1 {
+		if r.ContentLength > maxSize {
 			http.Error(w,
 				fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
-					com.MaxDatabaseSize, r.ContentLength/1024/1024), http.StatusBadRequest)
+					maxSize/1024/1024, r.ContentLength/1024/1024), http.StatusBadRequest)
 			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB",
-				userAcc, r.ContentLength/1024/1024, com.MaxDatabaseSize))
+				userAcc, r.ContentLength/1024/1024, maxSize/1024/1024))
 			return
 		}
 	}

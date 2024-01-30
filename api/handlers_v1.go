@@ -1236,14 +1236,15 @@ func uploadHandler(c *gin.Context) {
 	loggedInUser := c.MustGet("user").(string)
 
 	// Set the maximum accepted database size for uploading
-	oversizeAllowed := false
-	for _, user := range config.Conf.UserMgmt.SizeOverrideUsers {
-		if loggedInUser == user {
-			oversizeAllowed = true
-		}
+	maxSize, err := database.MaxUploadSizeForUser(loggedInUser)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
 	}
-	if !oversizeAllowed {
-		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, com.MaxDatabaseSize*1024*1024)
+	if maxSize != -1 {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxSize)
 	}
 
 	// Extract the database name and (optional) commit ID for the database from the request
@@ -1265,13 +1266,13 @@ func uploadHandler(c *gin.Context) {
 	}
 
 	// Check whether the uploaded database is too large
-	if !oversizeAllowed {
-		if c.Request.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+	if maxSize != -1 {
+		if c.Request.ContentLength > maxSize {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB", com.MaxDatabaseSize, c.Request.ContentLength/1024/1024),
+				"error": fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB", maxSize/1024/1024, c.Request.ContentLength/1024/1024),
 			})
 			log.Printf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB",
-				loggedInUser, c.Request.ContentLength/1024/1024, com.MaxDatabaseSize)
+				loggedInUser, c.Request.ContentLength/1024/1024, maxSize/1024/1024)
 			return
 		}
 	}

@@ -5674,23 +5674,22 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set the maximum accepted database size for uploading
-	oversizeAllowed := false
-	for _, user := range config.Conf.UserMgmt.SizeOverrideUsers {
-		if loggedInUser == user {
-			oversizeAllowed = true
-			break
-		}
+	maxSize, err := database.MaxUploadSizeForUser(loggedInUser)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
 	}
-	if !oversizeAllowed {
-		r.Body = http.MaxBytesReader(w, r.Body, com.MaxDatabaseSize*1024*1024)
+	if maxSize != -1 {
+		r.Body = http.MaxBytesReader(w, r.Body, maxSize)
 
-		// Check whether the uploaded database is too large (except for specific users)
-		if r.ContentLength > (com.MaxDatabaseSize * 1024 * 1024) {
+		// Check whether the uploaded database is too large
+		if r.ContentLength > maxSize {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprint(w, fmt.Sprintf("Database is too large. Maximum database upload size is %d MB, yours is %d MB",
-				com.MaxDatabaseSize, r.ContentLength/1024/1024))
+				maxSize/1024/1024, r.ContentLength/1024/1024))
 			log.Println(fmt.Sprintf("'%s' attempted to upload an oversized database %d MB in size.  Limit is %d MB",
-				loggedInUser, r.ContentLength/1024/1024, com.MaxDatabaseSize))
+				loggedInUser, r.ContentLength/1024/1024, maxSize/1024/1024))
 			return
 		}
 	}

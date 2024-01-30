@@ -15,19 +15,20 @@ type RateLimit struct {
 
 // Model type for the usage_limits table
 type UsageLimit struct {
-	ID          int         `json:"id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	RateLimits  []RateLimit `json:"rate_limits"`
+	ID            int         `json:"id"`
+	Name          string      `json:"name"`
+	Description   string      `json:"description"`
+	RateLimits    []RateLimit `json:"rate_limits"`
+	MaxUploadSize int64       `json:"max_upload_size"`
 }
 
 // AddDefaultUsageLimits adds the default usage limits to the system so the the default value for users is valid
 func AddDefaultUsageLimits() (err error) {
 	// Insert default and unlimited usage limits
-	sql := `INSERT INTO usage_limits (id, name, description, rate_limits) VALUES
-		(1, 'default', 'Default limits for new users', '[{"limit": 10, "period": "s", "increase": 10}]'),
-		(2, 'unlimited', 'No usage limits (intended for testing and developers)', NULL),
-		(3, 'banned', 'No access to the API at all', '[{"limit": 0, "period": "M", "increase": 0}]')
+	sql := `INSERT INTO usage_limits (id, name, description, rate_limits, max_upload_size) VALUES
+		(1, 'default', 'Default limits for new users', '[{"limit": 10, "period": "s", "increase": 10}]', 512*1024*1024),
+		(2, 'unlimited', 'No usage limits (intended for testing and developers)', NULL, NULL),
+		(3, 'banned', 'No access to the API at all', '[{"limit": 0, "period": "M", "increase": 0}]', 0)
 		ON CONFLICT (id) DO NOTHING`
 	_, err = DB.Exec(context.Background(), sql)
 	if err != nil {
@@ -45,6 +46,26 @@ func AddDefaultUsageLimits() (err error) {
 
 	log.Printf("%v: default usage limits added", config.Conf.Live.Nodename)
 	return nil
+}
+
+// MaxUploadSizeForUser retrieves the maximum upload size for a user based on their configured usage limits.
+// It returns -1 if the maximum upload size is considered to be unlimited.
+func MaxUploadSizeForUser(user string) (size int64, err error) {
+	query := `
+		WITH userData AS (
+			SELECT usage_limits_id
+			FROM users
+			WHERE lower(user_name) = lower($1)
+		)
+		SELECT coalesce(max_upload_size, -1) FROM usage_limits
+		WHERE id=(SELECT usage_limits_id FROM userData)`
+	err = DB.QueryRow(context.Background(), query, user).Scan(&size)
+	if err != nil {
+		log.Printf("Querying usage limits failed for user '%s': %v", user, err)
+		return 0, err
+	}
+
+	return
 }
 
 // RateLimitsForUser retrieves the rate limits for a user based on their configured usage limits.
@@ -68,7 +89,7 @@ func RateLimitsForUser(user string) (limits []RateLimit, err error) {
 
 // GetUsageLimits returns a list of all usage limits
 func GetUsageLimits() (usageLimits []UsageLimit, err error) {
-	query := `SELECT id, name, description, rate_limits FROM usage_limits`
+	query := `SELECT id, name, description, rate_limits, coalesce(max_upload_size, -1) FROM usage_limits`
 	rows, err := DB.Query(context.Background(), query)
 	if err != nil {
 		log.Printf("Database query failed: %v", err)
@@ -78,7 +99,7 @@ func GetUsageLimits() (usageLimits []UsageLimit, err error) {
 
 	for rows.Next() {
 		var u UsageLimit
-		err = rows.Scan(&u.ID, &u.Name, &u.Description, &u.RateLimits)
+		err = rows.Scan(&u.ID, &u.Name, &u.Description, &u.RateLimits, &u.MaxUploadSize)
 		if err != nil {
 			log.Printf("Error retrieving usage limits list: %v", err)
 			return

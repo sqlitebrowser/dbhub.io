@@ -60,7 +60,6 @@ intermediate_key = "/dbhub.io/docker/certs/intermediate-docker.key.pem"
 
 [usermgmt]
 banned_users = [""]
-size_override_users = ["default"]
 
 [web]
 base_dir = "/dbhub.io"

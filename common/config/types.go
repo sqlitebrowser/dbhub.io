@@ -114,7 +114,6 @@ type SigningConfig struct {
 // UserMgmtConfig contains the various settings for specific users, or groups of users
 type UserMgmtConfig struct {
 	BannedUsers       []string `toml:"banned_users"`        // List of users banned from the service
-	SizeOverrideUsers []string `toml:"size_override_users"` // List of users allowed to override the database upload size limits
 }
 
 // WebConfig contains configuration info for the webUI daemon

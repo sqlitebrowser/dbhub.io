@@ -16,9 +16,6 @@ const (
 	Float
 )
 
-// MaxDatabaseSize is the maximum database size accepted for upload (in MB)
-const MaxDatabaseSize = 512
-
 // MaxLicenceSize is the maximum licence size accepted for upload (in MB)
 const MaxLicenceSize = 1
 
