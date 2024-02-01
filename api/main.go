@@ -175,7 +175,10 @@ func authenticateV1(c *gin.Context) {
 
 	// Check for any errors
 	if err != nil || user == "" {
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorised.  Either no API key was provided, or the provided key doesn't have access.",
+		})
+		c.Abort()
 		return
 	}
 
@@ -188,7 +191,10 @@ func authenticateV1(c *gin.Context) {
 func authRequireWritePermission(c *gin.Context) {
 	key := c.MustGet("key").(database.APIKey)
 	if key.Permissions != database.MayReadAndWrite {
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "This function requires an API key with Write access.  The API key provided doesn't have it.",
+		})
+		c.Abort()
 		return
 	}
 }
