@@ -39,6 +39,10 @@ func collectInfo(c *gin.Context) (loggedInUser, dbOwner, dbName, commitID string
 		return
 	}
 
+	// Store database path for later logging
+	c.Set("owner", dbOwner)
+	c.Set("database", dbName)
+
 	// Check if the user has access to the requested database
 	// Check if the requested database exists
 	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
@@ -363,6 +367,10 @@ func deleteHandler(c *gin.Context) {
 		return
 	}
 	dbOwner := loggedInUser
+
+	// Store database path for later logging
+	c.Set("owner", dbOwner)
+	c.Set("database", dbName)
 
 	// Check if the database exists
 	exists, err := database.CheckDBPermissions(loggedInUser, dbOwner, dbName, false)
@@ -714,6 +722,10 @@ func executeHandler(c *gin.Context) {
 		return
 	}
 
+	// Store database path for later logging
+	c.Set("owner", dbOwner)
+	c.Set("database", dbName)
+
 	// Grab the incoming SQLite query
 	rawInput := c.PostForm("sql")
 	sql, err := com.CheckUnicode(rawInput, true)
@@ -960,6 +972,10 @@ func queryHandler(c *gin.Context) {
 		})
 		return
 	}
+
+	// Store database path for later logging
+	c.Set("owner", dbOwner)
+	c.Set("database", dbName)
 
 	// Grab the incoming SQLite query
 	rawInput := c.PostForm("sql")
@@ -1255,6 +1271,10 @@ func uploadHandler(c *gin.Context) {
 		})
 		return
 	}
+
+	// Store database path for later logging
+	c.Set("owner", loggedInUser)
+	c.Set("database", dbName)
 
 	// Check whether the uploaded database is too large
 	if maxSize != -1 {

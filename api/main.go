@@ -128,7 +128,7 @@ func main() {
 	// 1) authentication is required
 	// 2) usage limits are applied; because these are applied per user this needs to happen after authentication
 	// 3) authenticated and permitted calls are logged
-	v1 := router.Group("/v1", authenticateV1, limit, callLogV1)
+	v1 := router.Group("/v1", authenticateV1, limit, callLog)
 	{
 		v1.POST("/branches", branchesHandler)
 		v1.POST("/columns", columnsHandler)
@@ -200,8 +200,8 @@ func authRequireWritePermission(c *gin.Context) {
 	}
 }
 
-// callLogV1 is a middleware to log authenticated calls to API v1 endpoints to the database
-func callLogV1(c *gin.Context) {
+// callLog is a middleware to log authenticated calls to API endpoints to the database
+func callLog(c *gin.Context) {
 	// Time at the start of the request
 	t := time.Now()
 
@@ -218,12 +218,8 @@ func callLogV1(c *gin.Context) {
 	statusCode := c.Writer.Status()
 	requestSize := c.Request.ContentLength
 	responseSize := c.Writer.Size()
-
-	dbOwner, dbName, _, err := com.GetFormODC(c.Request)
-	if err != nil {
-		dbOwner = ""
-		dbName = ""
-	}
+	dbOwner := c.GetString("owner")
+	dbName := c.GetString("database")
 
 	database.ApiCallLog(key, loggedInUser, dbOwner, dbName, endpoint, userAgent, method, statusCode, runtime, requestSize, responseSize)
 }
