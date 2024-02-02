@@ -3992,6 +3992,13 @@ func saveLimitsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Flush cached limits for user so they are applied immediately
+	err = com.DeleteCacheItem("limits-" + username)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	return
 }
 

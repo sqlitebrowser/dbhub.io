@@ -16,8 +16,8 @@ const cacheTime int = 0
 
 // Interval for flushing the cached data of a user and reloading it from the database
 // Reloading the data from database also reloads the assigned usage limits. So this is also the maximum
-// time a user has to wait until a newly assigned limit is active.
-const reloadInterval time.Duration = 1 * time.Hour
+// time a user has to wait until a newly assigned limit is active unless the cache is cleared.
+const reloadInterval time.Duration = 24 * time.Hour
 
 type rateLimitCacheData struct {
 	// These values reflect the applied settings from the usage_limits table

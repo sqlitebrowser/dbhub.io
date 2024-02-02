@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"encoding/gob"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -78,6 +79,18 @@ func ConnectCache() (err error) {
 	log.Printf("%v: connected to Memcached: %v", config.Conf.Live.Nodename, config.Conf.Memcache.Server)
 
 	return nil
+}
+
+// DeleteCacheItem deletes the cached item with the given key if it exists
+func DeleteCacheItem(cacheKey string) (error) {
+	err := memCache.Delete(cacheKey)
+
+	// We don't care about cache misses
+	if errors.Is(err, memcache.ErrCacheMiss) {
+		return nil
+	}
+
+	return err
 }
 
 // GetCachedData retrieves cached data from Memcached
