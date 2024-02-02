@@ -69,7 +69,11 @@ func ApiUsageData(user string, from, to time.Time) (usage []ApiUsage, err error)
 			FROM users
 			WHERE lower(user_name) = lower($1)
 		)
-		SELECT to_char(api_call_date, 'YYYY-MM-DD') AS dt, count(*) AS num_calls, (sum(runtime) / 1000)::bigint AS runtime, sum(request_size) AS request_size, sum(response_size) AS response_size
+		SELECT to_char(api_call_date, 'YYYY-MM-DD') AS dt,
+			count(*) AS num_calls,
+			coalesce((sum(runtime) / 1000)::bigint, 0) AS runtime,
+			coalesce(sum(request_size), 0) AS request_size,
+			coalesce(sum(response_size), 0) AS response_size
 		FROM api_call_log
 		WHERE caller_id=(SELECT user_id FROM userData) AND api_call_date>=$2 AND api_call_date<=$3
 		GROUP BY dt ORDER BY dt`
