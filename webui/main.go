@@ -390,7 +390,14 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// If any of the required values were empty, indicate failure
 	if dbOwner == "" || dbName == "" {
@@ -1611,7 +1618,14 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Check if a branch name was requested
 	branchName, err := com.GetFormBranch(r)
@@ -2102,7 +2116,14 @@ func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Validate the supplied commit ID
 	commit, err := com.GetFormCommit(r)
@@ -2399,7 +2420,14 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Validation failed for owner or database name")
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// If any of the required values were empty, indicate failure
 	if dbName == "" || dbOwner == "" {
@@ -2517,7 +2545,14 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Ensure a release name was supplied in the tag parameter
 	relName, err := com.GetFormTag(r)
@@ -2598,7 +2633,14 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Ensure a tag name was supplied
 	tagName, err := com.GetFormTag(r)
@@ -4023,7 +4065,14 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 		errorPage(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Make sure a username was given
 	if len(dbOwner) == 0 || dbOwner == "" {
@@ -4436,7 +4485,14 @@ func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Check if a branch name was requested
 	branchName, err := com.GetFormBranch(r)
@@ -4570,7 +4626,14 @@ func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Make sure a branch name was provided
 	branchName, err := com.GetFormBranch(r)
@@ -4994,7 +5057,14 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Unescape, then validate the new branch name
 	a := r.PostFormValue("newbranch")
@@ -5137,7 +5207,14 @@ func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Ensure a discussion ID was given
 	a := r.PostFormValue("discid")
@@ -5346,7 +5423,14 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "Bad request")
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Ensure a discussion ID was given
 	a := r.PostFormValue("discid")
@@ -5456,7 +5540,14 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Validate new release name
 	a := r.PostFormValue("newtag")
@@ -5570,7 +5661,14 @@ func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	dbOwner := strings.ToLower(usr)
+
+	// Use the established capitalisation of the username
+	z, err := database.User(usr)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	dbOwner := z.Username
 
 	// Validate new tag name
 	a := r.PostFormValue("newtag")
