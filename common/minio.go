@@ -28,8 +28,15 @@ func ConnectMinio() (err error) {
 		return fmt.Errorf("Problem with Minio server configuration: %v", err)
 	}
 
-	// Log Minio server end point
-	log.Printf("%v: minio server config ok. Address: %v", config.Conf.Live.Nodename, config.Conf.Minio.Server)
+	// Verify the connection is actually functional
+	// NOTE: We don't care about the bucket itself, more just that this function call returns without an error
+	_, err = minioClient.BucketExists("non-existing")
+	if err != nil {
+		return
+	}
+
+	// Log Minio connection
+	log.Printf("%v: minio connection ok. Address: %v", config.Conf.Live.Nodename, config.Conf.Minio.Server)
 	return nil
 }
 
