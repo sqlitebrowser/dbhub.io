@@ -104,6 +104,7 @@ func main() {
 
 	s := &http.Server{
 		Addr:           config.Conf.Api.BindAddress,
+		ErrorLog:       com.HttpErrorLog(),
 		Handler:        router,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
