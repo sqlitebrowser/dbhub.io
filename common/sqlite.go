@@ -1563,7 +1563,7 @@ func SQLiteRunQuery(sdb *sqlite.Conn, querySource QuerySource, dbQuery string, i
 	})
 	if err != nil {
 		log.Printf("Error when retrieving select data from database: %s", err)
-		return 0, 0, dataRows, errors.New("Error when reading data from the SQLite database")
+		return 0, 0, dataRows, err
 	}
 
 	// Gather memory usage stats for the execution run: https://www.sqlite.org/c3ref/memory_highwater.html
