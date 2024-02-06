@@ -39,7 +39,7 @@ type JobResponseDBCreate struct {
 	NodeName string `json:"node_name"`
 }
 
-// JobResponseDBError holds the structure used when our job queue backend only needs to response with an error field (empty or not)
+// JobResponseDBError holds the structure used when our job queue backend only needs to respond with an error field (empty or not)
 type JobResponseDBError struct {
 	Err string `json:"error"`
 }

@@ -82,7 +82,7 @@ func ConnectCache() (err error) {
 }
 
 // DeleteCacheItem deletes the cached item with the given key if it exists
-func DeleteCacheItem(cacheKey string) (error) {
+func DeleteCacheItem(cacheKey string) error {
 	err := memCache.Delete(cacheKey)
 
 	// We don't care about cache misses

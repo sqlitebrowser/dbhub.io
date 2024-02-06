@@ -222,7 +222,13 @@ func JobQueueCheck() {
 			}
 
 		case "ping":
-			// TODO: Write a ping responder so we can internally check if live nodes are responding
+			// This just returns an empty response
+			var response JobResponseDBError
+			responsePayload, err = json.Marshal(response)
+			if err != nil {
+				log.Printf("%s: error when serialising ping response json: %s", config.Conf.Live.Nodename, err)
+				responsePayload = []byte(fmt.Sprintf(`{"error": "%s"}`, err))
+			}
 
 		case "query":
 			if JobQueueDebug > 0 {
