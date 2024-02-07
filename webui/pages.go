@@ -2273,6 +2273,7 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 		PageMeta      PageMetaInfo
 		User          string
 		ApiUsage      []database.ApiUsage
+		DBUsage       []database.DBUsage
 		UsageLimits   []database.UsageLimit
 		CurrentLimits int
 	}
@@ -2327,6 +2328,46 @@ func usagePage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errorPage(w, r, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Retrieve number of databases for the current user
+	// TODO: Retrieve real values
+	pageData.DBUsage = []database.DBUsage{
+		{
+			Date:        "2024-01-01",
+			NumLive:     1,
+			NumStandard: 2,
+		},
+		{
+			Date:        "2024-01-02",
+			NumLive:     1,
+			NumStandard: 2,
+		},
+		{
+			Date:        "2024-01-03",
+			NumLive:     2,
+			NumStandard: 3,
+		},
+		{
+			Date:        "2024-01-04",
+			NumLive:     2,
+			NumStandard: 4,
+		},
+		{
+			Date:        "2024-01-05",
+			NumLive:     3,
+			NumStandard: 5,
+		},
+		{
+			Date:        "2024-01-06",
+			NumLive:     3,
+			NumStandard: 6,
+		},
+		{
+			Date:        "2024-01-07",
+			NumLive:     3,
+			NumStandard: 7,
+		},
 	}
 
 	// Fill out page metadata

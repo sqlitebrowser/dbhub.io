@@ -261,11 +261,18 @@ function ApiUsage() {
 	</>);
 }
 
+function DBUsage() {
+    return (<></>);
+}
+
 export default function UsagePage() {
 	return (<>
 		<h3 className="text-center">{"Usage information" + (authInfo.loggedInUser === usageUser ? "" : (" for user '" + usageUser + "'"))}</h3>
 
 		<UsageLimitsSelect />
+
+		<h4>Database calls</h4>
+		<DBUsage />
 
 		<h4>API calls</h4>
 		<ApiUsage />
