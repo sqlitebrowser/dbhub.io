@@ -262,7 +262,122 @@ function ApiUsage() {
 }
 
 function DBUsage() {
-    return (<></>);
+    const [selectedValue, setSelectedValue] = React.useState("num_live");
+    const [selectedTime, setSelectedTime] = React.useState("daily");
+    const [data, setData] = React.useState(null);
+
+    // Exit early if there is no data yet
+    if (apiUsageData === null) {
+        return <div className="alert alert-info" role="alert">{(authInfo.loggedInUser === usageUser ? "You haven't" : "This user hasn't") + " had any databases recently."}</div>;
+    }
+
+    // Define available plots
+    const availableValues = [
+        {
+            label: "Number of calls",
+            value: "num_calls",
+            unit: "#",
+        },
+        {
+            label: "Execution time",
+            value: "runtime",
+            unit: "ms",
+        },
+        {
+            label: "Incoming traffic",
+            value: "request_size",
+            unit: "Bytes",
+        },
+        {
+            label: "Outgoing traffic",
+            value: "response_size",
+            unit: "Bytes",
+        },
+    ];
+    const availableTimes = [
+        {
+            label: "Daily",
+            value: "daily",
+        },
+        {
+            label: "Monthly",
+            value: "monthly",
+        },
+    ];
+
+    // Helper functions for getting details for current settings
+    const currentValueUnit = () => availableValues.find(p => p.value === selectedValue).unit;
+    const currentTimeLabel = () => availableTimes.find(p => p.value === selectedTime).label;
+
+    return (
+        <Plot
+            data={data}
+            layout={{
+                autosize: true,
+                xaxis: {
+                    type: "date",
+                    ticks: "outside",
+                    dtick: selectedTime === "monthly" ? "M1" : undefined,
+                    ticklabelmode: selectedTime === "monthly" ? "period" : "instant",
+                    rangeslider: {range: [dbUsageData[0].date, dbUsageData[dbUsageData.length - 1].date]},
+                    rangeselector: {
+                        buttons: [
+                            {
+                                count: 1,
+                                label: "1m",
+                                step: "month",
+                                stepmode: "backward",
+                            },
+                            {
+                                count: 3,
+                                label: "3m",
+                                step: "month",
+                                stepmode: "backward",
+                            },
+                            {
+                                count: 6,
+                                label: "6m",
+                                step: "month",
+                                stepmode: "backward",
+                            },
+                            {
+                                step: "all",
+                            },
+                        ]
+                    },
+                },
+                yaxis: {
+                    visible: true,
+                    shAuth0owline: true,
+                    ticks: "outside",
+                    title: currentTimeLabel() + " usage [" + currentValueUnit() + "]",
+                    rangemode: "tozero",
+                },
+                yaxis2: {
+                    side: "right",
+                    overlaying: "y",
+                    visible: true,
+                    showline: true,
+                    ticks: "outside",
+                    title: "Cumulative usage [" + currentValueUnit() + "]",
+                    rangemode: "tozero",
+                },
+                legend: {
+                    orientation: "h",
+                    xanchor: "center",
+                    yanchor: "bottom",
+                    y: 1.0,
+                    x: 0.5,
+                },
+            }}
+            config={{
+                watermark: false,
+                displayModeBar: false,
+            }}
+            useResizeHandler={true}
+            className="mt-1 w-100"
+        />
+    );
 }
 
 export default function UsagePage() {
