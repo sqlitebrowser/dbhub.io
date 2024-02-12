@@ -59,7 +59,7 @@
     "css-loader": "^6.10.0",
     "cypress": "13.3.3",
     "postcss": "^8.0.1",
-    "postcss-loader": "^8.0.0",
+    "postcss-loader": "^8.1.0",
     "sass": "^1.70.0",
     "sass-loader": "^14.1.0",
     "style-loader": "^3.3.4",
