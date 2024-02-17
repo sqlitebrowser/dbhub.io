@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	gsm "github.com/bradleypeabody/gorilla-sessions-memcache"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -61,6 +63,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Setup session storage
+	sessionStore := gsm.NewMemcacheStore(com.MemcacheHandle(), "dbhub_", []byte(config.Conf.Web.SessionStorePassword))
 
 	// Start background goroutines to handle job queue responses
 	com.ResponseQueue = com.NewResponseQueue()
@@ -116,9 +121,29 @@ func main() {
 	// Add gzip middleware
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 
-	// Add CORS middleware
-	// The default configuration allows all origins
-	router.Use(cors.Default())
+	// Add CORS middlewares. These allow all origins but only allow sending credentials for the DBHub.io web UI.
+	// For this we are using two middlewares here. The first one does the majority of the CORS handling but does
+	// not support setting the allow credentials header depending on the provided origin header. Because of this
+	// the second one is just adding that header if required.
+	router.Use(cors.New(cors.Config{
+		// Allow all origins but avoid using the "*" specifier which would disallow sending credentials
+		AllowOriginFunc: func(origin string) bool { return true },
+
+		// Allow common REST methods
+		AllowMethods: []string{"GET", "POST", "PATCH", "DELETE"},
+	}))
+
+	router.Use(func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+		if len(origin) == 0 {
+			return
+		}
+
+		// This allows sending user credentials from the web UI
+		if origin == "https://" + config.Conf.Web.ServerName {
+			c.Header("Access-Control-Allow-Credentials", "true")
+		}
+	})
 
 	// Parse our template files
 	router.Delims("[[", "]]")
@@ -147,6 +172,15 @@ func main() {
 		v1.POST("/upload", authRequireWritePermission, uploadHandler)
 		v1.POST("/views", viewsHandler)
 		v1.POST("/webpage", webpageHandler)
+	}
+
+	// Register API v2 handlers. There is three middlewares which apply to all of them:
+	// 1) authentication is required
+	// 2) usage limits are applied; because these are applied per user this needs to happen after authentication
+	// 3) authenticated and permitted calls are logged
+	v2 := router.Group("/v2", authenticateV2(sessionStore), limit, callLog)
+	{
+		v2.GET("/status", statusHandler)
 	}
 
 	// Register web routes
@@ -186,6 +220,57 @@ func authenticateV1(c *gin.Context) {
 	// Save username and key
 	c.Set("user", user)
 	c.Set("key", key)
+}
+
+// authenticateV2 authenticates incoming requests for the API v2 endpoints
+func authenticateV2(store *gsm.MemcacheStore) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// First try getting the authorization header value
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "" {
+			// Extract the API key from it
+			if !strings.HasPrefix(strings.ToLower(authHeader), "apikey ") {
+				// Not sending any response back on purpose here. This keeps the amount of traffic we create for
+				// possibly large numbers of unauthenticated calls low.
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			}
+			apiKey := authHeader[7:len(authHeader)] // 7 is the length of "apikey "
+
+			// Look up the details of the API key
+			user, key, err := database.GetAPIKeyBySecret(apiKey)
+
+			// Check for any errors
+			if err != nil || user == "" {
+				// Again, not responding here
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			}
+
+			// Save username and key
+			c.Set("user", user)
+			c.Set("key", key)
+		} else {
+			// If the authorization header has not been set, check for a session cookie
+			sess, err := store.Get(c.Request, "dbhub-user")
+			if err != nil {
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			}
+
+			u := sess.Values["UserName"]
+			if u == nil {
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			}
+
+			c.Set("user", u.(string))
+			c.Set("key", database.APIKey{
+				ID: 0, // The ID 0 is translated into NULL when inserting into api_call_log
+				Permissions: database.MayReadAndWrite, // Calls from the web UI may read and write
+			})
+		}
+	}
 }
 
 // authRequireWritePermission is a middleware which denies requests when the API key used does not provide write permissions

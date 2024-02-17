@@ -40,7 +40,7 @@ func ApiCallLog(key APIKey, loggedInUser, dbOwner, dbName, operation, callerSw, 
 			WHERE db.user_id = owner.user_id
 				AND db.db_name = $3)
 		INSERT INTO api_call_log (caller_id, db_owner_id, db_id, api_operation, api_caller_sw, key_id, method, status_code, runtime, request_size, response_size)
-		VALUES ((SELECT user_id FROM loggedIn), (SELECT user_id FROM owner), (SELECT db_id FROM d), $4, $5, $6, $7, $8, $9, $10, $11)`
+		VALUES ((SELECT user_id FROM loggedIn), (SELECT user_id FROM owner), (SELECT db_id FROM d), $4, $5, nullif($6, 0), $7, $8, $9, $10, $11)`
 		commandTag, err = DB.Exec(context.Background(), dbQuery, loggedInUser, dbOwner, dbName, operation, callerSw, key.ID, method, statusCode, runtime, requestSize, responseSize)
 	} else {
 		dbQuery = `
@@ -50,7 +50,7 @@ func ApiCallLog(key APIKey, loggedInUser, dbOwner, dbName, operation, callerSw, 
 			WHERE lower(user_name) = lower($1)
 		)
 		INSERT INTO api_call_log (caller_id, api_operation, api_caller_sw, key_id, method, status_code, runtime, request_size, response_size)
-		VALUES ((SELECT user_id FROM loggedIn), $2, $3, $4, $5, $6, $7, $8, $9)`
+		VALUES ((SELECT user_id FROM loggedIn), $2, $3, nullif($4, 0), $5, $6, $7, $8, $9)`
 		commandTag, err = DB.Exec(context.Background(), dbQuery, loggedInUser, operation, callerSw, key.ID, method, statusCode, runtime, requestSize, responseSize)
 	}
 	if err != nil {
@@ -75,7 +75,7 @@ func ApiUsageData(user string, from, to time.Time) (usage []ApiUsage, err error)
 			coalesce(sum(request_size), 0) AS request_size,
 			coalesce(sum(response_size), 0) AS response_size
 		FROM api_call_log
-		WHERE caller_id=(SELECT user_id FROM userData) AND api_call_date>=$2 AND api_call_date<=$3
+		WHERE caller_id=(SELECT user_id FROM userData) AND api_call_date>=$2 AND api_call_date<=$3 AND key_id IS NOT NULL
 		GROUP BY dt ORDER BY dt`
 	rows, err := DB.Query(context.Background(), query, user, from, to)
 	if err != nil {
@@ -108,7 +108,7 @@ func ApiUsageStatsLastPeriod(user string, period time.Duration) (count int, last
 		)
 		SELECT count(*) AS num_calls, max(api_call_date) AS last_call
 		FROM api_call_log
-		WHERE caller_id=(SELECT user_id FROM userData) AND api_call_date>=$2
+		WHERE caller_id=(SELECT user_id FROM userData) AND api_call_date>=$2 AND key_id IS NOT NULL
 		GROUP BY caller_id`
 	err = DB.QueryRow(context.Background(), query, user, time.Now().Add(-period)).Scan(&count, &lastCall)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
