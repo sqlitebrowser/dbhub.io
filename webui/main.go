@@ -44,7 +44,7 @@ var (
 // apiKeyDelHandler deletes an existing API key
 func apiKeyDelHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -86,7 +86,7 @@ func apiKeyDelHandler(w http.ResponseWriter, r *http.Request) {
 // apiKeyGenHandler generates a new API key, stores it in the PG database, and returns the details to the caller
 func apiKeyGenHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -372,7 +372,7 @@ func auth0CallbackHandler(w http.ResponseWriter, r *http.Request) {
 // Returns a list of the branches present in a database
 func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -453,7 +453,7 @@ func branchNamesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Retrieve session data for the user, if any exists
-func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err error) {
+func checkLogin(w http.ResponseWriter, r *http.Request) (loggedInUser string, validSession bool, err error) {
 	// Retrieve session data (if any)
 	var u interface{}
 	if config.Conf.Environment.Environment == "production" {
@@ -468,6 +468,13 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 		if u == "" {
 			u = nil
 		}
+
+		// Create a session cookie for the user anyway
+		if u != nil {
+			sess, _ := store.Get(r, "dbhub-user")
+			sess.Values["UserName"] = u.(string)
+			sess.Save(r, w)
+		}
 	}
 	if u != nil {
 		loggedInUser = u.(string)
@@ -477,7 +484,7 @@ func checkLogin(r *http.Request) (loggedInUser string, validSession bool, err er
 	return
 }
 
-func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo) (errCode int, err error) {
+func collectPageMetaInfo(w http.ResponseWriter, r *http.Request, pageMeta *PageMetaInfo) (errCode int, err error) {
 	// Auth0 info
 	pageMeta.Auth0.CallbackURL = "https://" + config.Conf.Web.ServerName + "/x/callback"
 	pageMeta.Auth0.ClientID = config.Conf.Auth0.ClientID
@@ -493,7 +500,7 @@ func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo) (errCode int, 
 	pageMeta.ApiUrl = "https://" + config.Conf.Api.ServerName
 
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
@@ -521,7 +528,7 @@ func collectPageMetaInfo(r *http.Request, pageMeta *PageMetaInfo) (errCode int, 
 
 func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -649,7 +656,7 @@ func createBranchHandler(w http.ResponseWriter, r *http.Request) {
 // Receives incoming info for adding a comment to an existing discussion
 func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -760,7 +767,7 @@ func createCommentHandler(w http.ResponseWriter, r *http.Request) {
 // then bounces to the discussion page
 func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, err.Error())
@@ -881,7 +888,7 @@ func createDiscussHandler(w http.ResponseWriter, r *http.Request) {
 // Receives incoming requests from the merge request creation page, creating them if the info is correct
 func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1166,7 +1173,7 @@ func createMergeHandler(w http.ResponseWriter, r *http.Request) {
 
 func createTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1600,7 +1607,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete Branch handler"
 
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1995,7 +2002,7 @@ func deleteBranchHandler(w http.ResponseWriter, r *http.Request) {
 // This function deletes a given comment from a discussion.
 func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -2098,7 +2105,7 @@ func deleteCommentHandler(w http.ResponseWriter, r *http.Request) {
 // This function deletes the latest commit from a given branch.
 func deleteCommitHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -2312,7 +2319,7 @@ func deleteDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	loggedInUser, _, err := checkLogin(r)
+	loggedInUser, _, err := checkLogin(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2400,7 +2407,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Delete Database handler"
 
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -2527,7 +2534,7 @@ func deleteDatabaseHandler(w http.ResponseWriter, r *http.Request) {
 // This function deletes a release.
 func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -2615,7 +2622,7 @@ func deleteReleaseHandler(w http.ResponseWriter, r *http.Request) {
 // This function deletes a tag.
 func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -2703,7 +2710,7 @@ func deleteTagHandler(w http.ResponseWriter, r *http.Request) {
 // Returns the list of commits that are different between a source and destination database/branch
 func diffCommitListHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, _, err := checkLogin(r)
+	loggedInUser, _, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -2949,7 +2956,7 @@ func downloadCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	loggedInUser, _, err := checkLogin(r)
+	loggedInUser, _, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -3026,7 +3033,7 @@ func downloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	loggedInUser, _, err := checkLogin(r)
+	loggedInUser, _, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -3060,7 +3067,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -3137,7 +3144,7 @@ func forkDBHandler(w http.ResponseWriter, r *http.Request) {
 // Generates a client certificate for the user and gives it to the browser.
 func generateCertHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -3200,7 +3207,7 @@ func insertDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	loggedInUser, _, err := checkLogin(r)
+	loggedInUser, _, err := checkLogin(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -3386,6 +3393,7 @@ func main() {
 
 	// Setup session storage
 	store = gsm.NewMemcacheStore(com.MemcacheHandle(), "dbhub_", []byte(config.Conf.Web.SessionStorePassword))
+	store.Options.Domain, _, _ = strings.Cut(config.Conf.Web.ServerName, ":") // Remove any port if it is specified as part of the server name
 
 	// Start the view count flushing routine in the background
 	go com.FlushViewCount()
@@ -3753,7 +3761,7 @@ func markdownPreview(w http.ResponseWriter, r *http.Request) {
 // Handler which does merging to MR's.  Called from the MR details page
 func mergeRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -3859,7 +3867,7 @@ func prefHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Preferences handler"
 
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -3988,7 +3996,7 @@ func requireLogin(pageMeta PageMetaInfo) (errCode int, err error) {
 // Handles saving of new usage limits for a user
 func saveLimitsHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -4047,7 +4055,7 @@ func saveLimitsHandler(w http.ResponseWriter, r *http.Request) {
 // Receives requests sent by the "Save" button on the database settings page.
 func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -4467,7 +4475,7 @@ func saveSettingsHandler(w http.ResponseWriter, r *http.Request) {
 // This function sets a branch as the default for a given database.
 func setDefaultBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -4567,7 +4575,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -4608,7 +4616,7 @@ func starToggleHandler(w http.ResponseWriter, r *http.Request) {
 // Returns the table and view names present in a specific database commit
 func tableNamesHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -4822,7 +4830,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Retrieve session data (if any)
 	var loggedInUser string
-	loggedInUser, _, err = checkLogin(r)
+	loggedInUser, _, err = checkLogin(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5039,7 +5047,7 @@ func tableViewHandler(w http.ResponseWriter, r *http.Request) {
 // This function processes branch rename and description updates.
 func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -5189,7 +5197,7 @@ func updateBranchHandler(w http.ResponseWriter, r *http.Request) {
 // This function processes comment text updates.
 func updateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -5307,7 +5315,7 @@ func updateDataHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	loggedInUser, _, err := checkLogin(r)
+	loggedInUser, _, err := checkLogin(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -5404,7 +5412,7 @@ func updateDataHandler(w http.ResponseWriter, r *http.Request) {
 // This function processes discussion title and body text updates.
 func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -5522,7 +5530,7 @@ func updateDiscussHandler(w http.ResponseWriter, r *http.Request) {
 // This function processes release rename and description updates.
 func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -5643,7 +5651,7 @@ func updateReleaseHandler(w http.ResponseWriter, r *http.Request) {
 // This function processes tag rename and description updates.
 func updateTagHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -5765,7 +5773,7 @@ func uploadDataHandler(w http.ResponseWriter, r *http.Request) {
 	pageName := "Upload DB handler"
 
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -6068,7 +6076,7 @@ func watchToggleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve session data (if any)
-	loggedInUser, validSession, err := checkLogin(r)
+	loggedInUser, validSession, err := checkLogin(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

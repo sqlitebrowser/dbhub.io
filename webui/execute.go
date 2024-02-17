@@ -21,7 +21,7 @@ func executePage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get all meta information
-	errCode, err := collectPageMetaInfo(r, &pageData.PageMeta)
+	errCode, err := collectPageMetaInfo(w, r, &pageData.PageMeta)
 	if err != nil {
 		errorPage(w, r, errCode, err.Error())
 		return
