@@ -15,11 +15,17 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	pgx "github.com/jackc/pgx/v5"
 	pgpool "github.com/jackc/pgx/v5/pgxpool"
+
+	"gorm.io/gorm"
+	"gorm.io/driver/postgres"
 )
 
 var (
 	// PostgreSQL connection pool handle
 	DB *pgpool.Pool
+
+	// Database connection via Gorm
+	gormDB *gorm.DB
 
 	// JobListen is the PG server connection used for receiving PG notifications
 	JobListen *pgx.Conn
@@ -40,7 +46,8 @@ func Connect() (err error) {
 	}
 
 	// Set the main PostgreSQL database configuration values
-	pgConfig, err := pgpool.ParseConfig(fmt.Sprintf("host=%s port=%d user= %s password = %s dbname=%s pool_max_conns=%d connect_timeout=10", config.Conf.Pg.Server, uint16(config.Conf.Pg.Port), config.Conf.Pg.Username, config.Conf.Pg.Password, config.Conf.Pg.Database, config.Conf.Pg.NumConnections))
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s pool_max_conns=%d connect_timeout=10", config.Conf.Pg.Server, uint16(config.Conf.Pg.Port), config.Conf.Pg.Username, config.Conf.Pg.Password, config.Conf.Pg.Database, config.Conf.Pg.NumConnections)
+	pgConfig, err := pgpool.ParseConfig(dsn)
 	if err != nil {
 		return
 	}
@@ -53,6 +60,12 @@ func Connect() (err error) {
 	DB, err = pgpool.New(context.Background(), pgConfig.ConnString())
 	if err != nil {
 		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v", err)
+	}
+
+	// Additional connection pool via Gorm
+	gormDB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return fmt.Errorf("could not connect to database: %v", err)
 	}
 
 	// migrate doesn't handle pgx connection strings, so we need to manually create something it can use
