@@ -140,7 +140,7 @@ func main() {
 		}
 
 		// This allows sending user credentials from the web UI
-		if origin == "https://" + config.Conf.Web.ServerName {
+		if origin == "https://"+config.Conf.Web.ServerName {
 			c.Header("Access-Control-Allow-Credentials", "true")
 		}
 	})
@@ -266,7 +266,7 @@ func authenticateV2(store *gsm.MemcacheStore) gin.HandlerFunc {
 
 			c.Set("user", u.(string))
 			c.Set("key", database.APIKey{
-				ID: 0, // The ID 0 is translated into NULL when inserting into api_call_log
+				ID:          0,                        // The ID 0 is translated into NULL when inserting into api_call_log
 				Permissions: database.MayReadAndWrite, // Calls from the web UI may read and write
 			})
 		}
