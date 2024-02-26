@@ -16,8 +16,8 @@ import (
 	pgx "github.com/jackc/pgx/v5"
 	pgpool "github.com/jackc/pgx/v5/pgxpool"
 
-	"gorm.io/gorm"
 	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var (
@@ -46,20 +46,26 @@ func Connect() (err error) {
 	}
 
 	// Set the main PostgreSQL database configuration values
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s pool_max_conns=%d connect_timeout=10", config.Conf.Pg.Server, uint16(config.Conf.Pg.Port), config.Conf.Pg.Username, config.Conf.Pg.Password, config.Conf.Pg.Database, config.Conf.Pg.NumConnections)
-	pgConfig, err := pgpool.ParseConfig(dsn)
+	pgConfig, err := pgpool.ParseConfig(fmt.Sprintf("host=%s port=%d user= %s password = %s dbname=%s pool_max_conns=%d connect_timeout=10", config.Conf.Pg.Server, uint16(config.Conf.Pg.Port), config.Conf.Pg.Username, config.Conf.Pg.Password, config.Conf.Pg.Database, config.Conf.Pg.NumConnections))
 	if err != nil {
 		return
 	}
 
+	// Gorm connection string
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s connect_timeout=10 sslmode=", config.Conf.Pg.Server, uint16(config.Conf.Pg.Port), config.Conf.Pg.Username, config.Conf.Pg.Password, config.Conf.Pg.Database)
+
+	// Enable encrypted connections where needed
 	if config.Conf.Pg.SSL {
 		pgConfig.ConnConfig.TLSConfig = &tlsConfig
+		dsn += "enable"
+	} else {
+		dsn += "disable"
 	}
 
 	// Connect to database
 	DB, err = pgpool.New(context.Background(), pgConfig.ConnString())
 	if err != nil {
-		return fmt.Errorf("Couldn't connect to PostgreSQL server: %v", err)
+		return fmt.Errorf("%s: couldn't connect to PostgreSQL server: %v", config.Conf.Live.Nodename, err)
 	}
 
 	// Additional connection pool via Gorm
