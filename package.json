@@ -60,7 +60,7 @@
     "cypress": "13.3.3",
     "postcss": "^8.4.35",
     "postcss-loader": "^8.1.0",
-    "sass": "^1.71.0",
+    "sass": "^1.71.1",
     "sass-loader": "^14.1.0",
     "style-loader": "^3.3.4",
     "webpack": "^5.90.2",
