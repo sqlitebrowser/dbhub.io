@@ -20,7 +20,7 @@ require (
 	github.com/gin-contrib/cors v1.5.0
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.9.1
-	github.com/go-playground/validator/v10 v10.18.0
+	github.com/go-playground/validator/v10 v10.19.0
 	github.com/golang-migrate/migrate/v4 v4.17.0
 	github.com/gwenn/gosqlite v0.0.0-20200521090053-24878be1a237
 	github.com/jackc/pgx/v5 v5.5.3
