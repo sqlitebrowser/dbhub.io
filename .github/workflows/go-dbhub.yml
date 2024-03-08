@@ -31,7 +31,7 @@ jobs:
       run: cd daemons; sh ./build_dbhub_docker_and_local.sh
 
     - name: Start the DBHub.io daemons
-      run: cd daemons; yarn docker:github
+      run: cd daemons; yarn docker:github && sleep 30
 
       # Build and test the go-dbhub library
     - name: Checkout go-dbhub library source code
