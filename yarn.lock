@@ -3337,10 +3337,10 @@ pkg-dir@^4.2.0:
   dependencies:
     find-up "^4.0.0"
 
-plotly.js-basic-dist@^2.30.0:
-  version "2.30.0"
-  resolved "https://registry.yarnpkg.com/plotly.js-basic-dist/-/plotly.js-basic-dist-2.30.0.tgz#48e961b8c36b1c9c5e7d364406c864a4495a548b"
-  integrity sha512-QBAslO+UVM4OYjf/Fv0dRY3v0t5jYhhsns2yeBV4B2k6avrPjaHvSugeVKJyiRDYrgnO+qpx7bcWbUOfGArEbQ==
+plotly.js-basic-dist@^2.30.1:
+  version "2.30.1"
+  resolved "https://registry.yarnpkg.com/plotly.js-basic-dist/-/plotly.js-basic-dist-2.30.1.tgz#5d1748153081c6f8028a1137e60f4723d1bf4d3a"
+  integrity sha512-Lkxq9RPO+EHSOQgOta4wJRo6WW2c/TsdpdmG/lRV1RaeoV1bKwjoWqEItCYbvv95Fi5n4rvXW+4VNKFiSCZnIw==
 
 plotly.js-dist@^2.30.1:
   version "2.30.1"
@@ -3516,10 +3516,10 @@ react-confirm-alert@^3.0.6:
   resolved "https://registry.yarnpkg.com/react-confirm-alert/-/react-confirm-alert-3.0.6.tgz#f7552ec839c1e189370cef02ffed3035e7ca2e22"
   integrity sha512-rplP6Ed9ZSNd0KFV5BUzk4EPQ77BxsrayllBXGFuA8xPXc7sbBjgU5KUrNpl7aWFmP7mXRlVXfuy1IT5DbffYw==
 
-react-data-grid@^7.0.0-beta.42:
-  version "7.0.0-beta.42"
-  resolved "https://registry.yarnpkg.com/react-data-grid/-/react-data-grid-7.0.0-beta.42.tgz#75382b3e1a9a708bb5de24326c3f2023b197c3d3"
-  integrity sha512-N5ToEOxMlQGkRYhed3ahFz34fgJTccrCA9PZqIGVoO1vsZADNISXk6ywODJOdCz/1yB78MLu+T7q6cnJd2024A==
+react-data-grid@^7.0.0-beta.43:
+  version "7.0.0-beta.43"
+  resolved "https://registry.yarnpkg.com/react-data-grid/-/react-data-grid-7.0.0-beta.43.tgz#102832abf4f23cdc6dc7ddf865612caa39be8061"
+  integrity sha512-uqzhXsaeIpCnNsB1zODWzP88od6r5Q5UA5GnEhba9XmUMFUy2VcUTTfABmbAiVGdJkUzWJTx1l0hZn0WNGE/hQ==
   dependencies:
     clsx "^2.0.0"
 

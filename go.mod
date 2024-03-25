@@ -17,8 +17,8 @@ require (
 	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/bradleypeabody/gorilla-sessions-memcache v0.0.0-20181103040241-659414f458e1
 	github.com/docker/go-units v0.5.0
-	github.com/gin-contrib/cors v1.7.0
-	github.com/gin-contrib/gzip v0.0.6
+	github.com/gin-contrib/cors v1.7.1
+	github.com/gin-contrib/gzip v1.0.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/golang-migrate/migrate/v4 v4.17.0
@@ -30,12 +30,12 @@ require (
 	github.com/sqlitebrowser/github_flavored_markdown v0.0.0-20190120045821-b8cf8f054e47
 	golang.org/x/oauth2 v0.18.0
 	gorm.io/driver/postgres v1.5.7
-	gorm.io/gorm v1.25.7
+	gorm.io/gorm v1.25.8
 )
 
 require (
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/bytedance/sonic v1.11.2 // indirect
+	github.com/bytedance/sonic v1.11.3 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
 	github.com/chenzhuoyu/iasm v0.9.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
@@ -66,7 +66,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/pelletier/go-toml/v2 v2.1.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/russross/blackfriday v2.0.0+incompatible // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
