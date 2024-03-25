@@ -52,7 +52,7 @@
   "license": "AGPL-3.0-or-later",
   "private": false,
   "devDependencies": {
-    "@babel/cli": "^7.23.9",
+    "@babel/cli": "^7.24.1",
     "autoprefixer": "^10.4.19",
     "babel-preset-react": "^6.24.1",
     "babel-preset-react-app": "^10.0.1",
