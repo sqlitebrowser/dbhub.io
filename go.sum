@@ -156,8 +156,8 @@ github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeV
 github.com/smartystreets/assertions v1.13.1 h1:Ef7KhSmjZcK6AVf9YbJdvPYG9avaF0ZxudX+ThRdWfU=
 github.com/smartystreets/goconvey v1.8.0 h1:Oi49ha/2MURE0WexF052Z0m+BNSGirfjg5RL+JXWq3w=
 github.com/smartystreets/goconvey v1.8.0/go.mod h1:EdX8jtrTIj26jmjCOVNMVSIYAtgexqXKHOXW2Dx9JLg=
-github.com/smtp2go-oss/smtp2go-go v1.0.2 h1:vXkqx9kyoQIuetyV3nm40b+OZevihhgb78X4vA/u2fs=
-github.com/smtp2go-oss/smtp2go-go v1.0.2/go.mod h1:lkv36awQXRBWAvnd517FFESKvne8465KCu90lPThcEY=
+github.com/smtp2go-oss/smtp2go-go v1.0.3 h1:CuNY5CXw53r9GKa1xjuS1koWDzpXb1rGcHG0TGk0hiM=
+github.com/smtp2go-oss/smtp2go-go v1.0.3/go.mod h1:lkv36awQXRBWAvnd517FFESKvne8465KCu90lPThcEY=
 github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d h1:yKm7XZV6j9Ev6lojP2XaIshpT4ymkqhMeSghO5Ps00E=
 github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d/go.mod h1:UdhH50NIW0fCiwBSr0co2m7BnFLdv4fQTgdqdJTHFeE=
 github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e h1:qpG93cPwA5f7s/ZPBJnGOYQNK/vKsaDaseuKT5Asee8=
