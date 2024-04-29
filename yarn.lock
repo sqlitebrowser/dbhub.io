@@ -3860,10 +3860,10 @@ source-map@^0.6.0:
   resolved "https://registry.npmjs.org/source-map/-/source-map-0.6.1.tgz"
   integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
 
-sql-formatter@^15.3.0:
-  version "15.3.0"
-  resolved "https://registry.yarnpkg.com/sql-formatter/-/sql-formatter-15.3.0.tgz#d6daec93b5d3fd053f40295a306f5440cc578849"
-  integrity sha512-1aDYVEX+dwOSCkRYns4HEGupRZoaivcsNpU4IzR+MVC+cWFYK9/dce7pr4aId4+ED2iK9PNs3j1Vdf8C+SIvDg==
+sql-formatter@^15.3.1:
+  version "15.3.1"
+  resolved "https://registry.yarnpkg.com/sql-formatter/-/sql-formatter-15.3.1.tgz#e988861d172827b856470a9baefa0135737227df"
+  integrity sha512-L/dqan+Hrt0PpPdCbHcI9bdfOvqaQZR7v5c5SWMJ3bUGQSezK09Mm9q2I3B4iObjaq7FyoldIM+fDSmfzGRXCA==
   dependencies:
     argparse "^2.0.1"
     get-stdin "=8.0.0"

@@ -14,7 +14,7 @@
     "react-modal-image": "^2.6.0",
     "react-plotly.js": "^2.6.0",
     "react-simple-code-editor": "^0.13.1",
-    "sql-formatter": "^15.3.0"
+    "sql-formatter": "^15.3.1"
   },
   "name": "dbhub.io",
   "version": "0.5.0",
