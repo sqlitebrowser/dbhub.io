@@ -3342,10 +3342,10 @@ plotly.js-basic-dist@^2.32.0:
   resolved "https://registry.yarnpkg.com/plotly.js-basic-dist/-/plotly.js-basic-dist-2.32.0.tgz#780e6af7dd2dc6aaec75434874d2f4b6d258b328"
   integrity sha512-fV80Zr7X8JXINtNdxsCq/rqF/R+r8u3anOcjbsEg85vd69buhJzQ44Psgv/dm6omvIXXxEeATQvTtTf52rmhig==
 
-plotly.js-dist@^2.31.1:
-  version "2.31.1"
-  resolved "https://registry.yarnpkg.com/plotly.js-dist/-/plotly.js-dist-2.31.1.tgz#a354e291bd28d854cb9a4c2d12772c45afcc9f1c"
-  integrity sha512-36jsTirziYZI+zfzODMDHSQFHyrHbHt3u1RWS9or0zW2ogUqocXWNOC+JSZ+a3qgQmgGMnw4nW00fHXdJwiHvw==
+plotly.js-dist@^2.32.0:
+  version "2.32.0"
+  resolved "https://registry.yarnpkg.com/plotly.js-dist/-/plotly.js-dist-2.32.0.tgz#c9fadd44226357ceff9c56962348179ebd90244e"
+  integrity sha512-+RnvqNTJADe3ctmCMT2YOhXu4ZwYuBi7eD4FF0oyaJ8jWj65Ru6lZVnetr7T3ZvnU5BgQWbbId+tYgf0PBFkeQ==
 
 postcss-loader@^8.1.1:
   version "8.1.1"
