@@ -9,7 +9,7 @@
     "react-bootstrap": "^2.10.2",
     "react-confirm-alert": "^3.0.6",
     "react-data-grid": "^7.0.0-beta.43",
-    "react-dom": "^18.2.0",
+    "react-dom": "^18.3.1",
     "react-dropdown-select": "^4.11.2",
     "react-modal-image": "^2.6.0",
     "react-plotly.js": "^2.6.0",
