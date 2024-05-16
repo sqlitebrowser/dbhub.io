@@ -1,15 +1,14 @@
 [Unit]
 Description=DBHub.io DB4S connector
 Documentation=https://github.com/sqlitebrowser/dbhub.io
-Requires=postgresql-10.service
-Requires=memcached.service
+Requires=network-online.target
 Wants=network-online.target
-After=postgresql-10.service
 AssertFileIsExecutable=/usr/local/bin/db4s
 
 [Service]
+Environment="LD_LIBRARY_PATH=/home/dbhub/git_repos/dbhub.io/local/lib"
 ExecStart=/usr/local/bin/db4s
-WorkingDirectory=/home/dbhub/go/src/github.com/sqlitebrowser/dbhub.io
+WorkingDirectory=/home/dbhub/git_repos/dbhub.io
 User=dbhub
 Group=dbhub
 PermissionsStartOnly=true
@@ -17,9 +16,9 @@ NonBlocking=true
 SuccessExitStatus=0
 StandardOutput=journal
 StandardError=inherit
-
-# Let systemd restart this service only if it has ended with the clean exit code or signal.
-Restart=on-success
+Restart=always
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
 
 # Specifies the maximum file descriptor number that can be opened by this process
 LimitNOFILE=65536

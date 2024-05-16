@@ -1,13 +1,13 @@
 [Unit]
-Description=DBHub.io Website User Interface
+Description=DBHub.io API daemon
 Documentation=https://github.com/sqlitebrowser/dbhub.io
 Requires=network-online.target
 Wants=network-online.target
-AssertFileIsExecutable=/usr/local/bin/webui
+AssertFileIsExecutable=/usr/local/bin/api
 
 [Service]
 Environment="LD_LIBRARY_PATH=/home/dbhub/git_repos/dbhub.io/local/lib"
-ExecStart=/usr/local/bin/webui
+ExecStart=/usr/local/bin/api
 WorkingDirectory=/home/dbhub/git_repos/dbhub.io
 User=dbhub
 Group=dbhub
