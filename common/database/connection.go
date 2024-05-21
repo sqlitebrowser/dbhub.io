@@ -57,7 +57,7 @@ func Connect() (err error) {
 	// Enable encrypted connections where needed
 	if config.Conf.Pg.SSL {
 		pgConfig.ConnConfig.TLSConfig = &tlsConfig
-		dsn += "enable"
+		dsn += "require"
 	} else {
 		dsn += "disable"
 	}
