@@ -1,8 +1,8 @@
 [Unit]
 Description=DBHub.io Live database daemon
 Documentation=https://github.com/sqlitebrowser/dbhub.io
-Requires=network-online.target
 Wants=network-online.target
+After=network-online.target
 AssertFileIsExecutable=/usr/local/bin/live
 
 [Service]
