@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"time"
 
 	com "github.com/sqlitebrowser/dbhub.io/common"
 	"github.com/sqlitebrowser/dbhub.io/common/config"
@@ -66,18 +67,18 @@ func main() {
 	go com.JobQueueListen()
 
 	// Launch goroutine event generator for checking submitted jobs
-	// TODO: This seems to work fine, but is kind of a pita to have enabled while developing this code atm.  So we disable it for now.
+	// NOTE: This seems to work fine, but is kind of a pita to have enabled while developing this code atm.  So we disable it for now.
 	// TODO: Instead of this, should we run some code on startup of the live nodes that checks the database for
 	//       (recent) unhandled requests, and automatically generates a JobQueueCheck() event if some are found?
-	//go func() {
-	//	for {
-	//		// Tell the JobQueueCheck() goroutine to check for newly submitted jobs
-	//		com.CheckJobQueue <- struct{}{}
-	//
-	//		// Wait a second before the next check
-	//		time.Sleep(1 * time.Second)
-	//	}
-	//}()
+	go func() {
+		for {
+			// Tell the JobQueueCheck() goroutine to check for newly submitted jobs
+			com.CheckJobQueue <- struct{}{}
+
+			// Wait a second before the next check
+			time.Sleep(1 * time.Second)
+		}
+	}()
 
 	log.Printf("%s: listening for requests", config.Conf.Live.Nodename)
 
